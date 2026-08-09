@@ -163,6 +163,26 @@ internal partial struct JsonLinesRecordReader : IRecordReader
         };
     }
 
+    // Step 2 scaffolds: defined now and wired into ReadPropertyValue's branches in Step 2
+    // (see docs/design_jsonlines_cell_value_zero_alloc.md). Left uncalled in Step 1 so the
+    // existing string-backed branches keep their behavior and existing tests do not regress.
+#pragma warning disable IDE0051 // Wired into ReadPropertyValue's branches in Step 2
+    private readonly CellData NumberToCellData(Utf8JsonReader reader)
+    {
+        throw new NotImplementedException();
+    }
+
+    private readonly CellData ObjectOrArrayToCellData(Utf8JsonReader reader, JsonRawBytes containingBytes)
+    {
+        throw new NotImplementedException();
+    }
+
+    private readonly CellData StringToCellData(Utf8JsonReader reader)
+    {
+        throw new NotImplementedException();
+    }
+#pragma warning restore IDE0051
+
     public void Dispose()
     {
         if (_disposed)

@@ -266,6 +266,72 @@ public sealed class JsonLinesRecordReaderTests
         }
     }
 
+    [Fact]
+    public void GetCellData_MultipleColumnsReadSequentially_KeepsEachValueValidWhenRead()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
+    [Fact]
+    public void GetCellData_StringExceedingInitialBuffer_ReturnsFullValue()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
+    [Fact]
+    public void GetCellData_StringWithEscapeSequences_ReturnsResolvedText()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
+    [Fact]
+    public void GetCellData_EmptyString_ReturnsEmptyValueWithoutError()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
+    [Fact]
+    public void GetCellData_AfterDisposingOriginalCopy_ThrowsObjectDisposedException()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
+    [Fact]
+    public void GetCellData_AfterWarmUp_AllocatesZeroBytes()
+    {
+        // Arrange
+
+        // Act
+
+        // Assert
+        Assert.Fail("Not implemented");
+    }
+
     private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas()
     {
         var inputSchema = new TableSchema
