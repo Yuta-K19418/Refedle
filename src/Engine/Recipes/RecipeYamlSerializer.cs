@@ -10,7 +10,7 @@ namespace Refedle.Engine.Recipes;
 /// Serializes and deserializes <see cref="Recipe"/> objects to and from YAML.
 /// AOT-safe: no reflection is used.
 /// </summary>
-internal sealed class RecipeYamlSerializer
+internal static class RecipeYamlSerializer
 {
     /// <summary>
     /// Serializes a recipe to a YAML string.
