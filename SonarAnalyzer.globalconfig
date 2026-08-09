@@ -19,3 +19,4 @@ dotnet_diagnostic.S6618.severity = warning
 dotnet_diagnostic.S1905.severity = warning
 dotnet_diagnostic.S3358.severity = warning
 dotnet_diagnostic.S1118.severity = warning
+dotnet_diagnostic.S4136.severity = warning
