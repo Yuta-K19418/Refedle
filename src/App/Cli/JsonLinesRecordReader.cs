@@ -7,7 +7,7 @@ using Refedle.Engine.Models;
 
 namespace Refedle.App.Cli;
 
-internal struct JsonLinesRecordReader : IRecordReader
+internal partial struct JsonLinesRecordReader : IRecordReader
 {
     private readonly RowIndexer _rowIndexer;
     private readonly Memory<byte>[] _columnNameUtf8Bytes;
@@ -19,6 +19,7 @@ internal struct JsonLinesRecordReader : IRecordReader
     private int _batchIndex;
     private JsonRawBytes _currentLineBytes;
     private bool _disposed;
+    private readonly PooledValueBuffer _valueBuffer;
 
     public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, TableSchema inputSchema, BatchOutputSchema outputSchema)
     {
@@ -38,6 +39,7 @@ internal struct JsonLinesRecordReader : IRecordReader
         _batchIndex = -1;
         _currentLineBytes = default;
         _disposed = false;
+        _valueBuffer = new PooledValueBuffer();
     }
 
     public ValueTask<bool> MoveNextAsync(CancellationToken ct)
@@ -170,6 +172,9 @@ internal struct JsonLinesRecordReader : IRecordReader
 
         _rowReader?.Dispose();
         _rowReader = null;
+
+        _valueBuffer.Dispose();
+
         _disposed = true;
     }
 }
