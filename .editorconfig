@@ -39,6 +39,9 @@ trim_trailing_whitespace = false
 # Disabling this as the project uses English-only strings and doesn't require .resx localization.
 dotnet_diagnostic.CA1303.severity = none
 
+# CA2012: Use ValueTasks correctly.
+dotnet_diagnostic.CA2012.severity = warning
+
 # IDE0005: Using directive is unnecessary.
 dotnet_diagnostic.IDE0005.severity = warning
 
