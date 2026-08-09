@@ -104,9 +104,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
 
             var createdType = ExtractCreatedType(typeDecl);
 
-            var declaredSymbol =
-                context.SemanticModel.GetDeclaredSymbol(typeDecl) as INamedTypeSymbol;
-            var typeName = declaredSymbol?.Name ?? string.Empty;
+            var typeName = context.SemanticModel.GetDeclaredSymbol(typeDecl) is INamedTypeSymbol declaredSymbol
+                ? declaredSymbol.Name
+                : string.Empty;
             var isReader = name.Contains("RecordReader");
 
             if (!string.IsNullOrEmpty(typeName) && !string.IsNullOrEmpty(createdType))
