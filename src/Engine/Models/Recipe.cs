@@ -4,7 +4,7 @@ namespace Refedle.Engine.Models;
 
 /// <summary>
 /// Represents a reusable data transformation recipe containing an ordered sequence of actions.
-/// Can be serialized to YAML or JSON for storage and reuse in headless CLI mode.
+/// Can be serialized to YAML for storage and reuse in headless CLI mode.
 /// </summary>
 public sealed record Recipe
 {
