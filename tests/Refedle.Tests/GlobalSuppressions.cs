@@ -41,3 +41,11 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.Tests.App.Views.JsonLinesTableSourceTests.Dispose_DisposesRowByteCache",
     Justification = "Ownership transferred to source")]
+
+// JsonLinesRecordReaderBenchmarks
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Cli.JsonLinesRecordReaderBenchmarks.Setup",
+    Justification = "RowReader ownership is transferred to JsonLinesRecordReader; disposed via _reader.Dispose() in Cleanup.")]

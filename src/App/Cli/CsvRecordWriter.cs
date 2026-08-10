@@ -88,7 +88,7 @@ internal struct CsvRecordWriter : IRecordWriter
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, typeof(CsvRecordWriter));
     }
 
     public void Dispose()

@@ -38,4 +38,30 @@ public sealed class CsvRecordReaderTests
             File.Delete(filePath);
         }
     }
+
+    [Fact]
+    public async Task ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(filePath, "value\nhello\n");
+            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
+            var recordReader = new CsvRecordReader(sepReader, outputSchema);
+            recordReader.Dispose();
+
+            // Act
+            Action act = () => recordReader.ThrowIfDisposed();
+
+            // Assert
+            var exception = act.Should().Throw<ObjectDisposedException>().Which;
+            exception.ObjectName.Should().Be(typeof(CsvRecordReader).FullName);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
 }

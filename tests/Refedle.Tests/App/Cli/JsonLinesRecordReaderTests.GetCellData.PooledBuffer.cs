@@ -1,38 +1,34 @@
 using AwesomeAssertions;
 using Refedle.App.Cli;
-using Refedle.Engine;
 using Refedle.Engine.IO.JsonLines;
-using Refedle.Engine.Models;
-using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Cli;
 
 public sealed partial class JsonLinesRecordReaderTests
 {
-    private const string ColumnName = "value";
-
     [Fact]
-    public async Task GetCellData_NumberToken_ReturnsValueRaw()
+    public async Task GetCellData_MultipleColumnsReadSequentially_KeepsEachValueValidWhenRead()
     {
         // Arrange
         var filePath = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(filePath, """{"value":1.50}""");
+            File.WriteAllText(filePath, """{"number":1.50,"text":"hello"}""");
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
+            var (inputSchema, outputSchema) = BuildSchemas(["number", "text"]);
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
             await reader.MoveNextAsync(default);
 
-            // Act
-            var cell = reader.GetCellData(0);
+            // Act — consume each cell immediately (the RecordProcessor pattern) so buffer
+            // reuse across calls cannot corrupt a value before it is read.
+            var first = reader.GetCellData(0).Value.ToString();
+            var second = reader.GetCellData(1).Value.ToString();
 
             // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("1.50");
+            first.Should().Be("1.50");
+            second.Should().Be("hello");
         }
         finally
         {
@@ -41,18 +37,26 @@ public sealed partial class JsonLinesRecordReaderTests
     }
 
     [Fact]
-    public async Task GetCellData_ObjectToken_ReturnsValueRaw()
+    public async Task GetCellData_StringExceedingInitialBuffer_ReturnsFullValue()
     {
         // Arrange
+        var longValue = new string('x', 300); // > MinimumSize (256), forces buffer growth
         var filePath = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(filePath, """{"value":{"a":1}}""");
+            var content = """{"value":"hi"}""" + "\n" + $$"""{"value":"{{longValue}}"}""";
+            File.WriteAllText(filePath, content);
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
             var (inputSchema, outputSchema) = BuildSchemas();
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+
+            // Establish the initial 256-char buffer with the short first row.
+            await reader.MoveNextAsync(default);
+            _ = reader.GetCellData(0).Value.Length;
+
+            // Advance to the long row, which exceeds the initial buffer and forces growth.
             await reader.MoveNextAsync(default);
 
             // Act
@@ -60,8 +64,8 @@ public sealed partial class JsonLinesRecordReaderTests
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("""{"a":1}""");
+            cell.Encoding.Should().Be(CellEncoding.PlainText);
+            cell.Value.ToString().Should().Be(longValue);
         }
         finally
         {
@@ -70,42 +74,14 @@ public sealed partial class JsonLinesRecordReaderTests
     }
 
     [Fact]
-    public async Task GetCellData_ArrayToken_ReturnsValueRaw()
+    public async Task GetCellData_StringWithEscapeSequences_ReturnsResolvedText()
     {
         // Arrange
         var filePath = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(filePath, """{"value":[1,2,3]}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("[1,2,3]");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_StringToken_ReturnsValuePlainText()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":"hello"}""");
+            // Raw JSON escapes (\n, \"); CopyString must resolve them, not return them verbatim.
+            File.WriteAllText(filePath, """{"value":"line1\n\"quoted\""}""");
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
@@ -119,7 +95,7 @@ public sealed partial class JsonLinesRecordReaderTests
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
             cell.Encoding.Should().Be(CellEncoding.PlainText);
-            cell.Value.ToString().Should().Be("hello");
+            cell.Value.ToString().Should().Be("line1\n\"quoted\"");
         }
         finally
         {
@@ -128,13 +104,14 @@ public sealed partial class JsonLinesRecordReaderTests
     }
 
     [Fact]
-    public async Task GetCellData_BooleanToken_ReturnsValueBoolean()
+    public async Task GetCellData_EmptyString_ReturnsEmptyValueWithoutError()
     {
         // Arrange
         var filePath = Path.GetTempFileName();
         try
         {
-            File.WriteAllText(filePath, """{"value":true}""");
+            // Empty string exercises Reserve's Math.Max(MinimumSize, 0) floor without error.
+            File.WriteAllText(filePath, """{"value":""}""");
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
@@ -147,8 +124,8 @@ public sealed partial class JsonLinesRecordReaderTests
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Boolean);
-            cell.Value.ToString().Should().Be("true");
+            cell.Encoding.Should().Be(CellEncoding.PlainText);
+            cell.Value.ToString().Should().Be(string.Empty);
         }
         finally
         {
@@ -157,117 +134,7 @@ public sealed partial class JsonLinesRecordReaderTests
     }
 
     [Fact]
-    public async Task GetCellData_FalseToken_ReturnsValueBoolean()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":false}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Boolean);
-            cell.Value.ToString().Should().Be("false");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_NullToken_ReturnsNullPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":null}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Null);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_MissingProperty_ReturnsMissingPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"other":1}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Missing);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_MalformedJson_ReturnsInvalidPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, "not valid json");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Invalid);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
+    public async Task GetCellData_AfterDisposingOriginalCopy_ThrowsObjectDisposedException()
     {
         // Arrange
         var filePath = Path.GetTempFileName();
@@ -279,14 +146,19 @@ public sealed partial class JsonLinesRecordReaderTests
             using var rowReader = new RowReader(filePath);
             var (inputSchema, outputSchema) = BuildSchemas();
             var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // The copy keeps its own _disposed=false but shares the reference-type buffer, so
+            // only Reserve's guard (not the copy's ThrowIfDisposed) catches the disposed shared
+            // buffer. Disposing the same instance instead would be caught too early to test it.
+            var copy = reader;
             reader.Dispose();
 
             // Act
-            Action act = () => reader.ThrowIfDisposed();
+            Action act = () => { _ = copy.GetCellData(0); };
 
             // Assert
-            var exception = act.Should().Throw<ObjectDisposedException>().Which;
-            exception.ObjectName.Should().Be(typeof(JsonLinesRecordReader).FullName);
+            act.Should().Throw<ObjectDisposedException>();
         }
         finally
         {
@@ -294,17 +166,99 @@ public sealed partial class JsonLinesRecordReaderTests
         }
     }
 
-    private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas() =>
-        BuildSchemas([ColumnName]);
-
-    private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas(IReadOnlyList<string> columnNames)
+    [Fact]
+    public async Task GetCellData_AfterWarmUp_AllocatesZeroBytes()
     {
-        var inputSchema = new TableSchema
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
         {
-            SourceFormat = DataFormat.JsonLines,
-            Columns = [.. columnNames.Select((name, index) => new ColumnSchema { Name = name, Type = ColumnType.Text, ColumnIndex = index })],
-        };
-        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], []);
-        return (inputSchema, outputSchema);
+            File.WriteAllText(filePath, """{"value":1.50}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            var (inputSchema, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Warm up so the one-time pooled-buffer Reserve happens before measurement.
+            _ = reader.GetCellData(0).Value.Length;
+
+            // Act — steady-state GetCellData reuses the buffer and must allocate nothing.
+            // Same thread throughout: MoveNextAsync completes synchronously, so no await hop.
+            var before = GC.GetAllocatedBytesForCurrentThread();
+            var cell = reader.GetCellData(0);
+            var after = GC.GetAllocatedBytesForCurrentThread();
+
+            // Assert
+            (after - before).Should().Be(0);
+            cell.Presence.Should().Be(CellPresence.Value);
+            cell.Value.Length.Should().Be("1.50".Length);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task GetCellData_StringWithUtf8Characters_ReturnsFullText()
+    {
+        // Arrange
+        var value = "日本語😀"; // CJK characters plus a surrogate-pair emoji
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, $$"""{"value":"{{value}}"}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            var (inputSchema, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var cell = reader.GetCellData(0);
+
+            // Assert
+            cell.Presence.Should().Be(CellPresence.Value);
+            cell.Encoding.Should().Be(CellEncoding.PlainText);
+            cell.Value.ToString().Should().Be(value);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Theory]
+    [InlineData("""{"text":"日本語😀"}""")]
+    [InlineData("""["日本語😀"]""")]
+    public async Task GetCellData_RawStructuredValueWithUtf8_ReturnsFullRawText(string rawValue)
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, $$"""{"value":{{rawValue}}}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            var (inputSchema, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var cell = reader.GetCellData(0);
+
+            // Assert
+            cell.Presence.Should().Be(CellPresence.Value);
+            cell.Encoding.Should().Be(CellEncoding.Raw);
+            cell.Value.ToString().Should().Be(rawValue);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
     }
 }

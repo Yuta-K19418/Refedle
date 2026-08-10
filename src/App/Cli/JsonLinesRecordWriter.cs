@@ -162,7 +162,7 @@ internal partial struct JsonLinesRecordWriter : IRecordWriter
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonLinesRecordWriter));
     }
 
     public void Dispose()

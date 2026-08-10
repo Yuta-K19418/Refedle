@@ -138,4 +138,20 @@ public sealed class JsonLinesRecordWriterTests
         var output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("{\"value\":\"\"}\n");
     }
+
+    [Fact]
+    public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
+    {
+        // Arrange
+        using var stream = new MemoryStream();
+        var writer = new JsonLinesRecordWriter(stream, _outputSchema);
+        writer.Dispose();
+
+        // Act
+        Action act = () => writer.ThrowIfDisposed();
+
+        // Assert
+        var exception = act.Should().Throw<ObjectDisposedException>().Which;
+        exception.ObjectName.Should().Be(typeof(JsonLinesRecordWriter).FullName);
+    }
 }

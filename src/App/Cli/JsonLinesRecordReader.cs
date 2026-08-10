@@ -7,7 +7,7 @@ using Refedle.Engine.Models;
 
 namespace Refedle.App.Cli;
 
-internal struct JsonLinesRecordReader : IRecordReader
+internal partial struct JsonLinesRecordReader : IRecordReader
 {
     private readonly RowIndexer _rowIndexer;
     private readonly Memory<byte>[] _columnNameUtf8Bytes;
@@ -19,6 +19,7 @@ internal struct JsonLinesRecordReader : IRecordReader
     private int _batchIndex;
     private JsonRawBytes _currentLineBytes;
     private bool _disposed;
+    private readonly PooledValueBuffer _valueBuffer;
 
     public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, TableSchema inputSchema, BatchOutputSchema outputSchema)
     {
@@ -38,6 +39,7 @@ internal struct JsonLinesRecordReader : IRecordReader
         _batchIndex = -1;
         _currentLineBytes = default;
         _disposed = false;
+        _valueBuffer = new PooledValueBuffer();
     }
 
     public ValueTask<bool> MoveNextAsync(CancellationToken ct)
@@ -80,7 +82,7 @@ internal struct JsonLinesRecordReader : IRecordReader
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonLinesRecordReader));
     }
 
     public readonly bool EvaluateFilters()
@@ -141,24 +143,44 @@ internal struct JsonLinesRecordReader : IRecordReader
     // Split out to stay under the Sonar cyclomatic-complexity limit (S1541). Passed by value,
     // not by ref, so it owns a copy isolated from the caller's state (ref also fails to
     // compile: CS8168/CS8347); the resulting small, stack-only copy per call is an accepted cost.
-    private static CellData ReadPropertyValue(Utf8JsonReader reader, JsonRawBytes containingBytes)
+    private readonly CellData ReadPropertyValue(Utf8JsonReader reader, JsonRawBytes containingBytes)
     {
         return reader.TokenType switch
         {
             JsonTokenType.Null => new CellData([], CellPresence.Null),
-            JsonTokenType.Number =>
-                new CellData(Encoding.UTF8.GetString(reader.ValueSpan), CellPresence.Value, CellEncoding.Raw),
-            JsonTokenType.StartObject or JsonTokenType.StartArray =>
-                new CellData(
-                    Encoding.UTF8.GetString(JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span),
-                    CellPresence.Value,
-                    CellEncoding.Raw),
-            JsonTokenType.String =>
-                new CellData(reader.GetString(), CellPresence.Value, CellEncoding.PlainText),
+            JsonTokenType.Number => NumberToCellData(reader),
+            JsonTokenType.StartObject or JsonTokenType.StartArray => ObjectOrArrayToCellData(reader, containingBytes),
+            JsonTokenType.String => StringToCellData(reader),
             JsonTokenType.True => new CellData("true", CellPresence.Value, CellEncoding.Boolean),
             JsonTokenType.False => new CellData("false", CellPresence.Value, CellEncoding.Boolean),
             _ => new CellData([], CellPresence.Invalid),
         };
+    }
+
+    // Decoded into the pooled buffer shared across GetCellData calls (valid only until the
+    // next call). ValueSpan.Length is a safe char-count upper bound: multi-byte UTF-8 and
+    // JSON escapes both use more source bytes than the chars they resolve to.
+    private readonly CellData NumberToCellData(Utf8JsonReader reader)
+    {
+        var bytes = reader.ValueSpan;
+        var buffer = _valueBuffer.Reserve(bytes.Length);
+        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
+    }
+
+    private readonly CellData ObjectOrArrayToCellData(Utf8JsonReader reader, JsonRawBytes containingBytes)
+    {
+        var bytes = JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span;
+        var buffer = _valueBuffer.Reserve(bytes.Length);
+        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
+    }
+
+    private readonly CellData StringToCellData(Utf8JsonReader reader)
+    {
+        var buffer = _valueBuffer.Reserve(reader.ValueSpan.Length);
+        var charsWritten = reader.CopyString(buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.PlainText);
     }
 
     public void Dispose()
@@ -170,6 +192,9 @@ internal struct JsonLinesRecordReader : IRecordReader
 
         _rowReader?.Dispose();
         _rowReader = null;
+
+        _valueBuffer.Dispose();
+
         _disposed = true;
     }
 }
