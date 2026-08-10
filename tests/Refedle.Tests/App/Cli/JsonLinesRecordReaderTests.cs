@@ -266,6 +266,34 @@ public sealed partial class JsonLinesRecordReaderTests
         }
     }
 
+    [Fact]
+    public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, """{"value":1.50}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            var (inputSchema, outputSchema) = BuildSchemas();
+            var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            reader.Dispose();
+
+            // Act
+            Action act = () => reader.ThrowIfDisposed();
+
+            // Assert
+            var exception = act.Should().Throw<ObjectDisposedException>().Which;
+            exception.ObjectName.Should().Be(typeof(JsonLinesRecordReader).FullName);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas() =>
         BuildSchemas([ColumnName]);
 

@@ -46,7 +46,7 @@ internal struct CsvRecordReader : IRecordReader
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, typeof(CsvRecordReader));
     }
 
     public readonly bool EvaluateFilters()

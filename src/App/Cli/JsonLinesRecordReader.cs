@@ -82,7 +82,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, this);
+        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonLinesRecordReader));
     }
 
     public readonly bool EvaluateFilters()
