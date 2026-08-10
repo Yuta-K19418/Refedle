@@ -14,7 +14,6 @@ internal partial struct JsonLinesRecordReader
         private char[]? _buffer;
         private bool _disposed;
 
-        // Wired in Step 2 (ReadPropertyValue replacement); unused in this scaffold step.
         public char[] Reserve(int minimumLength)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);

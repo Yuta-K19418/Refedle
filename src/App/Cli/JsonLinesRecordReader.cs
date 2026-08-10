@@ -143,45 +143,45 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     // Split out to stay under the Sonar cyclomatic-complexity limit (S1541). Passed by value,
     // not by ref, so it owns a copy isolated from the caller's state (ref also fails to
     // compile: CS8168/CS8347); the resulting small, stack-only copy per call is an accepted cost.
-    private static CellData ReadPropertyValue(Utf8JsonReader reader, JsonRawBytes containingBytes)
+    private readonly CellData ReadPropertyValue(Utf8JsonReader reader, JsonRawBytes containingBytes)
     {
         return reader.TokenType switch
         {
             JsonTokenType.Null => new CellData([], CellPresence.Null),
-            JsonTokenType.Number =>
-                new CellData(Encoding.UTF8.GetString(reader.ValueSpan), CellPresence.Value, CellEncoding.Raw),
-            JsonTokenType.StartObject or JsonTokenType.StartArray =>
-                new CellData(
-                    Encoding.UTF8.GetString(JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span),
-                    CellPresence.Value,
-                    CellEncoding.Raw),
-            JsonTokenType.String =>
-                new CellData(reader.GetString(), CellPresence.Value, CellEncoding.PlainText),
+            JsonTokenType.Number => NumberToCellData(reader),
+            JsonTokenType.StartObject or JsonTokenType.StartArray => ObjectOrArrayToCellData(reader, containingBytes),
+            JsonTokenType.String => StringToCellData(reader),
             JsonTokenType.True => new CellData("true", CellPresence.Value, CellEncoding.Boolean),
             JsonTokenType.False => new CellData("false", CellPresence.Value, CellEncoding.Boolean),
             _ => new CellData([], CellPresence.Invalid),
         };
     }
 
-    // Step 2 scaffolds: defined now and wired into ReadPropertyValue's branches in Step 2
-    // (see docs/design_jsonlines_cell_value_zero_alloc.md). Left uncalled in Step 1 so the
-    // existing string-backed branches keep their behavior and existing tests do not regress.
-#pragma warning disable IDE0051 // Wired into ReadPropertyValue's branches in Step 2
+    // Decoded into the pooled buffer shared across GetCellData calls (valid only until the
+    // next call). ValueSpan.Length is a safe char-count upper bound: multi-byte UTF-8 and
+    // JSON escapes both use more source bytes than the chars they resolve to.
     private readonly CellData NumberToCellData(Utf8JsonReader reader)
     {
-        throw new NotImplementedException();
+        var bytes = reader.ValueSpan;
+        var buffer = _valueBuffer.Reserve(bytes.Length);
+        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
     }
 
     private readonly CellData ObjectOrArrayToCellData(Utf8JsonReader reader, JsonRawBytes containingBytes)
     {
-        throw new NotImplementedException();
+        var bytes = JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span;
+        var buffer = _valueBuffer.Reserve(bytes.Length);
+        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
     }
 
     private readonly CellData StringToCellData(Utf8JsonReader reader)
     {
-        throw new NotImplementedException();
+        var buffer = _valueBuffer.Reserve(reader.ValueSpan.Length);
+        var charsWritten = reader.CopyString(buffer);
+        return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.PlainText);
     }
-#pragma warning restore IDE0051
 
     public void Dispose()
     {
