@@ -6,9 +6,11 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Refedle.Generators;
 
+/// <summary>Generates dispatch code for record readers and writers.</summary>
 [Generator]
 public class FormatDispatcherGenerator : IIncrementalGenerator
 {
+    /// <summary>Initializes the incremental generation pipeline.</summary>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Collect all reader and writer declarations in a single pass
@@ -95,16 +97,16 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         if (arg is not null)
         {
             var formatValue = arg; // e.g. "DataFormat.Csv"
-            if (formatValue.StartsWith("DataFormat."))
+            if (formatValue.StartsWith("DataFormat.", StringComparison.Ordinal))
             {
                 formatValue = formatValue.Substring("DataFormat.".Length);
             }
 
             var createdType = ExtractCreatedType(typeDecl);
 
-            var declaredSymbol =
-                context.SemanticModel.GetDeclaredSymbol(typeDecl) as INamedTypeSymbol;
-            var typeName = declaredSymbol?.Name ?? string.Empty;
+            var typeName = context.SemanticModel.GetDeclaredSymbol(typeDecl) is INamedTypeSymbol declaredSymbol
+                ? declaredSymbol.Name
+                : string.Empty;
             var isReader = name.Contains("RecordReader");
 
             if (!string.IsNullOrEmpty(typeName) && !string.IsNullOrEmpty(createdType))

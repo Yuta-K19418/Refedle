@@ -7,7 +7,7 @@ namespace Refedle.Engine.IO.JsonObject;
 /// <summary>
 /// Scans a JSON Object file and extracts all top-level key-value pairs in a single pass.
 /// </summary>
-public sealed class TopLevelScanner
+public static class TopLevelScanner
 {
     private const int InitialBufferSize = 1024 * 1024; // 1 MB
     private const int MaxBufferSize = 16 * 1024 * 1024; // 16 MB

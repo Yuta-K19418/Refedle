@@ -7,7 +7,7 @@ namespace Refedle.Engine.Recipes;
 /// Constructs <see cref="MorphAction"/> instances from parsed field dictionaries.
 /// Field values are expected to be already unquoted.
 /// </summary>
-internal sealed class MorphActionParser
+internal static class MorphActionParser
 {
     /// <summary>
     /// Parses a field dictionary into a <see cref="MorphAction"/>.

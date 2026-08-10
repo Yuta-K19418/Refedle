@@ -12,20 +12,20 @@ public static class Results
     public static Result Success() => new(true, default);
 
     /// <summary>
-    /// Creates a failed result with an error message.
-    /// </summary>
-    /// <param name="error">The error message describing why the operation failed.</param>
-    /// <returns>A Result representing a failed operation.</returns>
-    /// <exception cref="ArgumentException">Thrown when error is null, empty, or whitespace.</exception>
-    public static Result Failure(string error) => new(false, new ErrorMessage(error));
-
-    /// <summary>
     /// Creates a successful result with a value.
     /// </summary>
     /// <typeparam name="T">The type of the value.</typeparam>
     /// <param name="value">The value returned by the successful operation.</param>
     /// <returns>A Result{T} representing a successful operation with a value.</returns>
     public static Result<T> Success<T>(T value) => new(true, value);
+
+    /// <summary>
+    /// Creates a failed result with an error message.
+    /// </summary>
+    /// <param name="error">The error message describing why the operation failed.</param>
+    /// <returns>A Result representing a failed operation.</returns>
+    /// <exception cref="ArgumentException">Thrown when error is null, empty, or whitespace.</exception>
+    public static Result Failure(string error) => new(false, new ErrorMessage(error));
 
     /// <summary>
     /// Creates a failed result with an error message.
