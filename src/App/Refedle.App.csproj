@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Refedle.Benchmarks" />
     <InternalsVisibleTo Include="Refedle.Tests" />
   </ItemGroup>
 

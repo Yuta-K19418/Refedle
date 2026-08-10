@@ -1,9 +1,11 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonLines;
 
-namespace Refedle.Tests.Engine.IO.JsonLines;
+namespace Refedle.Benchmarks.Engine.IO.JsonLines;
 
 [MemoryDiagnoser]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 public class RowIndexerBenchmarks
 {
     private readonly string _tempFilePath;

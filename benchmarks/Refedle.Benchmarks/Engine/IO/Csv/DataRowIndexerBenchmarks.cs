@@ -2,10 +2,10 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.Csv;
 
-namespace Refedle.Tests.Engine.IO.Csv;
+namespace Refedle.Benchmarks.Engine.IO.Csv;
 
-[SimpleJob(RuntimeMoniker.Net80)]
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
 [HideColumns("Error", "StdDev", "Median", "RatioSD")]
 public class DataRowIndexerBenchmarks : IDisposable

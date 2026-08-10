@@ -1,6 +1,6 @@
 <Project>
   <!-- Include solution-level GlobalUsings.cs -->
-  <ItemGroup Condition="'$(ProjectName)' != 'Refedle.Generators'">
+  <ItemGroup Condition="'$(ProjectName)' != 'Refedle.Generators' and '$(ProjectName)' != 'Refedle.Benchmarks'">
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" Link="GlobalUsings.cs" />
   </ItemGroup>
 </Project>

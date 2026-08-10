@@ -2,11 +2,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonArray;
 
-namespace Refedle.Tests.Engine.IO.JsonArray;
+namespace Refedle.Benchmarks.Engine.IO.JsonArray;
 
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
-public sealed class ElementByteCacheBenchmarks : IDisposable
+public class ElementByteCacheBenchmarks : IDisposable
 {
     private readonly string _tempFilePath1k;
     private readonly int _elementCount;

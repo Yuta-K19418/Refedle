@@ -2,11 +2,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonLines;
 
-namespace Refedle.Tests.Engine.IO.JsonLines;
+namespace Refedle.Benchmarks.Engine.IO.JsonLines;
 
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot80)]
-public sealed class RowByteCacheBenchmarks : IDisposable
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+public class RowByteCacheBenchmarks : IDisposable
 {
     private readonly string _testFilePath;
     private readonly RowIndexer _indexer;

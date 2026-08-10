@@ -2,11 +2,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonObject;
 
-namespace Refedle.Tests.Engine.IO.JsonObject;
+namespace Refedle.Benchmarks.Engine.IO.JsonObject;
 
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
-public sealed class TopLevelScannerBenchmarks
+public class TopLevelScannerBenchmarks
 {
     private const int KeyCount10 = 10;
     private const int KeyCount100 = 100;

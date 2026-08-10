@@ -2,10 +2,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO;
 
-namespace Refedle.Tests.Engine.IO;
+namespace Refedle.Benchmarks.Engine.IO;
 
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net80)]
+[SimpleJob(RuntimeMoniker.Net10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 public class MmapServiceBenchmarks : IDisposable
 {
     private readonly string _testFilePath;

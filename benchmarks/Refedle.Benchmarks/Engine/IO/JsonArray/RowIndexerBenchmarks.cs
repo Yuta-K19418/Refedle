@@ -2,11 +2,11 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonArray;
 
-namespace Refedle.Tests.Engine.IO.JsonArray;
+namespace Refedle.Benchmarks.Engine.IO.JsonArray;
 
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
-public sealed class RowIndexerBenchmarks : IDisposable
+public class RowIndexerBenchmarks : IDisposable
 {
     private const int ElementCount1k = 1_000;
     private const int ElementCount100k = 100_000;
