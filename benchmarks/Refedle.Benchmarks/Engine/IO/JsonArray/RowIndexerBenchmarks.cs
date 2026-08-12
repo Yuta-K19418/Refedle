@@ -2,11 +2,14 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.JsonArray;
 
-namespace Refedle.Tests.Engine.IO.JsonArray;
+namespace Refedle.Benchmarks.Engine.IO.JsonArray;
 
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+/// <summary>
+/// Benchmarks JSON array row indexing.
+/// </summary>
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
-public sealed class RowIndexerBenchmarks : IDisposable
+public class RowIndexerBenchmarks : IDisposable
 {
     private const int ElementCount1k = 1_000;
     private const int ElementCount100k = 100_000;
@@ -17,6 +20,9 @@ public sealed class RowIndexerBenchmarks : IDisposable
     private readonly string _tempFilePath1m;
     private readonly RowIndexer _prebuiltIndexer;
 
+    /// <summary>
+    /// Creates benchmark data.
+    /// </summary>
     public RowIndexerBenchmarks()
     {
         var id = Guid.NewGuid();
@@ -41,6 +47,9 @@ public sealed class RowIndexerBenchmarks : IDisposable
         _prebuiltIndexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes one thousand elements.
+    /// </summary>
     [Benchmark]
     public void BuildIndex_1kElements()
     {
@@ -48,6 +57,9 @@ public sealed class RowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes one hundred thousand elements.
+    /// </summary>
     [Benchmark]
     public void BuildIndex_100kElements()
     {
@@ -55,6 +67,9 @@ public sealed class RowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes one million elements.
+    /// </summary>
     [Benchmark]
     public void BuildIndex_1mElements()
     {
@@ -62,26 +77,53 @@ public sealed class RowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Gets the first checkpoint.
+    /// </summary>
     [Benchmark]
     public void GetCheckPoint_First()
     {
         _prebuiltIndexer.GetCheckPoint(0);
     }
 
+    /// <summary>
+    /// Gets the middle checkpoint.
+    /// </summary>
     [Benchmark]
     public void GetCheckPoint_Middle()
     {
         _prebuiltIndexer.GetCheckPoint(ElementCount1m / 2);
     }
 
+    /// <summary>
+    /// Gets the final checkpoint.
+    /// </summary>
     [Benchmark]
     public void GetCheckPoint_Last()
     {
         _prebuiltIndexer.GetCheckPoint(ElementCount1m - 1);
     }
 
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
+    /// <param name="disposing">Indicates whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         File.Delete(_tempFilePath1k);
         File.Delete(_tempFilePath100k);
         File.Delete(_tempFilePath1m);

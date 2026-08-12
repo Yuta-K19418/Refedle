@@ -6,7 +6,7 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
-namespace Refedle.Tests.App.Cli;
+namespace Refedle.Benchmarks.App.Cli;
 
 /// <summary>
 /// Benchmarks for JsonLinesRecordReader.GetCellData. Measures per-cell managed
@@ -14,8 +14,8 @@ namespace Refedle.Tests.App.Cli;
 /// zero allocation is the target once GetCellData is backed by a pooled buffer.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot80)]
-public sealed class JsonLinesRecordReaderBenchmarks
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+public class JsonLinesRecordReaderBenchmarks
 {
     private const string NumberColumn = "number";
     private const string StringColumn = "string";

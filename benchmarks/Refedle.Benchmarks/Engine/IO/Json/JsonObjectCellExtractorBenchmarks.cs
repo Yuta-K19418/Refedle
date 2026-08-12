@@ -2,7 +2,7 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.Json;
 
-namespace Refedle.Tests.Engine.IO.Json;
+namespace Refedle.Benchmarks.Engine.IO.Json;
 
 /// <summary>
 /// Benchmarks for JsonObjectJsonObjectCellExtractor.ExtractCell.
@@ -10,9 +10,12 @@ namespace Refedle.Tests.Engine.IO.Json;
 /// single-column extraction vs full-row extraction.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot80)]
-public sealed class JsonObjectCellExtractorBenchmarks
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+public class JsonObjectCellExtractorBenchmarks
 {
+    /// <summary>
+    /// Initializes encoded column names.
+    /// </summary>
     public JsonObjectCellExtractorBenchmarks()
     {
         _allColumns = [_columnId, _columnName, _columnAge, _columnActive, _columnScore];

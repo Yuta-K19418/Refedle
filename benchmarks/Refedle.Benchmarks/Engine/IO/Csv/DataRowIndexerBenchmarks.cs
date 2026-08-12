@@ -2,10 +2,13 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using Refedle.Engine.IO.Csv;
 
-namespace Refedle.Tests.Engine.IO.Csv;
+namespace Refedle.Benchmarks.Engine.IO.Csv;
 
-[SimpleJob(RuntimeMoniker.Net80)]
-[SimpleJob(RuntimeMoniker.NativeAot80)]
+/// <summary>
+/// Benchmarks CSV row indexing.
+/// </summary>
+[SimpleJob(RuntimeMoniker.Net10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
 [HideColumns("Error", "StdDev", "Median", "RatioSD")]
 public class DataRowIndexerBenchmarks : IDisposable
@@ -15,6 +18,9 @@ public class DataRowIndexerBenchmarks : IDisposable
     private readonly string _largeFilePath;
     private readonly string _complexFilePath;
 
+    /// <summary>
+    /// Creates benchmark files.
+    /// </summary>
     public DataRowIndexerBenchmarks()
     {
         // Small file: 1,000 rows (~50 KB)
@@ -68,6 +74,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         File.WriteAllLines(_complexFilePath, complexLines);
     }
 
+    /// <summary>
+    /// Indexes a small CSV file.
+    /// </summary>
     [Benchmark(Description = "Small CSV (1K rows, ~50KB)")]
     public void IndexSmallCsv()
     {
@@ -75,6 +84,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes a medium CSV file.
+    /// </summary>
     [Benchmark(Description = "Medium CSV (100K rows, ~5MB)")]
     public void IndexMediumCsv()
     {
@@ -82,6 +94,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes a large CSV file.
+    /// </summary>
     [Benchmark(Description = "Large CSV (1M rows, ~50MB)")]
     public void IndexLargeCsv()
     {
@@ -89,6 +104,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Indexes quoted CSV fields.
+    /// </summary>
     [Benchmark(Description = "Complex CSV with quoted fields (10K rows)")]
     public void IndexComplexCsvWithQuotedFields()
     {
@@ -96,6 +114,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Gets a checkpoint from a medium file.
+    /// </summary>
     [Benchmark(Description = "GetCheckPoint for row 50,000")]
     public void GetCheckpointMediumFile()
     {
@@ -104,6 +125,9 @@ public class DataRowIndexerBenchmarks : IDisposable
         _ = indexer.GetCheckPoint(50_000);
     }
 
+    /// <summary>
+    /// Gets a checkpoint from a large file.
+    /// </summary>
     [Benchmark(Description = "GetCheckPoint for row 500,000")]
     public void GetCheckpointLargeFile()
     {
@@ -112,8 +136,26 @@ public class DataRowIndexerBenchmarks : IDisposable
         _ = indexer.GetCheckPoint(500_000);
     }
 
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
+    /// <param name="disposing">Indicates whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         if (File.Exists(_smallFilePath))
         {
             File.Delete(_smallFilePath);
@@ -133,7 +175,5 @@ public class DataRowIndexerBenchmarks : IDisposable
         {
             File.Delete(_complexFilePath);
         }
-
-        GC.SuppressFinalize(this);
     }
 }
