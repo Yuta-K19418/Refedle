@@ -4,6 +4,9 @@ using Refedle.Engine.IO.JsonObject;
 
 namespace Refedle.Benchmarks.Engine.IO.JsonObject;
 
+/// <summary>
+/// Benchmarks top-level JSON object scanning.
+/// </summary>
 [SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
 public class TopLevelScannerBenchmarks
@@ -15,6 +18,9 @@ public class TopLevelScannerBenchmarks
     private string _tempFilePath100KeysSmall = string.Empty;
     private string _tempFilePath100KeysLarge = string.Empty;
 
+    /// <summary>
+    /// Creates benchmark data.
+    /// </summary>
     [GlobalSetup]
     public void GlobalSetup()
     {
@@ -37,6 +43,9 @@ public class TopLevelScannerBenchmarks
         WriteKeyValues(_tempFilePath100KeysLarge, KeyCount100, static i => GenerateNestedObject(i));
     }
 
+    /// <summary>
+    /// Deletes benchmark data.
+    /// </summary>
     [GlobalCleanup]
     public void GlobalCleanup()
     {
@@ -56,18 +65,27 @@ public class TopLevelScannerBenchmarks
         }
     }
 
+    /// <summary>
+    /// Scans ten keys with small values.
+    /// </summary>
     [Benchmark]
     public void Scan_10Keys_SmallValues()
     {
         TopLevelScanner.Scan(_tempFilePath10Keys);
     }
 
+    /// <summary>
+    /// Scans one hundred keys with small values.
+    /// </summary>
     [Benchmark]
     public void Scan_100Keys_SmallValues()
     {
         TopLevelScanner.Scan(_tempFilePath100KeysSmall);
     }
 
+    /// <summary>
+    /// Scans one hundred keys with large nested values.
+    /// </summary>
     [Benchmark]
     public void Scan_100Keys_LargeNestedValues()
     {

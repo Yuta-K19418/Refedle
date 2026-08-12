@@ -376,3 +376,14 @@ dotnet_diagnostic.CA1849.severity = none
 # Test code runs on the test context and doesn't need ConfigureAwait.
 # xUnit tests should not use ConfigureAwait(false) (xUnit1030).
 dotnet_diagnostic.CA2007.severity = none
+
+# Benchmark files
+[benchmarks/**/*.cs]
+
+# CA1707: Identifiers should not contain underscores
+# Benchmark names are part of the command-line filter surface.
+dotnet_diagnostic.CA1707.severity = none
+
+# CA5394: Do not use insecure randomness
+# Benchmark access patterns do not require cryptographic randomness.
+dotnet_diagnostic.CA5394.severity = none

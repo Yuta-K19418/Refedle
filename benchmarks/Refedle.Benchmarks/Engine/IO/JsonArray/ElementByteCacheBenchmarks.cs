@@ -4,6 +4,9 @@ using Refedle.Engine.IO.JsonArray;
 
 namespace Refedle.Benchmarks.Engine.IO.JsonArray;
 
+/// <summary>
+/// Benchmarks JSON array element caching.
+/// </summary>
 [SimpleJob(RuntimeMoniker.NativeAot10_0)]
 [MemoryDiagnoser]
 public class ElementByteCacheBenchmarks : IDisposable
@@ -12,6 +15,9 @@ public class ElementByteCacheBenchmarks : IDisposable
     private readonly int _elementCount;
     private readonly RowIndexer _indexer;
 
+    /// <summary>
+    /// Creates benchmark data.
+    /// </summary>
     public ElementByteCacheBenchmarks()
     {
         var id = Guid.NewGuid();
@@ -29,14 +35,35 @@ public class ElementByteCacheBenchmarks : IDisposable
         _indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
+    /// <param name="disposing">Indicates whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing)
+        {
+            return;
+        }
+
         if (File.Exists(_tempFilePath1k))
         {
             File.Delete(_tempFilePath1k);
         }
     }
 
+    /// <summary>
+    /// Reads elements sequentially.
+    /// </summary>
     [Benchmark]
     public void GetRow_SequentialAccess()
     {
@@ -54,6 +81,9 @@ public class ElementByteCacheBenchmarks : IDisposable
         _ = result.Length + _elementCount;
     }
 
+    /// <summary>
+    /// Reads elements in pseudo-random order.
+    /// </summary>
     [Benchmark]
     public void GetRow_RandomAccess()
     {

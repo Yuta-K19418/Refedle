@@ -4,6 +4,9 @@ using Refedle.Engine.IO.JsonLines;
 
 namespace Refedle.Benchmarks.Engine.IO.JsonLines;
 
+/// <summary>
+/// Benchmarks JSON Lines row caching.
+/// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.NativeAot10_0)]
 public class RowByteCacheBenchmarks : IDisposable
@@ -13,9 +16,15 @@ public class RowByteCacheBenchmarks : IDisposable
     private readonly Random _random = new(42); // Fixed seed for reproducibility
     private bool _disposed;
 
+    /// <summary>
+    /// Gets or sets the cache capacity.
+    /// </summary>
     [Params(100, 200, 500)]
     public int Capacity { get; set; }
 
+    /// <summary>
+    /// Creates benchmark data.
+    /// </summary>
     public RowByteCacheBenchmarks()
     {
         // Arrange - Create test data
@@ -34,6 +43,9 @@ public class RowByteCacheBenchmarks : IDisposable
         _indexer.BuildIndex();
     }
 
+    /// <summary>
+    /// Accesses random rows with an approximately fifty percent cache hit rate.
+    /// </summary>
     [Benchmark]
     public void Access_RandomPattern_CacheHit50()
     {
@@ -62,6 +74,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Accesses sequential rows with an approximately ninety percent cache hit rate.
+    /// </summary>
     [Benchmark]
     public void Access_SequentialPattern_CacheHit90()
     {
@@ -81,6 +96,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Repeatedly accesses one cached row.
+    /// </summary>
     [Benchmark]
     public void Access_RepeatedSameLine_CacheHit100()
     {
@@ -96,6 +114,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Accesses rows with the configured cache size.
+    /// </summary>
     [Benchmark]
     public void Access_VaryingCacheSizes()
     {
@@ -115,6 +136,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Accesses a ten-thousand-line file.
+    /// </summary>
     [Benchmark]
     public void Access_LargeFile_10kLines()
     {
@@ -131,6 +155,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Accesses a one-hundred-thousand-line file.
+    /// </summary>
     [Benchmark]
     public void Access_LargeFile_100kLines()
     {
@@ -165,6 +192,9 @@ public class RowByteCacheBenchmarks : IDisposable
         }
     }
 
+    /// <summary>
+    /// Initializes a cache for the first time.
+    /// </summary>
     [Benchmark]
     public void InitializeCache_FirstTime()
     {
@@ -178,6 +208,9 @@ public class RowByteCacheBenchmarks : IDisposable
         cache.Dispose();
     }
 
+    /// <summary>
+    /// Initializes a cache after disposal.
+    /// </summary>
     [Benchmark]
     public void InitializeCache_AfterDisposal()
     {
@@ -192,12 +225,28 @@ public class RowByteCacheBenchmarks : IDisposable
         cache2.Dispose();
     }
 
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
     public void Dispose()
     {
-        if (!_disposed)
-        {
-            File.Delete(_testFilePath);
-            _disposed = true;
-        }
+        Dispose(true);
+        GC.SuppressFinalize(this);
     }
+
+    /// <summary>
+    /// Releases benchmark resources.
+    /// </summary>
+    /// <param name="disposing">Indicates whether managed resources should be released.</param>
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposing || _disposed)
+        {
+            return;
+        }
+
+        File.Delete(_testFilePath);
+        _disposed = true;
+    }
+
 }
