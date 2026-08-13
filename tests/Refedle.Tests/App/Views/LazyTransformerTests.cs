@@ -603,12 +603,7 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Name", ColumnType.Text));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Name",
-                Operator = FilterOperator.Equals,
-                Value = "Alice",
-            },
+            FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
         ];
 
         // Act — rows 0 and 2 match "Alice"
@@ -636,12 +631,7 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Fruit", ColumnType.Text));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Fruit",
-                Operator = FilterOperator.Contains,
-                Value = "ap",
-            },
+            FilterAction.Create("Fruit", FilterOperator.Contains, ComparisonType.Text, "ap").Value,
         ];
 
         // Act — rows 0 ("apple") and 2 ("apricot") contain "ap"
@@ -673,18 +663,8 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Name",
-                Operator = FilterOperator.Equals,
-                Value = "Alice",
-            },
-            new FilterAction
-            {
-                ColumnName = "Age",
-                Operator = FilterOperator.Equals,
-                Value = "30",
-            },
+            FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
+            FilterAction.Create("Age", FilterOperator.Equals, ComparisonType.Text, "30").Value,
         ];
 
         // Act — only row 0 ("Alice", "30") matches both filters
@@ -710,12 +690,7 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Name", ColumnType.Text));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Name",
-                Operator = FilterOperator.Equals,
-                Value = "Charlie",
-            },
+            FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Charlie").Value,
         ];
 
         // Act — no rows match "Charlie"
@@ -744,12 +719,7 @@ public sealed class LazyTransformerTests
         IReadOnlyList<MorphAction> actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
-            new FilterAction
-            {
-                ColumnName = "FullName",
-                Operator = FilterOperator.Equals,
-                Value = "Alice",
-            },
+            FilterAction.Create("FullName", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
         ];
 
         // Act — only row 0 ("Alice") matches
@@ -776,12 +746,7 @@ public sealed class LazyTransformerTests
         [
             new DeleteColumnAction { ColumnName = "Status" },
             // Filter targets a deleted column — should be silently skipped, no rows excluded
-            new FilterAction
-            {
-                ColumnName = "Status",
-                Operator = FilterOperator.Equals,
-                Value = "active",
-            },
+            FilterAction.Create("Status", FilterOperator.Equals, ComparisonType.Text, "active").Value,
         ];
 
         // Act — the filter spec is skipped (Status column was deleted), so no FilterSpec
@@ -812,12 +777,7 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Score", ColumnType.WholeNumber));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Score",
-                Operator = FilterOperator.GreaterThan,
-                Value = "20",
-            },
+            FilterAction.Create("Score", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
 
         // Act — rows 1 (50) and 2 (30) are greater than 20
@@ -843,12 +803,7 @@ public sealed class LazyTransformerTests
         var schema = MakeSchema(("Word", ColumnType.Text));
         IReadOnlyList<MorphAction> actions =
         [
-            new FilterAction
-            {
-                ColumnName = "Word",
-                Operator = FilterOperator.GreaterThan,
-                Value = "hello",
-            },
+            FilterAction.Create("Word", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
 
         // Act — numeric operators on Text columns always return false, so no rows match

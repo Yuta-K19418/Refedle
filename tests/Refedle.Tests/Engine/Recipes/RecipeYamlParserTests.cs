@@ -114,6 +114,7 @@ public sealed class RecipeYamlParserTests
               - type: filter
                 columnName: "status"
                 operator: Equals
+                comparisonType: Text
                 value: "active"
             """;
 
@@ -621,7 +622,7 @@ public sealed class RecipeYamlParserTests
         var original = new Recipe
         {
             Name = "test",
-            Actions = [new FilterAction { ColumnName = "status", Operator = FilterOperator.Equals, Value = "active" }],
+            Actions = [FilterAction.Create("status", FilterOperator.Equals, ComparisonType.Text, "active").Value],
         };
 
         // Act
@@ -647,7 +648,7 @@ public sealed class RecipeYamlParserTests
                 new RenameColumnAction { OldName = "user_id", NewName = "userId" },
                 new DeleteColumnAction { ColumnName = "temp" },
                 new CastColumnAction { ColumnName = "age", TargetType = ColumnType.WholeNumber },
-                new FilterAction { ColumnName = "status", Operator = FilterOperator.Equals, Value = "active" },
+                FilterAction.Create("status", FilterOperator.Equals, ComparisonType.Text, "active").Value,
             ],
         };
 
@@ -738,23 +739,24 @@ public sealed class RecipeYamlParserTests
     }
 
     [Theory]
-    [InlineData(FilterOperator.Equals)]
-    [InlineData(FilterOperator.NotEquals)]
-    [InlineData(FilterOperator.GreaterThan)]
-    [InlineData(FilterOperator.LessThan)]
-    [InlineData(FilterOperator.GreaterThanOrEqual)]
-    [InlineData(FilterOperator.LessThanOrEqual)]
-    [InlineData(FilterOperator.Contains)]
-    [InlineData(FilterOperator.NotContains)]
-    [InlineData(FilterOperator.StartsWith)]
-    [InlineData(FilterOperator.EndsWith)]
-    public void RoundTrip_FilterAction_AllOperators_PreservesOperator(FilterOperator op)
+    [InlineData(FilterOperator.Equals, ComparisonType.Text, "v")]
+    [InlineData(FilterOperator.NotEquals, ComparisonType.Text, "v")]
+    [InlineData(FilterOperator.GreaterThan, ComparisonType.Number, "1")]
+    [InlineData(FilterOperator.LessThan, ComparisonType.Number, "1")]
+    [InlineData(FilterOperator.GreaterThanOrEqual, ComparisonType.Number, "1")]
+    [InlineData(FilterOperator.LessThanOrEqual, ComparisonType.Number, "1")]
+    [InlineData(FilterOperator.Contains, ComparisonType.Text, "v")]
+    [InlineData(FilterOperator.NotContains, ComparisonType.Text, "v")]
+    [InlineData(FilterOperator.StartsWith, ComparisonType.Text, "v")]
+    [InlineData(FilterOperator.EndsWith, ComparisonType.Text, "v")]
+    public void RoundTrip_FilterAction_AllOperators_PreservesOperator(
+        FilterOperator op, ComparisonType comparisonType, string value)
     {
         // Arrange
         var original = new Recipe
         {
             Name = "test",
-            Actions = [new FilterAction { ColumnName = "col", Operator = op, Value = "v" }],
+            Actions = [FilterAction.Create("col", op, comparisonType, value).Value],
         };
 
         // Act
@@ -764,6 +766,7 @@ public sealed class RecipeYamlParserTests
         result.IsSuccess.Should().BeTrue();
         var action = result.Value.Actions[0].Should().BeOfType<FilterAction>().Subject;
         action.Operator.Should().Be(op);
+        action.ComparisonType.Should().Be(comparisonType);
     }
 
     [Theory]

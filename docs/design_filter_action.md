@@ -228,7 +228,7 @@ if (key.KeyCode == (KeyCode.F | KeyCode.ShiftMask))
 1. Guard: `App`, `OnMorphAction`/`_onMorphAction`, `Table`, `SelectedColumn`
 2. **Guard: row indexer BuildIndex must be complete** — if still scanning, return early (no dialog).
 3. Open `FilterColumnDialog(columnName)`
-4. On confirm: invoke callback with `new FilterAction { ColumnName, Operator, Value }`
+4. On confirm: call `FilterAction.Create(ColumnName, Operator, ComparisonType, Value)`; the dialog already validated, so `IsFailure` here is unreachable — invoke the callback with `.Value`
 
 ### Why `Shift+F` is gated on BuildIndex completion
 

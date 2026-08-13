@@ -266,6 +266,7 @@ actions:
   - type: filter
     columnName: "age"
     operator: GreaterThan
+    comparisonType: Number
     value: "25"
 ```
 

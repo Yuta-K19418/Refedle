@@ -192,18 +192,19 @@ public sealed class MorphActionParserTests
     }
 
     [Theory]
-    [InlineData("Contains", FilterOperator.Contains)]
-    [InlineData("NotContains", FilterOperator.NotContains)]
-    [InlineData("StartsWith", FilterOperator.StartsWith)]
-    [InlineData("EndsWith", FilterOperator.EndsWith)]
-    [InlineData("Equals", FilterOperator.Equals)]
-    [InlineData("NotEquals", FilterOperator.NotEquals)]
-    [InlineData("GreaterThan", FilterOperator.GreaterThan)]
-    [InlineData("LessThan", FilterOperator.LessThan)]
-    [InlineData("contains", FilterOperator.Contains)]  // operator is case-insensitive
-    [InlineData("GreaterThanOrEqual", FilterOperator.GreaterThanOrEqual)]
-    [InlineData("LessThanOrEqual", FilterOperator.LessThanOrEqual)]
-    public void ParseAction_ValidFilterAction_ReturnsSuccess(string operatorStr, FilterOperator expectedOp)
+    [InlineData("Contains", FilterOperator.Contains, ComparisonType.Text)]
+    [InlineData("NotContains", FilterOperator.NotContains, ComparisonType.Text)]
+    [InlineData("StartsWith", FilterOperator.StartsWith, ComparisonType.Text)]
+    [InlineData("EndsWith", FilterOperator.EndsWith, ComparisonType.Text)]
+    [InlineData("Equals", FilterOperator.Equals, ComparisonType.Text)]
+    [InlineData("NotEquals", FilterOperator.NotEquals, ComparisonType.Text)]
+    [InlineData("GreaterThan", FilterOperator.GreaterThan, ComparisonType.Number)]
+    [InlineData("LessThan", FilterOperator.LessThan, ComparisonType.Number)]
+    [InlineData("contains", FilterOperator.Contains, ComparisonType.Text)]  // operator is case-insensitive
+    [InlineData("GreaterThanOrEqual", FilterOperator.GreaterThanOrEqual, ComparisonType.Number)]
+    [InlineData("LessThanOrEqual", FilterOperator.LessThanOrEqual, ComparisonType.Number)]
+    public void ParseAction_ValidFilterAction_ReturnsSuccess(
+        string operatorStr, FilterOperator expectedOp, ComparisonType comparisonType)
     {
         // Arrange
         var fields = new Dictionary<string, string>
@@ -211,6 +212,7 @@ public sealed class MorphActionParserTests
             { "type", "filter" },
             { "columnName", "Age" },
             { "operator", operatorStr },
+            { "comparisonType", comparisonType.ToString() },
             { "value", "30" },
         };
 
@@ -222,6 +224,7 @@ public sealed class MorphActionParserTests
         var action = result.Value.Should().BeOfType<FilterAction>().Subject;
         action.ColumnName.Should().Be("Age");
         action.Operator.Should().Be(expectedOp);
+        action.ComparisonType.Should().Be(comparisonType);
         action.Value.Should().Be("30");
     }
 
@@ -416,5 +419,149 @@ public sealed class MorphActionParserTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("targetFormat");
         result.Error.Should().Contain("empty");
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithMissingComparisonType_ReturnsFailure()
+    {
+        // Arrange
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "Equals" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("'comparisonType'");
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithInvalidComparisonType_ReturnsFailure()
+    {
+        // Arrange
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "Equals" },
+            { "comparisonType", "NotAType" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid enum value for comparisonType");
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithWrongCaseComparisonType_ReturnsFailure()
+    {
+        // Arrange — comparisonType is case-sensitive; "text" is not a valid value
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "Equals" },
+            { "comparisonType", "text" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid enum value for comparisonType");
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithInvalidOperatorCombination_ReturnsFailure()
+    {
+        // Arrange — Contains is not valid for a Number comparison type
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "Contains" },
+            { "comparisonType", "Number" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithUnparseableValue_ReturnsFailure()
+    {
+        // Arrange — GreaterThan/Number requires a parseable numeric value
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "GreaterThan" },
+            { "comparisonType", "Number" },
+            { "value", "abc" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithValidComparisonType_PreservesComparisonType()
+    {
+        // Arrange
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "GreaterThan" },
+            { "comparisonType", "Timestamp" },
+            { "value", "2025-01-01" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        var action = result.Value.Should().BeOfType<FilterAction>().Subject;
+        action.ComparisonType.Should().Be(ComparisonType.Timestamp);
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithNumericComparisonType_ReturnsFailure()
+    {
+        // Arrange — '999' parses as a number to an undefined ComparisonType value
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "filter" },
+            { "columnName", "Age" },
+            { "operator", "Equals" },
+            { "comparisonType", "999" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
     }
 }

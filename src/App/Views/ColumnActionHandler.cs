@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Refedle.App.Views.Dialogs;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
@@ -106,19 +107,21 @@ internal sealed class ColumnActionHandler(
         using var dialog = new FilterColumnDialog(displayName);
         app.Run(dialog);
 
-        if (!dialog.Confirmed || dialog.SelectedOperator is null || dialog.Value is null)
+        if (!dialog.Confirmed || dialog.SelectedOperator is null
+            || dialog.SelectedComparisonType is null || dialog.Value is null)
         {
             return true;
         }
 
-        onMorphAction(
-            new FilterAction
-            {
-                ColumnName = rawName,
-                Operator = dialog.SelectedOperator.Value,
-                Value = dialog.Value,
-            }
-        );
+        var action = FilterAction.Create(
+            rawName, dialog.SelectedOperator.Value, dialog.SelectedComparisonType.Value, dialog.Value);
+        if (action.IsFailure)
+        {
+            // The dialog already validated at confirm time, so reaching here is unreachable.
+            throw new UnreachableException(action.Error);
+        }
+
+        onMorphAction(action.Value);
         return true;
     }
 
