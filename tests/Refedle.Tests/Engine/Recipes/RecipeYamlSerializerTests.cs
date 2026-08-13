@@ -84,7 +84,7 @@ public sealed class RecipeYamlSerializerTests
         var recipe = new Recipe
         {
             Name = "test",
-            Actions = [new FilterAction { ColumnName = "status", Operator = FilterOperator.Equals, Value = "active" }],
+            Actions = [FilterAction.Create("status", FilterOperator.Equals, ComparisonType.Text, "active").Value],
         };
 
         // Act
@@ -94,6 +94,7 @@ public sealed class RecipeYamlSerializerTests
         yaml.Should().Contain("  - type: filter");
         yaml.Should().Contain("    columnName: \"status\"");
         yaml.Should().Contain("    operator: Equals");
+        yaml.Should().Contain("    comparisonType: Text");
         yaml.Should().Contain("    value: \"active\"");
     }
 

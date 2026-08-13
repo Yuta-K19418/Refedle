@@ -66,7 +66,7 @@ actions:
 | `RenameColumnAction` | `rename` | `oldName` (string), `newName` (string) |
 | `DeleteColumnAction` | `delete` | `columnName` (string) |
 | `CastColumnAction` | `cast` | `columnName` (string), `targetType` (ColumnType enum) |
-| `FilterAction` *(added after rebase)* | `filter` | `columnName` (string), `operator` (FilterOperator enum), `value` (string) |
+| `FilterAction` *(added after rebase)* | `filter` | `columnName` (string), `operator` (FilterOperator enum), `comparisonType` (ComparisonType enum), `value` (string) |
 
 ---
 

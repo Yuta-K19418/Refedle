@@ -119,12 +119,23 @@ internal static class MorphActionParser
             return Results.Failure<MorphAction>($"Invalid enum value for operator: '{operatorStr}'");
         }
 
-        return Results.Success<MorphAction>(new FilterAction
+        if (!fields.TryGetValue("comparisonType", out var comparisonTypeStr))
         {
-            ColumnName = columnName,
-            Operator = filterOperator,
-            Value = filterValue,
-        });
+            return Results.Failure<MorphAction>("Missing required field 'comparisonType' for filter action");
+        }
+
+        if (!Enum.TryParse<ComparisonType>(comparisonTypeStr, ignoreCase: false, out var comparisonType))
+        {
+            return Results.Failure<MorphAction>($"Invalid enum value for comparisonType: '{comparisonTypeStr}'");
+        }
+
+        var action = FilterAction.Create(columnName, filterOperator, comparisonType, filterValue);
+        if (action.IsFailure)
+        {
+            return Results.Failure<MorphAction>(action.Error);
+        }
+
+        return Results.Success<MorphAction>(action.Value);
     }
 
     private static Result<MorphAction> ParseFormatTimestampAction(Dictionary<string, string> fields)

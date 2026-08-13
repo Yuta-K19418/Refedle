@@ -67,6 +67,7 @@ internal static class RecipeYamlSerializer
                 sb.AppendLine("  - type: filter");
                 sb.Append("    columnName: ").AppendLine(QuoteString(filter.ColumnName));
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    operator: {filter.Operator}");
+                sb.AppendLine(CultureInfo.InvariantCulture, $"    comparisonType: {filter.ComparisonType}");
                 sb.Append("    value: ").AppendLine(QuoteString(filter.Value));
                 break;
             case FillColumnAction fill:

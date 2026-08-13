@@ -131,7 +131,7 @@ public sealed class ActionApplierTests
             Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
             SourceFormat = DataFormat.Csv,
         };
-        MorphAction[] actions = [new FilterAction { ColumnName = "A", Operator = FilterOperator.Equals, Value = "test" }];
+        MorphAction[] actions = [FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
@@ -154,7 +154,7 @@ public sealed class ActionApplierTests
             Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
             SourceFormat = DataFormat.Csv,
         };
-        MorphAction[] actions = [new FilterAction { ColumnName = "NonExistent", Operator = FilterOperator.Equals, Value = "test" }];
+        MorphAction[] actions = [FilterAction.Create("NonExistent", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
@@ -179,7 +179,7 @@ public sealed class ActionApplierTests
         MorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "B" },
-            new FilterAction { ColumnName = "B", Operator = FilterOperator.Equals, Value = "test" },
+            FilterAction.Create("B", FilterOperator.Equals, ComparisonType.Text, "test").Value,
         ];
 
         // Act
@@ -223,7 +223,7 @@ public sealed class ActionApplierTests
         MorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
-            new FilterAction { ColumnName = "A", Operator = FilterOperator.GreaterThan, Value = "10" },
+            FilterAction.Create("A", FilterOperator.GreaterThan, ComparisonType.Number, "10").Value,
         ];
 
         // Act
@@ -294,8 +294,8 @@ public sealed class ActionApplierTests
         };
         MorphAction[] actions =
         [
-            new FilterAction { ColumnName = "A", Operator = FilterOperator.Equals, Value = "value1" },
-            new FilterAction { ColumnName = "B", Operator = FilterOperator.Contains, Value = "value2" },
+            FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "value1").Value,
+            FilterAction.Create("B", FilterOperator.Contains, ComparisonType.Text, "value2").Value,
         ];
 
         // Act
@@ -397,7 +397,7 @@ public sealed class ActionApplierTests
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
             new RenameColumnAction { OldName = "A", NewName = "RenamedA" },
-            new FilterAction { ColumnName = "RenamedA", Operator = FilterOperator.GreaterThan, Value = "10" },
+            FilterAction.Create("RenamedA", FilterOperator.GreaterThan, ComparisonType.Number, "10").Value,
         ];
 
         // Act
