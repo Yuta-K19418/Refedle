@@ -81,7 +81,7 @@ public sealed class DataRowReader : IDisposable
         while (readCount < rowsToRead && reader.MoveNext())
         {
             var record = reader.Current;
-            rows.Add(ParseRow(record));
+            rows.Add(ParseRow(in record));
             readCount++;
         }
     }

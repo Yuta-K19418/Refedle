@@ -24,7 +24,7 @@ public sealed class RowReader : IDisposable
         if (!mmapResult.IsSuccess)
         {
             throw new InvalidOperationException(
-                $"Failed to open memory-mapped file: {mmapResult.Error.ToString()}"
+                $"Failed to open memory-mapped file: {mmapResult.Error}"
             );
         }
 

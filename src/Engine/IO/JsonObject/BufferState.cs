@@ -1,5 +1,6 @@
 namespace Refedle.Engine.IO.JsonObject;
 
+[System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Auto)]
 internal ref struct BufferState(long fileSize)
 {
     private readonly long _fileSize = fileSize;
