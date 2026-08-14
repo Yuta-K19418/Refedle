@@ -1,0 +1,63 @@
+is_global = true
+
+# Enabled performance rules
+# MA0008: Add StructLayoutAttribute to structs.
+dotnet_diagnostic.MA0008.severity = warning
+# MA0020: Prefer direct collection methods over LINQ.
+dotnet_diagnostic.MA0020.severity = warning
+# MA0023: Avoid unused regular expression captures.
+dotnet_diagnostic.MA0023.severity = warning
+# MA0028: Avoid intermediate strings in StringBuilder calls.
+dotnet_diagnostic.MA0028.severity = warning
+# MA0029: Combine compatible LINQ operations.
+dotnet_diagnostic.MA0029.severity = warning
+# MA0030: Remove redundant OrderBy calls.
+dotnet_diagnostic.MA0030.severity = warning
+# MA0031: Avoid unnecessary Enumerable.Count enumeration.
+dotnet_diagnostic.MA0031.severity = warning
+# MA0044: Remove redundant ToString calls.
+dotnet_diagnostic.MA0044.severity = warning
+# MA0052: Replace constant enum ToString calls with nameof.
+dotnet_diagnostic.MA0052.severity = warning
+# MA0063: Filter with Where before sorting.
+dotnet_diagnostic.MA0063.severity = warning
+# MA0065: Implement efficient equality for structs.
+dotnet_diagnostic.MA0065.severity = warning
+# MA0066: Avoid default struct equality in hash tables.
+dotnet_diagnostic.MA0066.severity = warning
+# MA0078: Use Cast instead of Select for casts.
+dotnet_diagnostic.MA0078.severity = warning
+# MA0089: Use char overloads for single-character string operations.
+dotnet_diagnostic.MA0089.severity = warning
+# MA0098: Use indexers instead of LINQ element access.
+dotnet_diagnostic.MA0098.severity = warning
+# MA0105: Use lambda parameters instead of closures.
+dotnet_diagnostic.MA0105.severity = warning
+# MA0106: Use factoryArgument overloads to avoid closures.
+dotnet_diagnostic.MA0106.severity = warning
+# MA0110: Use the Regex source generator.
+dotnet_diagnostic.MA0110.severity = warning
+# MA0111: Use string.Create instead of FormattableString.
+dotnet_diagnostic.MA0111.severity = warning
+# MA0112: Use Count > 0 instead of Any for collection emptiness.
+dotnet_diagnostic.MA0112.severity = warning
+# MA0144: Use OperatingSystem methods for OS checks.
+dotnet_diagnostic.MA0144.severity = warning
+# MA0152: Use Unwrap instead of awaiting nested tasks twice.
+dotnet_diagnostic.MA0152.severity = warning
+# MA0158: Use System.Threading.Lock for synchronization.
+dotnet_diagnostic.MA0158.severity = warning
+# MA0159: Use Order instead of identity OrderBy.
+dotnet_diagnostic.MA0159.severity = warning
+# MA0160: Use ContainsKey when dictionary values are unused.
+dotnet_diagnostic.MA0160.severity = warning
+# MA0168: Use readonly structs with in or ref readonly parameters.
+dotnet_diagnostic.MA0168.severity = warning
+# MA0179: Use Attribute.IsDefined for attribute existence checks.
+dotnet_diagnostic.MA0179.severity = warning
+# MA0185: Simplify invariant string.Create calls.
+dotnet_diagnostic.MA0185.severity = warning
+# MA0209: Explicitly use in for in parameters.
+dotnet_diagnostic.MA0209.severity = warning
+# MA0210: Explicitly select in overloads.
+dotnet_diagnostic.MA0210.severity = warning
