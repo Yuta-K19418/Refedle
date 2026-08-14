@@ -1,6 +1,5 @@
 using Refedle.App.Cli;
 using Refedle.Engine.Filtering;
-using CliFilterEvaluator = Refedle.App.Cli.FilterEvaluator;
 
 namespace Refedle.Tests.App.Cli;
 
@@ -65,7 +64,7 @@ public sealed partial class RecordProcessorTests
 
                 var valueSpan = currentRecord[filter.SourceColumnIndex].AsSpan();
 
-                if (!CliFilterEvaluator.EvaluateFilter(valueSpan, filter))
+                if (!FilterEvaluator.EvaluateFilter(valueSpan, filter))
                 {
                     return false;
                 }

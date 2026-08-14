@@ -1,8 +1,10 @@
 using AwesomeAssertions;
 using Refedle.App.Cli;
 using Refedle.Engine;
+using Refedle.Engine.Filtering;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Cli;
@@ -294,17 +296,166 @@ public sealed partial class JsonLinesRecordReaderTests
         }
     }
 
+    // JSON null extracts to the "<null>" sentinel, which the reader rejects.
+    [Fact]
+    public async Task EvaluateFilters_NullJsonValue_ReturnsFalse()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, """{"value":null}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "anything")];
+            var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var result = reader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    // A non-object line extracts to the "<error>" sentinel, which the reader rejects.
+    [Fact]
+    public async Task EvaluateFilters_MalformedJsonValue_ReturnsFalse()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, "not valid json");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "anything")];
+            var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var result = reader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    // A filter whose source column index is absent from the input schema is ignored, not rejected.
+    [Fact]
+    public async Task EvaluateFilters_FilterColumnAbsentFromInputSchema_IgnoresFilter()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, """{"value":1}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            FilterSpec[] filters = [new(9, ColumnType.Text, FilterOperator.Equals, "anything")];
+            var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var result = reader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeTrue();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, """{"value":"hello"}""");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "hello")];
+            var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            await reader.MoveNextAsync(default);
+
+            // Act
+            var result = reader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeTrue();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    // Leading empty and whitespace-only lines are skipped before the first JSON object,
+    // exercising StringUtility.IsWhiteSpace at its production call site.
+    [Fact]
+    public async Task MoveNextAsync_LeadingEmptyAndWhitespaceLines_SkipsToFirstObject()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllText(filePath, "\n \t\n{\"value\":1}\n");
+            var rowIndexer = new RowIndexer(filePath);
+            rowIndexer.BuildIndex();
+            using var rowReader = new RowReader(filePath);
+            var (inputSchema, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+
+            // Act
+            var hasObject = await reader.MoveNextAsync(default);
+
+            // Assert
+            hasObject.Should().BeTrue();
+            reader.GetCellData(0).Value.ToString().Should().Be("1");
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas() =>
         BuildSchemas([ColumnName]);
 
     private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas(IReadOnlyList<string> columnNames)
+        => BuildSchemas(columnNames, []);
+
+    private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas(
+        IReadOnlyList<string> columnNames,
+        IReadOnlyList<FilterSpec> filters)
     {
         var inputSchema = new TableSchema
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [.. columnNames.Select((name, index) => new ColumnSchema { Name = name, Type = ColumnType.Text, ColumnIndex = index })],
         };
-        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], []);
+        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
         return (inputSchema, outputSchema);
     }
 }

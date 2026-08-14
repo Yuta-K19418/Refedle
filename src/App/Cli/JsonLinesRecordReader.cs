@@ -1,9 +1,11 @@
 using System.Text;
 using System.Text.Json;
 using Refedle.Engine;
+using Refedle.Engine.Filtering;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.App.Cli;
 
@@ -12,7 +14,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     private readonly RowIndexer _rowIndexer;
     private readonly Memory<byte>[] _columnNameUtf8Bytes;
     private readonly Dictionary<int, ReadOnlyMemory<byte>> _filterIndexToNameBytes;
-    private readonly IReadOnlyList<Engine.Filtering.FilterSpec> _filters;
+    private readonly IReadOnlyList<FilterSpec> _filters;
     private RowReader? _rowReader;
     private long _batchStart;
     private IReadOnlyList<JsonRawBytes> _currentBatch;
@@ -56,7 +58,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
             if (_batchIndex < _currentBatch.Count)
             {
                 _currentLineBytes = _currentBatch[_batchIndex];
-                if (_currentLineBytes.IsEmpty || FilterEvaluator.IsWhiteSpace(_currentLineBytes.Span))
+                if (_currentLineBytes.IsEmpty || StringUtility.IsWhiteSpace(_currentLineBytes.Span))
                 {
                     continue;
                 }
@@ -88,7 +90,28 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     public readonly bool EvaluateFilters()
     {
         ThrowIfDisposed();
-        return FilterEvaluator.EvaluateJsonFilters(_currentLineBytes, _filters, _filterIndexToNameBytes);
+
+        foreach (var filter in _filters)
+        {
+            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out var sourceColNameBytes))
+            {
+                continue;
+            }
+
+            var value = JsonObjectCellExtractor.ExtractCell(_currentLineBytes.Span, sourceColNameBytes.Span);
+
+            if (value == "<null>" || value == "<error>")
+            {
+                return false;
+            }
+
+            if (!FilterEvaluator.EvaluateFilter(value.AsSpan(), filter))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public readonly CellData GetCellData(int outputColumnIndex)

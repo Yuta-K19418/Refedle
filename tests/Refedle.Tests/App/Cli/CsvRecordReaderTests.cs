@@ -2,6 +2,9 @@ using AwesomeAssertions;
 using nietras.SeparatedValues;
 using Refedle.App.Cli;
 using Refedle.Engine;
+using Refedle.Engine.Filtering;
+using Refedle.Engine.Models.Actions;
+using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Cli;
 
@@ -58,6 +61,81 @@ public sealed class CsvRecordReaderTests
             // Assert
             var exception = act.Should().Throw<ObjectDisposedException>().Which;
             exception.ObjectName.Should().Be(typeof(CsvRecordReader).FullName);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    private static BatchOutputSchema BuildOutputSchema(int filterColumnIndex, FilterOperator op, string value) =>
+        new([new BatchOutputColumn("value", "value")], [new FilterSpec(filterColumnIndex, ColumnType.Text, op, value)]);
+
+    [Fact]
+    public async Task EvaluateFilters_FilterColumnBeyondCurrentRowColCount_ReturnsFalse()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
+            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(5, FilterOperator.Equals, "hello"));
+            await recordReader.MoveNextAsync(default);
+
+            // Act
+            var result = recordReader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
+            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "hello"));
+            await recordReader.MoveNextAsync(default);
+
+            // Act
+            var result = recordReader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeTrue();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task EvaluateFilters_NonMatchingStringFilter_ReturnsFalse()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
+            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "world"));
+            await recordReader.MoveNextAsync(default);
+
+            // Act
+            var result = recordReader.EvaluateFilters();
+
+            // Assert
+            result.Should().BeFalse();
         }
         finally
         {
