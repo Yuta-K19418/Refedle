@@ -14,7 +14,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     private readonly RowIndexer _rowIndexer;
     private readonly Memory<byte>[] _columnNameUtf8Bytes;
     private readonly Dictionary<int, ReadOnlyMemory<byte>> _filterIndexToNameBytes;
-    private readonly IReadOnlyList<FilterSpec> _filters;
+    private readonly IReadOnlyList<BatchFilterSpec> _filters;
     private RowReader? _rowReader;
     private long _batchStart;
     private IReadOnlyList<JsonRawBytes> _currentBatch;

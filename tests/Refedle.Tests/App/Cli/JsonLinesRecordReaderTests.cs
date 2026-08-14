@@ -308,7 +308,7 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "anything")];
+            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
             var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
             await reader.MoveNextAsync(default);
@@ -337,7 +337,7 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "anything")];
+            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
             var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
             await reader.MoveNextAsync(default);
@@ -366,7 +366,7 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            FilterSpec[] filters = [new(9, ColumnType.Text, FilterOperator.Equals, "anything")];
+            BatchFilterSpec[] filters = [new(9, ComparisonType.Text, FilterOperator.Equals, "anything")];
             var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
             await reader.MoveNextAsync(default);
@@ -394,7 +394,7 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            FilterSpec[] filters = [new(0, ColumnType.Text, FilterOperator.Equals, "hello")];
+            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "hello")];
             var (inputSchema, outputSchema) = BuildSchemas([ColumnName], filters);
             using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
             await reader.MoveNextAsync(default);
@@ -448,7 +448,7 @@ public sealed partial class JsonLinesRecordReaderTests
 
     private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas(
         IReadOnlyList<string> columnNames,
-        IReadOnlyList<FilterSpec> filters)
+        IReadOnlyList<BatchFilterSpec> filters)
     {
         var inputSchema = new TableSchema
         {

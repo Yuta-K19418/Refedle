@@ -7,7 +7,7 @@ namespace Refedle.App.Cli;
 internal struct CsvRecordReader : IRecordReader
 {
     private readonly int[] _outputToSourceIndexMap;
-    private readonly IReadOnlyList<FilterSpec> _filters;
+    private readonly IReadOnlyList<BatchFilterSpec> _filters;
     private SepReader? _reader;
     private bool _disposed;
 

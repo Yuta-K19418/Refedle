@@ -42,7 +42,7 @@ public static class ActionApplier
             nameToWorkingIndex[workingColumns[i].Name] = i;
         }
 
-        List<FilterSpec> filterSpecs = [];
+        List<BatchFilterSpec> filterSpecs = [];
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex = [];
 
         foreach (var action in actions)
@@ -62,7 +62,7 @@ public static class ActionApplier
         MorphAction action,
         List<(string Name, ColumnType Type, int ColumnIndex, string OutputName)> workingColumns,
         Dictionary<string, int> nameToWorkingIndex,
-        List<FilterSpec> filterSpecs,
+        List<BatchFilterSpec> filterSpecs,
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex
     ) =>
         action switch
@@ -73,7 +73,7 @@ public static class ActionApplier
             FilterAction filter => ApplyFilter(filter, workingColumns, nameToWorkingIndex, filterSpecs),
             FillColumnAction fill => ApplyFill(fill, nameToWorkingIndex, transformsByWorkingIndex),
             FormatTimestampAction formatTimestamp
-                => ApplyFormatTimestamp(formatTimestamp, workingColumns, nameToWorkingIndex, transformsByWorkingIndex),
+                => ApplyFormatTimestamp(formatTimestamp, nameToWorkingIndex, transformsByWorkingIndex),
             _ => throw new UnreachableException($"Unhandled action type: {action.GetType().Name}"),
         };
 
@@ -121,7 +121,7 @@ public static class ActionApplier
         FilterAction filter,
         List<(string Name, ColumnType Type, int ColumnIndex, string OutputName)> workingColumns,
         Dictionary<string, int> nameToWorkingIndex,
-        List<FilterSpec> filterSpecs
+        List<BatchFilterSpec> filterSpecs
     )
     {
         if (!nameToWorkingIndex.TryGetValue(filter.ColumnName, out var idx))
@@ -129,11 +129,11 @@ public static class ActionApplier
             return Results.Success();
         }
 
-        var (_, type, columnIndex, _) = workingColumns[idx];
+        var (_, _, columnIndex, _) = workingColumns[idx];
         filterSpecs.Add(
-            new FilterSpec(
+            new BatchFilterSpec(
                 SourceColumnIndex: columnIndex,
-                ColumnType: type,
+                ComparisonType: filter.ComparisonType,
                 Operator: filter.Operator,
                 Value: filter.Value
             )
@@ -158,7 +158,6 @@ public static class ActionApplier
 
     private static Result ApplyFormatTimestamp(
         FormatTimestampAction formatTimestamp,
-        List<(string Name, ColumnType Type, int ColumnIndex, string OutputName)> workingColumns,
         Dictionary<string, int> nameToWorkingIndex,
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex
     )
@@ -166,13 +165,6 @@ public static class ActionApplier
         if (!nameToWorkingIndex.TryGetValue(formatTimestamp.ColumnName, out var idx))
         {
             return Results.Success();
-        }
-
-        var (_, type, _, _) = workingColumns[idx];
-        if (type != ColumnType.Timestamp)
-        {
-            return Results.Failure(
-                $"FormatTimestampAction requires column '{formatTimestamp.ColumnName}' to be of type Timestamp, but it is {type}.");
         }
 
         transformsByWorkingIndex[idx] = new TimestampFormatSpec(formatTimestamp.TargetFormat);

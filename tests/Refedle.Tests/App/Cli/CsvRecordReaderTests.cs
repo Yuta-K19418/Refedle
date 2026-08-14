@@ -4,7 +4,6 @@ using Refedle.App.Cli;
 using Refedle.Engine;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.Models.Actions;
-using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Cli;
 
@@ -69,7 +68,7 @@ public sealed class CsvRecordReaderTests
     }
 
     private static BatchOutputSchema BuildOutputSchema(int filterColumnIndex, FilterOperator op, string value) =>
-        new([new BatchOutputColumn("value", "value")], [new FilterSpec(filterColumnIndex, ColumnType.Text, op, value)]);
+        new([new BatchOutputColumn("value", "value")], [new BatchFilterSpec(filterColumnIndex, ComparisonType.Text, op, value)]);
 
     [Fact]
     public async Task EvaluateFilters_FilterColumnBeyondCurrentRowColCount_ReturnsFalse()
