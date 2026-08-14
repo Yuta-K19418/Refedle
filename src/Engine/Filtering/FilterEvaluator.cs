@@ -28,15 +28,19 @@ public static class FilterEvaluator
     /// <summary>
     /// Evaluates a CLI batch filter against a raw cell value, resolving the effective
     /// <see cref="ColumnType"/> from the actual per-row value rather than the schema scan.
-    /// Numeric comparison resolves to <see cref="ColumnType.WholeNumber"/> or
-    /// <see cref="ColumnType.FloatingPoint"/> depending on what the row value parses as.
+    /// Numeric comparison resolves to <see cref="ColumnType.WholeNumber"/> only when both the
+    /// row value and the threshold parse as whole numbers; otherwise it falls back to
+    /// <see cref="ColumnType.FloatingPoint"/> so a mixed integer/decimal pair still compares.
     /// </summary>
     public static bool EvaluateFilter(ReadOnlySpan<char> rawValue, BatchFilterSpec spec)
     {
         var resolvedColumnType = spec.ComparisonType switch
         {
             ComparisonType.Text => ColumnType.Text,
+            // WholeNumber only when both sides are integers; otherwise a decimal threshold
+            // (e.g. "40.5") would fail long parsing and wrongly exclude an integer row.
             ComparisonType.Number => TypeInferrer.TryParseWholeNumber(rawValue, out _)
+                && TypeInferrer.TryParseWholeNumber(spec.Value.AsSpan(), out _)
                 ? ColumnType.WholeNumber
                 : ColumnType.FloatingPoint,
             ComparisonType.Timestamp => ColumnType.Timestamp,

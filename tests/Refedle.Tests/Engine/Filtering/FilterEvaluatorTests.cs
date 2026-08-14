@@ -754,6 +754,24 @@ public sealed class FilterEvaluatorTests
         result.Should().Be(expected);
     }
 
+    [Fact]
+    public void EvaluateFilter_BatchNumber_WholeValueWithFractionalThreshold_UsesNumericComparison()
+    {
+        // Arrange — regression: an integer row value compared against a fractional threshold
+        // must still compare (as double), not fail by forcing the threshold into whole-number parsing.
+        var spec = new BatchFilterSpec(
+            SourceColumnIndex: 0,
+            ComparisonType: ComparisonType.Number,
+            Operator: FilterOperator.GreaterThan,
+            Value: "40.5");
+
+        // Act
+        var result = FilterEvaluator.EvaluateFilter("42".AsSpan(), spec);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
     [Theory]
     [InlineData("2024-06-01", true)]
     [InlineData("2023-01-01", false)]
