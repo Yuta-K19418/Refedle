@@ -29,7 +29,7 @@ public sealed class ElementReader : IDisposable
         if (mmapResult.IsFailure)
         {
             throw new InvalidOperationException(
-                $"Failed to open memory-mapped file: {mmapResult.Error.ToString()}"
+                $"Failed to open memory-mapped file: {mmapResult.Error}"
             );
         }
 

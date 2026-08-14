@@ -10,12 +10,17 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Meziantou.Analyzer" Version="3.0.151">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="Terminal.Gui" Version="2.4.17" />
     <PackageReference Include="Sep" Version="0.15.1" />
   </ItemGroup>
 
   <ItemGroup>
     <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)..\..\SonarAnalyzer.globalconfig" />
+    <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)..\..\MeziantouAnalyzer.globalconfig" />
   </ItemGroup>
 
   <ItemGroup>
