@@ -123,7 +123,7 @@ public sealed class ActionApplierTests
     }
 
     [Fact]
-    public void BuildOutputSchema_WithFilterAction_AddsFilterSpec()
+    public void BuildOutputSchema_WithFilterAction_AddsBatchFilterSpec()
     {
         // Arrange
         var schema = new TableSchema
@@ -140,7 +140,7 @@ public sealed class ActionApplierTests
         result.Columns.Should().HaveCount(1);
         result.Filters.Should().HaveCount(1);
         result.Filters[0].SourceColumnIndex.Should().Be(0);
-        result.Filters[0].ColumnType.Should().Be(ColumnType.Text);
+        result.Filters[0].ComparisonType.Should().Be(ComparisonType.Text);
         result.Filters[0].Operator.Should().Be(FilterOperator.Equals);
         result.Filters[0].Value.Should().Be("test");
     }
@@ -212,7 +212,7 @@ public sealed class ActionApplierTests
     }
 
     [Fact]
-    public void BuildOutputSchema_WithCastThenFilterOnSameColumn_UsesPostCastType()
+    public void BuildOutputSchema_WithCastThenFilterOnSameColumn_UsesComparisonTypeNotColumnType()
     {
         // Arrange
         var schema = new TableSchema
@@ -229,10 +229,10 @@ public sealed class ActionApplierTests
         // Act
         var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
 
-        // Assert
+        // Assert — the filter resolves from the action's ComparisonType, not the cast type.
         result.Filters.Should().HaveCount(1);
         result.Filters[0].SourceColumnIndex.Should().Be(0);
-        result.Filters[0].ColumnType.Should().Be(ColumnType.WholeNumber);
+        result.Filters[0].ComparisonType.Should().Be(ComparisonType.Number);
     }
 
     [Fact]
@@ -381,7 +381,7 @@ public sealed class ActionApplierTests
     }
 
     [Fact]
-    public void BuildOutputSchema_WithCastRenameThenFilter_UsesPostCastTypeAndRenamedName()
+    public void BuildOutputSchema_WithCastRenameThenFilter_ResolvesByRenamedNameAndComparisonType()
     {
         // Arrange
         var schema = new TableSchema
@@ -403,12 +403,12 @@ public sealed class ActionApplierTests
         // Act
         var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
 
-        // Assert
+        // Assert — the filter carries the action's ComparisonType and resolves by renamed name.
         result.Columns.Should().HaveCount(2);
         result.Columns[0].SourceName.Should().Be("A");
         result.Columns[0].OutputName.Should().Be("RenamedA");
         result.Filters.Should().HaveCount(1);
-        result.Filters[0].ColumnType.Should().Be(ColumnType.WholeNumber);
+        result.Filters[0].ComparisonType.Should().Be(ComparisonType.Number);
     }
 
     // -------------------------------------------------------------------------
@@ -610,9 +610,10 @@ public sealed class ActionApplierTests
     }
 
     [Fact]
-    public void BuildOutputSchema_WithFormatTimestampAction_OnTextColumn_ReturnsFailure()
+    public void BuildOutputSchema_WithFormatTimestampAction_OnNonTimestampColumn_AttachesTransform()
     {
-        // Arrange
+        // Arrange — the schema-time Timestamp gate is removed, so a non-Timestamp
+        // column now accepts the transform (per-row parsing happens at read time, unchanged).
         var schema = new TableSchema
         {
             Columns = [new ColumnSchema { Name = "Name", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
@@ -624,9 +625,9 @@ public sealed class ActionApplierTests
         var result = ActionApplier.BuildOutputSchema(schema, actions);
 
         // Assert
-        result.IsSuccess.Should().BeFalse();
-        result.Error.Should().Contain("Name");
-        result.Error.Should().Contain("Timestamp");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Columns[0].Transform.Should().BeOfType<TimestampFormatSpec>()
+            .Which.TargetFormat.Should().Be("yyyy/MM/dd");
     }
 
     [Fact]

@@ -26,4 +26,4 @@ public sealed record BatchOutputColumn(string SourceName, string OutputName, Cel
 /// </param>
 public sealed record BatchOutputSchema(
     IReadOnlyList<BatchOutputColumn> Columns,
-    IReadOnlyList<FilterSpec> Filters);
+    IReadOnlyList<BatchFilterSpec> Filters);

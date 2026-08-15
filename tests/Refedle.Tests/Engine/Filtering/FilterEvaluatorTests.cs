@@ -712,4 +712,82 @@ public sealed class FilterEvaluatorTests
         // Assert
         result.Should().BeFalse();
     }
+
+    // -------------------------------------------------------------------------
+    // BatchFilterSpec — CLI per-row type resolution (ComparisonType-based)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void EvaluateFilter_BatchText_Equals_MatchingValue_ReturnsTrue()
+    {
+        // Arrange
+        var spec = new BatchFilterSpec(
+            SourceColumnIndex: 0,
+            ComparisonType: ComparisonType.Text,
+            Operator: FilterOperator.Equals,
+            Value: "hello");
+
+        // Act
+        var result = FilterEvaluator.EvaluateFilter("hello".AsSpan(), spec);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("42", true)]    // whole number: 42 > 40
+    [InlineData("40.5", true)]  // floating point: 40.5 > 40 (would be excluded if forced to whole)
+    [InlineData("30", false)]   // whole number: 30 > 40 is false
+    public void EvaluateFilter_BatchNumber_ResolvesTypePerRow(string rawValue, bool expected)
+    {
+        // Arrange
+        var spec = new BatchFilterSpec(
+            SourceColumnIndex: 0,
+            ComparisonType: ComparisonType.Number,
+            Operator: FilterOperator.GreaterThan,
+            Value: "40");
+
+        // Act
+        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+
+        // Assert
+        result.Should().Be(expected);
+    }
+
+    [Fact]
+    public void EvaluateFilter_BatchNumber_WholeValueWithFractionalThreshold_UsesNumericComparison()
+    {
+        // Arrange — regression: an integer row value compared against a fractional threshold
+        // must still compare (as double), not fail by forcing the threshold into whole-number parsing.
+        var spec = new BatchFilterSpec(
+            SourceColumnIndex: 0,
+            ComparisonType: ComparisonType.Number,
+            Operator: FilterOperator.GreaterThan,
+            Value: "40.5");
+
+        // Act
+        var result = FilterEvaluator.EvaluateFilter("42".AsSpan(), spec);
+
+        // Assert
+        result.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("2024-06-01", true)]
+    [InlineData("2023-01-01", false)]
+    public void EvaluateFilter_BatchTimestamp_OrdersChronologically(string rawValue, bool expected)
+    {
+        // Arrange
+        var spec = new BatchFilterSpec(
+            SourceColumnIndex: 0,
+            ComparisonType: ComparisonType.Timestamp,
+            Operator: FilterOperator.GreaterThan,
+            Value: "2024-01-01");
+
+        // Act
+        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+
+        // Assert
+        result.Should().Be(expected);
+    }
 }

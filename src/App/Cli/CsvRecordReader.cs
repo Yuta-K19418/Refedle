@@ -7,7 +7,7 @@ namespace Refedle.App.Cli;
 internal struct CsvRecordReader : IRecordReader
 {
     private readonly int[] _outputToSourceIndexMap;
-    private readonly IReadOnlyList<FilterSpec> _filters;
+    private readonly IReadOnlyList<BatchFilterSpec> _filters;
     private SepReader? _reader;
     private bool _disposed;
 
@@ -57,7 +57,24 @@ internal struct CsvRecordReader : IRecordReader
             return false;
         }
 
-        return FilterEvaluator.EvaluateCsvFilters(_reader.Current, _filters);
+        // Current is stable for the lifetime of a row; cache it to avoid re-reading
+        // the property (and a defensive struct copy) once per filter on the hot path.
+        var current = _reader.Current;
+        foreach (var filter in _filters)
+        {
+            if (filter.SourceColumnIndex >= current.ColCount)
+            {
+                return false;
+            }
+
+            var valueSpan = current[filter.SourceColumnIndex].Span;
+            if (!FilterEvaluator.EvaluateFilter(valueSpan, filter))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public readonly CellData GetCellData(int outputColumnIndex)
