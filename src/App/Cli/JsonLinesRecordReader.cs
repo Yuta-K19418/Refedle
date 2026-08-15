@@ -4,7 +4,6 @@ using Refedle.Engine;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.IO.JsonLines;
-using Refedle.Engine.Models;
 using Refedle.Engine.Utilities;
 
 namespace Refedle.App.Cli;
@@ -23,7 +22,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     private bool _disposed;
     private readonly PooledValueBuffer _valueBuffer;
 
-    public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, TableSchema inputSchema, BatchOutputSchema outputSchema)
+    public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema)
     {
         _rowIndexer = rowIndexer;
         _rowReader = rowReader;
@@ -31,8 +30,11 @@ internal partial struct JsonLinesRecordReader : IRecordReader
         _columnNameUtf8Bytes = [.. outputSchema.Columns
             .Select(c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
 
-        _filterIndexToNameBytes = inputSchema.Columns
-            .ToDictionary(c => c.ColumnIndex, c => (ReadOnlyMemory<byte>)Encoding.UTF8.GetBytes(c.Name));
+        _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
+        for (var i = 0; i < inputColumnNames.Count; i++)
+        {
+            _filterIndexToNameBytes[i] = Encoding.UTF8.GetBytes(inputColumnNames[i]).AsMemory();
+        }
 
         _filters = outputSchema.Filters;
 

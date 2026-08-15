@@ -228,6 +228,8 @@ internal static class ColumnNameResolver
 
 `ResolveJsonLinesColumnNames` mirrors `IncrementalSchemaScannerBase.ExecuteBackgroundScan`'s loop shape (`RowIndexer.GetCheckPoint` + `RowReader.ReadLines` in batches of `BatchSize`), but walks the *entire* file in one synchronous pass instead of starting at row 200 and continuing in the background — this makes a column first appearing after row 200 structurally impossible to miss, rather than something handled as a special case.
 
+Zero-record JSON Lines input (an empty file, or a file containing only blank lines) resolves to an empty column list rather than failing: `ResolveJsonLinesColumnNames` returns before constructing `RowReader` when `rowIndexer.TotalRows == 0`, since `RowReader`'s underlying `MmapService.Open` rejects zero-byte files. An empty column list flows through unchanged — `BuildOutputSchema` produces an empty output schema, and CSV output writes a header-only file while JSON Lines output writes zero bytes.
+
 No `Task.Run`, no `async`/`ValueTask`: neither branch does genuine asynchronous I/O — `ColumnNameScanner.ScanColumnNames` uses `Sep`'s synchronous `FromFile` (not `FromFileAsync`), and `RowIndexer`/`RowReader` are mmap-backed and synchronous. Unlike `IRecordReaderFactory<TReader>.CreateAsync` (which returns `ValueTask<TReader>` because it's an interface shared with `CsvRecordReaderFactory`, whose implementation genuinely awaits `FromFileAsync`), `ColumnNameResolver` has no interface to conform to, so there's no structural reason to shape it as awaitable. A plain synchronous method is simpler and more honest about what it does.
 
 #### `Runner.cs` changes

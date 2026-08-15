@@ -12,14 +12,9 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithNoActions_ReturnsAllColumnsAndNoFilters()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, []).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], []).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -32,19 +27,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAction_UpdatesOutputName()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new RenameColumnAction { OldName = "A", NewName = "RenamedA" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -59,15 +45,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new RenameColumnAction { OldName = "NonExistent", NewName = "NewName" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -79,19 +60,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithDeleteAction_RemovesColumn()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -104,19 +76,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithDeleteAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new DeleteColumnAction { ColumnName = "NonExistent" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -126,15 +89,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterAction_AddsBatchFilterSpec()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -149,15 +107,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [FilterAction.Create("NonExistent", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Filters.Should().BeEmpty();
@@ -167,15 +120,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterOnDeletedColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "B" },
@@ -183,7 +127,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -194,15 +138,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastAction_DoesNotAffectColumnInclusion()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -215,11 +154,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastThenFilterOnSameColumn_UsesComparisonTypeNotColumnType()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -227,7 +161,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert — the filter resolves from the action's ComparisonType, not the cast type.
         result.Filters.Should().HaveCount(1);
@@ -239,20 +173,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_PreservesColumnOrder()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-                new ColumnSchema { Name = "C", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 2 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B", "C"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -264,15 +188,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new CastColumnAction { ColumnName = "NonExistent", TargetType = ColumnType.WholeNumber }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -283,15 +202,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithMultipleFilterActions_AddsAllFilterSpecs()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "value1").Value,
@@ -299,7 +209,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Filters.Should().HaveCount(2);
@@ -311,11 +221,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithChainedRenameActions_AppliesAllRenamesInOrder()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "B" },
@@ -323,7 +228,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -332,7 +237,7 @@ public sealed class ActionApplierTests
     }
 
     [Fact]
-    public void BuildOutputSchema_WithNullSchema_ThrowsArgumentNullException()
+    public void BuildOutputSchema_WithNullColumnNames_ThrowsArgumentNullException()
     {
         // Arrange
         MorphAction[] actions = [];
@@ -348,14 +253,9 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithNullActions_ThrowsArgumentNullException()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
 
         // Act
-        var act = () => ActionApplier.BuildOutputSchema(schema, null!);
+        var act = () => ActionApplier.BuildOutputSchema(["A"], null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -365,15 +265,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithAllColumnsDeleted_ReturnsEmptyColumnsAndNoFilters()
     {
         // Arrange — delete the only column; output schema should have no columns and no filters
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -384,15 +279,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastRenameThenFilter_ResolvesByRenamedNameAndComparisonType()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "B", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -401,7 +287,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert — the filter carries the action's ComparisonType and resolves by renamed name.
         result.Columns.Should().HaveCount(2);
@@ -419,15 +305,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_SingleColumn_AttachesTransformToColumn()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Email", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new FillColumnAction { ColumnName = "Email", Value = "REDACTED" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -441,15 +322,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new FillColumnAction { ColumnName = "NonExistent", Value = "FILL" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -460,16 +336,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithMultipleActions_IncludingFill_AppliesAllCorrectly()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns =
-            [
-                new ColumnSchema { Name = "Name", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 },
-                new ColumnSchema { Name = "Email", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 1 },
-                new ColumnSchema { Name = "Age", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 2 },
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
@@ -478,7 +344,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["Name", "Email", "Age"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -493,11 +359,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAndFill_FillTargetsRenamedColumn()
     {
         // Arrange — rename first, then fill using the new name; transform must be attached
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Email", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new RenameColumnAction { OldName = "Email", NewName = "EmailAddress" },
@@ -505,7 +366,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -518,11 +379,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithTwoFillsOnSameColumn_LastFillWins()
     {
         // Arrange — two consecutive fills on the same column; second value must win
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Status", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new FillColumnAction { ColumnName = "Status", Value = "FIRST" },
@@ -530,7 +386,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["Status"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -541,11 +397,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_OnDeletedColumn_SkipsSilently()
     {
         // Arrange — delete the column first; subsequent fill on the same (now removed) column is a no-op
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Email", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "Email" },
@@ -553,7 +404,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -564,11 +415,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillThenDelete_ColumnIsRemoved()
     {
         // Arrange — fill column, then delete it; column should not appear in output
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
@@ -576,7 +422,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions).Value;
+        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -591,15 +437,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnTimestampColumn_AttachesTransformToColumn()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "CreatedAt", Type = ColumnType.Timestamp, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions);
+        var result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -612,17 +453,12 @@ public sealed class ActionApplierTests
     [Fact]
     public void BuildOutputSchema_WithFormatTimestampAction_OnNonTimestampColumn_AttachesTransform()
     {
-        // Arrange — the schema-time Timestamp gate is removed, so a non-Timestamp
-        // column now accepts the transform (per-row parsing happens at read time, unchanged).
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Name", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
+        // Arrange — there is no schema-time Timestamp gate anymore, so any column
+        // accepts the transform (per-row parsing happens at read time, unchanged).
         MorphAction[] actions = [new FormatTimestampAction { ColumnName = "Name", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions);
+        var result = ActionApplier.BuildOutputSchema(["Name"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -634,15 +470,10 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "A", Type = ColumnType.Timestamp, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions = [new FormatTimestampAction { ColumnName = "NonExistent", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions);
+        var result = ActionApplier.BuildOutputSchema(["A"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -654,11 +485,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastToTimestampThenFormat_AppliesCorrectly()
     {
         // Arrange
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "Date", Type = ColumnType.Text, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "Date", TargetType = ColumnType.Timestamp },
@@ -666,7 +492,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions);
+        var result = ActionApplier.BuildOutputSchema(["Date"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -679,11 +505,6 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnDeletedColumn_SkipsSilently()
     {
         // Arrange — delete column first; subsequent format_timestamp on same (now removed) column is a no-op
-        var schema = new TableSchema
-        {
-            Columns = [new ColumnSchema { Name = "CreatedAt", Type = ColumnType.Timestamp, IsNullable = false, ColumnIndex = 0 }],
-            SourceFormat = DataFormat.Csv,
-        };
         MorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "CreatedAt" },
@@ -691,7 +512,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(schema, actions);
+        var result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

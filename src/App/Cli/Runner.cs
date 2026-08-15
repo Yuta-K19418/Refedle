@@ -1,6 +1,4 @@
-using Refedle.App.Schema.Csv;
 using Refedle.Engine;
-using Refedle.Engine.Models;
 using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
 
@@ -8,7 +6,7 @@ namespace Refedle.App.Cli;
 
 /// <summary>
 /// Orchestrates CLI headless batch processing pipeline:
-/// recipe load → schema detection → output schema build → transform → write.
+/// recipe load → column resolution → output schema build → transform → write.
 /// Supports CSV and JSON Lines for both input and output (cross-format conversion included).
 /// </summary>
 internal static class Runner
@@ -40,11 +38,11 @@ internal static class Runner
             var inputFormat = DetectFileFormat(args.InputFile);
             var outputFormat = DetectFileFormat(args.OutputFile);
 
-            // Scan schema
-            var inputSchema = await ScanInputSchemaAsync(args.InputFile, inputFormat).ConfigureAwait(false);
+            // Resolve the full input column name set (no type inference)
+            var columnNames = ColumnNameResolver.ResolveColumnNames(inputFormat, args.InputFile, ct);
 
             // Build output schema
-            var outputSchemaResult = ActionApplier.BuildOutputSchema(inputSchema, recipe.Actions);
+            var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
             if (outputSchemaResult.IsFailure)
             {
                 await logger.WriteErrorAsync($"Error building output schema: {outputSchemaResult.Error}");
@@ -55,7 +53,7 @@ internal static class Runner
 
             // Dispatch to generated static monomorphization logic
             return await Generated.FormatDispatcher.DispatchAsync(
-                inputFormat, outputFormat, args, inputSchema, outputSchema, logger, ct).ConfigureAwait(false);
+                inputFormat, outputFormat, args, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -72,17 +70,6 @@ internal static class Runner
             await logger.WriteErrorAsync($"Error: {ex.Message}");
             return ExitCode.Failure;
         }
-    }
-
-    private static async ValueTask<TableSchema> ScanInputSchemaAsync(string inputFile, DataFormat inputFormat)
-    {
-        if (inputFormat == DataFormat.Csv)
-        {
-            return await new IncrementalSchemaScanner(inputFile).InitialScanAsync().ConfigureAwait(false);
-        }
-
-        var jsonLinesScanner = new Refedle.App.Schema.JsonLines.IncrementalSchemaScanner(inputFile);
-        return await jsonLinesScanner.InitialScanAsync().ConfigureAwait(false);
     }
 
     private static DataFormat DetectFileFormat(string filePath)

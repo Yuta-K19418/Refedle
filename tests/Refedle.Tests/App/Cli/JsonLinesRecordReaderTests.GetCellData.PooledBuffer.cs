@@ -17,8 +17,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas(["number", "text"]);
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas(["number", "text"]);
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act — consume each cell immediately (the RecordProcessor pattern) so buffer
@@ -49,8 +49,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
 
             // Establish the initial 256-char buffer with the short first row.
             await reader.MoveNextAsync(default);
@@ -85,8 +85,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
@@ -115,8 +115,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
@@ -144,8 +144,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // The copy keeps its own _disposed=false but shares the reference-type buffer, so
@@ -177,8 +177,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Warm up so the one-time pooled-buffer Reserve happens before measurement.
@@ -213,8 +213,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
@@ -244,8 +244,8 @@ public sealed partial class JsonLinesRecordReaderTests
             var rowIndexer = new RowIndexer(filePath);
             rowIndexer.BuildIndex();
             using var rowReader = new RowReader(filePath);
-            var (inputSchema, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+            var (inputColumnNames, outputSchema) = BuildSchemas();
+            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
