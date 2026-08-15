@@ -307,6 +307,52 @@ public sealed partial class RunnerTests : IDisposable
         output.Should().Contain("Alice");
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithHeaderOnlyFile(string inputContent)
+    {
+        // Arrange — an empty file and a newline-only file are both zero-record input; both
+        // resolve to an empty column list and succeed (see design_cli_batch_column_resolution.md).
+        var inputFile = CreateTestFile("input.jsonl", inputContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().Be(Environment.NewLine);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    public async Task RunAsync_JsonLinesToJsonLines_WithZeroRecordInput_SucceedsWithEmptyOutput(string inputContent)
+    {
+        // Arrange — an empty file and a newline-only file are both zero-record input; both
+        // resolve to an empty column list and succeed (see design_cli_batch_column_resolution.md).
+        var inputFile = CreateTestFile("input.jsonl", inputContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.jsonl");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().BeEmpty();
+    }
+
     [Fact]
     public async Task RunAsync_WithNonExistentInputPath_ReturnsExitCode1()
     {

@@ -23,13 +23,17 @@ public static class PropertyNameScanner
         ArgumentNullException.ThrowIfNull(seen);
         ArgumentNullException.ThrowIfNull(order);
 
+        // One scratch list per batch, cleared per line, keeps the full-file scan allocation-light
+        // while names still merge only after a line parses completely (transactional per line).
+        List<string> lineNames = [];
         foreach (var line in rawLines)
         {
-            ScanLine(line.Span, seen, order);
+            lineNames.Clear();
+            ScanLine(line.Span, lineNames, seen, order);
         }
     }
 
-    private static void ScanLine(ReadOnlySpan<byte> line, HashSet<string> seen, IList<string> order)
+    private static void ScanLine(ReadOnlySpan<byte> line, List<string> lineNames, HashSet<string> seen, IList<string> order)
     {
         try
         {
@@ -39,14 +43,20 @@ public static class PropertyNameScanner
                 return;
             }
 
-            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            while (reader.Read())
             {
+                if (reader.TokenType == JsonTokenType.EndObject)
+                {
+                    MergeNamesIfEndOfLine(ref reader, lineNames, seen, order);
+                    return;
+                }
+
                 if (reader.TokenType != JsonTokenType.PropertyName)
                 {
                     continue;
                 }
 
-                ScanProperty(ref reader, seen, order);
+                ScanProperty(ref reader, lineNames);
             }
         }
         catch (JsonException)
@@ -55,15 +65,25 @@ public static class PropertyNameScanner
         }
     }
 
-    // Reads one "key": value pair (reader positioned at PropertyName) and registers the key
-    // in first-seen order; nested object/array values are skipped whole.
-    private static void ScanProperty(ref Utf8JsonReader reader, HashSet<string> seen, IList<string> order)
+    // A line holds exactly one object: only whitespace may follow its closing brace. Read()
+    // skips whitespace, so false means a clean end of line; another token (true) or a
+    // JsonException marks invalid trailing content and leaves the line's names unmerged.
+    private static void MergeNamesIfEndOfLine(ref Utf8JsonReader reader, List<string> lineNames, HashSet<string> seen, IList<string> order)
+    {
+        if (reader.Read())
+        {
+            return;
+        }
+
+        MergeLineNames(lineNames, seen, order);
+    }
+
+    // Reads one "key": value pair (reader positioned at PropertyName); nested object/array
+    // values are skipped whole.
+    private static void ScanProperty(ref Utf8JsonReader reader, List<string> lineNames)
     {
         var propertyName = reader.GetString() ?? throw new UnreachableException("GetString() returned null on a PropertyName token.");
-        if (seen.Add(propertyName))
-        {
-            order.Add(propertyName);
-        }
+        lineNames.Add(propertyName);
 
         if (!reader.Read())
         {
@@ -73,6 +93,17 @@ public static class PropertyNameScanner
         if (reader.TokenType is JsonTokenType.StartObject or JsonTokenType.StartArray)
         {
             reader.Skip();
+        }
+    }
+
+    private static void MergeLineNames(List<string> lineNames, HashSet<string> seen, IList<string> order)
+    {
+        foreach (var name in lineNames)
+        {
+            if (seen.Add(name))
+            {
+                order.Add(name);
+            }
         }
     }
 }

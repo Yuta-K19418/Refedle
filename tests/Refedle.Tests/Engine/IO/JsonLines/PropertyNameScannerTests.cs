@@ -102,6 +102,69 @@ public sealed class PropertyNameScannerTests
     }
 
     [Theory]
+    [InlineData("""{"a":1,"b":2""")]      // ends after a complete value, object never closed
+    [InlineData("""{"a":1,"b":""")]       // breaks mid-value after "b"
+    [InlineData("""{"a":1,"b":2,"c""")]   // key truncated after two valid properties
+    public void ScanPropertyNames_WithLineMalformedAfterValidProperties_DoesNotKeepPartialNames(string malformedLine)
+    {
+        // Arrange — "a"/"b" parse before the line breaks; a fully valid line follows it.
+        HashSet<string> seen = [];
+        List<string> order = [];
+        List<JsonRawBytes> lines =
+        [
+            Encoding.UTF8.GetBytes(malformedLine),
+            Encoding.UTF8.GetBytes("""{"c":3}"""),
+        ];
+
+        // Act
+        PropertyNameScanner.ScanPropertyNames(lines, seen, order);
+
+        // Assert — nothing from the malformed line survives; only "c" is registered.
+        order.Should().Equal(["c"]);
+        seen.Should().HaveCount(1);
+    }
+
+    [Theory]
+    [InlineData("""{"a":1} trailing""")]
+    [InlineData("""{"a":1}{"b":2}""")]
+    public void ScanPropertyNames_WithInvalidSuffixAfterObject_DoesNotKeepNames(string malformedLine)
+    {
+        // Arrange — the object itself is complete, but non-whitespace content follows it.
+        HashSet<string> seen = [];
+        List<string> order = [];
+        List<JsonRawBytes> lines =
+        [
+            Encoding.UTF8.GetBytes(malformedLine),
+            Encoding.UTF8.GetBytes("""{"c":3}"""),
+        ];
+
+        // Act
+        PropertyNameScanner.ScanPropertyNames(lines, seen, order);
+
+        // Assert
+        order.Should().Equal(["c"]);
+        seen.Should().Equal(["c"]);
+    }
+
+    [Theory]
+    [InlineData("""{"a":1}   """)]
+    [InlineData("{\"a\":1}\t")]
+    public void ScanPropertyNames_WithTrailingWhitespaceAfterObject_KeepsNames(string line)
+    {
+        // Arrange — whitespace after the closing brace is legal and must not discard the line.
+        HashSet<string> seen = [];
+        List<string> order = [];
+        List<JsonRawBytes> lines = [Encoding.UTF8.GetBytes(line)];
+
+        // Act
+        PropertyNameScanner.ScanPropertyNames(lines, seen, order);
+
+        // Assert
+        order.Should().Equal(["a"]);
+        seen.Should().Equal(["a"]);
+    }
+
+    [Theory]
     [InlineData("[1,2,3]")]
     [InlineData("42")]
     [InlineData("\"hello\"")]

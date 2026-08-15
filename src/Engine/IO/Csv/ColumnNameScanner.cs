@@ -11,11 +11,20 @@ public static class ColumnNameScanner
 {
     /// <summary>
     /// Reads the header row and returns the resolved column names in order. Blank header
-    /// cells are auto-named <c>ColumnN</c>; duplicate names (explicit or auto-named) throw.
+    /// cells are auto-named <c>ColumnN</c>. Exact duplicate header names are rejected by the
+    /// underlying Sep reader; this method's own uniqueness check covers the remaining case,
+    /// where an auto-named blank cell collides with an explicit header name.
     /// </summary>
     /// <param name="filePath">Path to the CSV file.</param>
     /// <returns>The ordered column names.</returns>
-    /// <exception cref="InvalidOperationException">Thrown when a duplicate column name is found.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown by the underlying Sep reader (at open time) when the header contains exact
+    /// duplicate column names.
+    /// </exception>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when an auto-named blank cell (<c>ColumnN</c>) collides with another resolved
+    /// column name.
+    /// </exception>
     public static IReadOnlyList<string> ScanColumnNames(string filePath)
     {
         ArgumentNullException.ThrowIfNull(filePath);
