@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Refedle.Engine.IO.Json;
 using Terminal.Gui.Views;
@@ -90,7 +91,7 @@ internal sealed class JsonArrayTreeNode : TreeNode
 
             var elementNode = JsonTreeNodeHelper.CreateChildNode(
                 ref reader,
-                $"[{elementIndex}]",
+                string.Create(CultureInfo.InvariantCulture, $"[{elementIndex}]"),
                 _rawJson,
                 RecordPosition,
                 this

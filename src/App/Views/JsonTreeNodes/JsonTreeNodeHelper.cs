@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Refedle.Engine.IO.Json;
 using Terminal.Gui.Views;
@@ -116,7 +117,7 @@ internal static class JsonTreeNodeHelper
     {
         if (reader.TryGetDecimal(out var decimalValue))
         {
-            return new JsonValueTreeNode($"{label}: {decimalValue}")
+            return new JsonValueTreeNode(string.Create(CultureInfo.InvariantCulture, $"{label}: {decimalValue}"))
             {
                 ValueKind = JsonValueKind.Number,
                 KeyName = label,
@@ -125,7 +126,7 @@ internal static class JsonTreeNodeHelper
         }
 
         var doubleValue = reader.GetDouble();
-        return new JsonValueTreeNode($"{label}: {doubleValue}")
+        return new JsonValueTreeNode(string.Create(CultureInfo.InvariantCulture, $"{label}: {doubleValue}"))
         {
             ValueKind = JsonValueKind.Number,
             KeyName = label,

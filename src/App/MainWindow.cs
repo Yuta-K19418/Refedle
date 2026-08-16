@@ -1,3 +1,4 @@
+using System.Globalization;
 using Refedle.Engine.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
@@ -207,9 +208,9 @@ internal sealed class MainWindow : Window
 
         var fraction = (float)bytesRead / fileSize;
         _progressBar.Fraction = fraction;
-        _progressLabel.Text =
-            $"Indexing… {fraction * 100:F0}%  " +
-            $"({FormatBytes(bytesRead)} / {FormatBytes(fileSize)})";
+        _progressLabel.Text = string.Create(
+            CultureInfo.InvariantCulture,
+            $"Indexing… {fraction * 100:F0}%  ({FormatBytes(bytesRead)} / {FormatBytes(fileSize)})");
     }
 
     private void DismissIndexingProgress()
@@ -237,10 +238,10 @@ internal sealed class MainWindow : Window
 
         return bytes switch
         {
-            >= GB => $"{bytes / (double)GB:F2} GB",
-            >= MB => $"{bytes / (double)MB:F2} MB",
-            >= KB => $"{bytes / (double)KB:F2} KB",
-            _ => $"{bytes} B",
+            >= GB => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)GB:F2} GB"),
+            >= MB => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)MB:F2} MB"),
+            >= KB => string.Create(CultureInfo.InvariantCulture, $"{bytes / (double)KB:F2} KB"),
+            _ => string.Create(CultureInfo.InvariantCulture, $"{bytes} B"),
         };
     }
 

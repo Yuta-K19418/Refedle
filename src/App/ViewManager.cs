@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using Refedle.App.Views;
 using Refedle.Engine.IO;
@@ -130,7 +131,7 @@ internal sealed class ViewManager : IDisposable
 
         _itemCountLabel = new Label
         {
-            Text = $"{_state.RowIndexer.TotalRows} items",
+            Text = string.Create(CultureInfo.InvariantCulture, $"{_state.RowIndexer.TotalRows} items"),
             // AnchorEnd places the right edge at the container boundary; subtract 1 to keep a margin
             X = Pos.AnchorEnd() - 1,
             // Place on the same row as the StatusBar (bottom line of the container)
