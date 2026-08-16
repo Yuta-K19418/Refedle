@@ -310,7 +310,7 @@ public sealed partial class RunnerTests : IDisposable
     [Theory]
     [InlineData("")]
     [InlineData("\n")]
-    public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithHeaderOnlyFile(string inputContent)
+    public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithBlankLine(string inputContent)
     {
         // Arrange — an empty file and a newline-only file are both zero-record input; both
         // resolve to an empty column list and succeed.
