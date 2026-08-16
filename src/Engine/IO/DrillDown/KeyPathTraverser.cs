@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.Types;
@@ -178,7 +179,11 @@ internal static class KeyPathTraverser
 
             var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
             var remainder = arrayBytes.Slice((int)reader.BytesConsumed);
-            var next = TraversalFrame.Descend(elementBytes, segmentIndex + 1, $"{posHash}:{elementIndex}");
+            var next = TraversalFrame.Descend(
+                elementBytes,
+                segmentIndex + 1,
+                string.Create(CultureInfo.InvariantCulture, $"{posHash}:{elementIndex}")
+            );
             var deferred = new TraversalFrame(
                 FrameKind.ContinueArray, remainder, segmentIndex, elementIndex + 1, posHash, reader.CurrentState);
             return (next, deferred);
