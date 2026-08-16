@@ -65,15 +65,11 @@ public static class PropertyNameScanner
     }
 
     // A line holds exactly one object: only whitespace may follow its closing brace. Read()
-    // skips whitespace, so false means a clean end of line; another token (true) or a
-    // JsonException marks invalid trailing content and leaves the line's names unmerged.
+    // throws JsonException if anything else follows (it never returns another token here),
+    // propagating to ScanLine's catch and leaving this line's names unmerged.
     private static void MergeNamesIfEndOfLine(ref Utf8JsonReader reader, List<string> lineNames, ISet<string> seen, IList<string> order)
     {
-        if (reader.Read())
-        {
-            return;
-        }
-
+        reader.Read();
         MergeLineNames(lineNames, seen, order);
     }
 
