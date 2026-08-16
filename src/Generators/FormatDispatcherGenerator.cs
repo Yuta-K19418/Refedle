@@ -169,7 +169,6 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Threading;");
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using Refedle.Engine;");
-        sb.AppendLine("using Refedle.Engine.Models;");
         sb.AppendLine("using Refedle.Engine.Types;");
         sb.AppendLine("using Refedle.App.Cli;");
         sb.AppendLine("using Refedle.App.Cli.Factories;");
@@ -182,7 +181,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("        DataFormat inputFormat,");
         sb.AppendLine("        DataFormat outputFormat,");
         sb.AppendLine("        Arguments args,");
-        sb.AppendLine("        TableSchema inputSchema,");
+        sb.AppendLine("        IReadOnlyList<string> inputColumnNames,");
         sb.AppendLine("        BatchOutputSchema outputSchema,");
         sb.AppendLine("        IAppLogger logger,");
         sb.AppendLine("        CancellationToken ct)");
@@ -198,7 +197,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
                     $"            (DataFormat.{reader.FormatName}, DataFormat.{writer.FormatName}) =>"
                 );
                 sb.AppendLine(
-                    $"                await Run{reader.FormatName}To{writer.FormatName}Async(args, inputSchema, outputSchema, logger, ct),"
+                    $"                await Run{reader.FormatName}To{writer.FormatName}Async(args, inputColumnNames, outputSchema, logger, ct),"
                 );
             }
         }
@@ -218,7 +217,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
                     $"    private static async ValueTask<ExitCode> Run{reader.FormatName}To{writer.FormatName}Async("
                 );
                 sb.AppendLine("        Arguments args,");
-                sb.AppendLine("        TableSchema inputSchema,");
+                sb.AppendLine("        IReadOnlyList<string> inputColumnNames,");
                 sb.AppendLine("        BatchOutputSchema outputSchema,");
                 sb.AppendLine("        IAppLogger logger,");
                 sb.AppendLine("        CancellationToken ct)");
@@ -226,7 +225,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
 
                 sb.AppendLine($"        var readerFactory = new {reader.FactoryTypeName}();");
                 sb.AppendLine(
-                    $"        using var reader = await readerFactory.CreateAsync(args, inputSchema, outputSchema, logger, ct).ConfigureAwait(false);"
+                    $"        using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);"
                 );
 
                 sb.AppendLine($"        var writerFactory = new {writer.FactoryTypeName}();");

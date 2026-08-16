@@ -263,6 +263,29 @@ public sealed partial class RunnerTests : IDisposable
     }
 
     [Fact]
+    public async Task RunAsync_JsonLinesToCsv_WithColumnFirstAppearingAfterRow200_IncludesColumnInOutput()
+    {
+        // Arrange — "extra" first appears at row 201, beyond the old 200-row initial-scan cap,
+        // so the full-file column resolution is what surfaces it in the CSV header.
+        var lines = Enumerable.Range(0, 200).Select(_ => """{"name":"x"}""").Append("""{"name":"x","extra":"late"}""");
+        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().StartWith("name,extra");
+        output.Should().Contain("late");
+    }
+
+    [Fact]
     public async Task RunAsync_JsonLinesToCsv_CrossFormat_WritesExpectedOutput()
     {
         // Arrange
@@ -282,6 +305,52 @@ public sealed partial class RunnerTests : IDisposable
         var output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("name,age");
         output.Should().Contain("Alice");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithBlankLine(string inputContent)
+    {
+        // Arrange — an empty file and a newline-only file are both zero-record input; both
+        // resolve to an empty column list and succeed.
+        var inputFile = CreateTestFile("input.jsonl", inputContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().Be(Environment.NewLine);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    public async Task RunAsync_JsonLinesToJsonLines_WithZeroRecordInput_SucceedsWithEmptyOutput(string inputContent)
+    {
+        // Arrange — an empty file and a newline-only file are both zero-record input; both
+        // resolve to an empty column list and succeed.
+        var inputFile = CreateTestFile("input.jsonl", inputContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.jsonl");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().BeEmpty();
     }
 
     [Fact]

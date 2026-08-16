@@ -3,8 +3,6 @@ using BenchmarkDotNet.Jobs;
 using Refedle.App.Cli;
 using Refedle.Engine;
 using Refedle.Engine.IO.JsonLines;
-using Refedle.Engine.Models;
-using Refedle.Engine.Types;
 
 namespace Refedle.Benchmarks.App.Cli;
 
@@ -46,8 +44,8 @@ public class JsonLinesRecordReaderBenchmarks
         var rowIndexer = new RowIndexer(_tempFilePath);
         rowIndexer.BuildIndex();
         var rowReader = new RowReader(_tempFilePath);
-        var (inputSchema, outputSchema) = BuildSchemas();
-        _reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputSchema, outputSchema);
+        var (inputColumnNames, outputSchema) = BuildSchemas();
+        _reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
         _ = _reader.MoveNextAsync(default).AsTask().GetAwaiter().GetResult();
 
         // Warm up each branch in Setup so the measured Allocated excludes first-call
@@ -95,19 +93,9 @@ public class JsonLinesRecordReaderBenchmarks
     [Benchmark]
     public int ReadCell_Array() => _reader.GetCellData(3).Value.Length;
 
-    private static (TableSchema InputSchema, BatchOutputSchema OutputSchema) BuildSchemas()
+    private static (IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema) BuildSchemas()
     {
-        var inputSchema = new TableSchema
-        {
-            SourceFormat = DataFormat.JsonLines,
-            Columns =
-            [
-                new ColumnSchema { Name = NumberColumn, Type = ColumnType.Text, ColumnIndex = 0 },
-                new ColumnSchema { Name = StringColumn, Type = ColumnType.Text, ColumnIndex = 1 },
-                new ColumnSchema { Name = ObjectColumn, Type = ColumnType.Text, ColumnIndex = 2 },
-                new ColumnSchema { Name = ArrayColumn, Type = ColumnType.Text, ColumnIndex = 3 },
-            ],
-        };
+        string[] inputColumnNames = [NumberColumn, StringColumn, ObjectColumn, ArrayColumn];
         var outputSchema = new BatchOutputSchema(
             [
                 new BatchOutputColumn(NumberColumn, NumberColumn),
@@ -116,6 +104,6 @@ public class JsonLinesRecordReaderBenchmarks
                 new BatchOutputColumn(ArrayColumn, ArrayColumn),
             ],
             []);
-        return (inputSchema, outputSchema);
+        return (inputColumnNames, outputSchema);
     }
 }
