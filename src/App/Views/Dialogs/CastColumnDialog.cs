@@ -71,7 +71,7 @@ internal sealed class CastColumnDialog : Dialog
 
         void updateErrorState(ColumnType? selected)
         {
-            var isValid = selected != null && validTypes.Contains(selected.Value);
+            var isValid = selected is not null && validTypes.Contains(selected.Value);
             errorLabel.Visible = !isValid;
             okButton.Enabled = isValid;
         }
