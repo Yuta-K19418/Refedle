@@ -334,7 +334,7 @@ internal sealed class AppKeyHandler : IDisposable
         }
 
         // Shortcuts like o, s, q, t, x, Backspace should not have Ctrl or Alt modifiers.
-        if ((key.KeyCode & (KeyCode.CtrlMask | KeyCode.AltMask)) != 0)
+        if ((key.KeyCode & (KeyCode.CtrlMask | KeyCode.AltMask)) != KeyCode.Null)
         {
             return;
         }
