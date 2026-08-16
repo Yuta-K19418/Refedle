@@ -99,6 +99,12 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.MainWindow.InitializeMenu",
     Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
 [assembly: SuppressMessage(
+    "Design",
+    "MA0147:Avoid async void method for delegate",
+    Scope = "member",
+    Target = "~M:Refedle.App.MainWindow.InitializeMenu",
+    Justification = "Terminal.Gui menu callbacks require Action, so asynchronous commands must use async void.")]
+[assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
