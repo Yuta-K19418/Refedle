@@ -1,5 +1,253 @@
 is_global = true
 
+# Enabled security rules
+# MA0009: Add a timeout to regular expression evaluation.
+dotnet_diagnostic.MA0009.severity = warning
+# MA0039: Do not write custom certificate validation methods.
+dotnet_diagnostic.MA0039.severity = warning
+
+# Enabled usage rules
+# MA0001: Specify StringComparison for string operations.
+dotnet_diagnostic.MA0001.severity = warning
+# MA0002: Specify a comparer for string collections and operations.
+dotnet_diagnostic.MA0002.severity = warning
+
+# Enabled style rules
+# MA0007: Add a trailing comma after the last value in multi-line initializers.
+dotnet_diagnostic.MA0007.severity = warning
+
+# Enabled design rules
+# MA0010: Mark custom attributes with AttributeUsageAttribute.
+dotnet_diagnostic.MA0010.severity = warning
+# MA0011: Specify an IFormatProvider for culture-sensitive operations.
+dotnet_diagnostic.MA0011.severity = warning
+# MA0012: Do not throw exception types reserved for the runtime.
+dotnet_diagnostic.MA0012.severity = warning
+# MA0013: Do not derive custom exceptions from ApplicationException.
+dotnet_diagnostic.MA0013.severity = warning
+# MA0014: Do not throw or catch ApplicationException.
+dotnet_diagnostic.MA0014.severity = warning
+# MA0015: Specify the parameter name in ArgumentException.
+dotnet_diagnostic.MA0015.severity = warning
+# MA0016: Prefer collection abstractions in visible APIs.
+dotnet_diagnostic.MA0016.severity = warning
+# MA0017: Use protected constructors for abstract types.
+dotnet_diagnostic.MA0017.severity = warning
+# MA0019: Use EventArgs.Empty instead of creating empty event arguments.
+dotnet_diagnostic.MA0019.severity = warning
+# MA0021: Use the configured string comparer for hash codes.
+dotnet_diagnostic.MA0021.severity = warning
+# MA0022: Return a completed Task instead of null.
+dotnet_diagnostic.MA0022.severity = warning
+# MA0024: Specify an explicit StringComparer when possible.
+dotnet_diagnostic.MA0024.severity = warning
+# MA0025: Do not leave NotImplementedException in implemented APIs.
+dotnet_diagnostic.MA0025.severity = warning
+# MA0027: Rethrow exceptions implicitly to preserve stack traces.
+dotnet_diagnostic.MA0027.severity = warning
+# MA0033: Do not apply ThreadStaticAttribute to instance fields.
+dotnet_diagnostic.MA0033.severity = warning
+# MA0035: Do not use dangerous threading methods.
+dotnet_diagnostic.MA0035.severity = warning
+# MA0036: Mark classes with only static members as static.
+dotnet_diagnostic.MA0036.severity = warning
+# MA0040: Forward cancellation tokens to compatible operations.
+dotnet_diagnostic.MA0040.severity = warning
+# MA0042: Do not block synchronously in async methods.
+dotnet_diagnostic.MA0042.severity = warning
+# MA0043: Use nameof for ArgumentException parameter names.
+dotnet_diagnostic.MA0043.severity = warning
+# MA0045: Do not use blocking calls that require async propagation.
+dotnet_diagnostic.MA0045.severity = warning
+# MA0050: Validate iterator arguments before enumeration begins.
+dotnet_diagnostic.MA0050.severity = warning
+# MA0054: Preserve caught exceptions as inner exceptions.
+dotnet_diagnostic.MA0054.severity = warning
+# MA0055: Do not use finalizers.
+dotnet_diagnostic.MA0055.severity = warning
+# MA0056: Do not call overridable members in constructors.
+dotnet_diagnostic.MA0056.severity = warning
+# MA0057: End attribute type names with Attribute.
+dotnet_diagnostic.MA0057.severity = warning
+# MA0058: End exception type names with Exception.
+dotnet_diagnostic.MA0058.severity = warning
+# MA0059: End EventArgs type names with EventArgs.
+dotnet_diagnostic.MA0059.severity = warning
+# MA0060: Do not ignore return values from critical operations.
+dotnet_diagnostic.MA0060.severity = warning
+# MA0061: Do not change default parameter values in overrides.
+dotnet_diagnostic.MA0061.severity = warning
+# MA0062: Use FlagsAttribute only for bitwise flag enums.
+dotnet_diagnostic.MA0062.severity = warning
+# MA0064: Avoid locking on publicly accessible objects.
+dotnet_diagnostic.MA0064.severity = warning
+# MA0067: Use Guid.Empty for an empty Guid value.
+dotnet_diagnostic.MA0067.severity = warning
+# MA0068: Use valid parameter names in nullable attributes.
+dotnet_diagnostic.MA0068.severity = warning
+# MA0069: Do not expose non-constant static fields.
+dotnet_diagnostic.MA0069.severity = warning
+# MA0070: Include migration guidance in ObsoleteAttribute.
+dotnet_diagnostic.MA0070.severity = warning
+# MA0071: Avoid redundant else branches.
+dotnet_diagnostic.MA0071.severity = warning
+# MA0072: Do not throw exceptions from finally blocks.
+dotnet_diagnostic.MA0072.severity = warning
+# MA0073: Avoid comparisons with Boolean constants.
+dotnet_diagnostic.MA0073.severity = warning
+# MA0074: Avoid implicit culture-sensitive string operations.
+dotnet_diagnostic.MA0074.severity = warning
+# MA0076: Avoid implicit culture-sensitive formatting in interpolated strings.
+dotnet_diagnostic.MA0076.severity = warning
+# MA0077: Implement IEquatable<T> when defining Equals(T).
+dotnet_diagnostic.MA0077.severity = warning
+# MA0079: Forward the CancellationToken using .WithCancellation().
+dotnet_diagnostic.MA0079.severity = warning
+# MA0080: Use a cancellation token using .WithCancellation().
+dotnet_diagnostic.MA0080.severity = warning
+# MA0081: Method overrides should not omit the params keyword.
+dotnet_diagnostic.MA0081.severity = warning
+# MA0082: Do not use NaN in comparisons.
+dotnet_diagnostic.MA0082.severity = warning
+# MA0084: Do not let local variables hide other symbols.
+dotnet_diagnostic.MA0084.severity = warning
+# MA0085: Do not use anonymous delegates to unsubscribe from events.
+dotnet_diagnostic.MA0085.severity = warning
+# MA0086: Do not throw from finalizers.
+dotnet_diagnostic.MA0086.severity = warning
+# MA0090: Remove empty else and finally blocks.
+dotnet_diagnostic.MA0090.severity = warning
+# MA0091: Use this as the sender for instance events.
+dotnet_diagnostic.MA0091.severity = warning
+# MA0092: Use null as the sender for static events.
+dotnet_diagnostic.MA0092.severity = warning
+# MA0093: Do not pass null EventArgs when raising events.
+dotnet_diagnostic.MA0093.severity = warning
+# MA0094: Implement IComparable<T> when defining CompareTo(T).
+dotnet_diagnostic.MA0094.severity = warning
+# MA0095: Override Equals(object) when implementing IEquatable<T>.
+dotnet_diagnostic.MA0095.severity = warning
+# MA0096: Implement IEquatable<T> when implementing IComparable<T>.
+dotnet_diagnostic.MA0096.severity = warning
+# MA0099: Use explicit enum values instead of 0.
+dotnet_diagnostic.MA0099.severity = warning
+# MA0100: Await tasks before disposing their resources.
+dotnet_diagnostic.MA0100.severity = warning
+# MA0101: Avoid implicit end-of-line characters in verbatim strings.
+dotnet_diagnostic.MA0101.severity = warning
+# MA0102: Mark non-mutating struct members as readonly.
+dotnet_diagnostic.MA0102.severity = warning
+# MA0103: Use SequenceEqual for sequence equality.
+dotnet_diagnostic.MA0103.severity = warning
+# MA0104: Do not use BCL type names for custom public types.
+dotnet_diagnostic.MA0104.severity = warning
+# MA0107: Do not use the default object.ToString implementation.
+dotnet_diagnostic.MA0107.severity = warning
+# MA0108: Remove redundant caller argument expressions.
+dotnet_diagnostic.MA0108.severity = warning
+# MA0113: Use DateTime.UnixEpoch.
+dotnet_diagnostic.MA0113.severity = warning
+# MA0114: Use DateTimeOffset.UnixEpoch.
+dotnet_diagnostic.MA0114.severity = warning
+# MA0127: Use String.Equals instead of string constant patterns.
+dotnet_diagnostic.MA0127.severity = warning
+# MA0128: Use pattern matching for constant ReadOnlySpan<char> comparisons.
+dotnet_diagnostic.MA0128.severity = warning
+# MA0129: Await tasks in using statements.
+dotnet_diagnostic.MA0129.severity = warning
+# MA0130: Do not call GetType on System.Type instances.
+dotnet_diagnostic.MA0130.severity = warning
+# MA0132: Do not implicitly convert DateTime to DateTimeOffset.
+dotnet_diagnostic.MA0132.severity = warning
+# MA0133: Use DateTimeOffset directly when required by an API.
+dotnet_diagnostic.MA0133.severity = warning
+# MA0134: Observe results of asynchronous calls.
+dotnet_diagnostic.MA0134.severity = warning
+# MA0136: Avoid implicit end-of-line characters in raw strings.
+dotnet_diagnostic.MA0136.severity = warning
+# MA0137: Use the Async suffix for awaitable-returning methods.
+dotnet_diagnostic.MA0137.severity = warning
+# MA0138: Do not use the Async suffix for non-awaitable methods.
+dotnet_diagnostic.MA0138.severity = warning
+# MA0140: Remove identical if and else branches.
+dotnet_diagnostic.MA0140.severity = warning
+# MA0141: Use is not null for null checks.
+dotnet_diagnostic.MA0141.severity = warning
+# MA0142: Use is null for null checks.
+dotnet_diagnostic.MA0142.severity = warning
+# MA0143: Do not assign to primary constructor parameters.
+dotnet_diagnostic.MA0143.severity = warning
+# MA0145: Validate UnsafeAccessor method signatures.
+dotnet_diagnostic.MA0145.severity = warning
+# MA0146: Set UnsafeAccessor names explicitly on local functions.
+dotnet_diagnostic.MA0146.severity = warning
+# MA0147: Avoid async void delegates.
+dotnet_diagnostic.MA0147.severity = warning
+# MA0150: Do not call ToString when it falls back to object.ToString.
+dotnet_diagnostic.MA0150.severity = warning
+# MA0151: Use valid members in DebuggerDisplay attributes.
+dotnet_diagnostic.MA0151.severity = warning
+# MA0153: Do not log data-classified values directly.
+dotnet_diagnostic.MA0153.severity = warning
+# MA0155: Do not use async void methods.
+dotnet_diagnostic.MA0155.severity = warning
+# MA0161: Set ProcessStartInfo.UseShellExecute explicitly.
+dotnet_diagnostic.MA0161.severity = warning
+# MA0162: Use ProcessStartInfo with Process.Start.
+dotnet_diagnostic.MA0162.severity = warning
+# MA0163: Set UseShellExecute to false when redirecting process I/O.
+dotnet_diagnostic.MA0163.severity = warning
+# MA0164: Parenthesize not patterns for clarity.
+dotnet_diagnostic.MA0164.severity = warning
+# MA0166: Forward TimeProvider to compatible operations.
+dotnet_diagnostic.MA0166.severity = warning
+# MA0169: Use Equals when equality operators are not defined.
+dotnet_diagnostic.MA0169.severity = warning
+# MA0170: Use only valid types for attribute arguments.
+dotnet_diagnostic.MA0170.severity = warning
+# MA0172: Do not use identical operands in logical operations.
+dotnet_diagnostic.MA0172.severity = warning
+# MA0173: Use LazyInitializer.EnsureInitialized for lazy initialization.
+dotnet_diagnostic.MA0173.severity = warning
+# MA0178: Use TimeSpan.Zero for zero durations.
+dotnet_diagnostic.MA0178.severity = warning
+# MA0180: Match ILogger type parameters to containing types.
+dotnet_diagnostic.MA0180.severity = warning
+# MA0183: Use placeholders when passing formatting arguments.
+dotnet_diagnostic.MA0183.severity = warning
+# MA0184: Do not use interpolated strings without parameters.
+dotnet_diagnostic.MA0184.severity = warning
+# MA0186: Annotate Equals parameters with NotNullWhen(true).
+dotnet_diagnostic.MA0186.severity = warning
+# MA0188: Use System.TimeProvider instead of custom time abstractions.
+dotnet_diagnostic.MA0188.severity = warning
+# MA0191: Do not use the null-forgiving operator.
+dotnet_diagnostic.MA0191.severity = warning
+# MA0193: Specify MidpointRounding explicitly.
+dotnet_diagnostic.MA0193.severity = warning
+# MA0194: Merge patterns on the same value.
+dotnet_diagnostic.MA0194.severity = warning
+# MA0195: Do not use static fields before initialization.
+dotnet_diagnostic.MA0195.severity = warning
+# MA0196: Do not use inheritdoc on non-inheriting members.
+dotnet_diagnostic.MA0196.severity = warning
+# MA0198: Specify cref for ambiguous type inheritdoc.
+dotnet_diagnostic.MA0198.severity = warning
+# MA0199: Do not use type inheritdoc without an inheritance source.
+dotnet_diagnostic.MA0199.severity = warning
+# MA0200: Do not use empty property patterns on non-nullable value types.
+dotnet_diagnostic.MA0200.severity = warning
+# MA0201: Do not check zero-valued enum flags.
+dotnet_diagnostic.MA0201.severity = warning
+# MA0202: Remove identical conditional compilation branches.
+dotnet_diagnostic.MA0202.severity = warning
+# MA0203: Do not use return documentation tags on void methods.
+dotnet_diagnostic.MA0203.severity = warning
+# MA0206: Remove unnecessary braces from empty type declarations.
+dotnet_diagnostic.MA0206.severity = warning
+# MA0213: Simplify negated boolean expressions.
+dotnet_diagnostic.MA0213.severity = warning
+
 # Enabled performance rules
 # MA0008: Add StructLayoutAttribute to structs.
 dotnet_diagnostic.MA0008.severity = warning
