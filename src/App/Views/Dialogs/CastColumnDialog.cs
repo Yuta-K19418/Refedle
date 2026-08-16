@@ -94,7 +94,7 @@ internal sealed class CastColumnDialog : Dialog
         void confirm()
         {
             var selected = selector.Value;
-            if (selected == null || selected == currentType)
+            if (selected is null || selected == currentType)
             {
                 return;
             }
