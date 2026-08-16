@@ -2,6 +2,14 @@
 // signatures, so parameter/event types are spelled out explicitly.
 using System.Diagnostics.CodeAnalysis;
 
+// DataFormat
+[assembly: SuppressMessage(
+    "Design",
+    "MA0104:Do not create a type with a name from the BCL",
+    Scope = "type",
+    Target = "~T:Refedle.Engine.Types.DataFormat",
+    Justification = "DataFormat is the established public domain type; renaming it would break the public API.")]
+
 // MmapService
 [assembly: SuppressMessage(
     "Reliability",
