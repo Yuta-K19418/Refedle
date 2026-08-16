@@ -128,7 +128,7 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
             }
 
             var sourceCol = _sourceColumnIndices[col];
-            var rawValue = _source[sourceRow, sourceCol]?.ToString() ?? string.Empty;
+            var rawValue = Convert.ToString(_source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
             return FormatCellValue(rawValue, _columnTypes[col], _formatStrings[col]);
         }
     }

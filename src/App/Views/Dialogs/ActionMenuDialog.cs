@@ -85,8 +85,11 @@ internal sealed class ActionMenuDialog : Dialog
         var items = _listView.Source?.ToList();
         if (_listView.SelectedItem is { } idx && items is not null && idx < items.Count)
         {
-            var selectedAction = items[idx]?.ToString()
-                ?? throw new UnreachableException("List item must not be null");
+            if (items[idx] is not string selectedAction)
+            {
+                throw new UnreachableException("List item must be a string.");
+            }
+
             _onConfirmed(selectedAction);
         }
 
