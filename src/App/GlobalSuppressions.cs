@@ -310,3 +310,107 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Views.Dialogs.ActionMenuDialog.#ctor(System.String[],System.Action{System.String})",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
+
+// Intentional synchronous UI and scan operations
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Program.<Main>$(System.String[])",
+    Justification = "ConsoleCancelEventHandler must cancel synchronously when the process receives Ctrl+C.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.AppState.RenewCtsWithCancel",
+    Justification = "Cancellation must complete before the replaced token source is disposed.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.FormatDetector.DetectJsonFormat(System.String)",
+    Justification = "This small, synchronous format probe would otherwise require changing the detector API.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.AppKeyHandler.HandleHelp",
+    Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.AppKeyHandler.HandleActionMenuForTable(Refedle.App.Views.MorphTableView)",
+    Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.AppKeyHandler.HandleSingleDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.ModeController.ToggleJsonLinesModeAsync",
+    Justification = "Result is accessed only after the continuation has completed successfully.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.FileDialogHandler.LoadCsvAsync(System.String,Refedle.Engine.IO.IRowIndexer)",
+    Justification = "Result is accessed only after the continuation has completed successfully.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Schema.Csv.IncrementalSchemaScanner.ReadRows(System.Int32,System.Int32)",
+    Justification = "The scanner base contract runs this batch reader synchronously on a background task.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
+    Justification = "The scanner base contract runs this header reader synchronously on a background task.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleRenameColumn",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleDeleteColumn",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleCastColumn",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFilterColumn",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFillColumn",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFormatTimestamp",
+    Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
