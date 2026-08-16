@@ -33,7 +33,7 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Save Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        _app.Run(dialog);
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
@@ -71,7 +71,7 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Load Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        _app.Run(dialog);
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {

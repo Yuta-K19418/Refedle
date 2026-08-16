@@ -226,6 +226,12 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Cli.JsonLinesRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
     Justification = "Flush to IBufferWriter is synchronous and fast")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0042:Use the async version of a method",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.JsonLinesRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
+    Justification = "Flush to IBufferWriter is synchronous and fast")]
 
 // Cli.Runner
 [assembly: SuppressMessage(

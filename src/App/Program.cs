@@ -53,5 +53,5 @@ if (tuiOptions.HasAny)
     mainWindow.ScheduleStartupLoad(tuiOptions);
 }
 
-app.Run(mainWindow);
+await app.RunAsync(mainWindow, CancellationToken.None, errorHandler: null);
 return (int)ExitCode.Success;

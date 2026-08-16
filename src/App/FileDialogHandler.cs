@@ -29,7 +29,7 @@ internal sealed class FileDialogHandler(
         dialog.AllowedTypes.Add(new AllowedType("JSON file", ".json"));
         dialog.AllowedTypes.Add(new AllowedType("JSON Lines file", ".jsonl"));
 
-        _app.Run(dialog);
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
