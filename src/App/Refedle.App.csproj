@@ -15,7 +15,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Terminal.Gui" Version="2.4.17" />
-    <PackageReference Include="Sep" Version="0.15.1" />
+    <PackageReference Include="Sep" Version="0.16.0" />
   </ItemGroup>
 
   <ItemGroup>
