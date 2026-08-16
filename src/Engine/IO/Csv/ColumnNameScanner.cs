@@ -1,3 +1,4 @@
+using System.Globalization;
 using nietras.SeparatedValues;
 
 namespace Refedle.Engine.IO.Csv;
@@ -37,7 +38,7 @@ public static class ColumnNameScanner
         for (var i = 0; i < header.ColNames.Count; i++)
         {
             var name = header.ColNames[i];
-            var resolvedName = string.IsNullOrWhiteSpace(name) ? $"Column{i + 1}" : name;
+            var resolvedName = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}") : name;
 
             if (!seen.Add(resolvedName))
             {

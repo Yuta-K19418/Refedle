@@ -17,7 +17,7 @@ public static class PropertyNameScanner
     /// pair of accumulator collections is shared and grown across repeated calls rather than
     /// each call allocating and returning its own list.
     /// </summary>
-    public static void ScanPropertyNames(IReadOnlyList<JsonRawBytes> rawLines, HashSet<string> seen, IList<string> order)
+    public static void ScanPropertyNames(IReadOnlyList<JsonRawBytes> rawLines, ISet<string> seen, IList<string> order)
     {
         ArgumentNullException.ThrowIfNull(rawLines);
         ArgumentNullException.ThrowIfNull(seen);
@@ -33,7 +33,7 @@ public static class PropertyNameScanner
         }
     }
 
-    private static void ScanLine(ReadOnlySpan<byte> line, List<string> lineNames, HashSet<string> seen, IList<string> order)
+    private static void ScanLine(ReadOnlySpan<byte> line, List<string> lineNames, ISet<string> seen, IList<string> order)
     {
         try
         {
@@ -68,7 +68,7 @@ public static class PropertyNameScanner
     // A line holds exactly one object: only whitespace may follow its closing brace. Read()
     // skips whitespace, so false means a clean end of line; another token (true) or a
     // JsonException marks invalid trailing content and leaves the line's names unmerged.
-    private static void MergeNamesIfEndOfLine(ref Utf8JsonReader reader, List<string> lineNames, HashSet<string> seen, IList<string> order)
+    private static void MergeNamesIfEndOfLine(ref Utf8JsonReader reader, List<string> lineNames, ISet<string> seen, IList<string> order)
     {
         if (reader.Read())
         {
@@ -96,7 +96,7 @@ public static class PropertyNameScanner
         }
     }
 
-    private static void MergeLineNames(List<string> lineNames, HashSet<string> seen, IList<string> order)
+    private static void MergeLineNames(List<string> lineNames, ISet<string> seen, IList<string> order)
     {
         foreach (var name in lineNames)
         {
