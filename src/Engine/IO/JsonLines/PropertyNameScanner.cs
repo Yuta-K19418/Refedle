@@ -5,8 +5,7 @@ namespace Refedle.Engine.IO.JsonLines;
 
 /// <summary>
 /// Collects JSON object property names across JSON Lines rows, in first-appearance order,
-/// without inferring value types. Used by the CLI batch pipeline, which no longer needs
-/// column types (see design_cli_batch_column_resolution.md).
+/// without inferring value types.
 /// </summary>
 public static class PropertyNameScanner
 {

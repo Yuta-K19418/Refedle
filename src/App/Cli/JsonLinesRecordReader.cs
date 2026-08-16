@@ -23,7 +23,7 @@ internal partial struct JsonLinesRecordReader : IRecordReader
     private readonly PooledValueBuffer _valueBuffer;
 
     // rowReader is null only for zero-record input, where the file cannot be memory-mapped
-    // (MmapService rejects empty files); such a reader yields no rows (see design doc).
+    // (MmapService rejects empty files); such a reader yields no rows.
     public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader? rowReader, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema)
     {
         _rowIndexer = rowIndexer;

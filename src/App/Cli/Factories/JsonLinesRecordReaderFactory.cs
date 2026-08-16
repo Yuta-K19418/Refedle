@@ -12,7 +12,7 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
         rowIndexer.BuildIndex(CancellationToken.None);
 
         // Zero-record input: RowReader must not be constructed (MmapService rejects empty
-        // files); a reader without one yields no rows (see design_cli_batch_column_resolution.md).
+        // files); a reader without one yields no rows.
         if (rowIndexer.TotalRows == 0)
         {
             return new(new JsonLinesRecordReader(rowIndexer, null, inputColumnNames, outputSchema));

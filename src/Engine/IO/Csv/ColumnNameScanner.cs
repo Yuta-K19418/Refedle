@@ -5,8 +5,7 @@ namespace Refedle.Engine.IO.Csv;
 
 /// <summary>
 /// Reads only the header row of a CSV file to determine column names, without scanning
-/// any data rows or inferring types. Used by the CLI batch pipeline, which no longer needs
-/// column types (see design_cli_batch_column_resolution.md).
+/// any data rows or inferring types.
 /// </summary>
 public static class ColumnNameScanner
 {

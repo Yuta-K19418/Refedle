@@ -313,7 +313,7 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithHeaderOnlyFile(string inputContent)
     {
         // Arrange — an empty file and a newline-only file are both zero-record input; both
-        // resolve to an empty column list and succeed (see design_cli_batch_column_resolution.md).
+        // resolve to an empty column list and succeed.
         var inputFile = CreateTestFile("input.jsonl", inputContent);
         var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
         var outputFile = Path.Combine(_testDir, "output.csv");
@@ -336,7 +336,7 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToJsonLines_WithZeroRecordInput_SucceedsWithEmptyOutput(string inputContent)
     {
         // Arrange — an empty file and a newline-only file are both zero-record input; both
-        // resolve to an empty column list and succeed (see design_cli_batch_column_resolution.md).
+        // resolve to an empty column list and succeed.
         var inputFile = CreateTestFile("input.jsonl", inputContent);
         var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
         var outputFile = Path.Combine(_testDir, "output.jsonl");

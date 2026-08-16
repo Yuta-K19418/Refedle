@@ -22,7 +22,7 @@ internal static class ColumnNameResolver
         rowIndexer.BuildIndex(ct);
 
         // Zero-record input resolves to an empty column list. RowReader must not be
-        // constructed here: MmapService.Open rejects zero-byte files (see design doc).
+        // constructed here: MmapService.Open rejects zero-byte files.
         if (rowIndexer.TotalRows == 0)
         {
             return [];
