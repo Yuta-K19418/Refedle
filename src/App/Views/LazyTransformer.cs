@@ -159,7 +159,7 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
             ))
             .ToList();
 
-        var nameToIndex = working.Select((w, i) => (w.Name, i)).ToDictionary(t => t.Name, t => t.i);
+        var nameToIndex = working.Select((w, i) => (w.Name, i)).ToDictionary(t => t.Name, t => t.i, StringComparer.Ordinal);
         List<FilterSpec> filterSpecs = [];
 
         foreach (var action in actions)
