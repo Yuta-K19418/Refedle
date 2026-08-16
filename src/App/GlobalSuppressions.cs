@@ -3,6 +3,14 @@
 // types must be spelled out explicitly.
 using System.Diagnostics.CodeAnalysis;
 
+// HelpDialog
+[assembly: SuppressMessage(
+    "Usage",
+    "MA0136:Raw String contains an implicit end of line character",
+    Scope = "member",
+    Target = "~F:Refedle.App.Views.Dialogs.HelpDialog.HelpText",
+    Justification = "Repository policy fixes C# source files to LF, so the UI text is deterministic.")]
+
 // ViewManager
 [assembly: SuppressMessage(
     "Reliability",
