@@ -268,7 +268,7 @@ internal sealed class ViewManager : IDisposable
 
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = Task.Run(() => filterIndexer.BuildIndexAsync(CancellationToken.None));
+            _ = Task.Run(() => filterIndexer.BuildIndexAsync(_state.Cts.Token), _state.Cts.Token);
         }
     }
 
@@ -384,7 +384,7 @@ internal sealed class ViewManager : IDisposable
 
         if (tableSource is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = Task.Run(() => filterIndexer.BuildIndexAsync(CancellationToken.None));
+            _ = Task.Run(() => filterIndexer.BuildIndexAsync(_state.Cts.Token), _state.Cts.Token);
         }
     }
 

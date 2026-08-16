@@ -47,7 +47,7 @@ internal sealed class RecipeCommandHandler(
             LastModified = System.DateTimeOffset.UtcNow,
         };
 
-        var result = await _recipeManager.SaveAsync(recipe, dialog.Path);
+        var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token);
 
         _app.Invoke(() =>
         {
@@ -88,7 +88,7 @@ internal sealed class RecipeCommandHandler(
             throw new InvalidOperationException("Cannot load recipe: no input file is currently loaded.");
         }
 
-        var result = await _recipeManager.LoadAsync(path);
+        var result = await _recipeManager.LoadAsync(path, _state.Cts.Token);
 
         _app.Invoke(() =>
         {
