@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.IO.MemoryMappedFiles;
 
 namespace Refedle.Engine.IO;
@@ -69,7 +70,7 @@ public sealed class MmapService : IDisposable
                 FileAccess.Read => MemoryMappedFileAccess.Read,
                 FileAccess.ReadWrite => MemoryMappedFileAccess.ReadWrite,
                 FileAccess.Write => MemoryMappedFileAccess.Write,
-                _ => throw new ArgumentException($"Unsupported FileAccess: {access}", nameof(access))
+                _ => throw new ArgumentException($"Unsupported FileAccess: {access}", nameof(access)),
             };
 
             using var fileStream = new FileStream(
@@ -141,7 +142,7 @@ public sealed class MmapService : IDisposable
         if (offset > _length - destination.Length)
         {
             throw new ArgumentOutOfRangeException(nameof(destination),
-                $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}");
+                string.Create(CultureInfo.InvariantCulture, $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}"));
         }
 
         var buffer = ArrayPool<byte>.Shared.Rent(destination.Length);
@@ -150,7 +151,7 @@ public sealed class MmapService : IDisposable
             var bytesRead = _accessor.ReadArray(offset, buffer, 0, destination.Length);
             if (bytesRead != destination.Length)
             {
-                throw new IOException($"Expected to read {destination.Length} bytes but read {bytesRead}");
+                throw new IOException(string.Create(CultureInfo.InvariantCulture, $"Expected to read {destination.Length} bytes but read {bytesRead}"));
             }
 
             buffer.AsSpan(0, destination.Length).CopyTo(destination);
@@ -180,13 +181,13 @@ public sealed class MmapService : IDisposable
 
         if (offset < 0)
         {
-            return (false, $"Offset must be non-negative: {offset}");
+            return (false, string.Create(CultureInfo.InvariantCulture, $"Offset must be non-negative: {offset}"));
         }
 
         // Check for overflow-safe range validation
         if (destination.Length > 0 && offset > _length - destination.Length)
         {
-            return (false, $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}");
+            return (false, string.Create(CultureInfo.InvariantCulture, $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}"));
         }
 
         try

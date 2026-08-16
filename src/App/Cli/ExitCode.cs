@@ -13,5 +13,5 @@ internal enum ExitCode
     /// <summary>
     /// Failure exit code.
     /// </summary>
-    Failure = 1
+    Failure = 1,
 }

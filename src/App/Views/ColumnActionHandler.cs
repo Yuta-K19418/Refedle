@@ -26,7 +26,7 @@ internal sealed class ColumnActionHandler(
         ColumnActions.Cast,
         ColumnActions.Filter,
         ColumnActions.Fill,
-        ColumnActions.FormatTimestamp
+        ColumnActions.FormatTimestamp,
     ];
 
     internal static string[] GetAvailableActions() => _availableActions;

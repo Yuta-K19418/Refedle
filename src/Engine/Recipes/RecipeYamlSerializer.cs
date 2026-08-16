@@ -81,7 +81,7 @@ internal static class RecipeYamlSerializer
                 sb.Append("    targetFormat: ").AppendLine(QuoteString(formatTimestamp.TargetFormat));
                 break;
             default:
-                throw new UnreachableException($"Unhandled MorphAction subtype in serializer");
+                throw new UnreachableException("Unhandled MorphAction subtype in serializer");
         }
     }
 

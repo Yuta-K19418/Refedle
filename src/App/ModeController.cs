@@ -1,3 +1,4 @@
+using System.Globalization;
 using Refedle.App.Schema.JsonLines;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
@@ -109,7 +110,7 @@ internal sealed class ModeController
         var rows = new FocusedTableRow[children.Count];
         for (var i = 0; i < children.Count; i++)
         {
-            rows[i] = new FocusedTableRow(children[i], $"[{i}]");
+            rows[i] = new FocusedTableRow(children[i], string.Create(CultureInfo.InvariantCulture, $"[{i}]"));
         }
 
         _state.DrillDown = new DrillDownState(rows, result.Value.schema, _state.CurrentMode);

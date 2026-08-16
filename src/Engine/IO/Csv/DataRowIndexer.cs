@@ -194,7 +194,7 @@ public sealed class DataRowIndexer : RowIndexerBase
                 continue;
             }
 
-            if (!(currentByte == (byte)'\n' && !inQuotes))
+            if (currentByte != (byte)'\n' || inQuotes)
             {
                 continue;
             }

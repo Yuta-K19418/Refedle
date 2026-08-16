@@ -23,7 +23,7 @@ public sealed record TableSchema
 
             if (value.Count == 0)
             {
-                throw new ArgumentException("Columns cannot be empty", nameof(Columns));
+                throw new ArgumentException("Columns cannot be empty", nameof(value));
             }
 
             // Validate for duplicate column names using HashSet for O(1) lookup
@@ -34,7 +34,7 @@ public sealed record TableSchema
                 {
                     throw new ArgumentException(
                         $"Duplicate column name found: {column.Name}",
-                        nameof(Columns)
+                        nameof(value)
                     );
                 }
             }

@@ -39,7 +39,7 @@ public static class TopLevelScanner
             var state = new JsonScanState(fileSize);
             var rootCompleted = false;
             List<JsonObjectEntry> result = [];
-            var keyIndex = new Dictionary<string, int>();
+            var keyIndex = new Dictionary<string, int>(StringComparer.Ordinal);
 
             while (true)
             {

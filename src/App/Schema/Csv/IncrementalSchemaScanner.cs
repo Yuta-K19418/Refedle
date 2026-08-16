@@ -1,3 +1,4 @@
+using System.Globalization;
 using nietras.SeparatedValues;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
@@ -132,7 +133,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
             var columnName = header.ColNames[i];
             if (string.IsNullOrWhiteSpace(columnName))
             {
-                columnName = $"Column{i + 1}";
+                columnName = string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}");
             }
 
             processedNames[i] = columnName;

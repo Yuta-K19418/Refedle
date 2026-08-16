@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Globalization;
 using System.Text.Json;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.Types;
@@ -85,7 +86,7 @@ internal static class KeyPathLeafCollector
 
             var isObjectElement = reader.TokenType == JsonTokenType.StartObject;
             var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, leafBytes);
-            var elementHash = $"{posHash}:{elementIndex}";
+            var elementHash = string.Create(CultureInfo.InvariantCulture, $"{posHash}:{elementIndex}");
 
             if (isObjectElement)
             {

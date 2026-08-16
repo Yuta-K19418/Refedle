@@ -128,7 +128,7 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
             }
 
             var sourceCol = _sourceColumnIndices[col];
-            var rawValue = _source[sourceRow, sourceCol]?.ToString() ?? string.Empty;
+            var rawValue = Convert.ToString(_source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
             return FormatCellValue(rawValue, _columnTypes[col], _formatStrings[col]);
         }
     }
@@ -159,7 +159,7 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
             ))
             .ToList();
 
-        var nameToIndex = working.Select((w, i) => (w.Name, i)).ToDictionary(t => t.Name, t => t.i);
+        var nameToIndex = working.Select((w, i) => (w.Name, i)).ToDictionary(t => t.Name, t => t.i, StringComparer.Ordinal);
         List<FilterSpec> filterSpecs = [];
 
         foreach (var action in actions)
@@ -305,7 +305,9 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
     };
 
     private static string FormatWholeNumber(string rawValue) =>
-        long.TryParse(rawValue, out var l) ? l.ToString(CultureInfo.InvariantCulture) : ParseFailureLabel;
+        long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l)
+            ? l.ToString(CultureInfo.InvariantCulture)
+            : ParseFailureLabel;
 
     private static string FormatFloatingPoint(string rawValue) =>
         double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)

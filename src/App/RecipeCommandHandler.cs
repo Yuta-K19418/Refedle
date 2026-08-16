@@ -33,7 +33,7 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Save Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        _app.Run(dialog);
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
@@ -47,7 +47,7 @@ internal sealed class RecipeCommandHandler(
             LastModified = System.DateTimeOffset.UtcNow,
         };
 
-        var result = await _recipeManager.SaveAsync(recipe, dialog.Path);
+        var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token);
 
         _app.Invoke(() =>
         {
@@ -71,7 +71,7 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Load Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        _app.Run(dialog);
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
@@ -88,7 +88,7 @@ internal sealed class RecipeCommandHandler(
             throw new InvalidOperationException("Cannot load recipe: no input file is currently loaded.");
         }
 
-        var result = await _recipeManager.LoadAsync(path);
+        var result = await _recipeManager.LoadAsync(path, _state.Cts.Token);
 
         _app.Invoke(() =>
         {

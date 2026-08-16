@@ -1,3 +1,4 @@
+using System.Globalization;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
@@ -37,7 +38,7 @@ public static class SchemaScanner
         {
             var headerOnlyColumns = columnNames.Select((name, idx) => new ColumnSchema
             {
-                Name = string.IsNullOrWhiteSpace(name) ? $"Column{idx + 1}" : name,
+                Name = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{idx + 1}") : name,
                 Type = ColumnType.Text,
                 IsNullable = true,
                 ColumnIndex = idx,
@@ -111,7 +112,7 @@ public static class SchemaScanner
 
             // Generate column name if empty
             var finalColumnName = string.IsNullOrWhiteSpace(columnName)
-                ? $"Column{i + 1}"
+                ? string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}")
                 : columnName;
 
             columnSchema[i] = new ColumnSchema
