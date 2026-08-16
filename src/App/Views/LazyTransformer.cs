@@ -305,7 +305,9 @@ internal sealed class LazyTransformer : ITableSource, IDisposable
     };
 
     private static string FormatWholeNumber(string rawValue) =>
-        long.TryParse(rawValue, out var l) ? l.ToString(CultureInfo.InvariantCulture) : ParseFailureLabel;
+        long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l)
+            ? l.ToString(CultureInfo.InvariantCulture)
+            : ParseFailureLabel;
 
     private static string FormatFloatingPoint(string rawValue) =>
         double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)
