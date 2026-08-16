@@ -10,6 +10,28 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~T:Refedle.Engine.Types.DataFormat",
     Justification = "DataFormat is the established public domain type; renaming it would break the public API.")]
 
+// DataRowReader
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.SkipRows(nietras.SeparatedValues.SepReader,System.Int32)",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.ReadRowsInto(nietras.SeparatedValues.SepReader,System.Int32,System.Collections.Generic.List{System.Collections.Generic.IReadOnlyList{System.ReadOnlyMemory{System.Char}}})",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+
+// KeyPathLeafCollector
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.DrillDown.KeyPathLeafCollector.SynthesizeObject(System.ReadOnlySpan{System.Byte},System.ReadOnlySpan{System.Byte})",
+    Justification = "The writer flushes only to an in-memory ArrayBufferWriter, so asynchronous flushing provides no I/O benefit.")]
+
 // MmapService
 [assembly: SuppressMessage(
     "Reliability",
