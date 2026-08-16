@@ -18,5 +18,5 @@ internal enum ParseState
     /// <summary>
     /// Accumulating key: value pairs for the current action item.
     /// </summary>
-    ActionItem
+    ActionItem,
 }

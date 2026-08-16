@@ -69,7 +69,7 @@ public sealed class MmapService : IDisposable
                 FileAccess.Read => MemoryMappedFileAccess.Read,
                 FileAccess.ReadWrite => MemoryMappedFileAccess.ReadWrite,
                 FileAccess.Write => MemoryMappedFileAccess.Write,
-                _ => throw new ArgumentException($"Unsupported FileAccess: {access}", nameof(access))
+                _ => throw new ArgumentException($"Unsupported FileAccess: {access}", nameof(access)),
             };
 
             using var fileStream = new FileStream(
