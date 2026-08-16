@@ -77,7 +77,7 @@ public sealed class SchemaTests
         };
 
         // Assert
-        act.Should().Throw<ArgumentException>().WithParameterName("Columns");
+        act.Should().Throw<ArgumentException>().WithParameterName("value");
     }
 
     [Fact]
@@ -97,7 +97,7 @@ public sealed class SchemaTests
         };
 
         // Assert
-        act.Should().Throw<ArgumentException>().WithParameterName("Columns");
+        act.Should().Throw<ArgumentException>().WithParameterName("value");
     }
 
     [Theory]
@@ -130,7 +130,7 @@ public sealed class SchemaTests
         var act = () => new TableSchema { Columns = [], SourceFormat = DataFormat.JsonArray };
 
         // Assert
-        act.Should().Throw<ArgumentException>().WithParameterName("Columns");
+        act.Should().Throw<ArgumentException>().WithParameterName("value");
     }
 
     [Fact]
