@@ -93,7 +93,7 @@ public static class SchemaScanner
             return Results.Success(schema);
         }
 
-        var columnMap = new Dictionary<string, ColumnType>();
+        var columnMap = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
         var keyOrder = new List<string>();
 
         foreach (var col in schema.Columns)
@@ -102,7 +102,7 @@ public static class SchemaScanner
             keyOrder.Add(col.Name);
         }
 
-        var observedKeys = new HashSet<string>();
+        var observedKeys = new HashSet<string>(StringComparer.Ordinal);
 
         var scanResult = ScanLine(lineBytes, columnMap, keyOrder, observedKeys);
         if (scanResult.IsFailure)
@@ -127,7 +127,7 @@ public static class SchemaScanner
         Dictionary<string, ColumnType> columnMap,
         HashSet<string> observedKeys)
     {
-        var updatedColumns = new Dictionary<string, ColumnSchema>();
+        var updatedColumns = new Dictionary<string, ColumnSchema>(StringComparer.Ordinal);
 
         for (var i = 0; i < keyOrder.Count; i++)
         {
@@ -198,9 +198,9 @@ public static class SchemaScanner
     /// <returns>Result containing the seeded TableSchema, or an error if the line is invalid.</returns>
     private static Result<TableSchema> TrySeedSchema(ReadOnlySpan<byte> line)
     {
-        var columnMap = new Dictionary<string, ColumnType>();
+        var columnMap = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
         var keyOrder = new List<string>();
-        var observedKeys = new HashSet<string>();
+        var observedKeys = new HashSet<string>(StringComparer.Ordinal);
 
         var scanResult = ScanLine(line, columnMap, keyOrder, observedKeys);
         if (scanResult.IsFailure)

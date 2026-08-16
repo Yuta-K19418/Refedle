@@ -198,7 +198,7 @@ internal sealed class RecipeYamlParser
             completedAction = parseResult.Value;
         }
 
-        var newAction = new Dictionary<string, string> { ["type"] = line["  - type: ".Length..] };
+        var newAction = new Dictionary<string, string>(StringComparer.Ordinal) { ["type"] = line["  - type: ".Length..] };
         return Results.Success<(Dictionary<string, string> newAction, MorphAction? completedAction)>((newAction, completedAction));
     }
 
