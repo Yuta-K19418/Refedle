@@ -63,7 +63,7 @@ public static class TypeInferrer
     public static bool TryParseWholeNumber(ReadOnlySpan<char> value, out long result)
     {
         var trimmed = value.Trim();
-        return long.TryParse(trimmed, out result);
+        return long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
     }
 
     /// <summary>
