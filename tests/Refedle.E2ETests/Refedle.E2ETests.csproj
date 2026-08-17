@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
+    <!-- Zero-Warning Policy -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Disable AOT for debugging -->
+    <PublishAot>false</PublishAot>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.0.1" />
+    <PackageReference Include="AwesomeAssertions" Version="9.5.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Normal reference (not ReferenceOutputAssembly=false): TUI tests call into Refedle.App
+         internals, and CLI tests exec the refedle.dll MSBuild copies next to this assembly,
+         which keeps the configuration in sync via build order. -->
+    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Black-box tests never use the engine type aliases from the shared GlobalUsings.cs;
+       excluding it avoids IDE0005 under the zero-warning policy. -->
+    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+  </ItemGroup>
+
+</Project>

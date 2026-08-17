@@ -26,6 +26,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Refedle.Benchmarks" />
     <InternalsVisibleTo Include="Refedle.Tests" />
+    <InternalsVisibleTo Include="Refedle.E2ETests" />
   </ItemGroup>
 
   <PropertyGroup>
