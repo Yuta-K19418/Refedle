@@ -1,25 +1,33 @@
 using AwesomeAssertions;
-using Refedle.App;
+using Terminal.Gui.Drivers;
 
 namespace Refedle.E2ETests.Tui.MainWindow;
 
 public sealed partial class MainWindowTests
 {
-    private const string TestCsvContent = """
-        name,age
-        Alice,30
-        Bob,25
-        Charlie,35
-        """;
-
     [Fact]
-    public async Task ScheduleStartupLoad_WithCsvFile_RendersHeaderAndDataRowsOnceIndexed()
+    public async Task OpenKey_WithCsvFileSelectedInOpenDialog_RendersHeaderAndDataRowsOnceIndexed()
     {
         // Arrange
-        var inputFile = _testDirectory.CreateFile("input.csv", TestCsvContent);
+        var csvContent = """
+            name,age
+            Alice,30
+            Bob,25
+            Charlie,35
+            """;
+        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
 
-        // Act
-        Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
+        // Act: drive the real 'o'-key flow. The path field is pre-filled with the dialog's
+        // current directory, so clear it (same pattern as the Save tests) before typing
+        // the absolute path; Enter then selects the listed file and closes the dialog.
+        Harness.SendKey(KeyCode.O);
+        await Harness.WaitForContentsAsync("Open File");
+        Harness.SendKey(KeyCode.Home);
+        Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
+        Harness.SendKey(KeyCode.Delete);
+        Harness.SendText(inputFile);
+        await Harness.WaitForContentsAsync("input.csv");
+        Harness.SendKey(KeyCode.Enter);
         var lines = await Harness.WaitForContentsAsync("Charlie", "35");
 
         // Assert

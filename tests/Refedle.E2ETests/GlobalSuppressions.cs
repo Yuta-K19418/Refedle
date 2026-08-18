@@ -3,14 +3,6 @@
 // types must be spelled out explicitly.
 using System.Diagnostics.CodeAnalysis;
 
-// TuiTestHarness
-[assembly: SuppressMessage(
-    "Design",
-    "CA1031:Do not catch general exception types",
-    Scope = "member",
-    Target = "~M:Refedle.E2ETests.Helpers.TuiTestHarness.ReadContentsAsync",
-    Justification = "Marshals any exception from the UI-thread snapshot callback back to the awaiting caller via TaskCompletionSource.")]
-
 // MainWindowTests
 [assembly: SuppressMessage(
     "Design",
