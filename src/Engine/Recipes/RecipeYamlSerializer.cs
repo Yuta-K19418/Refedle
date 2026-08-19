@@ -27,7 +27,7 @@ internal static class RecipeYamlSerializer
 
         if (recipe.LastModified is not null)
         {
-            sb.Append("lastModified: ").AppendLine(QuoteString(recipe.LastModified.Value.ToString("O")));
+            sb.Append("lastModified: ").AppendLine(recipe.LastModified.Value.ToString("O"));
         }
 
         if (recipe.Actions.Count == 0)
@@ -50,33 +50,33 @@ internal static class RecipeYamlSerializer
         switch (action)
         {
             case RenameColumnAction rename:
-                sb.AppendLine("  - type: rename");
+                sb.AppendLine("  - type: Rename");
                 sb.Append("    oldName: ").AppendLine(QuoteString(rename.OldName));
                 sb.Append("    newName: ").AppendLine(QuoteString(rename.NewName));
                 break;
             case DeleteColumnAction delete:
-                sb.AppendLine("  - type: delete");
+                sb.AppendLine("  - type: Delete");
                 sb.Append("    columnName: ").AppendLine(QuoteString(delete.ColumnName));
                 break;
             case CastColumnAction cast:
-                sb.AppendLine("  - type: cast");
+                sb.AppendLine("  - type: Cast");
                 sb.Append("    columnName: ").AppendLine(QuoteString(cast.ColumnName));
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    targetType: {cast.TargetType}");
                 break;
             case FilterAction filter:
-                sb.AppendLine("  - type: filter");
+                sb.AppendLine("  - type: Filter");
                 sb.Append("    columnName: ").AppendLine(QuoteString(filter.ColumnName));
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    operator: {filter.Operator}");
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    comparisonType: {filter.ComparisonType}");
                 sb.Append("    value: ").AppendLine(QuoteString(filter.Value));
                 break;
             case FillColumnAction fill:
-                sb.AppendLine("  - type: fill");
+                sb.AppendLine("  - type: Fill");
                 sb.Append("    columnName: ").AppendLine(QuoteString(fill.ColumnName));
                 sb.Append("    value: ").AppendLine(QuoteString(fill.Value));
                 break;
             case FormatTimestampAction formatTimestamp:
-                sb.AppendLine("  - type: format_timestamp");
+                sb.AppendLine("  - type: FormatTimestamp");
                 sb.Append("    columnName: ").AppendLine(QuoteString(formatTimestamp.ColumnName));
                 sb.Append("    targetFormat: ").AppendLine(QuoteString(formatTimestamp.TargetFormat));
                 break;
