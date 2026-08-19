@@ -53,9 +53,8 @@ internal sealed class RenameColumnDialog : Dialog
         var okButton = new Button { Text = "OK" };
         var cancelButton = new Button { Text = "Cancel" };
 
-        okButton.Accepting += (sender, e) =>
+        void Confirm()
         {
-            e.Handled = true;
             var name = textField.Text;
             if (string.IsNullOrEmpty(name) || name == currentName)
             {
@@ -65,6 +64,18 @@ internal sealed class RenameColumnDialog : Dialog
             NewName = name;
             Confirmed = true;
             App?.RequestStop();
+        }
+
+        okButton.Accepting += (sender, e) =>
+        {
+            e.Handled = true;
+            Confirm();
+        };
+
+        textField.Accepting += (sender, e) =>
+        {
+            e.Handled = true;
+            Confirm();
         };
 
         textField.TextChanging += (sender, e) =>

@@ -55,6 +55,7 @@ internal sealed class HelpDialog : Dialog
         h/j/k/l   : Move Left/Down/Up/Right
         gg        : Jump to first row
         G         : Jump to last row
+        d/u       : Page Down/Up
         Enter     : Expand/Collapse (Tree View)
 
         Context Actions (via 'x' menu)

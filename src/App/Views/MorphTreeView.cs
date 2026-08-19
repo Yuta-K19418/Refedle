@@ -6,7 +6,7 @@ namespace Refedle.App.Views;
 
 /// <summary>
 /// Abstract base class for all format-specific tree views.
-/// Provides Vim-key navigation (h/j/k/l/g/G/Ctrl+d/Ctrl+u), 't'-key table-mode toggle,
+/// Provides Vim-key navigation (h/j/k/l/g/G/d/u), 't'-key table-mode toggle,
 /// Enter-to-toggle expand/collapse, and global-shortcut passthrough guard.
 /// </summary>
 internal abstract class MorphTreeView : TreeView
