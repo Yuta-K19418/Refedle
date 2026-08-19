@@ -19,15 +19,15 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Chained transformations
             actions:
-              - type: filter
+              - type: Filter
                 columnName: age
-                operator: greaterThan
+                operator: GreaterThan
                 comparisonType: Number
                 value: 30
-              - type: fill
+              - type: Fill
                 columnName: email
                 value: "***"
-              - type: format_timestamp
+              - type: FormatTimestamp
                 columnName: joined
                 targetFormat: yyyy-MM-dd
             """;

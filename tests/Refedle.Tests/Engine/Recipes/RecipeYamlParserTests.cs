@@ -47,7 +47,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: rename
+              - type: Rename
                 oldName: "old_col"
                 newName: "new_col"
             """;
@@ -69,7 +69,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: delete
+              - type: Delete
                 columnName: "temp_field"
             """;
 
@@ -89,7 +89,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: cast
+              - type: Cast
                 columnName: "age"
                 targetType: WholeNumber
             """;
@@ -111,7 +111,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: filter
+              - type: Filter
                 columnName: "status"
                 operator: Equals
                 comparisonType: Text
@@ -136,12 +136,12 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: rename
+              - type: Rename
                 oldName: "a"
                 newName: "b"
-              - type: delete
+              - type: Delete
                 columnName: "temp"
-              - type: cast
+              - type: Cast
                 columnName: "age"
                 targetType: WholeNumber
             """;
@@ -183,7 +183,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: rename
+              - type: Rename
                 newName: "new"
             """;
 
@@ -202,7 +202,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: rename
+              - type: Rename
                 oldName: "old"
             """;
 
@@ -221,7 +221,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: delete
+              - type: Delete
             """;
 
         // Act
@@ -239,7 +239,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: cast
+              - type: Cast
                 targetType: WholeNumber
             """;
 
@@ -258,7 +258,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: cast
+              - type: Cast
                 columnName: "age"
             """;
 
@@ -277,7 +277,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: filter
+              - type: Filter
                 operator: Equals
                 value: "active"
             """;
@@ -297,7 +297,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: filter
+              - type: Filter
                 columnName: "status"
                 value: "active"
             """;
@@ -317,7 +317,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: filter
+              - type: Filter
                 columnName: "status"
                 operator: Equals
             """;
@@ -337,7 +337,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: cast
+              - type: Cast
                 columnName: "age"
                 targetType: InvalidType
             """;
@@ -357,7 +357,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: filter
+              - type: Filter
                 columnName: "status"
                 operator: InvalidOperator
                 value: "active"
@@ -425,7 +425,7 @@ public sealed class RecipeYamlParserTests
         var yaml = """
             name: "test"
             actions:
-              - type: rename
+              - type: Rename
                 oldName: "col\"name"
                 newName: "new"
             """;

@@ -20,7 +20,7 @@ Add a `FillColumnAction` that overwrites every value in a named column with a fi
 | `src/Engine/BatchOutputSchema.cs` | Add `CellTransformSpec?` to `BatchOutputColumn` |
 | `src/Engine/ActionApplier.cs` | Handle `FillColumnAction`; set `Transform = new FillSpec(value)` on the output column |
 | `src/App/Cli/RecordProcessor.cs` | Change `outputColumnCount: int` → `columns: IReadOnlyList<BatchOutputColumn>`; apply transform per cell |
-| `src/Engine/Recipes/MorphActionParser.cs` | Add `"fill"` case |
+| `src/Engine/Recipes/MorphActionParser.cs` | Add `"Fill"` case |
 | `src/Engine/Recipes/RecipeYamlSerializer.cs` | Add `FillColumnAction` case |
 | `src/Generators/FormatDispatcherGenerator.cs` | Pass `outputSchema.Columns` instead of `outputSchema.Columns.Count` to `RecordProcessor.ProcessAsync` |
 
@@ -133,7 +133,7 @@ return await RecordProcessor.ProcessAsync<TReader, TWriter>(
 ### MorphActionParser
 
 ```csharp
-"fill" => ParseFillAction(fields),
+"Fill" => ParseFillAction(fields),
 ```
 
 ```csharp
@@ -151,7 +151,7 @@ private static Result<MorphAction> ParseFillAction(Dictionary<string, string> fi
 
 ```csharp
 case FillColumnAction fill:
-    sb.AppendLine("  - type: fill");
+    sb.AppendLine("  - type: Fill");
     sb.Append("    columnName: ").AppendLine(QuoteString(fill.ColumnName));
     sb.Append("    value: ").AppendLine(QuoteString(fill.Value));
     break;

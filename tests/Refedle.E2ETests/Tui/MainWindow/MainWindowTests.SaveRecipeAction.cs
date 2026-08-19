@@ -55,7 +55,7 @@ public sealed partial class MainWindowTests
             // Assert
             File.Exists(savePath).Should().BeTrue();
             var recipeContent = await File.ReadAllTextAsync(savePath);
-            recipeContent.Should().Contain("type: rename");
+            recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"name\"");
             recipeContent.Should().Contain("newName: \"years\"");
         }
@@ -124,7 +124,7 @@ public sealed partial class MainWindowTests
             // Assert
             File.Exists(savePath).Should().BeTrue();
             var recipeContent = await File.ReadAllTextAsync(savePath);
-            recipeContent.Should().Contain("type: rename");
+            recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"age\"");
             recipeContent.Should().Contain("newName: \"years\"");
         }

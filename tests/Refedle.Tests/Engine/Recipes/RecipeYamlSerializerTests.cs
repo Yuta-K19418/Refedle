@@ -35,7 +35,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: rename");
+        yaml.Should().Contain("  - type: Rename");
         yaml.Should().Contain("    oldName: \"old\"");
         yaml.Should().Contain("    newName: \"new\"");
     }
@@ -54,7 +54,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: delete");
+        yaml.Should().Contain("  - type: Delete");
         yaml.Should().Contain("    columnName: \"temp_field\"");
     }
 
@@ -72,7 +72,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: cast");
+        yaml.Should().Contain("  - type: Cast");
         yaml.Should().Contain("    columnName: \"age\"");
         yaml.Should().Contain("    targetType: WholeNumber");
     }
@@ -91,7 +91,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: filter");
+        yaml.Should().Contain("  - type: Filter");
         yaml.Should().Contain("    columnName: \"status\"");
         yaml.Should().Contain("    operator: Equals");
         yaml.Should().Contain("    comparisonType: Text");
@@ -122,6 +122,24 @@ public sealed class RecipeYamlSerializerTests
 
         // Assert
         yaml.Should().NotContain("lastModified:");
+    }
+
+    [Fact]
+    public void Serialize_WithLastModified_WritesIsoTimestampUnquoted()
+    {
+        // Arrange
+        var recipe = new Recipe
+        {
+            Name = "test",
+            LastModified = new DateTimeOffset(2025, 1, 1, 0, 0, 0, TimeSpan.Zero),
+            Actions = [],
+        };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        yaml.Should().Contain("lastModified: 2025-01-01T00:00:00.0000000+00:00");
     }
 
     [Fact]
@@ -189,7 +207,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: fill");
+        yaml.Should().Contain("  - type: Fill");
         yaml.Should().Contain("    columnName: \"Email\"");
         yaml.Should().Contain("    value: \"REDACTED\"");
     }
@@ -254,7 +272,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: format_timestamp");
+        yaml.Should().Contain("  - type: FormatTimestamp");
         yaml.Should().Contain("    columnName: \"CreatedAt\"");
         yaml.Should().Contain("    targetFormat: \"yyyy/MM/dd\"");
     }

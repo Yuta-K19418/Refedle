@@ -17,7 +17,7 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Format joined
             actions:
-              - type: format_timestamp
+              - type: FormatTimestamp
                 columnName: joined
                 targetFormat: yyyy-MM-dd
             """;

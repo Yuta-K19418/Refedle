@@ -18,7 +18,7 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Delete age
             actions:
-              - type: delete
+              - type: Delete
                 columnName: age
             """;
         var inputFile = _testDirectory.CreateFile("input.csv", csvContent);

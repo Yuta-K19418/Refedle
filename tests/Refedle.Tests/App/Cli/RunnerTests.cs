@@ -23,7 +23,7 @@ public sealed partial class RunnerTests : IDisposable
         name: Test Recipe
         description: Test description
         actions:
-          - type: rename
+          - type: Rename
             oldName: age
             newName: new_age
         """;
@@ -108,7 +108,7 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange
         var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: delete\n    columnName: age");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
         var outputFile = Path.Combine(_testDir, "output.csv");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
         var logger = new TestAppLogger();
@@ -130,7 +130,7 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange
         var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: filter\n    columnName: age\n    operator: greaterThan\n    comparisonType: Number\n    value: 30");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
         var outputFile = Path.Combine(_testDir, "output.csv");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
         var logger = new TestAppLogger();
@@ -199,7 +199,7 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange
         var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: delete\n    columnName: age");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
         var outputFile = Path.Combine(_testDir, "output.jsonl");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
         var logger = new TestAppLogger();
@@ -221,7 +221,7 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange
         var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: filter\n    columnName: age\n    operator: greaterThan\n    comparisonType: Number\n    value: 30");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
         var outputFile = Path.Combine(_testDir, "output.jsonl");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
         var logger = new TestAppLogger();

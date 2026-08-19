@@ -17,7 +17,7 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Mask email
             actions:
-              - type: fill
+              - type: Fill
                 columnName: email
                 value: "***"
             """;

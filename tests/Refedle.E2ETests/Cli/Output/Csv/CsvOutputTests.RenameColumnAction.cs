@@ -18,7 +18,7 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Rename age
             actions:
-              - type: rename
+              - type: Rename
                 oldName: age
                 newName: years
             """;

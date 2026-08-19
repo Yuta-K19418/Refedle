@@ -32,14 +32,14 @@ model.
 ```yaml
 name: "customer-data"
 description: "Normalize customer CSV export"
-lastModified: "2025-12-30T12:00:00+00:00"
+lastModified: 2025-12-30T12:00:00+00:00
 actions:
-  - type: rename
+  - type: Rename
     oldName: "user_name"
     newName: "username"
-  - type: delete
+  - type: Delete
     columnName: "temp_field"
-  - type: cast
+  - type: Cast
     columnName: "age"
     targetType: WholeNumber
 ```
@@ -48,14 +48,17 @@ actions:
 
 | Element | Rule |
 |---------|------|
+| Field keys | Always `camelCase` (e.g., `columnName`, `comparisonType`). |
+| Field values | Always `PascalCase`, matching the C# enum member name or action discriminator 1:1 (e.g., `Rename`, `WholeNumber`, `GreaterThan`). **Case-sensitive**: a value that differs in casing is rejected on read instead of silently accepted. |
+| Quoting | A field is quoted iff the program handles it as a free-form string. Fixed-vocabulary (enum) values and `lastModified` are never quoted. |
+| Free-form string values | Always wrapped in `"..."`. Internal `"` is escaped as `\"`. Applies to `name`, `description`, `columnName`, `value`, `oldName`, `newName`, `targetFormat`. |
+| Enum values | Written as the C# enum name, **unquoted** (e.g., `type: Rename`, `targetType: WholeNumber`, `operator: GreaterThan`, `comparisonType: Number`). |
+| DateTimeOffset | `lastModified` is written in ISO 8601 round-trip format (`"O"`), **unquoted** — it is always a resolved timestamp value, never user-authored, so generic YAML tools can read it as a native timestamp. |
 | Top-level fields | `name` (required, non-empty), `description` (omit if null), `lastModified` (omit if null), `actions` |
 | Field order | Always: `name` → `description` → `lastModified` → `actions` |
-| String values | Always wrapped in `"..."`. Internal `"` is escaped as `\"`. |
-| Enum values | Written as the C# enum name, **unquoted** (e.g., `WholeNumber`, `Equals`). |
-| DateTimeOffset | Written in ISO 8601 round-trip format (`"O"`), quoted. |
 | Empty actions | `actions: []` on a single line (no trailing `-` items). |
 | Non-empty actions | `actions:` header, then items indented 2 spaces: `  - type: ...`, with further fields indented 4 spaces: `    key: value`. |
-| `type` field | Always the **first** field of each action item. |
+| `type` field | Always the **first** field of each action item; its value is the PascalCase action discriminator (e.g., `Rename`, `FormatTimestamp`). |
 | Comments | Lines starting with `#` are silently skipped on read. |
 | Blank lines | Silently skipped on read. |
 
@@ -63,10 +66,12 @@ actions:
 
 | Action type | Discriminator | Fields (in order) |
 |---|---|---|
-| `RenameColumnAction` | `rename` | `oldName` (string), `newName` (string) |
-| `DeleteColumnAction` | `delete` | `columnName` (string) |
-| `CastColumnAction` | `cast` | `columnName` (string), `targetType` (ColumnType enum) |
-| `FilterAction` *(added after rebase)* | `filter` | `columnName` (string), `operator` (FilterOperator enum), `comparisonType` (ComparisonType enum), `value` (string) |
+| `RenameColumnAction` | `Rename` | `oldName` (string), `newName` (string) |
+| `DeleteColumnAction` | `Delete` | `columnName` (string) |
+| `CastColumnAction` | `Cast` | `columnName` (string), `targetType` (ColumnType enum) |
+| `FilterAction` | `Filter` | `columnName` (string), `operator` (FilterOperator enum), `comparisonType` (ComparisonType enum), `value` (string) |
+| `FillColumnAction` | `Fill` | `columnName` (string), `value` (string) |
+| `FormatTimestampAction` | `FormatTimestamp` | `columnName` (string), `targetFormat` (string) |
 
 ---
 
@@ -139,15 +144,16 @@ Builds the YAML output using `StringBuilder`:
 ```
 name: "{recipe.Name}"
 [description: "{recipe.Description}"]          -- omit if null
-[lastModified: "{recipe.LastModified:O}"]       -- omit if null
+[lastModified: {recipe.LastModified:O}]         -- omit if null
 actions: []                                     -- if no actions
 actions:                                        -- if actions present
-  - type: {discriminator}
+  - type: {PascalCase discriminator}
     {field}: {formattedValue}
     ...
 ```
 
-String quoting helper: wrap every string value in `"..."` and escape inner `"` as `\"`.
+String quoting helper: wrap every free-form string value in `"..."` and escape inner `"` as `\"`.
+Enum values and `lastModified` bypass the helper and are written unquoted.
 
 #### `Deserialize(string yaml) → Result<Recipe>`
 
@@ -176,13 +182,13 @@ Line-by-line state machine parser.
 ```csharp
 switch (type)
 {
-    case "rename":
+    case "Rename":
         // requires: oldName, newName
-    case "delete":
+    case "Delete":
         // requires: columnName
-    case "cast":
+    case "Cast":
         // requires: columnName, targetType (parsed as ColumnType enum)
-    // "filter" → added after feature/filter-action rebase
+    // "Filter", "Fill", "FormatTimestamp" → added with their features
     default:
         return Results.Failure<Recipe>($"Unknown action type: '{type}'");
 }
@@ -191,7 +197,7 @@ switch (type)
 **Error cases returned as `Results.Failure<Recipe>`:**
 - Missing `name` field.
 - Unrecognised action `type` value.
-- Missing required field for an action type (e.g., `oldName` missing for `rename`).
+- Missing required field for an action type (e.g., `oldName` missing for `Rename`).
 - Invalid enum value (e.g., `targetType: UnsupportedType`).
 - Malformed `key: value` line at unexpected indentation.
 

@@ -255,15 +255,15 @@ Pressing `s` at this point produces `people.yaml`:
 
 ```yaml
 name: "people"
-lastModified: "2026-07-26T12:34:56.0000000+00:00"
+lastModified: 2026-07-26T12:34:56.0000000+00:00
 actions:
-  - type: rename
+  - type: Rename
     oldName: "nm"
     newName: "name"
-  - type: fill
+  - type: Fill
     columnName: "email"
     value: "REDACTED"
-  - type: filter
+  - type: Filter
     columnName: "age"
     operator: GreaterThan
     comparisonType: Number

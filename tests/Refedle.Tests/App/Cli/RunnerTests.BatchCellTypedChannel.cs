@@ -203,7 +203,7 @@ public sealed partial class RunnerTests
     {
         // Arrange
         const string content = "name,status\nAlice,active\n";
-        const string recipeYaml = "name: Fill status\nactions:\n  - type: fill\n    columnName: status\n    value: 0";
+        const string recipeYaml = "name: Fill status\nactions:\n  - type: Fill\n    columnName: status\n    value: 0";
         var inputFile = CreateTestFile("input.csv", content);
         var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
         var outputFile = Path.Combine(_testDir, "output.jsonl");
@@ -227,7 +227,7 @@ public sealed partial class RunnerTests
     {
         // Arrange
         const string content = "date\n2024-03-15\n";
-        const string recipeYaml = "name: Format date\nactions:\n  - type: format_timestamp\n    columnName: date\n    targetFormat: yyyyMMdd";
+        const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyyMMdd";
         var inputFile = CreateTestFile("input.csv", content);
         var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
         var outputFile = Path.Combine(_testDir, "output.jsonl");

@@ -18,9 +18,9 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Filter age
             actions:
-              - type: filter
+              - type: Filter
                 columnName: age
-                operator: greaterThan
+                operator: GreaterThan
                 comparisonType: Number
                 value: 30
             """;
@@ -53,9 +53,9 @@ public sealed partial class CsvOutputTests
         var recipeYaml = """
             name: Filter age
             actions:
-              - type: filter
+              - type: Filter
                 columnName: age
-                operator: greaterThan
+                operator: GreaterThan
                 comparisonType: Number
                 value: 30
             """;

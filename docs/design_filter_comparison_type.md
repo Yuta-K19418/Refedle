@@ -126,7 +126,7 @@ private static Result<MorphAction> ParseFilterAction(Dictionary<string, string> 
 
 ```csharp
 case FilterAction filter:
-    sb.AppendLine("  - type: filter");
+    sb.AppendLine("  - type: Filter");
     sb.Append("    columnName: ").AppendLine(QuoteString(filter.ColumnName));
     sb.AppendLine(CultureInfo.InvariantCulture, $"    operator: {filter.Operator}");
     sb.AppendLine(CultureInfo.InvariantCulture, $"    comparisonType: {filter.ComparisonType}");   // new
