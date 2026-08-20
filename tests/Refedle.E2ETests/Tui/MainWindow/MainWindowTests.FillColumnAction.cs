@@ -45,4 +45,50 @@ public sealed partial class MainWindowTests
         lines.Should().Contain(line => line.Contains("Bob", StringComparison.Ordinal) && line.Contains("***", StringComparison.Ordinal));
         lines.Should().NotContain(line => line.Contains("alice@example.com", StringComparison.Ordinal));
     }
+
+    [Fact]
+    public async Task ActionMenu_FillColumnOnFocusedTable_RendersFillValueInEveryCellOfColumn()
+    {
+        // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
+        var content = """
+            [
+              {"name":"Alice","email":"alice@example.com"},
+              {"name":"Bob","email":"bob@example.com"}
+            ]
+            """;
+        var inputFile = _testDirectory.CreateFile("input.json", content);
+        Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
+        await Harness.WaitForContentsAsync("[0]:");
+        Harness.SendKey(KeyCode.X);
+        Harness.SendKey(KeyCode.Enter);
+        await Harness.WaitForContentsAsync("name (text)", "email (text)");
+
+        // Act: column 0 is the "#" pseudo column; move right twice to "email", open Fill
+        // (5th item), submit a mask value.
+        Harness.SendKey(KeyCode.L);
+        Harness.SendKey(KeyCode.L);
+        Harness.SendKey(KeyCode.X);
+        Harness.SendKey(KeyCode.J);
+        Harness.SendKey(KeyCode.J);
+        Harness.SendKey(KeyCode.J);
+        Harness.SendKey(KeyCode.J);
+        Harness.SendKey(KeyCode.Enter);
+        await Harness.WaitForContentsAsync("Fill Column");
+        Harness.SendText("***");
+        // Queued keys drain one per UI-loop iteration, so typing a multi-character value can take
+        // longer than a short fixed delay would allow; wait for it to fully land before submitting.
+        await Harness.WaitForContentsAsync("Value: ***");
+        Harness.SendKey(KeyCode.Enter);
+        // Poll for the fill's observable effect rather than a fixed delay. The dialog's own text
+        // also hides "alice@example.com" while open, so its title's absence is checked too, so
+        // the wait doesn't return before the confirming key actually lands.
+        var lines = await Harness.WaitForConditionAsync(
+            l => l.All(line => !line.Contains("alice@example.com", StringComparison.Ordinal) && !line.Contains("Fill Column", StringComparison.Ordinal)),
+            "dialog closed and \"alice@example.com\" replaced by the fill value");
+
+        // Assert
+        lines.Should().Contain(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("***", StringComparison.Ordinal));
+        lines.Should().Contain(line => line.Contains("Bob", StringComparison.Ordinal) && line.Contains("***", StringComparison.Ordinal));
+        lines.Should().NotContain(line => line.Contains("alice@example.com", StringComparison.Ordinal));
+    }
 }
