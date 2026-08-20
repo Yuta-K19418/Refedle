@@ -2,6 +2,7 @@ using System.Text;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 using Terminal.Gui.Views;
 
 namespace Refedle.App.Views;
@@ -14,6 +15,7 @@ internal sealed class FocusedTableSource : ITableSource
     private readonly IReadOnlyList<FocusedTableRow> _rows;
     private readonly TableSchema _schema;
     private readonly string[] _columnNames;
+    private readonly string[] _rawColumnNames;
     private readonly byte[][] _columnNamesUtf8;
 
     internal FocusedTableSource(DrillDownState drillDown)
@@ -21,7 +23,8 @@ internal sealed class FocusedTableSource : ITableSource
         ArgumentNullException.ThrowIfNull(drillDown);
         _rows = drillDown.Rows;
         _schema = drillDown.Schema;
-        _columnNames = ["#", .. drillDown.Schema.Columns.Select(c => c.Name)];
+        _columnNames = ["#", .. drillDown.Schema.Columns.Select(c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
+        _rawColumnNames = ["#", .. drillDown.Schema.Columns.Select(c => c.Name)];
         _columnNamesUtf8 = [.. drillDown.Schema.Columns.Select(c => Encoding.UTF8.GetBytes(c.Name))];
     }
 
@@ -33,6 +36,13 @@ internal sealed class FocusedTableSource : ITableSource
 
     /// <inheritdoc/>
     public string[] ColumnNames => _columnNames;
+
+    /// <summary>
+    /// Gets the raw (unlabeled) column names in output order, with <c>"#"</c> at index 0.
+    /// Use these when constructing <see cref="MorphAction"/>s so that action
+    /// <c>ColumnName</c> values match the DrillDown schema names.
+    /// </summary>
+    internal string[] RawColumnNames => _rawColumnNames;
 
     /// <inheritdoc/>
     public object this[int row, int col]

@@ -18,7 +18,7 @@ public sealed partial class MainWindowTests
         // Act: the sole "items" root node is already selected; x opens the DrillDown menu.
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name", "val");
+        var lines = await Harness.WaitForContentsAsync("name (text)", "val (number)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("[0]", StringComparison.Ordinal) && line.Contains('A') && line.Contains('1'));
