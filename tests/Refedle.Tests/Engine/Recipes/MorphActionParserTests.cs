@@ -48,7 +48,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "rename" },
+            { "type", "Rename" },
             { "newName", "NewAge" },
         };
 
@@ -66,7 +66,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "rename" },
+            { "type", "Rename" },
             { "oldName", "Age" },
         };
 
@@ -84,7 +84,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "rename" },
+            { "type", "Rename" },
             { "oldName", "Age" },
             { "newName", "years" },
         };
@@ -105,7 +105,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "delete" },
+            { "type", "Delete" },
             { "columnName", "Age" },
         };
 
@@ -122,7 +122,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_DeleteAction_WithMissingColumnName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string> { { "type", "delete" } };
+        var fields = new Dictionary<string, string> { { "type", "Delete" } };
 
         // Act
         var result = MorphActionParser.ParseAction(fields);
@@ -138,7 +138,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "cast" },
+            { "type", "Cast" },
             { "columnName", "Age" },
             { "targetType", "WholeNumber" },
         };
@@ -159,7 +159,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "cast" },
+            { "type", "Cast" },
             { "columnName", "Age" },
             { "targetType", "NotAType" },
         };
@@ -178,7 +178,7 @@ public sealed class MorphActionParserTests
         // Arrange — targetType is case-sensitive; "wholenumber" is not a valid value
         var fields = new Dictionary<string, string>
         {
-            { "type", "cast" },
+            { "type", "Cast" },
             { "columnName", "Age" },
             { "targetType", "wholenumber" },
         };
@@ -200,7 +200,6 @@ public sealed class MorphActionParserTests
     [InlineData("NotEquals", FilterOperator.NotEquals, ComparisonType.Text)]
     [InlineData("GreaterThan", FilterOperator.GreaterThan, ComparisonType.Number)]
     [InlineData("LessThan", FilterOperator.LessThan, ComparisonType.Number)]
-    [InlineData("contains", FilterOperator.Contains, ComparisonType.Text)]  // operator is case-insensitive
     [InlineData("GreaterThanOrEqual", FilterOperator.GreaterThanOrEqual, ComparisonType.Number)]
     [InlineData("LessThanOrEqual", FilterOperator.LessThanOrEqual, ComparisonType.Number)]
     public void ParseAction_ValidFilterAction_ReturnsSuccess(
@@ -209,7 +208,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", operatorStr },
             { "comparisonType", comparisonType.ToString() },
@@ -234,9 +233,30 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "EXPLODE" },
+            { "value", "30" },
+        };
+
+        // Act
+        var result = MorphActionParser.ParseAction(fields);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Invalid enum value for operator");
+    }
+
+    [Fact]
+    public void ParseAction_FilterAction_WithWrongCaseOperator_ReturnsFailure()
+    {
+        // Arrange — operator is case-sensitive; "equals" is not a valid value
+        var fields = new Dictionary<string, string>
+        {
+            { "type", "Filter" },
+            { "columnName", "Age" },
+            { "operator", "equals" },
+            { "comparisonType", "Text" },
             { "value", "30" },
         };
 
@@ -254,7 +274,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Equals" },
         };
@@ -273,7 +293,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "fill" },
+            { "type", "Fill" },
             { "columnName", "Email" },
             { "value", "REDACTED" },
         };
@@ -294,7 +314,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "fill" },
+            { "type", "Fill" },
             { "value", "REDACTED" },
         };
 
@@ -312,7 +332,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "fill" },
+            { "type", "Fill" },
             { "columnName", "Email" },
         };
 
@@ -330,7 +350,7 @@ public sealed class MorphActionParserTests
         // Arrange — empty string is a valid fill value (e.g., blank-out a column)
         var fields = new Dictionary<string, string>
         {
-            { "type", "fill" },
+            { "type", "Fill" },
             { "columnName", "Email" },
             { "value", "" },
         };
@@ -350,7 +370,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "format_timestamp" },
+            { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
             { "targetFormat", "yyyy/MM/dd" },
         };
@@ -371,7 +391,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "format_timestamp" },
+            { "type", "FormatTimestamp" },
             { "targetFormat", "yyyy/MM/dd" },
         };
 
@@ -389,7 +409,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "format_timestamp" },
+            { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
         };
 
@@ -407,7 +427,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "format_timestamp" },
+            { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
             { "targetFormat", "" },
         };
@@ -427,7 +447,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Equals" },
             { "value", "30" },
@@ -447,7 +467,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Equals" },
             { "comparisonType", "NotAType" },
@@ -468,7 +488,7 @@ public sealed class MorphActionParserTests
         // Arrange — comparisonType is case-sensitive; "text" is not a valid value
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Equals" },
             { "comparisonType", "text" },
@@ -489,7 +509,7 @@ public sealed class MorphActionParserTests
         // Arrange — Contains is not valid for a Number comparison type
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Contains" },
             { "comparisonType", "Number" },
@@ -509,7 +529,7 @@ public sealed class MorphActionParserTests
         // Arrange — GreaterThan/Number requires a parseable numeric value
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "GreaterThan" },
             { "comparisonType", "Number" },
@@ -529,7 +549,7 @@ public sealed class MorphActionParserTests
         // Arrange
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "GreaterThan" },
             { "comparisonType", "Timestamp" },
@@ -551,7 +571,7 @@ public sealed class MorphActionParserTests
         // Arrange — '999' parses as a number to an undefined ComparisonType value
         var fields = new Dictionary<string, string>
         {
-            { "type", "filter" },
+            { "type", "Filter" },
             { "columnName", "Age" },
             { "operator", "Equals" },
             { "comparisonType", "999" },

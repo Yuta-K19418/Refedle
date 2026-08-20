@@ -18,12 +18,12 @@ internal static class MorphActionParser
         return fields.TryGetValue("type", out var type)
             ? type switch
             {
-                "rename" => ParseRenameAction(fields),
-                "delete" => ParseDeleteAction(fields),
-                "cast" => ParseCastAction(fields),
-                "filter" => ParseFilterAction(fields),
-                "fill" => ParseFillAction(fields),
-                "format_timestamp" => ParseFormatTimestampAction(fields),
+                "Rename" => ParseRenameAction(fields),
+                "Delete" => ParseDeleteAction(fields),
+                "Cast" => ParseCastAction(fields),
+                "Filter" => ParseFilterAction(fields),
+                "Fill" => ParseFillAction(fields),
+                "FormatTimestamp" => ParseFormatTimestampAction(fields),
                 _ => Results.Failure<MorphAction>($"Unknown action type: '{type}'"),
             }
             : Results.Failure<MorphAction>("Missing action type");
@@ -114,7 +114,7 @@ internal static class MorphActionParser
             return Results.Failure<MorphAction>("Missing required field 'value' for filter action");
         }
 
-        if (!Enum.TryParse<FilterOperator>(operatorStr, ignoreCase: true, out var filterOperator))
+        if (!Enum.TryParse<FilterOperator>(operatorStr, ignoreCase: false, out var filterOperator))
         {
             return Results.Failure<MorphAction>($"Invalid enum value for operator: '{operatorStr}'");
         }
