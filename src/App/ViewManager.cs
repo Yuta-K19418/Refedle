@@ -236,7 +236,7 @@ internal sealed class ViewManager : IDisposable
 
         ITableSource rawSource = new Views.VirtualTableSource(indexer, schema);
         var source = _state.ActionStack.Count > 0
-            ? new Views.LazyTransformer(
+            ? Views.LazyTransformer.Create(
                 rawSource,
                 schema,
                 _state.ActionStack,
@@ -351,7 +351,7 @@ internal sealed class ViewManager : IDisposable
         _state.OnSchemaRefined = source.UpdateSchema;
 
         var tableSource = _state.ActionStack.Count > 0
-            ? (ITableSource)new Views.LazyTransformer(
+            ? (ITableSource)Views.LazyTransformer.Create(
                 source,
                 schema,
                 _state.ActionStack,
