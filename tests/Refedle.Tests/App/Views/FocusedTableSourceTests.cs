@@ -28,7 +28,7 @@ public sealed class FocusedTableSourceTests
     private static DrillDownState CreateState(
         IReadOnlyList<FocusedTableRow>? rows = null,
         TableSchema? schema = null) =>
-        new(rows ?? DefaultRows, schema ?? DefaultSchema, ViewMode.JsonLinesTree);
+        new(rows ?? DefaultRows, schema ?? DefaultSchema, ViewMode.JsonLinesTree, ActionStack: []);
 
     [Fact]
     public void Constructor_NullDrillDownState_ThrowsArgumentNullException()

@@ -98,7 +98,7 @@ internal sealed class RecipeCommandHandler(
                 return;
             }
 
-            _state.ActionStack = result.Value.Actions;
+            _state.SetActionStack(result.Value.Actions);
             _viewManager.RefreshCurrentTableView();
         });
     }

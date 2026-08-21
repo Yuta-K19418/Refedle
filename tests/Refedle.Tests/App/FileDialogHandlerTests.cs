@@ -231,7 +231,8 @@ public sealed class FileDialogHandlerTests : IDisposable
         state.DrillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
-            ViewMode.JsonObjectTree);
+            ViewMode.JsonObjectTree,
+            ActionStack: []);
 
         var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
 

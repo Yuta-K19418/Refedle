@@ -86,22 +86,14 @@ internal sealed class ViewManager : IDisposable
 
     private void AddContextualHints(List<string> hints)
     {
-        var format = FormatDetector.Detect(_state.CurrentFilePath);
-        if (format.IsSuccess
-            && format.Value is DataFormat.JsonLines or DataFormat.JsonArray
-            && _state.CurrentMode != ViewMode.FocusedTable)
-        {
-            hints.Add("t:Tree/Table");
-        }
+        AddTreeToggleHint(hints);
+        AddMenuHint(hints);
 
-        var currentView = GetCurrentView();
-        if ((currentView is MorphTableView && _state.CurrentMode != ViewMode.FocusedTable)
-            || currentView is MorphTreeView)
-        {
-            hints.Add("x:Menu");
-        }
+        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+            ? drillDown.ActionStack.Count
+            : _state.ActionStack.Count;
 
-        if (_state.ActionStack.Count > 0)
+        if (currentActionCount > 0)
         {
             hints.Add("c:Clear");
         }
@@ -109,6 +101,27 @@ internal sealed class ViewManager : IDisposable
         if (_state.CurrentMode == ViewMode.FocusedTable)
         {
             hints.Add("bs:Back");
+        }
+    }
+
+    private void AddTreeToggleHint(List<string> hints)
+    {
+        var format = FormatDetector.Detect(_state.CurrentFilePath);
+        if (format.IsSuccess
+            && format.Value is DataFormat.JsonLines or DataFormat.JsonArray
+            && _state.CurrentMode != ViewMode.FocusedTable)
+        {
+            hints.Add("t:Tree/Table");
+        }
+    }
+
+    private void AddMenuHint(List<string> hints)
+    {
+        var currentView = GetCurrentView();
+        if ((currentView is MorphTableView && _state.CurrentMode != ViewMode.FocusedTable)
+            || currentView is MorphTreeView)
+        {
+            hints.Add("x:Menu");
         }
     }
 
@@ -391,9 +404,9 @@ internal sealed class ViewManager : IDisposable
 
     /// <summary>
     /// Refreshes the current table view by re-invoking the appropriate <c>SwitchTo*</c> method.
-    /// Called after a morph action is added to <see cref="AppState.ActionStack"/> so that
-    /// <see cref="Views.LazyTransformer"/> or <see cref="Views.FocusedTableTransformer"/>
-    /// is reconstructed with the updated stack.
+    /// Called after a morph action is added to <see cref="AppState.ActionStack"/> or the active
+    /// <see cref="DrillDownState.ActionStack"/> so that <see cref="Views.LazyTransformer"/> or
+    /// <see cref="Views.FocusedTableTransformer"/> is reconstructed with the updated stack.
     /// </summary>
     internal void RefreshCurrentTableView()
     {
@@ -427,6 +440,13 @@ internal sealed class ViewManager : IDisposable
     /// <param name="action">The morph action to apply.</param>
     private void HandleMorphAction(MorphAction action)
     {
+        if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is not null)
+        {
+            _state.DrillDown = _state.DrillDown with { ActionStack = [.. _state.DrillDown.ActionStack, action] };
+            RefreshCurrentTableView();
+            return;
+        }
+
         _state.AddMorphAction(action);
         RefreshCurrentTableView();
     }
@@ -544,7 +564,6 @@ internal sealed class ViewManager : IDisposable
                     "ModeController.DrillDown must set DrillDown state on success.");
             }
 
-            _state.ClearMorphActions();
             UpdateBreadcrumb(request.KeyPath, collapseIndices: false);
             SwitchToFocusedTable(drillDown);
         });
@@ -573,7 +592,6 @@ internal sealed class ViewManager : IDisposable
 
             _state.DrillDown = result.Value;
             _state.CurrentMode = ViewMode.FocusedTable;
-            _state.ClearMorphActions();
             UpdateBreadcrumb(request.KeyPath, collapseIndices: true);
             SwitchToFocusedTable(result.Value);
         });
@@ -588,8 +606,8 @@ internal sealed class ViewManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         ITableSource rawSource = new Views.FocusedTableSource(drillDown);
-        var source = _state.ActionStack.Count > 0
-            ? Views.FocusedTableTransformer.Create(rawSource, drillDown.Schema, _state.ActionStack)
+        var source = drillDown.ActionStack.Count > 0
+            ? Views.FocusedTableTransformer.Create(rawSource, drillDown.Schema, drillDown.ActionStack)
             : rawSource;
 
         Func<int, string> getRawColumnName = source switch
