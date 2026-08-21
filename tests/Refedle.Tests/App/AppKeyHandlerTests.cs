@@ -219,7 +219,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
         state.DrillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, ActionStack: []);
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
         using var window = new Window();
         var modeController = new ModeController(state);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -248,6 +248,7 @@ public sealed class AppKeyHandlerTests
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
                 schema,
                 ViewMode.JsonLinesTree,
+                KeyPath: [],
                 ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
         };
         using var window = new Window();
@@ -282,7 +283,7 @@ public sealed class AppKeyHandlerTests
             CurrentMode = ViewMode.FocusedTable,
             JsonObjectEntries = entries,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, ActionStack: []),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);

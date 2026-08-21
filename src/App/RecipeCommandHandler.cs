@@ -20,7 +20,7 @@ internal sealed class RecipeCommandHandler(
 
     internal async Task SaveAsync()
     {
-        if (_state.CurrentMode is not (ViewMode.CsvTable or ViewMode.JsonLinesTable or ViewMode.JsonLinesTree))
+        if (_state.CurrentMode is not (ViewMode.CsvTable or ViewMode.JsonLinesTable or ViewMode.JsonLinesTree or ViewMode.FocusedTable))
         {
             return;
         }
@@ -40,12 +40,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var recipe = new Recipe
-        {
-            Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),
-            Actions = _state.ActionStack,
-            LastModified = System.DateTimeOffset.UtcNow,
-        };
+        var recipe = BuildRecipe();
 
         var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token);
 
@@ -60,6 +55,29 @@ internal sealed class RecipeCommandHandler(
             MessageBox.Query(_app, "Save Recipe", "Recipe saved successfully.", "OK");
         });
     }
+
+    /// <summary>
+    /// Builds the Recipe to save under the Save Scope rule: a FocusedTable view with an active
+    /// DrillDown captures only that DrillDown's scope (KeyPath + ActionStack), never the base
+    /// table's AppState.ActionStack. Any other mode — including a stale AppState.DrillDown left
+    /// over from navigating back without clearing it — captures the base table's ActionStack,
+    /// with DrillDownKeyPath left unset.
+    /// </summary>
+    internal Recipe BuildRecipe() =>
+        _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+            ? new Recipe
+            {
+                Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),
+                Actions = drillDown.ActionStack,
+                DrillDownKeyPath = drillDown.KeyPath,
+                LastModified = System.DateTimeOffset.UtcNow,
+            }
+            : new Recipe
+            {
+                Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),
+                Actions = _state.ActionStack,
+                LastModified = System.DateTimeOffset.UtcNow,
+            };
 
     internal async Task LoadAsync()
     {

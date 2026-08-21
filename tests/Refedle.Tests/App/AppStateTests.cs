@@ -16,6 +16,7 @@ public sealed class AppStateTests
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
                 new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
                 ViewMode.JsonLinesTree,
+                KeyPath: [],
                 ActionStack: [drillDownAction]),
         };
 

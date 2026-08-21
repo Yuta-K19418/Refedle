@@ -255,4 +255,46 @@ public sealed class ModeControllerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
     }
+
+    [Fact]
+    public void DrillDown_WithKeyPathOnRequest_PopulatesDrillDownStateKeyPath()
+    {
+        // Arrange
+        JsonRawBytes nodeBytes = Encoding.UTF8.GetBytes("""[{"id":1}]""");
+        IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
+        var request = new SingleDrillDownRequest(
+            Format: Refedle.Engine.Types.DataFormat.JsonObject,
+            NodeBytes: nodeBytes,
+            KeyPath: keyPath);
+        using var state = new AppState();
+        var controller = new ModeController(state);
+
+        // Act
+        var result = controller.DrillDown(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        state.DrillDown.Should().BeOfType<DrillDownState>().Which.KeyPath.Should().Equal(keyPath);
+    }
+
+    [Fact]
+    public async Task FullAggregationDrillDownAsync_WithKeyPathOnRequest_PopulatesDrillDownStateKeyPath()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(
+            _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
+        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        var controller = new ModeController(state);
+        IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
+        var request = new FullAggregationDrillDownRequest(
+            Format: Refedle.Engine.Types.DataFormat.JsonLines,
+            KeyPath: keyPath);
+
+        // Act
+        var result = await controller.FullAggregationDrillDownAsync(request);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.KeyPath.Should().Equal(keyPath);
+    }
 }

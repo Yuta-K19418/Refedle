@@ -232,6 +232,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonObjectTree,
+            KeyPath: [],
             ActionStack: []);
 
         var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });

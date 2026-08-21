@@ -11,4 +11,5 @@ internal sealed record DrillDownState(
     IReadOnlyList<FocusedTableRow> Rows,
     TableSchema Schema,
     ViewMode PreviousMode,
+    IReadOnlyList<KeyPathSegment> KeyPath,
     IReadOnlyList<MorphAction> ActionStack);

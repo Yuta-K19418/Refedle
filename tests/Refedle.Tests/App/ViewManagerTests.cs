@@ -823,6 +823,7 @@ public sealed class ViewManagerTests : IDisposable
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
             ViewMode.JsonArrayTree,
+            KeyPath: [],
             ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
@@ -855,6 +856,7 @@ public sealed class ViewManagerTests : IDisposable
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
             ViewMode.JsonArrayTree,
+            KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "label" }]);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
@@ -884,6 +886,7 @@ public sealed class ViewManagerTests : IDisposable
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
             ViewMode.JsonArrayTree,
+            KeyPath: [],
             ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
@@ -918,6 +921,7 @@ public sealed class ViewManagerTests : IDisposable
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
             ViewMode.JsonArrayTree,
+            KeyPath: [],
             ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         state.AddMorphAction(baseAction);
@@ -949,6 +953,7 @@ public sealed class ViewManagerTests : IDisposable
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
             ViewMode.JsonLinesTree,
+            KeyPath: [],
             ActionStack: [staleDrillDownAction]);
         using var state = new AppState { CurrentFilePath = filePath, DrillDown = staleDrillDown };
         using var window = new Window();
@@ -1087,7 +1092,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             RowIndexer = indexer,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, ActionStack: []),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);
@@ -1117,7 +1122,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             RowIndexer = indexer,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, ActionStack: []),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);
@@ -1145,7 +1150,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             JsonObjectEntries = entries,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, ActionStack: []),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);

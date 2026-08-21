@@ -238,7 +238,7 @@ public sealed class MainWindowTests
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
         state.DrillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, ActionStack: []);
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
         using var mainWindow = new MainWindow(app, state);
         // No dialog auto-dismiss wired: if the wrong stack were consulted, this would hang.
         app.StopAfterFirstIteration = true;
@@ -266,6 +266,7 @@ public sealed class MainWindowTests
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
                 schema,
                 ViewMode.JsonLinesTree,
+                KeyPath: [],
                 ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
         };
         using var mainWindow = new MainWindow(app, state);
@@ -295,6 +296,7 @@ public sealed class MainWindowTests
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
+            KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
         using var mainWindow = new MainWindow(app, state);
         // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
@@ -336,6 +338,7 @@ public sealed class MainWindowTests
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
                 schema,
                 ViewMode.JsonLinesTree,
+                KeyPath: [],
                 ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]),
         };
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
