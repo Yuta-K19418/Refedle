@@ -16,28 +16,32 @@ namespace Refedle.App.Views;
 /// Column 0 is the <c>"#"</c> pseudo column (a per-row hash), which is never a Morph
 /// target: <see cref="Create"/> runs <see cref="LazyTransformerBase.BuildTransformedSchema"/>
 /// over the DrillDown schema only, then prepends a fixed <c>"#"</c> slot to every output
-/// array. Use <see cref="Create"/> to construct.
+/// array. Use <see cref="Create"/> to construct — the constructor is private.
 /// </summary>
-internal sealed class FocusedTableTransformer(
-    ITableSource source,
-    IReadOnlyList<int>? matchedRowIndices,
-    string[] columnNames,
-    string[] rawColumnNames,
-    IReadOnlyList<ColumnType> columnTypes,
-    IReadOnlyList<int> sourceColumnIndices,
-    IReadOnlyList<string?> fillValues,
-    IReadOnlyList<string?> formatStrings
-) : LazyTransformerBase(
-    source,
-    columnNames,
-    rawColumnNames,
-    columnTypes,
-    sourceColumnIndices,
-    fillValues,
-    formatStrings
-)
+internal sealed class FocusedTableTransformer : LazyTransformerBase
 {
-    private readonly IReadOnlyList<int>? _matchedRowIndices = matchedRowIndices;
+    private readonly IReadOnlyList<int>? _matchedRowIndices;
+
+    private FocusedTableTransformer(
+        ITableSource source,
+        IReadOnlyList<int>? matchedRowIndices,
+        string[] columnNames,
+        string[] rawColumnNames,
+        IReadOnlyList<ColumnType> columnTypes,
+        IReadOnlyList<int> sourceColumnIndices,
+        IReadOnlyList<string?> fillValues,
+        IReadOnlyList<string?> formatStrings)
+        : base(
+            source,
+            columnNames,
+            rawColumnNames,
+            columnTypes,
+            sourceColumnIndices,
+            fillValues,
+            formatStrings)
+    {
+        _matchedRowIndices = matchedRowIndices;
+    }
 
     /// <summary>
     /// Creates a new <see cref="FocusedTableTransformer"/> by applying the action stack

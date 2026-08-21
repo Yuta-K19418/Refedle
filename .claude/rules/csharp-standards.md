@@ -12,7 +12,11 @@ paths:
 - ❌ Block-scoped namespaces (`namespace X { ... }`) are **STRICTLY FORBIDDEN**
 
 ### Constructors
-- Use **Primary Constructors** for classes/structs/records (unless explicit validation requires a body)
+- Use **Primary Constructors** for classes/structs/records, with one exception: if the
+  constructor must be narrower in accessibility than the type itself (e.g. `private`/
+  `protected`, to force construction through a static factory), use a conventional
+  constructor with a body — primary constructors cannot carry an explicit accessibility
+  modifier in current C#, so this case is not achievable with primary-constructor syntax
 
 ### Collections
 - Use **Collection Expressions** `[]`
