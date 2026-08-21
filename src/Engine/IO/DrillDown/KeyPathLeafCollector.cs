@@ -144,6 +144,43 @@ internal static class KeyPathLeafCollector
         return null;
     }
 
+    /// <summary>
+    /// Returns the bytes of the array element at <paramref name="index"/>, or <c>null</c> if
+    /// <paramref name="arrayBytes"/> is not an array or <paramref name="index"/> is out of range.
+    /// </summary>
+    internal static JsonRawBytes? FindArrayElementByIndex(JsonRawBytes arrayBytes, int index)
+    {
+        var reader = new Utf8JsonReader(arrayBytes.Span);
+        if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
+        {
+            return null;
+        }
+
+        var elementIndex = 0;
+        while (reader.Read())
+        {
+            if (reader.TokenType == JsonTokenType.EndArray)
+            {
+                return null;
+            }
+
+            if (reader.CurrentDepth != 1)
+            {
+                continue;
+            }
+
+            var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
+            if (elementIndex == index)
+            {
+                return elementBytes;
+            }
+
+            elementIndex++;
+        }
+
+        return null;
+    }
+
     private static JsonRawBytes SynthesizeObject(ReadOnlySpan<byte> keyUtf8, ReadOnlySpan<byte> valueBytes)
     {
         var buffer = new ArrayBufferWriter<byte>();

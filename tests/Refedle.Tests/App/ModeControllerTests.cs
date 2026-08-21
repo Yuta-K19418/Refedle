@@ -153,7 +153,8 @@ public sealed class ModeControllerTests : IDisposable
         var request = new SingleDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
-            KeyPath: []);
+            KeyPath: [],
+            InitialActionStack: []);
         using var state = new AppState();
         var controller = new ModeController(state);
         var expectedHashValues = Enumerable.Range(0, childCount).Select(i => $"[{i}]");
@@ -177,7 +178,8 @@ public sealed class ModeControllerTests : IDisposable
         var controller = new ModeController(state);
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
-            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         var result = await controller.FullAggregationDrillDownAsync(request);
@@ -199,7 +201,8 @@ public sealed class ModeControllerTests : IDisposable
         var controller = new ModeController(state);
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
-            KeyPath: [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+            KeyPath: [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         var result = await controller.FullAggregationDrillDownAsync(request);
@@ -219,7 +222,8 @@ public sealed class ModeControllerTests : IDisposable
         var request = new SingleDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
-            KeyPath: []);
+            KeyPath: [],
+            InitialActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.JsonObjectTree };
         var controller = new ModeController(state);
 
@@ -246,7 +250,8 @@ public sealed class ModeControllerTests : IDisposable
         var controller = new ModeController(state);
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
-            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         var result = await controller.FullAggregationDrillDownAsync(request);
@@ -265,7 +270,8 @@ public sealed class ModeControllerTests : IDisposable
         var request = new SingleDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
-            KeyPath: keyPath);
+            KeyPath: keyPath,
+            InitialActionStack: []);
         using var state = new AppState();
         var controller = new ModeController(state);
 
@@ -288,7 +294,8 @@ public sealed class ModeControllerTests : IDisposable
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
-            KeyPath: keyPath);
+            KeyPath: keyPath,
+            InitialActionStack: []);
 
         // Act
         var result = await controller.FullAggregationDrillDownAsync(request);

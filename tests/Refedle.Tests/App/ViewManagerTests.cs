@@ -581,7 +581,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — immediate-execution uiThreadInvoke applies the scanned result synchronously
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -605,7 +606,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -632,7 +634,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — the background scan completes; the callback is captured but NOT yet executed
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -668,7 +671,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — scan completes and the callback is captured; dispose BEFORE the callback executes
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -775,7 +779,8 @@ public sealed class ViewManagerTests : IDisposable
             [
                 new KeyPathSegment("list", KeyPathSegmentKind.Key),
                 new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
-            ]);
+            ],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
@@ -800,7 +805,8 @@ public sealed class ViewManagerTests : IDisposable
             [
                 new KeyPathSegment("list", KeyPathSegmentKind.Key),
                 new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
-            ]);
+            ],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -992,7 +998,8 @@ public sealed class ViewManagerTests : IDisposable
         var request = new SingleDrillDownRequest(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[{\"a\":1}]"),
-            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
@@ -1017,7 +1024,8 @@ public sealed class ViewManagerTests : IDisposable
         var request = new SingleDrillDownRequest(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[]"),
-            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
@@ -1042,7 +1050,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -1067,7 +1076,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);

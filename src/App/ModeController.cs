@@ -113,7 +113,7 @@ internal sealed class ModeController
             rows[i] = new FocusedTableRow(children[i], string.Create(CultureInfo.InvariantCulture, $"[{i}]"));
         }
 
-        _state.DrillDown = new DrillDownState(rows, result.Value.schema, _state.CurrentMode, request.KeyPath, ActionStack: []);
+        _state.DrillDown = new DrillDownState(rows, result.Value.schema, _state.CurrentMode, request.KeyPath, ActionStack: request.InitialActionStack);
         _state.CurrentMode = ViewMode.FocusedTable;
 
         return Results.Success();
@@ -143,6 +143,6 @@ internal sealed class ModeController
             return Results.Failure<DrillDownState>(result.Error);
         }
 
-        return Results.Success(new DrillDownState(result.Value.rows, result.Value.schema, previousMode, request.KeyPath, ActionStack: []));
+        return Results.Success(new DrillDownState(result.Value.rows, result.Value.schema, previousMode, request.KeyPath, ActionStack: request.InitialActionStack));
     }
 }

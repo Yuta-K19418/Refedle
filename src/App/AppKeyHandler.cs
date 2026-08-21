@@ -241,7 +241,8 @@ internal sealed class AppKeyHandler : IDisposable
         var request = new SingleDrillDownRequest(
             Format: format,
             NodeBytes: arrayNode.RawJson,
-            KeyPath: KeyPathBuilder.Build(selectedNode));
+            KeyPath: KeyPathBuilder.Build(selectedNode),
+            InitialActionStack: []);
 
         void onDrillDownConfirmed(string actionName) => _viewManager.DrillDown(request);
 
@@ -258,7 +259,8 @@ internal sealed class AppKeyHandler : IDisposable
         var keyPath = KeyPathBuilder.Build(selectedNode);
         var request = new FullAggregationDrillDownRequest(
             Format: format,
-            KeyPath: keyPath);
+            KeyPath: keyPath,
+            InitialActionStack: []);
 
         void onDrillDownConfirmed(string actionName) =>
             _ = _viewManager.FullAggregationDrillDownAsync(request)

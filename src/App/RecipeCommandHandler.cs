@@ -1,5 +1,9 @@
+using Refedle.Engine;
+using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Recipes;
+using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 
@@ -106,18 +110,104 @@ internal sealed class RecipeCommandHandler(
             throw new InvalidOperationException("Cannot load recipe: no input file is currently loaded.");
         }
 
+        // Captured before the await so the DrillDown branch never reads AppState off the UI thread.
+        var currentFilePath = _state.CurrentFilePath;
         var result = await _recipeManager.LoadAsync(path, _state.Cts.Token);
 
-        _app.Invoke(() =>
+        if (result.IsFailure)
         {
-            if (result.IsFailure)
-            {
-                _viewManager.ShowError(result.Error);
-                return;
-            }
+            _app.Invoke(() => _viewManager.ShowError(result.Error));
+            return;
+        }
 
-            _state.SetActionStack(result.Value.Actions);
-            _viewManager.RefreshCurrentTableView();
-        });
+        var recipe = result.Value;
+        if (recipe.DrillDownKeyPath is not { } keyPath)
+        {
+            _app.Invoke(() =>
+            {
+                _state.SetActionStack(recipe.Actions);
+                _viewManager.RefreshCurrentTableView();
+            });
+            return;
+        }
+
+        await LoadDrillDownRecipeAsync(recipe, keyPath, currentFilePath);
+    }
+
+    /// <summary>
+    /// Replays a recipe's recorded DrillDown location: Full Aggregation DrillDown (JSON Lines/Array)
+    /// re-scans the whole file by KeyPath; Single DrillDown (JSON Object) resolves the recorded path
+    /// against the cached top-level entries. Both request types carry <c>recipe.Actions</c> as their
+    /// <c>InitialActionStack</c>, so the resulting <see cref="DrillDownState"/> — and the
+    /// FocusedTableTransformer built from it — reflect the recipe's actions from the very first
+    /// render, instead of a separate post-hoc patch that a failed transition could leave inconsistent.
+    /// </summary>
+    private async ValueTask LoadDrillDownRecipeAsync(
+        Recipe recipe, IReadOnlyList<KeyPathSegment> keyPath, string currentFilePath)
+    {
+        var formatResult = FormatDetector.Detect(currentFilePath);
+        if (formatResult.IsFailure)
+        {
+            _app.Invoke(() => _viewManager.ShowError(formatResult.Error));
+            return;
+        }
+
+        var format = formatResult.Value;
+        if (format == DataFormat.JsonObject)
+        {
+            _app.Invoke(() => LoadSingleDrillDownRecipe(recipe, format, keyPath));
+            return;
+        }
+
+        if (format is not (DataFormat.JsonLines or DataFormat.JsonArray))
+        {
+            _app.Invoke(() => _viewManager.ShowError(
+                $"This recipe's DrillDown path cannot be replayed against a {format} file."));
+            return;
+        }
+
+        var request = new FullAggregationDrillDownRequest(format, keyPath, recipe.Actions);
+        await _viewManager.FullAggregationDrillDownAsync(request);
+    }
+
+    private void LoadSingleDrillDownRecipe(Recipe recipe, DataFormat format, IReadOnlyList<KeyPathSegment> keyPath)
+    {
+        if (keyPath.Count == 0)
+        {
+            _viewManager.ShowError("This recipe's DrillDown path is empty, which is not valid for a JSON Object file.");
+            return;
+        }
+
+        var entryResult = FindRootEntry(keyPath[0].Value);
+        if (entryResult.IsFailure)
+        {
+            _viewManager.ShowError(entryResult.Error);
+            return;
+        }
+
+        IReadOnlyList<KeyPathSegment> remainingKeyPath = [.. keyPath.Skip(1)];
+        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(entryResult.Value.Value, remainingKeyPath);
+        if (nodeResult.IsFailure)
+        {
+            _viewManager.ShowError(nodeResult.Error);
+            return;
+        }
+
+        var request = new SingleDrillDownRequest(format, nodeResult.Value, keyPath, recipe.Actions);
+        _viewManager.DrillDown(request);
+    }
+
+    private Result<JsonObjectEntry> FindRootEntry(string key)
+    {
+        foreach (var entry in _state.JsonObjectEntries ?? [])
+        {
+            if (entry.Key == key)
+            {
+                return Results.Success(entry);
+            }
+        }
+
+        return Results.Failure<JsonObjectEntry>(
+            $"DrillDown path key \"{key}\" was not found in this file's top-level entries.");
     }
 }

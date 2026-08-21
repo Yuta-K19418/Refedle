@@ -10,7 +10,7 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App;
 
-public sealed class RecipeCommandHandlerTests
+public sealed partial class RecipeCommandHandlerTests
 {
     private static IApplication CreateTestApp()
     {
