@@ -236,7 +236,7 @@ internal sealed class ViewManager : IDisposable
 
         ITableSource rawSource = new Views.VirtualTableSource(indexer, schema);
         var source = _state.ActionStack.Count > 0
-            ? new Views.LazyTransformer(
+            ? Views.LazyTransformer.Create(
                 rawSource,
                 schema,
                 _state.ActionStack,
@@ -351,7 +351,7 @@ internal sealed class ViewManager : IDisposable
         _state.OnSchemaRefined = source.UpdateSchema;
 
         var tableSource = _state.ActionStack.Count > 0
-            ? (ITableSource)new Views.LazyTransformer(
+            ? (ITableSource)Views.LazyTransformer.Create(
                 source,
                 schema,
                 _state.ActionStack,
@@ -392,7 +392,8 @@ internal sealed class ViewManager : IDisposable
     /// <summary>
     /// Refreshes the current table view by re-invoking the appropriate <c>SwitchTo*</c> method.
     /// Called after a morph action is added to <see cref="AppState.ActionStack"/> so that
-    /// <see cref="Views.LazyTransformer"/> is reconstructed with the updated stack.
+    /// <see cref="Views.LazyTransformer"/> or <see cref="Views.FocusedTableTransformer"/>
+    /// is reconstructed with the updated stack.
     /// </summary>
     internal void RefreshCurrentTableView()
     {
@@ -405,6 +406,10 @@ internal sealed class ViewManager : IDisposable
             case ViewMode.JsonLinesTable
                 when _state.RowIndexer is not null && _state.Schema is not null:
                 SwitchToJsonLinesTableView(_state.RowIndexer, _state.Schema);
+                break;
+
+            case ViewMode.FocusedTable when _state.DrillDown is not null:
+                SwitchToFocusedTable(_state.DrillDown);
                 break;
 
             default:
@@ -539,6 +544,7 @@ internal sealed class ViewManager : IDisposable
                     "ModeController.DrillDown must set DrillDown state on success.");
             }
 
+            _state.ClearMorphActions();
             UpdateBreadcrumb(request.KeyPath, collapseIndices: false);
             SwitchToFocusedTable(drillDown);
         });
@@ -567,6 +573,7 @@ internal sealed class ViewManager : IDisposable
 
             _state.DrillDown = result.Value;
             _state.CurrentMode = ViewMode.FocusedTable;
+            _state.ClearMorphActions();
             UpdateBreadcrumb(request.KeyPath, collapseIndices: true);
             SwitchToFocusedTable(result.Value);
         });
@@ -574,15 +581,30 @@ internal sealed class ViewManager : IDisposable
 
     /// <summary>
     /// Creates FocusedTableSource and FocusedTableView, then switches to the FocusedTable view.
+    /// Wraps the source with <see cref="Views.FocusedTableTransformer"/> when the Action Stack is non-empty.
     /// </summary>
     internal void SwitchToFocusedTable(DrillDownState drillDown)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        var source = new Views.FocusedTableSource(drillDown);
+
+        ITableSource rawSource = new Views.FocusedTableSource(drillDown);
+        var source = _state.ActionStack.Count > 0
+            ? Views.FocusedTableTransformer.Create(rawSource, drillDown.Schema, _state.ActionStack)
+            : rawSource;
+
+        Func<int, string> getRawColumnName = source switch
+        {
+            Views.FocusedTableTransformer ft => i => ft.RawColumnNames[i],
+            Views.FocusedTableSource fts => i => fts.RawColumnNames[i],
+            _ => throw new UnreachableException(),
+        };
+
         var view = new Views.FocusedTableView
         {
             Table = source,
             Style = new TableStyle { AlwaysShowHeaders = true },
+            OnMorphAction = HandleMorphAction,
+            GetRawColumnName = getRawColumnName,
         };
         _state.OnSchemaRefined = null;
         view.SetSelection(0, 0, false);

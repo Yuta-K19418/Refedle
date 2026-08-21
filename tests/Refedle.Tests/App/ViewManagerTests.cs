@@ -7,6 +7,7 @@ using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonArray;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
@@ -806,6 +807,160 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         window.SubViews.OfType<BreadcrumbBar>().Single().Text.Should().Be("list[*]");
+    }
+
+    [Fact]
+    public void SwitchToFocusedTable_WithEmptyActionStack_SetsMorphCallbacksOnRawSource()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        DrillDownState drillDown = new(
+            [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
+            schema,
+            ViewMode.JsonArrayTree);
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        // Act
+        viewManager.SwitchToFocusedTable(drillDown);
+
+        // Assert — callbacks are wired even with no actions, so Morph works from the first DrillDown
+        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        view.Table.Should().BeOfType<FocusedTableSource>();
+        view.OnMorphAction.Should().NotBeNull();
+        view.GetRawColumnName.Should().NotBeNull();
+        var rawName = view.GetRawColumnName?.Invoke(1);
+        rawName.Should().Be("name");
+    }
+
+    [Fact]
+    public void RefreshCurrentTableView_WithFocusedTableModeAndDrillDown_RendersThroughFocusedTableTransformer()
+    {
+        // Arrange — a pending action proves the re-render went through SwitchToFocusedTable's wrap path
+        using var app = CreateTestApp();
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        DrillDownState drillDown = new(
+            [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
+            schema,
+            ViewMode.JsonArrayTree);
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        // Act
+        viewManager.RefreshCurrentTableView();
+
+        // Assert
+        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        view.Table.Should().BeOfType<FocusedTableTransformer>();
+        view.Table.ColumnNames.Should().Contain("label (text)");
+    }
+
+    [Fact]
+    public void DrillDown_OnSuccess_ClearsActionStack()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        var request = new SingleDrillDownRequest(
+            DataFormat.JsonObject,
+            Encoding.UTF8.GetBytes("[{\"a\":1}]"),
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+
+        // Act
+        viewManager.DrillDown(request);
+
+        // Assert
+        state.ActionStack.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void DrillDown_OnFailure_LeavesActionStackUntouched()
+    {
+        // Arrange — an empty array node fails schema extraction, routing to ShowError
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        var request = new SingleDrillDownRequest(
+            DataFormat.JsonObject,
+            Encoding.UTF8.GetBytes("[]"),
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+
+        // Act
+        viewManager.DrillDown(request);
+
+        // Assert — the failed DrillDown leaves the previous actions (and error view) in place
+        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+        state.ActionStack.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task FullAggregationDrillDownAsync_OnSuccess_ClearsActionStack()
+    {
+        // Arrange
+        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using var app = CreateTestApp();
+        using var state = new AppState { CurrentFilePath = filePath };
+        state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        var request = new FullAggregationDrillDownRequest(
+            DataFormat.JsonLines,
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+
+        // Act
+        await viewManager.FullAggregationDrillDownAsync(request);
+
+        // Assert
+        state.ActionStack.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task FullAggregationDrillDownAsync_OnFailure_LeavesActionStackUntouched()
+    {
+        // Arrange — a non-matching KeyPath forces the scan to fail
+        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using var app = CreateTestApp();
+        using var state = new AppState { CurrentFilePath = filePath };
+        state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        var request = new FullAggregationDrillDownRequest(
+            DataFormat.JsonLines,
+            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+
+        // Act
+        await viewManager.FullAggregationDrillDownAsync(request);
+
+        // Assert — the failed scan leaves the previous actions (and error view) in place
+        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+        state.ActionStack.Should().ContainSingle();
     }
 
     [Fact]

@@ -67,7 +67,7 @@ public sealed class FocusedTableSourceTests
     }
 
     [Fact]
-    public void ColumnNames_ReturnsHashFollowedBySchemaColumnNames()
+    public void ColumnNames_ReturnsHashFollowedByTypeLabeledSchemaColumnNames()
     {
         // Arrange
         var source = new FocusedTableSource(CreateState());
@@ -76,7 +76,20 @@ public sealed class FocusedTableSourceTests
         var columnNames = source.ColumnNames;
 
         // Assert
-        columnNames.Should().Equal("#", "name", "age");
+        columnNames.Should().Equal("#", "name (text)", "age (number)");
+    }
+
+    [Fact]
+    public void RawColumnNames_ReturnsHashFollowedByRawSchemaColumnNames()
+    {
+        // Arrange
+        var source = new FocusedTableSource(CreateState());
+
+        // Act
+        var rawColumnNames = source.RawColumnNames;
+
+        // Assert
+        rawColumnNames.Should().Equal("#", "name", "age");
     }
 
     [Theory]

@@ -26,15 +26,15 @@ public sealed partial class MainWindowTests
         // Act: x opens a menu with a single "DrillDown" item on the root selection.
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name", "age", "email");
+        var lines = await Harness.WaitForContentsAsync("name (text)", "age (number)", "email (text)");
 
         // Assert: every column contributed by any element is rendered together in the header,
         // and each element's own values still appear in its row even where other columns are
         // missing for that element.
         lines.Should().Contain(line =>
-            line.Contains("name", StringComparison.Ordinal)
-            && line.Contains("age", StringComparison.Ordinal)
-            && line.Contains("email", StringComparison.Ordinal));
+            line.Contains("name (text)", StringComparison.Ordinal)
+            && line.Contains("age (number)", StringComparison.Ordinal)
+            && line.Contains("email (text)", StringComparison.Ordinal));
         lines.Should().Contain(line => line.Contains("Item1", StringComparison.Ordinal) && line.Contains('1'));
         lines.Should().Contain(line => line.Contains("Item2", StringComparison.Ordinal) && line.Contains("item2@example.com", StringComparison.Ordinal));
         lines.Should().Contain(line => line.Contains('3') && line.Contains("item3@example.com", StringComparison.Ordinal));
@@ -57,7 +57,7 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        await Harness.WaitForContentsAsync("name", "age", "email");
+        await Harness.WaitForContentsAsync("name (text)", "age (number)", "email (text)");
 
         // Act
         Harness.SendKey(KeyCode.Backspace);
