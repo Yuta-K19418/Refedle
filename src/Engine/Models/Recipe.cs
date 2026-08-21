@@ -1,3 +1,4 @@
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models.Actions;
 
 namespace Refedle.Engine.Models;
@@ -37,6 +38,12 @@ public sealed record Recipe
     /// Uses DateTimeOffset to preserve timezone information.
     /// </summary>
     public DateTimeOffset? LastModified { get; init; }
+
+    /// <summary>
+    /// The DrillDown location this recipe was saved from, if any. Null for a recipe saved from
+    /// the base table; when set, <see cref="Actions"/> is scoped to that DrillDown, not the base table.
+    /// </summary>
+    public IReadOnlyList<KeyPathSegment>? DrillDownKeyPath { get; init; }
 
     /// <summary>
     /// Returns true if the recipe contains no actions.

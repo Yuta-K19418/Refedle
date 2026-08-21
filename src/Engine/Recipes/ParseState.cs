@@ -19,4 +19,9 @@ internal enum ParseState
     /// Accumulating key: value pairs for the current action item.
     /// </summary>
     ActionItem,
+
+    /// <summary>
+    /// Encountered drillDownKeyPath:; accumulating key/index fields for the current segment item.
+    /// </summary>
+    DrillDownKeyPathItem,
 }

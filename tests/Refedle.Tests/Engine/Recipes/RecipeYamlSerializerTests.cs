@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Recipes;
@@ -275,5 +276,97 @@ public sealed class RecipeYamlSerializerTests
         yaml.Should().Contain("  - type: FormatTimestamp");
         yaml.Should().Contain("    columnName: \"CreatedAt\"");
         yaml.Should().Contain("    targetFormat: \"yyyy/MM/dd\"");
+    }
+
+    [Fact]
+    public void Serialize_NullDrillDownKeyPath_OmitsSection()
+    {
+        // Arrange
+        var recipe = new Recipe { Name = "test", Actions = [], DrillDownKeyPath = null };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        yaml.Should().NotContain("drillDownKeyPath:");
+    }
+
+    [Fact]
+    public void Serialize_EmptyDrillDownKeyPath_ProducesDrillDownKeyPathEmptyListLine()
+    {
+        // Arrange
+        var recipe = new Recipe { Name = "test", Actions = [], DrillDownKeyPath = [] };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        yaml.Should().Contain("drillDownKeyPath: []");
+    }
+
+    [Fact]
+    public void Serialize_WithDrillDownKeyPath_KeyThenIndexSegments_CombinesIntoOneItem()
+    {
+        // Arrange
+        var recipe = new Recipe
+        {
+            Name = "test",
+            Actions = [],
+            DrillDownKeyPath =
+            [
+                new KeyPathSegment("customer", KeyPathSegmentKind.Key),
+                new KeyPathSegment("orders", KeyPathSegmentKind.Key),
+                new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
+            ],
+        };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        yaml.Should().Contain("drillDownKeyPath:\n  - key: \"customer\"\n  - key: \"orders\"\n    index: 0\n");
+    }
+
+    [Fact]
+    public void Serialize_WithDrillDownKeyPath_BareIndexNotPrecededByKey_ProducesStandaloneIndexItem()
+    {
+        // Arrange
+        var recipe = new Recipe
+        {
+            Name = "test",
+            Actions = [],
+            DrillDownKeyPath =
+            [
+                new KeyPathSegment("scores", KeyPathSegmentKind.Key),
+                new KeyPathSegment("[1]", KeyPathSegmentKind.Index),
+                new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
+            ],
+        };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        yaml.Should().Contain("drillDownKeyPath:\n  - key: \"scores\"\n    index: 1\n  - index: 0\n");
+    }
+
+    [Fact]
+    public void Serialize_WithDrillDownKeyPath_AppearsAfterActions()
+    {
+        // Arrange
+        var recipe = new Recipe
+        {
+            Name = "test",
+            Actions = [new RenameColumnAction { OldName = "a", NewName = "b" }],
+            DrillDownKeyPath = [new KeyPathSegment("customer", KeyPathSegmentKind.Key)],
+        };
+
+        // Act
+        var yaml = RecipeYamlSerializer.Serialize(recipe);
+
+        // Assert
+        var actionsIdx = yaml.IndexOf("actions:", StringComparison.Ordinal);
+        var drillDownIdx = yaml.IndexOf("drillDownKeyPath:", StringComparison.Ordinal);
+        actionsIdx.Should().BeLessThan(drillDownIdx);
     }
 }

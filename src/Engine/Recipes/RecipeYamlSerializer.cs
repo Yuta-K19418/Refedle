@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Text;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 
@@ -30,20 +31,69 @@ internal static class RecipeYamlSerializer
             sb.Append("lastModified: ").AppendLine(recipe.LastModified.Value.ToString("O"));
         }
 
-        if (recipe.Actions.Count == 0)
-        {
-            sb.AppendLine("actions: []");
-            return sb.ToString();
-        }
+        AppendActions(sb, recipe.Actions);
 
-        sb.AppendLine("actions:");
-        foreach (var action in recipe.Actions)
+        if (recipe.DrillDownKeyPath is { } drillDownKeyPath)
         {
-            AppendAction(sb, action);
+            AppendDrillDownKeyPath(sb, drillDownKeyPath);
         }
 
         return sb.ToString();
     }
+
+    private static void AppendActions(StringBuilder sb, IReadOnlyList<MorphAction> actions)
+    {
+        if (actions.Count == 0)
+        {
+            sb.AppendLine("actions: []");
+            return;
+        }
+
+        sb.AppendLine("actions:");
+        foreach (var action in actions)
+        {
+            AppendAction(sb, action);
+        }
+    }
+
+    private static void AppendDrillDownKeyPath(StringBuilder sb, IReadOnlyList<KeyPathSegment> segments)
+    {
+        // An empty KeyPath is legitimate: a root-level Full Aggregation DrillDown selecting a
+        // top-level element directly has no segments (see KeyPathTraverser.LastKeySegment).
+        if (segments.Count == 0)
+        {
+            sb.AppendLine("drillDownKeyPath: []");
+            return;
+        }
+
+        sb.AppendLine("drillDownKeyPath:");
+
+        var i = 0;
+        while (i < segments.Count)
+        {
+            var segment = segments[i];
+            if (segment.Kind == KeyPathSegmentKind.Key && i + 1 < segments.Count && segments[i + 1].Kind == KeyPathSegmentKind.Index)
+            {
+                sb.Append("  - key: ").AppendLine(QuoteString(segment.Value));
+                sb.Append("    index: ").AppendLine(ExtractIndexLabel(segments[i + 1].Value));
+                i += 2;
+                continue;
+            }
+
+            if (segment.Kind == KeyPathSegmentKind.Key)
+            {
+                sb.Append("  - key: ").AppendLine(QuoteString(segment.Value));
+                i++;
+                continue;
+            }
+
+            sb.Append("  - index: ").AppendLine(ExtractIndexLabel(segment.Value));
+            i++;
+        }
+    }
+
+    // Index-kind KeyPathSegment.Value is always in "[N]" form (see KeyPathSegment's doc comment).
+    private static string ExtractIndexLabel(string value) => value[1..^1];
 
     private static void AppendAction(StringBuilder sb, MorphAction action)
     {

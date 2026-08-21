@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 
@@ -9,9 +10,17 @@ namespace Refedle.Engine.Recipes;
 /// Parses YAML text into <see cref="Recipe"/> objects.
 /// AOT-safe: no reflection is used.
 /// </summary>
-internal sealed class RecipeYamlParser
+internal sealed partial class RecipeYamlParser
 {
-    private sealed record RootParseState(string Name, string? Description, DateTimeOffset? LastModified, ParseState ParseState);
+    // DrillDownKeyPathPresent tracks whether the drillDownKeyPath key appeared in the YAML at all,
+    // separately from whether any segments were collected — "absent" (null) and "present but
+    // empty" ([]) are different, meaningful recipe states (see KeyPathTraverser.LastKeySegment).
+    private sealed record RootParseState(
+        string Name,
+        string? Description,
+        DateTimeOffset? LastModified,
+        ParseState ParseState,
+        bool DrillDownKeyPathPresent);
 
     /// <summary>
     /// Parses a YAML string into a recipe.
@@ -19,9 +28,10 @@ internal sealed class RecipeYamlParser
     /// </summary>
     public static Result<Recipe> Parse(string yaml)
     {
-        var rootState = new RootParseState(string.Empty, null, null, ParseState.Root);
+        var rootState = new RootParseState(string.Empty, null, null, ParseState.Root, DrillDownKeyPathPresent: false);
         List<MorphAction> actions = [];
-        Dictionary<string, string> currentAction = [];
+        List<KeyPathSegment> drillDownKeyPath = [];
+        Dictionary<string, string> currentItem = [];
 
         foreach (var rawLine in yaml.Split('\n'))
         {
@@ -31,25 +41,22 @@ internal sealed class RecipeYamlParser
                 continue;
             }
 
-            var lineResult = ProcessLine(line, rootState, currentAction, actions);
+            var lineResult = ProcessLine(line, rootState, currentItem, actions, drillDownKeyPath);
             if (lineResult.IsFailure)
             {
                 return Results.Failure<Recipe>(lineResult.Error);
             }
 
-            (rootState, currentAction) = lineResult.Value;
+            (rootState, currentItem) = lineResult.Value;
         }
 
-        if (currentAction.ContainsKey("type"))
+        var finalizeResult = FinalizePendingItem(rootState, currentItem, actions, drillDownKeyPath);
+        if (finalizeResult.IsFailure)
         {
-            var buildResult = MorphActionParser.ParseAction(currentAction);
-            if (buildResult.IsFailure)
-            {
-                return Results.Failure<Recipe>(buildResult.Error);
-            }
-
-            actions.Add(buildResult.Value);
+            return Results.Failure<Recipe>(finalizeResult.Error);
         }
+
+        IReadOnlyList<KeyPathSegment>? parsedDrillDownKeyPath = rootState.DrillDownKeyPathPresent ? drillDownKeyPath.AsReadOnly() : null;
 
         return string.IsNullOrEmpty(rootState.Name)
             ? Results.Failure<Recipe>("Missing required field: 'name'")
@@ -59,58 +66,70 @@ internal sealed class RecipeYamlParser
                 Description = rootState.Description,
                 LastModified = rootState.LastModified,
                 Actions = actions.AsReadOnly(),
+                DrillDownKeyPath = parsedDrillDownKeyPath,
             });
     }
 
+    // Finalizes whichever item was still pending when the file ended, based on which
+    // section was last active (actions vs. drillDownKeyPath).
+    private static Result FinalizePendingItem(
+        RootParseState rootState,
+        Dictionary<string, string> currentItem,
+        List<MorphAction> actions,
+        List<KeyPathSegment> drillDownKeyPath)
+    {
+        if (rootState.ParseState == ParseState.DrillDownKeyPathItem)
+        {
+            return FinalizeDrillDownKeyPathItem(currentItem, drillDownKeyPath);
+        }
+
+        return FinalizePendingAction(currentItem, actions);
+    }
+
+    // Parses currentAction into a MorphAction and appends it, if a "type" field was collected;
+    // a no-op otherwise. Shared by end-of-file finalization and the drillDownKeyPath transition,
+    // both of which must flush whatever action was still open before moving on.
+    private static Result FinalizePendingAction(Dictionary<string, string> currentAction, List<MorphAction> actions)
+    {
+        if (!currentAction.ContainsKey("type"))
+        {
+            return Results.Success();
+        }
+
+        var actionResult = MorphActionParser.ParseAction(currentAction);
+        if (actionResult.IsFailure)
+        {
+            return Results.Failure(actionResult.Error);
+        }
+
+        actions.Add(actionResult.Value);
+        return Results.Success();
+    }
+
     // Dispatches a single YAML line to the handler for the current parse state.
-    // currentAction is returned rather than mutated-in-place because StartNewAction
-    // replaces it wholesale with a fresh dictionary for the next action item.
-    private static Result<(RootParseState rootState, Dictionary<string, string> currentAction)> ProcessLine(
+    // currentItem is returned rather than mutated-in-place because item-boundary
+    // transitions replace it wholesale with a fresh dictionary for the next item.
+    private static Result<(RootParseState rootState, Dictionary<string, string> currentItem)> ProcessLine(
         string line,
         RootParseState rootState,
-        Dictionary<string, string> currentAction,
-        List<MorphAction> actions)
+        Dictionary<string, string> currentItem,
+        List<MorphAction> actions,
+        List<KeyPathSegment> drillDownKeyPath)
     {
         if (rootState.ParseState == ParseState.Root)
         {
             var result = ProcessRootLine(line, rootState);
             return result.IsFailure
-                ? Results.Failure<(RootParseState rootState, Dictionary<string, string> currentAction)>(result.Error)
-                : Results.Success((result.Value, currentAction));
+                ? Results.Failure<(RootParseState rootState, Dictionary<string, string> currentItem)>(result.Error)
+                : Results.Success((result.Value, currentItem));
         }
 
-        if (line.StartsWith("  - type: ", StringComparison.Ordinal))
+        if (rootState.ParseState == ParseState.DrillDownKeyPathItem)
         {
-            var startResult = StartNewAction(line, currentAction);
-            if (startResult.IsFailure)
-            {
-                return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentAction)>(startResult.Error);
-            }
-
-            var (newCurrentAction, completedAction) = startResult.Value;
-            if (completedAction is not null)
-            {
-                actions.Add(completedAction);
-            }
-
-            return Results.Success((rootState with { ParseState = ParseState.ActionItem }, newCurrentAction));
+            return ProcessDrillDownKeyPathLine(line, rootState, currentItem, drillDownKeyPath);
         }
 
-        if (rootState.ParseState != ParseState.ActionItem || !line.StartsWith("    ", StringComparison.Ordinal))
-        {
-            return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentAction)>(
-                $"Unexpected line in actions context: '{line}'");
-        }
-
-        var fieldResult = ParseActionField(line);
-        if (fieldResult.IsFailure)
-        {
-            return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentAction)>(fieldResult.Error);
-        }
-
-        var (fieldKey, fieldValue) = fieldResult.Value;
-        currentAction[fieldKey] = fieldValue;
-        return Results.Success((rootState, currentAction));
+        return ProcessActionsSectionLine(line, rootState, currentItem, actions);
     }
 
     private static bool IsSkippable(string line)
@@ -126,6 +145,16 @@ internal sealed class RecipeYamlParser
         if (line == "actions:")
         {
             return Results.Success(state with { ParseState = ParseState.Actions });
+        }
+
+        if (line == "drillDownKeyPath: []")
+        {
+            return Results.Success(state with { DrillDownKeyPathPresent = true });
+        }
+
+        if (line == "drillDownKeyPath:")
+        {
+            return Results.Success(state with { ParseState = ParseState.DrillDownKeyPathItem, DrillDownKeyPathPresent = true });
         }
 
         var colonIdx = line.IndexOf(": ", StringComparison.Ordinal);
@@ -180,6 +209,56 @@ internal sealed class RecipeYamlParser
         }
 
         return Results.Success(dt);
+    }
+
+    private static Result<(RootParseState rootState, Dictionary<string, string> currentItem)> ProcessActionsSectionLine(
+        string line,
+        RootParseState rootState,
+        Dictionary<string, string> currentAction,
+        List<MorphAction> actions)
+    {
+        if (line == "drillDownKeyPath: []")
+        {
+            return TransitionToEmptyDrillDownKeyPath(rootState, currentAction, actions);
+        }
+
+        if (line == "drillDownKeyPath:")
+        {
+            return TransitionToDrillDownKeyPath(rootState, currentAction, actions);
+        }
+
+        if (line.StartsWith("  - type: ", StringComparison.Ordinal))
+        {
+            var startResult = StartNewAction(line, currentAction);
+            if (startResult.IsFailure)
+            {
+                return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentItem)>(startResult.Error);
+            }
+
+            var (newCurrentAction, completedAction) = startResult.Value;
+            if (completedAction is not null)
+            {
+                actions.Add(completedAction);
+            }
+
+            return Results.Success((rootState with { ParseState = ParseState.ActionItem }, newCurrentAction));
+        }
+
+        if (rootState.ParseState != ParseState.ActionItem || !line.StartsWith("    ", StringComparison.Ordinal))
+        {
+            return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentItem)>(
+                $"Unexpected line in actions context: '{line}'");
+        }
+
+        var fieldResult = ParseActionField(line);
+        if (fieldResult.IsFailure)
+        {
+            return Results.Failure<(RootParseState rootState, Dictionary<string, string> currentItem)>(fieldResult.Error);
+        }
+
+        var (fieldKey, fieldValue) = fieldResult.Value;
+        currentAction[fieldKey] = fieldValue;
+        return Results.Success((rootState, currentAction));
     }
 
     private static Result<(Dictionary<string, string> newAction, MorphAction? completedAction)> StartNewAction(
