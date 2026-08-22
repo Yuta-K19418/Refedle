@@ -4,6 +4,7 @@ using System.Text;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.Engine.Recipes;
 
@@ -19,11 +20,11 @@ internal static class RecipeYamlSerializer
     public static string Serialize(Recipe recipe)
     {
         var sb = new StringBuilder();
-        sb.Append("name: ").AppendLine(QuoteString(recipe.Name));
+        sb.Append("name: ").AppendLine(StringUtility.QuoteString(recipe.Name));
 
         if (recipe.Description is not null)
         {
-            sb.Append("description: ").AppendLine(QuoteString(recipe.Description));
+            sb.Append("description: ").AppendLine(StringUtility.QuoteString(recipe.Description));
         }
 
         if (recipe.LastModified is not null)
@@ -74,7 +75,7 @@ internal static class RecipeYamlSerializer
             var segment = segments[i];
             if (segment.Kind == KeyPathSegmentKind.Key && i + 1 < segments.Count && segments[i + 1].Kind == KeyPathSegmentKind.Index)
             {
-                sb.Append("  - key: ").AppendLine(QuoteString(segment.Value));
+                sb.Append("  - key: ").AppendLine(StringUtility.QuoteString(segment.Value));
                 sb.Append("    index: ").AppendLine(ExtractIndexLabel(segments[i + 1].Value));
                 i += 2;
                 continue;
@@ -82,7 +83,7 @@ internal static class RecipeYamlSerializer
 
             if (segment.Kind == KeyPathSegmentKind.Key)
             {
-                sb.Append("  - key: ").AppendLine(QuoteString(segment.Value));
+                sb.Append("  - key: ").AppendLine(StringUtility.QuoteString(segment.Value));
                 i++;
                 continue;
             }
@@ -101,45 +102,37 @@ internal static class RecipeYamlSerializer
         {
             case RenameColumnAction rename:
                 sb.AppendLine("  - type: Rename");
-                sb.Append("    oldName: ").AppendLine(QuoteString(rename.OldName));
-                sb.Append("    newName: ").AppendLine(QuoteString(rename.NewName));
+                sb.Append("    oldName: ").AppendLine(StringUtility.QuoteString(rename.OldName));
+                sb.Append("    newName: ").AppendLine(StringUtility.QuoteString(rename.NewName));
                 break;
             case DeleteColumnAction delete:
                 sb.AppendLine("  - type: Delete");
-                sb.Append("    columnName: ").AppendLine(QuoteString(delete.ColumnName));
+                sb.Append("    columnName: ").AppendLine(StringUtility.QuoteString(delete.ColumnName));
                 break;
             case CastColumnAction cast:
                 sb.AppendLine("  - type: Cast");
-                sb.Append("    columnName: ").AppendLine(QuoteString(cast.ColumnName));
+                sb.Append("    columnName: ").AppendLine(StringUtility.QuoteString(cast.ColumnName));
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    targetType: {cast.TargetType}");
                 break;
             case FilterAction filter:
                 sb.AppendLine("  - type: Filter");
-                sb.Append("    columnName: ").AppendLine(QuoteString(filter.ColumnName));
+                sb.Append("    columnName: ").AppendLine(StringUtility.QuoteString(filter.ColumnName));
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    operator: {filter.Operator}");
                 sb.AppendLine(CultureInfo.InvariantCulture, $"    comparisonType: {filter.ComparisonType}");
-                sb.Append("    value: ").AppendLine(QuoteString(filter.Value));
+                sb.Append("    value: ").AppendLine(StringUtility.QuoteString(filter.Value));
                 break;
             case FillColumnAction fill:
                 sb.AppendLine("  - type: Fill");
-                sb.Append("    columnName: ").AppendLine(QuoteString(fill.ColumnName));
-                sb.Append("    value: ").AppendLine(QuoteString(fill.Value));
+                sb.Append("    columnName: ").AppendLine(StringUtility.QuoteString(fill.ColumnName));
+                sb.Append("    value: ").AppendLine(StringUtility.QuoteString(fill.Value));
                 break;
             case FormatTimestampAction formatTimestamp:
                 sb.AppendLine("  - type: FormatTimestamp");
-                sb.Append("    columnName: ").AppendLine(QuoteString(formatTimestamp.ColumnName));
-                sb.Append("    targetFormat: ").AppendLine(QuoteString(formatTimestamp.TargetFormat));
+                sb.Append("    columnName: ").AppendLine(StringUtility.QuoteString(formatTimestamp.ColumnName));
+                sb.Append("    targetFormat: ").AppendLine(StringUtility.QuoteString(formatTimestamp.TargetFormat));
                 break;
             default:
                 throw new UnreachableException("Unhandled MorphAction subtype in serializer");
         }
-    }
-
-    private static string QuoteString(string value)
-    {
-        var escaped = value
-            .Replace("\\", "\\\\", StringComparison.Ordinal)
-            .Replace("\"", "\\\"", StringComparison.Ordinal);
-        return $"\"{escaped}\"";
     }
 }

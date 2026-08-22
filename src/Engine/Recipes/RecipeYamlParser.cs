@@ -2,6 +2,7 @@ using System.Globalization;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.Engine.Recipes;
 
@@ -147,12 +148,12 @@ internal static class RecipeYamlParser
     private static Result<RecipeYamlParseState> SetName(RecipeYamlParseState state, string value) =>
         !string.IsNullOrEmpty(state.Name)
             ? Results.Failure<RecipeYamlParseState>("Duplicate root-level key: 'name'")
-            : Results.Success(state with { Name = RecipeYamlFieldParser.UnquoteString(value) });
+            : Results.Success(state with { Name = StringUtility.UnquoteString(value) });
 
     private static Result<RecipeYamlParseState> SetDescription(RecipeYamlParseState state, string value) =>
         state.Description is not null
             ? Results.Failure<RecipeYamlParseState>("Duplicate root-level key: 'description'")
-            : Results.Success(state with { Description = RecipeYamlFieldParser.UnquoteString(value) });
+            : Results.Success(state with { Description = StringUtility.UnquoteString(value) });
 
     private static Result<RecipeYamlParseState> SetLastModified(RecipeYamlParseState state, string value) =>
         state.LastModified is not null
@@ -172,7 +173,7 @@ internal static class RecipeYamlParser
 
     private static Result<DateTimeOffset> TryParseLastModified(string value)
     {
-        if (!DateTimeOffset.TryParse(RecipeYamlFieldParser.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
+        if (!DateTimeOffset.TryParse(StringUtility.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
         {
             return Results.Failure<DateTimeOffset>($"Invalid lastModified value: '{value}'");
         }
