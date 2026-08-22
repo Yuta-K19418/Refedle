@@ -65,6 +65,16 @@ paths:
 - When a class is **approaching 200–300 lines**, proactively check whether multiple responsibilities have accumulated — it is easier to split early than after the class grows further
 - If multiple responsibilities are detected, refactor by splitting the class
 
+### Partial Classes
+- `partial` is **STRICTLY FORBIDDEN** in production code, with one exception:
+  - Exception: extracting a `private` nested type's definition into its own file, when including
+    it in the containing file would bloat that file
+  - Do NOT use `partial` to work around the 300-line class-size guideline — splitting the same
+    class across files does not reduce its actual complexity. When a class approaches or exceeds
+    300 lines, split by **responsibility** into a separate class and delegate to it instead
+- This rule applies to production code only; test code follows the `partial`-per-method-group
+  convention in [testing.md](testing.md#naming-conventions)
+
 ### Dependency Direction
 - When a change introduces a new class (whether split out of an existing class or added from scratch), check whether it forms a **bidirectional dependency** with another class — i.e., the two classes call each other's members (methods, properties, etc.)
 - Access modifiers (`public`, `internal`, etc.) are irrelevant to this check
