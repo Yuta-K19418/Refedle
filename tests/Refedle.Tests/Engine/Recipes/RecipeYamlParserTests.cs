@@ -552,6 +552,79 @@ public sealed class RecipeYamlParserTests
         result.Value.Actions.Should().BeEmpty();
     }
 
+    [Fact]
+    public void Parse_MalformedActionField_ReturnsFailureWithOriginalIndentedLine()
+    {
+        // Arrange
+        var yaml = """
+            name: "test"
+            actions:
+              - type: Rename
+                badfieldnocolon
+            """;
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Malformed action field: '    badfieldnocolon'");
+    }
+
+    [Fact]
+    public void Parse_InvalidPendingActionAtNextActionBoundary_ReturnsFailure()
+    {
+        // Arrange: Rename is missing "newName" — finalized when the next action item begins.
+        var yaml = """
+            name: "test"
+            actions:
+              - type: Rename
+                oldName: "a"
+              - type: Delete
+                columnName: "x"
+            """;
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("newName");
+    }
+
+    [Theory]
+    [InlineData("name: \"test\"\nactions:\nbadline")]
+    [InlineData("name: \"test\"\nactions:\n  - type: Delete\nbadline")]
+    public void Parse_UnexpectedLineInActionsContext_ReturnsFailure(string yaml)
+    {
+        // Arrange: neither an action-item boundary ("  - type: ") nor a nested field ("    ")
+        // line, exercised both before and after an action item has started.
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Unexpected line in actions context: 'badline'");
+    }
+
+    [Theory]
+    [InlineData("drillDownKeyPath:")]
+    [InlineData("drillDownKeyPath: []")]
+    public void Parse_InvalidPendingActionAtDrillDownKeyPathTransition_ReturnsFailure(string drillDownKeyPathLine)
+    {
+        // Arrange: Rename is missing "newName" — finalized when the actions section transitions
+        // into drillDownKeyPath parsing, via either transition line form.
+        var yaml = $"name: \"test\"\nactions:\n  - type: Rename\n    oldName: \"a\"\n{drillDownKeyPathLine}";
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("newName");
+    }
+
     // -----------------------------------------------------------------------
     // DrillDownKeyPath
     // -----------------------------------------------------------------------
@@ -660,6 +733,27 @@ public sealed class RecipeYamlParserTests
     }
 
     [Fact]
+    public void Parse_DrillDownKeyPath_InvalidPendingItemAtNextItemBoundary_ReturnsFailure()
+    {
+        // Arrange: the first item is missing both "key" and "index" — finalized when the
+        // next item boundary ("  - ") begins, not at end-of-file.
+        var yaml = """
+            name: "test"
+            actions: []
+            drillDownKeyPath:
+              - notAField: "value"
+              - key: "customer"
+            """;
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("key").And.Contain("index");
+    }
+
+    [Fact]
     public void Parse_DrillDownKeyPath_MalformedIndexValue_ReturnsFailure()
     {
         // Arrange
@@ -677,6 +771,54 @@ public sealed class RecipeYamlParserTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("notANumber");
+    }
+
+    [Fact]
+    public void Parse_MalformedDrillDownKeyPathField_ReturnsFailureWithOriginalIndentedLine()
+    {
+        // Arrange
+        var yaml = """
+            name: "test"
+            actions: []
+            drillDownKeyPath:
+              - key: "customer"
+                badfieldnocolon
+            """;
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Malformed action field: '    badfieldnocolon'");
+    }
+
+    [Fact]
+    public void Parse_MalformedDrillDownKeyPathItemBoundaryLine_ReturnsFailure()
+    {
+        // Arrange: the item-boundary line itself ("  - ...") has no ": " separator.
+        var yaml = "name: \"test\"\nactions: []\ndrillDownKeyPath:\n  - badnocolon";
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Malformed action field: '  - badnocolon'");
+    }
+
+    [Fact]
+    public void Parse_UnexpectedLineInDrillDownKeyPathContext_ReturnsFailure()
+    {
+        // Arrange: neither an item boundary ("  - ") nor a nested field ("    ") line.
+        var yaml = "name: \"test\"\nactions: []\ndrillDownKeyPath:\n  - key: \"customer\"\nbadline";
+
+        // Act
+        var result = RecipeYamlParser.Parse(yaml);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Unexpected line in drillDownKeyPath context: 'badline'");
     }
 
     [Fact]
