@@ -19,7 +19,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("actions: []");
+        yaml.Should().Be("name: \"test\"\nactions: []\n");
     }
 
     [Fact]
@@ -36,9 +36,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: Rename");
-        yaml.Should().Contain("    oldName: \"old\"");
-        yaml.Should().Contain("    newName: \"new\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Rename\n    oldName: \"old\"\n    newName: \"new\"\n");
     }
 
     [Fact]
@@ -55,8 +53,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: Delete");
-        yaml.Should().Contain("    columnName: \"temp_field\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Delete\n    columnName: \"temp_field\"\n");
     }
 
     [Fact]
@@ -73,9 +70,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: Cast");
-        yaml.Should().Contain("    columnName: \"age\"");
-        yaml.Should().Contain("    targetType: WholeNumber");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Cast\n    columnName: \"age\"\n    targetType: WholeNumber\n");
     }
 
     [Fact]
@@ -92,11 +87,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: Filter");
-        yaml.Should().Contain("    columnName: \"status\"");
-        yaml.Should().Contain("    operator: Equals");
-        yaml.Should().Contain("    comparisonType: Text");
-        yaml.Should().Contain("    value: \"active\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Filter\n    columnName: \"status\"\n    operator: Equals\n    comparisonType: Text\n    value: \"active\"\n");
     }
 
     [Fact]
@@ -140,7 +131,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("lastModified: 2025-01-01T00:00:00.0000000+00:00");
+        yaml.Should().Be("name: \"test\"\nlastModified: 2025-01-01T00:00:00.0000000+00:00\nactions: []\n");
     }
 
     [Fact]
@@ -157,7 +148,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("    oldName: \"col\\\"name\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Rename\n    oldName: \"col\\\"name\"\n    newName: \"new\"\n");
     }
 
     [Fact]
@@ -174,7 +165,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain(@"    oldName: ""C:\\data""");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Rename\n    oldName: \"C:\\\\data\"\n    newName: \"output\"\n");
     }
 
     [Fact]
@@ -191,7 +182,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("    oldName: \"col\\\\\\\"name\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Rename\n    oldName: \"col\\\\\\\"name\"\n    newName: \"output\"\n");
     }
 
     [Fact]
@@ -208,9 +199,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: Fill");
-        yaml.Should().Contain("    columnName: \"Email\"");
-        yaml.Should().Contain("    value: \"REDACTED\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Fill\n    columnName: \"Email\"\n    value: \"REDACTED\"\n");
     }
 
     [Fact]
@@ -227,7 +216,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("    value: \"val\\\"with\\\\special\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: Fill\n    columnName: \"col\"\n    value: \"val\\\"with\\\\special\"\n");
     }
 
     [Fact]
@@ -246,17 +235,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        var nameIdx = yaml.IndexOf("name:", StringComparison.Ordinal);
-        var descIdx = yaml.IndexOf("description:", StringComparison.Ordinal);
-        var lastModIdx = yaml.IndexOf("lastModified:", StringComparison.Ordinal);
-        var actionsIdx = yaml.IndexOf("actions:", StringComparison.Ordinal);
-        nameIdx.Should().BeGreaterThanOrEqualTo(0, "name field should be present");
-        descIdx.Should().BeGreaterThanOrEqualTo(0, "description field should be present");
-        lastModIdx.Should().BeGreaterThanOrEqualTo(0, "lastModified field should be present");
-        actionsIdx.Should().BeGreaterThanOrEqualTo(0, "actions field should be present");
-        nameIdx.Should().BeLessThan(descIdx);
-        descIdx.Should().BeLessThan(lastModIdx);
-        lastModIdx.Should().BeLessThan(actionsIdx);
+        yaml.Should().Be("name: \"test\"\ndescription: \"desc\"\nlastModified: 2025-01-01T00:00:00.0000000+00:00\nactions: []\n");
     }
 
     [Fact]
@@ -273,9 +252,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("  - type: FormatTimestamp");
-        yaml.Should().Contain("    columnName: \"CreatedAt\"");
-        yaml.Should().Contain("    targetFormat: \"yyyy/MM/dd\"");
+        yaml.Should().Be("name: \"test\"\nactions:\n  - type: FormatTimestamp\n    columnName: \"CreatedAt\"\n    targetFormat: \"yyyy/MM/dd\"\n");
     }
 
     [Fact]
@@ -301,7 +278,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("drillDownKeyPath: []");
+        yaml.Should().Be("name: \"test\"\nactions: []\ndrillDownKeyPath: []\n");
     }
 
     [Fact]
@@ -324,7 +301,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("drillDownKeyPath:\n  - key: \"customer\"\n  - key: \"orders\"\n    index: 0\n");
+        yaml.Should().Be("name: \"test\"\nactions: []\ndrillDownKeyPath:\n  - key: \"customer\"\n  - key: \"orders\"\n    index: 0\n");
     }
 
     [Fact]
@@ -347,7 +324,7 @@ public sealed class RecipeYamlSerializerTests
         var yaml = RecipeYamlSerializer.Serialize(recipe);
 
         // Assert
-        yaml.Should().Contain("drillDownKeyPath:\n  - key: \"scores\"\n    index: 1\n  - index: 0\n");
+        yaml.Should().Be("name: \"test\"\nactions: []\ndrillDownKeyPath:\n  - key: \"scores\"\n    index: 1\n  - index: 0\n");
     }
 
     [Fact]
