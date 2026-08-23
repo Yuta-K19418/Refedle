@@ -61,7 +61,11 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleQuit()
     {
-        if (_state.ActionStack.Count == 0)
+        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+            ? drillDown.ActionStack.Count
+            : _state.ActionStack.Count;
+
+        if (currentActionCount == 0)
         {
             _app.RequestStop();
             return true;
@@ -237,7 +241,8 @@ internal sealed class AppKeyHandler : IDisposable
         var request = new SingleDrillDownRequest(
             Format: format,
             NodeBytes: arrayNode.RawJson,
-            KeyPath: KeyPathBuilder.Build(selectedNode));
+            KeyPath: KeyPathBuilder.Build(selectedNode),
+            InitialActionStack: []);
 
         void onDrillDownConfirmed(string actionName) => _viewManager.DrillDown(request);
 
@@ -254,7 +259,8 @@ internal sealed class AppKeyHandler : IDisposable
         var keyPath = KeyPathBuilder.Build(selectedNode);
         var request = new FullAggregationDrillDownRequest(
             Format: format,
-            KeyPath: keyPath);
+            KeyPath: keyPath,
+            InitialActionStack: []);
 
         void onDrillDownConfirmed(string actionName) =>
             _ = _viewManager.FullAggregationDrillDownAsync(request)
@@ -285,7 +291,11 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     internal bool HandleClearActions()
     {
-        if (_state.ActionStack.Count == 0)
+        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+            ? drillDown.ActionStack.Count
+            : _state.ActionStack.Count;
+
+        if (currentActionCount == 0)
         {
             return false;
         }
@@ -297,12 +307,20 @@ internal sealed class AppKeyHandler : IDisposable
             "Yes",
             "No"
         );
-        if (result == 0)
+        if (result != 0)
         {
-            _state.ClearMorphActions();
-            _viewManager.RefreshCurrentTableView();
+            return true;
         }
 
+        if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } activeDrillDown)
+        {
+            _state.DrillDown = activeDrillDown with { ActionStack = [] };
+            _viewManager.RefreshCurrentTableView();
+            return true;
+        }
+
+        _state.ClearMorphActions();
+        _viewManager.RefreshCurrentTableView();
         return true;
     }
 

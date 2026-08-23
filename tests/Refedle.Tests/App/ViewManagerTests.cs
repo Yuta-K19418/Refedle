@@ -581,7 +581,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — immediate-execution uiThreadInvoke applies the scanned result synchronously
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -605,7 +606,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -632,7 +634,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — the background scan completes; the callback is captured but NOT yet executed
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -668,7 +671,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act — scan completes and the callback is captured; dispose BEFORE the callback executes
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -775,7 +779,8 @@ public sealed class ViewManagerTests : IDisposable
             [
                 new KeyPathSegment("list", KeyPathSegmentKind.Key),
                 new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
-            ]);
+            ],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
@@ -800,7 +805,8 @@ public sealed class ViewManagerTests : IDisposable
             [
                 new KeyPathSegment("list", KeyPathSegmentKind.Key),
                 new KeyPathSegment("[0]", KeyPathSegmentKind.Index),
-            ]);
+            ],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -822,7 +828,9 @@ public sealed class ViewManagerTests : IDisposable
         DrillDownState drillDown = new(
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
-            ViewMode.JsonArrayTree);
+            ViewMode.JsonArrayTree,
+            KeyPath: [],
+            ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
         var modeController = new ModeController(state);
@@ -853,9 +861,10 @@ public sealed class ViewManagerTests : IDisposable
         DrillDownState drillDown = new(
             [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
             schema,
-            ViewMode.JsonArrayTree);
+            ViewMode.JsonArrayTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "name", NewName = "label" }]);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
-        state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
         using var window = new Window();
         var modeController = new ModeController(state);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -870,9 +879,115 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public void DrillDown_OnSuccess_ClearsActionStack()
+    public void HandleMorphAction_WithFocusedTableModeAndDrillDown_AppendsToDrillDownActionStack()
     {
         // Arrange
+        using var app = CreateTestApp();
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        DrillDownState drillDown = new(
+            [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
+            schema,
+            ViewMode.JsonArrayTree,
+            KeyPath: [],
+            ActionStack: []);
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        viewManager.SwitchToFocusedTable(drillDown);
+        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        var action = new RenameColumnAction { OldName = "name", NewName = "label" };
+
+        // Act
+        view.OnMorphAction?.Invoke(action);
+
+        // Assert
+        state.ActionStack.Should().BeEmpty();
+        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDownAfter.ActionStack.Should().Equal(action);
+    }
+
+    [Fact]
+    public void HandleMorphAction_WithFocusedTableModeAndBaseActions_LeavesBaseStackUntouched()
+    {
+        // Arrange — a populated base ActionStack must survive appending a morph action to the
+        // active DrillDown's own stack
+        using var app = CreateTestApp();
+        var baseAction = new RenameColumnAction { OldName = "base", NewName = "renamed_base" };
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        DrillDownState drillDown = new(
+            [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
+            schema,
+            ViewMode.JsonArrayTree,
+            KeyPath: [],
+            ActionStack: []);
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        state.AddMorphAction(baseAction);
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        viewManager.SwitchToFocusedTable(drillDown);
+        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        var drillDownAction = new DeleteColumnAction { ColumnName = "drill_down" };
+
+        // Act
+        view.OnMorphAction?.Invoke(drillDownAction);
+
+        // Assert
+        state.ActionStack.Should().Equal(baseAction);
+        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDownAfter.ActionStack.Should().Equal(drillDownAction);
+    }
+
+    [Fact]
+    public void HandleMorphAction_WithTableMode_AppendsToBaseActionStack_LeavesDrillDownActionStackUntouched()
+    {
+        // Arrange — a stale DrillDown (e.g. left over from Backspace navigation) must be untouched
+        // when the current view is the base table, not FocusedTable
+        var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
+        using var app = CreateTestApp();
+        var staleDrillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
+        var staleDrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [staleDrillDownAction]);
+        using var state = new AppState { CurrentFilePath = filePath, DrillDown = staleDrillDown };
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.Csv,
+            Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
+        };
+        viewManager.SwitchToCsvTable(new MockRowIndexer(filePath), schema);
+        var view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
+        var action = new RenameColumnAction { OldName = "col1", NewName = "renamed" };
+
+        // Act
+        view.OnMorphAction?.Invoke(action);
+
+        // Assert
+        state.ActionStack.Should().Equal(action);
+        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDownAfter.ActionStack.Should().Equal(staleDrillDownAction);
+    }
+
+    [Fact]
+    public void DrillDown_OnSuccess_LeavesBaseActionStackUntouched()
+    {
+        // Arrange — the base table's ActionStack must survive entering a DrillDown, and the fresh
+        // DrillDownState must start with its own empty ActionStack
         using var app = CreateTestApp();
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
@@ -883,13 +998,16 @@ public sealed class ViewManagerTests : IDisposable
         var request = new SingleDrillDownRequest(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[{\"a\":1}]"),
-            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
 
         // Assert
-        state.ActionStack.Should().BeEmpty();
+        state.ActionStack.Should().ContainSingle();
+        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDown.ActionStack.Should().BeEmpty();
     }
 
     [Fact]
@@ -906,7 +1024,8 @@ public sealed class ViewManagerTests : IDisposable
         var request = new SingleDrillDownRequest(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[]"),
-            [new KeyPathSegment("list", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         viewManager.DrillDown(request);
@@ -917,9 +1036,10 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task FullAggregationDrillDownAsync_OnSuccess_ClearsActionStack()
+    public async Task FullAggregationDrillDownAsync_OnSuccess_LeavesBaseActionStackUntouched()
     {
-        // Arrange
+        // Arrange — the base table's ActionStack must survive entering a DrillDown, and the fresh
+        // DrillDownState must start with its own empty ActionStack
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
@@ -930,13 +1050,16 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("user", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
 
         // Assert
-        state.ActionStack.Should().BeEmpty();
+        state.ActionStack.Should().ContainSingle();
+        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDown.ActionStack.Should().BeEmpty();
     }
 
     [Fact]
@@ -953,7 +1076,8 @@ public sealed class ViewManagerTests : IDisposable
 
         var request = new FullAggregationDrillDownRequest(
             DataFormat.JsonLines,
-            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)]);
+            [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
         // Act
         await viewManager.FullAggregationDrillDownAsync(request);
@@ -978,7 +1102,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             RowIndexer = indexer,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);
@@ -1008,7 +1132,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             RowIndexer = indexer,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);
@@ -1036,7 +1160,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentMode = ViewMode.FocusedTable,
             JsonObjectEntries = entries,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);

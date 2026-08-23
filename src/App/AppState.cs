@@ -55,11 +55,15 @@ internal sealed class AppState : IDisposable
     /// </summary>
     public Action<TableSchema>? OnSchemaRefined { get; set; }
 
+    private IReadOnlyList<MorphAction> _actionStack = [];
+
     /// <summary>
-    /// Gets or sets the current Action Stack of transformation operations applied to the loaded file.
+    /// Gets the current Action Stack of transformation operations applied to the loaded file.
     /// An empty list means no transformations are active (passthrough).
+    /// Mutation goes through <see cref="AddMorphAction"/>, <see cref="ClearMorphActions"/>, or
+    /// <see cref="SetActionStack"/>.
     /// </summary>
-    public IReadOnlyList<MorphAction> ActionStack { get; set; } = [];
+    public IReadOnlyList<MorphAction> ActionStack => _actionStack;
 
     /// <summary>
     /// Gets or sets the DrillDown session state.
@@ -94,7 +98,7 @@ internal sealed class AppState : IDisposable
     /// <param name="action">The action to append.</param>
     internal void AddMorphAction(MorphAction action)
     {
-        ActionStack = [.. ActionStack, action];
+        _actionStack = [.. _actionStack, action];
     }
 
     /// <summary>
@@ -102,7 +106,16 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void ClearMorphActions()
     {
-        ActionStack = [];
+        _actionStack = [];
+    }
+
+    /// <summary>
+    /// Replaces the Action Stack wholesale, e.g. when loading a recipe.
+    /// </summary>
+    /// <param name="actions">The actions to set as the new Action Stack.</param>
+    internal void SetActionStack(IReadOnlyList<MorphAction> actions)
+    {
+        _actionStack = actions;
     }
 
     /// <inheritdoc/>

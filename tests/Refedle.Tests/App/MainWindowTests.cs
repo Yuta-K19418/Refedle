@@ -1,6 +1,9 @@
 using AwesomeAssertions;
 using Refedle.App;
+using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
+using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
@@ -209,7 +212,7 @@ public sealed class MainWindowTests
         // Arrange
         using var app = CreateTestApp();
         using var state = new AppState();
-        state.ActionStack = [new RenameColumnAction { OldName = "col1", NewName = "new_col1" }];
+        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
         using var mainWindow = new MainWindow(app, state);
         // Auto-dismiss the "unsaved changes" confirmation dialog by pressing Enter (= "Yes").
         app.Iteration += (_, _) => app.Keyboard.RaiseKeyDownEvent(Key.Enter);
@@ -223,5 +226,146 @@ public sealed class MainWindowTests
 
         // Assert
         handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithQKey_WhenFocusedTableDrillDownActionStackEmpty_QuitsWithoutConfirmation()
+    {
+        // Arrange — base ActionStack has entries, but the active DrillDown's own stack is empty;
+        // quitting from FocusedTable must consult the DrillDown's stack, not the base one
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        using var mainWindow = new MainWindow(app, state);
+        // No dialog auto-dismiss wired: if the wrong stack were consulted, this would hang.
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithQKey_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_QuitsWithoutConfirmation()
+    {
+        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but the
+        // current view is the base table; quitting must consult the base stack, not the stale one
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState
+        {
+            DrillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
+        };
+        using var mainWindow = new MainWindow(app, state);
+        // No dialog auto-dismiss wired: if the wrong stack were consulted, this would hang.
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithCKey_WhenFocusedTableDrillDownHasActions_ClearsOnlyDrillDownStack()
+    {
+        // Arrange — confirming the clear from FocusedTable must only clear the DrillDown's own
+        // ActionStack, leaving the base table's ActionStack untouched
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
+        using var mainWindow = new MainWindow(app, state);
+        // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
+        // then confirm (Enter). Self-unsubscribes so it fires only once — resending on every
+        // subsequent Iteration tick would keep steering focus in the (now dialog-free) main window.
+        void ConfirmYes(object? sender, EventArgs e)
+        {
+            app.Iteration -= ConfirmYes;
+            app.Keyboard.RaiseKeyDownEvent(Key.CursorLeft);
+            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        }
+
+        app.Iteration += ConfirmYes;
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'c');
+
+        // Assert
+        handled.Should().BeTrue();
+        state.ActionStack.Should().ContainSingle();
+        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDown.ActionStack.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void KeyDown_WithCKey_WhenBaseStackHasActions_ClearsOnlyBaseStack()
+    {
+        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but
+        // the current view is the base table; confirming the clear must only clear the base stack
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState
+        {
+            DrillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]),
+        };
+        state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+        using var mainWindow = new MainWindow(app, state);
+        // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
+        // then confirm (Enter). Self-unsubscribes so it fires only once — resending on every
+        // subsequent Iteration tick would keep steering focus in the (now dialog-free) main window.
+        void ConfirmYes(object? sender, EventArgs e)
+        {
+            app.Iteration -= ConfirmYes;
+            app.Keyboard.RaiseKeyDownEvent(Key.CursorLeft);
+            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        }
+
+        app.Iteration += ConfirmYes;
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'c');
+
+        // Assert
+        handled.Should().BeTrue();
+        state.ActionStack.Should().BeEmpty();
+        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDown.ActionStack.Should().ContainSingle();
     }
 }

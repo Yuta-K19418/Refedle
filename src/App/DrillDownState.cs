@@ -1,5 +1,6 @@
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 
 namespace Refedle.App;
 
@@ -9,4 +10,6 @@ namespace Refedle.App;
 internal sealed record DrillDownState(
     IReadOnlyList<FocusedTableRow> Rows,
     TableSchema Schema,
-    ViewMode PreviousMode);
+    ViewMode PreviousMode,
+    IReadOnlyList<KeyPathSegment> KeyPath,
+    IReadOnlyList<MorphAction> ActionStack);

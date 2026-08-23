@@ -133,4 +133,69 @@ public sealed partial class MainWindowTests
             File.Delete(savePath);
         }
     }
+
+    [Fact]
+    public async Task SaveRecipe_FromFocusedTableWithActiveDrillDown_WritesDrillDownKeyPathAndActionStackToRecipeFile()
+    {
+        // Arrange: DrillDown from a JSON array root into the FocusedTable view.
+        var content = """
+            [
+              {"name":"Alice","age":30},
+              {"name":"Bob","age":25}
+            ]
+            """;
+        var inputFile = _testDirectory.CreateFile("input.json", content);
+        var savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-focusedtable-test.yaml");
+        File.Delete(savePath);
+        try
+        {
+            Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
+            await Harness.WaitForContentsAsync("[0]:");
+            Harness.SendKey(KeyCode.X);
+            Harness.SendKey(KeyCode.Enter);
+            await Harness.WaitForContentsAsync("name (text)", "age (number)");
+
+            // Act: rename "name" -> "years" inside the FocusedTable, then save while
+            // CurrentMode is FocusedTable with an active DrillDown — this exercises the
+            // FocusedTable mode guard and the DrillDown-scoped BuildRecipe branch end-to-end.
+            Harness.SendKey(KeyCode.L);
+            Harness.SendKey(KeyCode.X);
+            Harness.SendKey(KeyCode.Enter);
+            // The text field is pre-filled with the current name "name" (4 chars); clear it
+            // before typing the replacement.
+            Harness.SendKey(KeyCode.Backspace);
+            Harness.SendKey(KeyCode.Backspace);
+            Harness.SendKey(KeyCode.Backspace);
+            Harness.SendKey(KeyCode.Backspace);
+            Harness.SendText("years");
+            await Harness.WaitForContentsAsync("New name: years");
+            Harness.SendKey(KeyCode.Enter);
+            await Harness.WaitForContentsAsync("years (text)");
+
+            Harness.SendKey(KeyCode.S);
+            await Harness.WaitForContentsAsync("Save Recipe");
+            Harness.SendKey(KeyCode.Home);
+            Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
+            Harness.SendKey(KeyCode.Delete);
+            Harness.SendText("save-recipe-focusedtable-test.yaml");
+            await Harness.WaitForContentsAsync("save-recipe-focusedtable-test.yaml");
+            Harness.SendKey(KeyCode.Enter);
+            await Harness.WaitForContentsAsync("Recipe saved successfully");
+            Harness.SendKey(KeyCode.Enter);
+            await Harness.WaitForContentsAsync("years (text)");
+
+            // Assert: the root array node's KeyPath has no segments, so the empty-list form is
+            // the correct round-trip — see RecipeYamlSerializer's KeyPathTraverser.LastKeySegment note.
+            File.Exists(savePath).Should().BeTrue();
+            var recipeContent = await File.ReadAllTextAsync(savePath);
+            recipeContent.Should().Contain("drillDownKeyPath: []");
+            recipeContent.Should().Contain("type: Rename");
+            recipeContent.Should().Contain("oldName: \"name\"");
+            recipeContent.Should().Contain("newName: \"years\"");
+        }
+        finally
+        {
+            File.Delete(savePath);
+        }
+    }
 }

@@ -5,6 +5,7 @@ using Refedle.App.Views.JsonTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
@@ -208,7 +209,66 @@ public sealed class AppKeyHandlerTests
         state.ActionStack.Should().BeEmpty();
     }
 
-    // MessageBox.Query display is not unit-testable; requires TUI event loop integration testing.
+    [Fact]
+    public void HandleClearActions_WhenFocusedTableDrillDownActionStackEmpty_ReturnsFalse()
+    {
+        // Arrange — base ActionStack has entries, but the active DrillDown's own stack is empty;
+        // clearing from FocusedTable must consult the DrillDown's stack, not the base one
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+
+        // Act
+        var result = handler.HandleClearActions();
+
+        // Assert
+        result.Should().BeFalse();
+        state.ActionStack.Should().ContainSingle();
+    }
+
+    [Fact]
+    public void HandleClearActions_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_ReturnsFalse()
+    {
+        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but the
+        // current view is the base table; clearing must consult the base stack, not the stale one
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState
+        {
+            DrillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
+        };
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+
+        // Act
+        var result = handler.HandleClearActions();
+
+        // Assert
+        result.Should().BeFalse();
+        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDown.ActionStack.Should().ContainSingle();
+    }
+
+    // The confirmed-clear branches (MessageBox.Query "Yes") require a TUI event loop to
+    // auto-dismiss the dialog; see MainWindowTests.KeyDown_WithCKey_* for those.
 
     [Fact]
     public void OnGlobalKeyDown_BackspaceInFocusedTableWithDrillDown_CallsReturnFromDrillDown()
@@ -223,7 +283,7 @@ public sealed class AppKeyHandlerTests
             CurrentMode = ViewMode.FocusedTable,
             JsonObjectEntries = entries,
             DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree),
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
         var modeController = new ModeController(state);

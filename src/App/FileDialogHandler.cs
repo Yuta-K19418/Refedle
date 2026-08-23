@@ -52,7 +52,7 @@ internal sealed class FileDialogHandler(
 
         // Reset state for new file
         _state.CurrentFilePath = path;
-        _state.ActionStack = [];
+        _state.ClearMorphActions();
         _state.RenewCtsWithCancel();
         _state.DrillDown = null;
         _state.JsonObjectEntries = null;
