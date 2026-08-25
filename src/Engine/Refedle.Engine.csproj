@@ -17,7 +17,7 @@
 
   <ItemGroup>
     <PackageReference Include="Sep" Version="0.17.0" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.32.0.713">
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.33.0.1635">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
