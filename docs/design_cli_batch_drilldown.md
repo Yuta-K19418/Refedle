@@ -207,7 +207,7 @@ internal static class JsonObjectCellReader
     // NumberToCellData / ObjectOrArrayToCellData / StringToCellData. The returned
     // CellData.Value span is valid until the next ReadCell call on the same buffer.
     public static CellData ReadCell(
-        ReadOnlySpan<byte> objectBytes, ReadOnlySpan<byte> columnNameUtf8, PooledValueBuffer valueBuffer);
+        JsonRawBytes objectBytes, ReadOnlySpan<byte> columnNameUtf8, PooledValueBuffer valueBuffer);
 }
 ```
 

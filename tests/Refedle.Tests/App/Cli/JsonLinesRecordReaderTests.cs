@@ -7,7 +7,7 @@ using Refedle.Engine.Models.Actions;
 
 namespace Refedle.Tests.App.Cli;
 
-public sealed partial class JsonLinesRecordReaderTests
+public sealed class JsonLinesRecordReaderTests
 {
     private const string ColumnName = "value";
 
