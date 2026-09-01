@@ -33,6 +33,21 @@ public sealed class FormatDispatcherGeneratorTests
         }
         """;
 
+    private const string KeyPathSegmentSource = """
+        namespace Refedle.Engine.IO.DrillDown;
+
+        public enum KeyPathSegmentKind
+        {
+            Key,
+            Index,
+        }
+
+        public struct KeyPathSegment
+        {
+            public KeyPathSegment(string value, KeyPathSegmentKind kind) { }
+        }
+        """;
+
     private const string AppCliStubsSource = """
         using System;
         using System.Threading;
@@ -114,19 +129,20 @@ public sealed class FormatDispatcherGeneratorTests
         using System.Threading;
         using System.Threading.Tasks;
         using Refedle.Engine;
+        using Refedle.Engine.IO.DrillDown;
 
         namespace Refedle.App.Cli.Factories;
 
         internal interface IRecordReaderFactory<TReader>
             where TReader : struct, IRecordReader
         {
-            ValueTask<TReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct);
+            ValueTask<TReader> CreateAsync(string inputFile, IReadOnlyList<KeyPathSegment>? drillDownKeyPath, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct);
         }
 
         internal interface IRecordWriterFactory<TWriter>
             where TWriter : struct, IRecordWriter
         {
-            ValueTask<TWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct);
+            ValueTask<TWriter> CreateAsync(string outputFile, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct);
         }
         """;
 
@@ -134,6 +150,7 @@ public sealed class FormatDispatcherGeneratorTests
         using System.Threading;
         using System.Threading.Tasks;
         using Refedle.Engine;
+        using Refedle.Engine.IO.DrillDown;
         using Refedle.Engine.Types;
 
         namespace Refedle.App.Cli.Factories;
@@ -141,28 +158,28 @@ public sealed class FormatDispatcherGeneratorTests
         [RecordReader(DataFormat.Csv)]
         internal readonly struct CsvRecordReaderFactory : IRecordReaderFactory<CsvRecordReader>
         {
-            public ValueTask<CsvRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<CsvRecordReader> CreateAsync(string inputFile, IReadOnlyList<KeyPathSegment>? drillDownKeyPath, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new CsvRecordReader());
         }
 
         [RecordReader(DataFormat.JsonLines)]
         internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<JsonLinesRecordReader>
         {
-            public ValueTask<JsonLinesRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<JsonLinesRecordReader> CreateAsync(string inputFile, IReadOnlyList<KeyPathSegment>? drillDownKeyPath, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new JsonLinesRecordReader());
         }
 
         [RecordWriter(DataFormat.Csv)]
         internal readonly struct CsvRecordWriterFactory : IRecordWriterFactory<CsvRecordWriter>
         {
-            public ValueTask<CsvRecordWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<CsvRecordWriter> CreateAsync(string outputFile, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new CsvRecordWriter());
         }
 
         [RecordWriter(DataFormat.JsonLines)]
         internal readonly struct JsonLinesRecordWriterFactory : IRecordWriterFactory<JsonLinesRecordWriter>
         {
-            public ValueTask<JsonLinesRecordWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<JsonLinesRecordWriter> CreateAsync(string outputFile, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new JsonLinesRecordWriter());
         }
         """;
@@ -171,6 +188,7 @@ public sealed class FormatDispatcherGeneratorTests
         using System.Threading;
         using System.Threading.Tasks;
         using Refedle.Engine;
+        using Refedle.Engine.IO.DrillDown;
         using Refedle.Engine.Types;
 
         namespace Refedle.App.Cli.Factories;
@@ -178,14 +196,14 @@ public sealed class FormatDispatcherGeneratorTests
         [RecordReader(DataFormat.Csv)]
         internal readonly struct CsvRecordReaderFactory : IRecordReaderFactory<CsvRecordReader>
         {
-            public ValueTask<CsvRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<CsvRecordReader> CreateAsync(string inputFile, IReadOnlyList<KeyPathSegment>? drillDownKeyPath, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new CsvRecordReader());
         }
 
         [RecordReader(DataFormat.JsonLines)]
         internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<JsonLinesRecordReader>
         {
-            public ValueTask<JsonLinesRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<JsonLinesRecordReader> CreateAsync(string inputFile, IReadOnlyList<KeyPathSegment>? drillDownKeyPath, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new JsonLinesRecordReader());
         }
         """;
@@ -201,20 +219,20 @@ public sealed class FormatDispatcherGeneratorTests
         [RecordWriter(DataFormat.Csv)]
         internal readonly struct CsvRecordWriterFactory : IRecordWriterFactory<CsvRecordWriter>
         {
-            public ValueTask<CsvRecordWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<CsvRecordWriter> CreateAsync(string outputFile, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new CsvRecordWriter());
         }
 
         [RecordWriter(DataFormat.JsonLines)]
         internal readonly struct JsonLinesRecordWriterFactory : IRecordWriterFactory<JsonLinesRecordWriter>
         {
-            public ValueTask<JsonLinesRecordWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+            public ValueTask<JsonLinesRecordWriter> CreateAsync(string outputFile, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
                 => new(new JsonLinesRecordWriter());
         }
         """;
 
     // Regression baseline for the current CSV/JSON Lines reader/writer dispatch, captured
-    // before the CreateAsync signatures are decomposed. The generator emits
+    // before DrillDown readers/writers are added. The generator emits
     // Environment.NewLine line breaks, so the snapshot is normalized per platform.
     private const string CurrentDispatchSource = """
         // <auto-generated/>
@@ -224,6 +242,7 @@ public sealed class FormatDispatcherGeneratorTests
         using System.Threading.Tasks;
         using Refedle.Engine;
         using Refedle.Engine.Types;
+        using Refedle.Engine.IO.DrillDown;
         using Refedle.App.Cli;
         using Refedle.App.Cli.Factories;
 
@@ -234,7 +253,9 @@ public sealed class FormatDispatcherGeneratorTests
             public static async ValueTask<ExitCode> DispatchAsync(
                 DataFormat inputFormat,
                 DataFormat outputFormat,
-                Arguments args,
+                string inputFile,
+                string outputFile,
+                IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
                 IReadOnlyList<string> inputColumnNames,
                 BatchOutputSchema outputSchema,
                 IAppLogger logger,
@@ -243,70 +264,78 @@ public sealed class FormatDispatcherGeneratorTests
                 return (inputFormat, outputFormat) switch
                 {
                     (DataFormat.Csv, DataFormat.Csv) =>
-                        await RunCsvToCsvAsync(args, inputColumnNames, outputSchema, logger, ct),
+                        await RunCsvToCsvAsync(inputFile, outputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct),
                     (DataFormat.Csv, DataFormat.JsonLines) =>
-                        await RunCsvToJsonLinesAsync(args, inputColumnNames, outputSchema, logger, ct),
+                        await RunCsvToJsonLinesAsync(inputFile, outputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct),
                     (DataFormat.JsonLines, DataFormat.Csv) =>
-                        await RunJsonLinesToCsvAsync(args, inputColumnNames, outputSchema, logger, ct),
+                        await RunJsonLinesToCsvAsync(inputFile, outputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct),
                     (DataFormat.JsonLines, DataFormat.JsonLines) =>
-                        await RunJsonLinesToJsonLinesAsync(args, inputColumnNames, outputSchema, logger, ct),
+                        await RunJsonLinesToJsonLinesAsync(inputFile, outputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct),
                     _ => throw new NotSupportedException($"Unsupported format combination: {inputFormat} -> {outputFormat}")
                 };
             }
 
             private static async ValueTask<ExitCode> RunCsvToCsvAsync(
-                Arguments args,
+                string inputFile,
+                string outputFile,
+                IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
                 IReadOnlyList<string> inputColumnNames,
                 BatchOutputSchema outputSchema,
                 IAppLogger logger,
                 CancellationToken ct)
             {
                 var readerFactory = new CsvRecordReaderFactory();
-                using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                using var reader = await readerFactory.CreateAsync(inputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
                 var writerFactory = new CsvRecordWriterFactory();
-                await using var writer = await writerFactory.CreateAsync(args, outputSchema, logger, ct).ConfigureAwait(false);
+                await using var writer = await writerFactory.CreateAsync(outputFile, outputSchema, logger, ct).ConfigureAwait(false);
                 return await RecordProcessor.ProcessAsync<CsvRecordReader, CsvRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
             private static async ValueTask<ExitCode> RunCsvToJsonLinesAsync(
-                Arguments args,
+                string inputFile,
+                string outputFile,
+                IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
                 IReadOnlyList<string> inputColumnNames,
                 BatchOutputSchema outputSchema,
                 IAppLogger logger,
                 CancellationToken ct)
             {
                 var readerFactory = new CsvRecordReaderFactory();
-                using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                using var reader = await readerFactory.CreateAsync(inputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
                 var writerFactory = new JsonLinesRecordWriterFactory();
-                await using var writer = await writerFactory.CreateAsync(args, outputSchema, logger, ct).ConfigureAwait(false);
+                await using var writer = await writerFactory.CreateAsync(outputFile, outputSchema, logger, ct).ConfigureAwait(false);
                 return await RecordProcessor.ProcessAsync<CsvRecordReader, JsonLinesRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
             private static async ValueTask<ExitCode> RunJsonLinesToCsvAsync(
-                Arguments args,
+                string inputFile,
+                string outputFile,
+                IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
                 IReadOnlyList<string> inputColumnNames,
                 BatchOutputSchema outputSchema,
                 IAppLogger logger,
                 CancellationToken ct)
             {
                 var readerFactory = new JsonLinesRecordReaderFactory();
-                using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                using var reader = await readerFactory.CreateAsync(inputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
                 var writerFactory = new CsvRecordWriterFactory();
-                await using var writer = await writerFactory.CreateAsync(args, outputSchema, logger, ct).ConfigureAwait(false);
+                await using var writer = await writerFactory.CreateAsync(outputFile, outputSchema, logger, ct).ConfigureAwait(false);
                 return await RecordProcessor.ProcessAsync<JsonLinesRecordReader, CsvRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
             private static async ValueTask<ExitCode> RunJsonLinesToJsonLinesAsync(
-                Arguments args,
+                string inputFile,
+                string outputFile,
+                IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
                 IReadOnlyList<string> inputColumnNames,
                 BatchOutputSchema outputSchema,
                 IAppLogger logger,
                 CancellationToken ct)
             {
                 var readerFactory = new JsonLinesRecordReaderFactory();
-                using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                using var reader = await readerFactory.CreateAsync(inputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);
                 var writerFactory = new JsonLinesRecordWriterFactory();
-                await using var writer = await writerFactory.CreateAsync(args, outputSchema, logger, ct).ConfigureAwait(false);
+                await using var writer = await writerFactory.CreateAsync(outputFile, outputSchema, logger, ct).ConfigureAwait(false);
                 return await RecordProcessor.ProcessAsync<JsonLinesRecordReader, JsonLinesRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
         }
@@ -326,6 +355,7 @@ public sealed class FormatDispatcherGeneratorTests
                     ("GlobalUsings.cs", GlobalUsingsSource),
                     ("DataFormat.cs", DataFormatSource),
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
+                    ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("Factories.cs", AllFactoriesSource),
@@ -357,6 +387,7 @@ public sealed class FormatDispatcherGeneratorTests
                     ("GlobalUsings.cs", GlobalUsingsSource),
                     ("DataFormat.cs", DataFormatSource),
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
+                    ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("ReaderFactories.cs", ReaderFactoriesOnlySource),
@@ -384,6 +415,7 @@ public sealed class FormatDispatcherGeneratorTests
                     ("GlobalUsings.cs", GlobalUsingsSource),
                     ("DataFormat.cs", DataFormatSource),
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
+                    ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("WriterFactories.cs", WriterFactoriesOnlySource),

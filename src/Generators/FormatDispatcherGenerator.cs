@@ -170,6 +170,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("using System.Threading.Tasks;");
         sb.AppendLine("using Refedle.Engine;");
         sb.AppendLine("using Refedle.Engine.Types;");
+        sb.AppendLine("using Refedle.Engine.IO.DrillDown;");
         sb.AppendLine("using Refedle.App.Cli;");
         sb.AppendLine("using Refedle.App.Cli.Factories;");
         sb.AppendLine();
@@ -180,7 +181,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("    public static async ValueTask<ExitCode> DispatchAsync(");
         sb.AppendLine("        DataFormat inputFormat,");
         sb.AppendLine("        DataFormat outputFormat,");
-        sb.AppendLine("        Arguments args,");
+        sb.AppendLine("        string inputFile,");
+        sb.AppendLine("        string outputFile,");
+        sb.AppendLine("        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,");
         sb.AppendLine("        IReadOnlyList<string> inputColumnNames,");
         sb.AppendLine("        BatchOutputSchema outputSchema,");
         sb.AppendLine("        IAppLogger logger,");
@@ -197,7 +200,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
                     $"            (DataFormat.{reader.FormatName}, DataFormat.{writer.FormatName}) =>"
                 );
                 sb.AppendLine(
-                    $"                await Run{reader.FormatName}To{writer.FormatName}Async(args, inputColumnNames, outputSchema, logger, ct),"
+                    $"                await Run{reader.FormatName}To{writer.FormatName}Async(inputFile, outputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct),"
                 );
             }
         }
@@ -216,7 +219,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
                 sb.AppendLine(
                     $"    private static async ValueTask<ExitCode> Run{reader.FormatName}To{writer.FormatName}Async("
                 );
-                sb.AppendLine("        Arguments args,");
+                sb.AppendLine("        string inputFile,");
+                sb.AppendLine("        string outputFile,");
+                sb.AppendLine("        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,");
                 sb.AppendLine("        IReadOnlyList<string> inputColumnNames,");
                 sb.AppendLine("        BatchOutputSchema outputSchema,");
                 sb.AppendLine("        IAppLogger logger,");
@@ -225,12 +230,12 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
 
                 sb.AppendLine($"        var readerFactory = new {reader.FactoryTypeName}();");
                 sb.AppendLine(
-                    $"        using var reader = await readerFactory.CreateAsync(args, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);"
+                    $"        using var reader = await readerFactory.CreateAsync(inputFile, drillDownKeyPath, inputColumnNames, outputSchema, logger, ct).ConfigureAwait(false);"
                 );
 
                 sb.AppendLine($"        var writerFactory = new {writer.FactoryTypeName}();");
                 sb.AppendLine(
-                    $"        await using var writer = await writerFactory.CreateAsync(args, outputSchema, logger, ct).ConfigureAwait(false);"
+                    $"        await using var writer = await writerFactory.CreateAsync(outputFile, outputSchema, logger, ct).ConfigureAwait(false);"
                 );
 
                 sb.AppendLine(

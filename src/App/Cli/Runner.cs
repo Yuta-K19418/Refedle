@@ -38,8 +38,10 @@ internal static class Runner
             var inputFormat = DetectFileFormat(args.InputFile);
             var outputFormat = DetectFileFormat(args.OutputFile);
 
-            // Resolve the full input column name set (no type inference)
-            var columnNames = ColumnNameResolver.ResolveColumnNames(inputFormat, args.InputFile, ct);
+            // Resolve the full input column name set (no type inference);
+            // drillDownKeyPath is not yet sourced from the recipe
+            var columnNames = ColumnNameResolver.ResolveColumnNames(
+                inputFormat, args.InputFile, drillDownKeyPath: null, ct);
 
             // Build output schema
             var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
@@ -53,7 +55,8 @@ internal static class Runner
 
             // Dispatch to generated static monomorphization logic
             return await Generated.FormatDispatcher.DispatchAsync(
-                inputFormat, outputFormat, args, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                inputFormat, outputFormat, args.InputFile, args.OutputFile,
+                drillDownKeyPath: null, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

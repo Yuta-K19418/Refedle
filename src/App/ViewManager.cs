@@ -106,7 +106,7 @@ internal sealed class ViewManager : IDisposable
 
     private void AddTreeToggleHint(List<string> hints)
     {
-        var format = FormatDetector.Detect(_state.CurrentFilePath);
+        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsSuccess
             && format.Value is DataFormat.JsonLines or DataFormat.JsonArray
             && _state.CurrentMode != ViewMode.FocusedTable)

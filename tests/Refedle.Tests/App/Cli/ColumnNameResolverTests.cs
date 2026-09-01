@@ -29,7 +29,7 @@ public sealed class ColumnNameResolverTests : IDisposable
         var inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
 
         // Act
-        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.Csv, inputFile, CancellationToken.None);
+        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.Csv, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         names.Should().Equal(["name", "age"]);
@@ -43,7 +43,7 @@ public sealed class ColumnNameResolverTests : IDisposable
         var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
 
         // Act
-        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, CancellationToken.None);
+        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         names.Should().Equal(["a", "b"]);
@@ -57,7 +57,7 @@ public sealed class ColumnNameResolverTests : IDisposable
         var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
 
         // Act
-        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, CancellationToken.None);
+        var names = ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         names.Should().Equal(["a", "late"]);
@@ -72,7 +72,7 @@ public sealed class ColumnNameResolverTests : IDisposable
         cts.Cancel();
 
         // Act
-        Action act = () => ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, cts.Token);
+        Action act = () => ColumnNameResolver.ResolveColumnNames(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, cts.Token);
 
         // Assert
         act.Should().Throw<OperationCanceledException>();
@@ -85,7 +85,7 @@ public sealed class ColumnNameResolverTests : IDisposable
         var inputFile = CreateTestFile("input.json", "[1,2,3]");
 
         // Act
-        Action act = () => ColumnNameResolver.ResolveColumnNames(DataFormat.JsonArray, inputFile, CancellationToken.None);
+        Action act = () => ColumnNameResolver.ResolveColumnNames(DataFormat.JsonArray, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         act.Should().Throw<NotSupportedException>().WithMessage("*JsonArray*");

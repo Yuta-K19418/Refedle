@@ -1,4 +1,6 @@
 using Refedle.Engine;
+using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli.Factories;
@@ -6,9 +8,15 @@ namespace Refedle.App.Cli.Factories;
 [RecordReader(DataFormat.JsonLines)]
 internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<JsonLinesRecordReader>
 {
-    public ValueTask<JsonLinesRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+    public ValueTask<JsonLinesRecordReader> CreateAsync(
+        string inputFile,
+        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
+        IReadOnlyList<string> inputColumnNames,
+        BatchOutputSchema outputSchema,
+        IAppLogger logger,
+        CancellationToken ct)
     {
-        Engine.IO.JsonLines.RowIndexer rowIndexer = new(args.InputFile);
+        RowIndexer rowIndexer = new(inputFile);
         rowIndexer.BuildIndex(CancellationToken.None);
 
         // Zero-record input: RowReader must not be constructed (MmapService rejects empty
@@ -18,7 +26,7 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
             return new(new JsonLinesRecordReader(rowIndexer, null, inputColumnNames, outputSchema));
         }
 
-        Engine.IO.JsonLines.RowReader rowReader = new(args.InputFile);
+        RowReader rowReader = new(inputFile);
         return new(new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema));
     }
 }

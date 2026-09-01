@@ -1,4 +1,5 @@
 using Refedle.Engine.IO.Csv;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
 
@@ -8,7 +9,11 @@ internal static class ColumnNameResolver
 {
     private const int BatchSize = 1000;
 
-    public static IReadOnlyList<string> ResolveColumnNames(DataFormat inputFormat, string inputFile, CancellationToken ct) =>
+    public static IReadOnlyList<string> ResolveColumnNames(
+        DataFormat inputFormat,
+        string inputFile,
+        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
+        CancellationToken ct) =>
         inputFormat switch
         {
             DataFormat.Csv => ColumnNameScanner.ScanColumnNames(inputFile),

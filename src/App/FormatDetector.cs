@@ -9,11 +9,12 @@ namespace Refedle.App;
 internal static class FormatDetector
 {
     /// <summary>
-    /// Detects the format of the file at the specified path.
+    /// Detects the format of an existing input file. For <c>.json</c>, the root token
+    /// is inspected to distinguish a JSON Object from a JSON Array.
     /// </summary>
-    /// <param name="filePath">The path to the file.</param>
+    /// <param name="filePath">The path to the input file.</param>
     /// <returns>A <see cref="Result{DataFormat}"/> indicating the detected format or failure.</returns>
-    public static Result<DataFormat> Detect(string filePath)
+    public static Result<DataFormat> DetectInputFile(string filePath)
     {
         if (string.IsNullOrEmpty(filePath))
         {

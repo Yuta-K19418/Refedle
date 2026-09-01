@@ -145,7 +145,7 @@ internal sealed class RecipeCommandHandler(
     private async ValueTask LoadDrillDownRecipeAsync(
         Recipe recipe, IReadOnlyList<KeyPathSegment> keyPath, string currentFilePath)
     {
-        var formatResult = FormatDetector.Detect(currentFilePath);
+        var formatResult = FormatDetector.DetectInputFile(currentFilePath);
         if (formatResult.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(formatResult.Error));

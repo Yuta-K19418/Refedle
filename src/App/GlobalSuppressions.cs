@@ -252,20 +252,28 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Cli.Factories.JsonLinesRecordWriterFactory.CreateAsync(Refedle.App.Cli.Arguments,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Target = "~M:Refedle.App.Cli.Factories.JsonLinesRecordWriterFactory.CreateAsync(System.String,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Ownership is transferred to the caller.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Cli.Factories.JsonLinesRecordReaderFactory.CreateAsync(Refedle.App.Cli.Arguments,Refedle.Engine.Models.TableSchema,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Target = "~M:Refedle.App.Cli.Factories.JsonLinesRecordReaderFactory.CreateAsync(System.String,System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Collections.Generic.IReadOnlyList{System.String},Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Ownership is transferred to the caller.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Cli.Factories.CsvRecordWriterFactory.CreateAsync(Refedle.App.Cli.Arguments,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Target = "~M:Refedle.App.Cli.Factories.CsvRecordWriterFactory.CreateAsync(System.String,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Ownership is transferred to the caller.")]
+
+// Cli.ColumnNameResolver
+[assembly: SuppressMessage(
+    "Style",
+    "IDE0060:Remove unused parameter",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.ColumnNameResolver.ResolveColumnNames(Refedle.Engine.Types.DataFormat,System.String,System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Threading.CancellationToken)",
+    Justification = "Reserved for DrillDown column resolution; the CSV/JSON Lines branches ignore it until that phase.")]
 
 // Views.Dialogs
 [assembly: SuppressMessage(
