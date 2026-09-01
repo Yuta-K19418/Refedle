@@ -16,15 +16,11 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
         IAppLogger logger,
         CancellationToken ct)
     {
+        // Runner rejects zero-byte input before dispatch, so RowIndexer.TotalRows is
+        // always > 0 here and RowReader (which MmapService cannot open on an empty file)
+        // is always constructible.
         RowIndexer rowIndexer = new(inputFile);
         rowIndexer.BuildIndex(CancellationToken.None);
-
-        // Zero-record input: RowReader must not be constructed (MmapService rejects empty
-        // files); a reader without one yields no rows.
-        if (rowIndexer.TotalRows == 0)
-        {
-            return new(new JsonLinesRecordReader(rowIndexer, null, inputColumnNames, outputSchema));
-        }
 
         RowReader rowReader = new(inputFile);
         return new(new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema));

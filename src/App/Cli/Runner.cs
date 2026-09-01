@@ -1,6 +1,5 @@
 using Refedle.Engine;
 using Refedle.Engine.Recipes;
-using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli;
 
@@ -34,9 +33,23 @@ internal static class Runner
 
             var recipe = recipeResult.Value;
 
-            // Detect formats (throws NotSupportedException if invalid)
-            var inputFormat = DetectFileFormat(args.InputFile);
-            var outputFormat = DetectFileFormat(args.OutputFile);
+            // Detect formats: input by content, output by extension (it does not exist yet)
+            var inputFormatResult = FormatDetector.DetectInputFile(args.InputFile);
+            if (inputFormatResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error detecting input format: {inputFormatResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var outputFormatResult = FormatDetector.DetectOutputFile(args.OutputFile);
+            if (outputFormatResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error detecting output format: {outputFormatResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var inputFormat = inputFormatResult.Value;
+            var outputFormat = outputFormatResult.Value;
 
             // Resolve the full input column name set (no type inference);
             // drillDownKeyPath is not yet sourced from the recipe
@@ -73,18 +86,5 @@ internal static class Runner
             await logger.WriteErrorAsync($"Error: {ex.Message}");
             return ExitCode.Failure;
         }
-    }
-
-    private static DataFormat DetectFileFormat(string filePath)
-    {
-        var extension = Path.GetExtension(filePath).ToUpperInvariant();
-        return extension switch
-        {
-            ".CSV" => DataFormat.Csv,
-            ".JSONL" => DataFormat.JsonLines,
-            // .json is a JSON array/object format, not JSON Lines — unsupported
-            ".JSON" => throw new NotSupportedException($"Unsupported format: {extension} (Standard JSON format is not supported for batch processing. Use .jsonl for JSON Lines.)"),
-            _ => throw new NotSupportedException($"Unsupported file extension: {extension}"),
-        };
     }
 }

@@ -26,13 +26,6 @@ internal static class ColumnNameResolver
         var rowIndexer = new RowIndexer(inputFile);
         rowIndexer.BuildIndex(ct);
 
-        // Zero-record input resolves to an empty column list. RowReader must not be
-        // constructed here: MmapService.Open rejects zero-byte files.
-        if (rowIndexer.TotalRows == 0)
-        {
-            return [];
-        }
-
         using var rowReader = new RowReader(inputFile);
 
         var seen = new HashSet<string>(StringComparer.Ordinal);

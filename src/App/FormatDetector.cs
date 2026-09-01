@@ -47,6 +47,32 @@ internal static class FormatDetector
     }
 
     /// <summary>
+    /// Detects the format of an output file from its extension only — the file does
+    /// not exist yet, so its content cannot be inspected. <c>.json</c> output is
+    /// always JSON Array shaped.
+    /// </summary>
+    /// <param name="filePath">The path of the output file to be written.</param>
+    /// <returns>A <see cref="Result{DataFormat}"/> indicating the detected format or failure.</returns>
+    public static Result<DataFormat> DetectOutputFile(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath))
+        {
+            return Results.Failure<DataFormat>("File path cannot be empty");
+        }
+
+        var rawExtension = Path.GetExtension(filePath);
+        var extension = rawExtension.ToUpperInvariant();
+
+        return extension switch
+        {
+            ".CSV" => Results.Success(DataFormat.Csv),
+            ".JSONL" => Results.Success(DataFormat.JsonLines),
+            ".JSON" => Results.Success(DataFormat.JsonArray),
+            _ => Results.Failure<DataFormat>($"Unsupported file format: {rawExtension}"),
+        };
+    }
+
+    /// <summary>
     /// Distinguishes JSON Object from JSON Array by peeking at the first non-whitespace byte.
     /// </summary>
     /// <param name="filePath">Path to the .json file.</param>

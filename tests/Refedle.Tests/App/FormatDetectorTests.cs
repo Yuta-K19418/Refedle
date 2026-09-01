@@ -229,4 +229,73 @@ public sealed class FormatDetectorTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(DataFormat.JsonObject);
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void DetectOutputFile_WithNullOrEmptyPath_ReturnsFailure(string? path)
+    {
+        // Act
+        var result = FormatDetector.DetectOutputFile(path!);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("path cannot be empty");
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentCsvPath_ReturnsCsvFormat()
+    {
+        // Arrange — the output file does not exist yet; only the extension is inspected.
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.Csv);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentJsonLinesPath_ReturnsJsonLinesFormat()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.JsonLines);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentJsonPath_ReturnsJsonArrayFormat()
+    {
+        // Arrange — .json output is always JSON Array shaped, so no content sniffing occurs.
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.JsonArray);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithUnsupportedExtension_ReturnsFailure()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xml");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Unsupported file format");
+    }
 }
