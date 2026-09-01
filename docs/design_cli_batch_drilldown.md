@@ -137,6 +137,8 @@ public static Result<DataFormat> DetectOutputFile(string filePath); // new, exte
 
 Replace `Runner.cs`'s private extension-only `DetectFileFormat` with calls to `FormatDetector` — `DetectInputFile` for the input file, `DetectOutputFile` for the output file (which doesn't exist yet, so it can't be content-sniffed). As a side effect, `.json` input now detects successfully as `JsonObject`/`JsonArray` even before Phase 3 adds downstream support (it will still fail later, in `ColumnNameResolver`, with a generic unsupported-format message) — acceptable, since this branch won't be merged until the full feature is complete.
 
+Another effect, unforeseen at design time: a zero-byte input file now fails with exit code 1 (`File is empty`) instead of being processed as zero-record input, aligning CLI behavior with the TUI's existing `FormatDetector` check. This is a deliberate, accepted narrowing — a zero-byte input file has no legitimate batch use. See the `JsonLinesRecordReader Zero-Record Path` section below for the follow-on cleanup this enables.
+
 **Affected Files**
 
 | File | Change |
@@ -150,7 +152,19 @@ Replace `Runner.cs`'s private extension-only `DetectFileFormat` with calls to `F
 | File | Change |
 |---|---|
 | `tests/Refedle.Tests/App/FormatDetectorTests.cs` | Already exists. Rename existing `Detect` test cases to `DetectInputFile`; add new test cases for `DetectOutputFile` (extension-only mapping, including `.json`→`JsonArray` and the unsupported-extension failure case) |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Already exists. `RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1` / `RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1`: switch the test fixture from `.json` to a genuinely never-supported extension (e.g. `.xml`) so these tests stay valid once Phase 3 adds `.json` support, and update the expected message to match `FormatDetector`'s wording. `RunAsync_WithUnknownExtension_ReturnsExitCode1`: update the expected message to match `FormatDetector`'s wording (exact message text decided at implementation time) |
+| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Already exists. `RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1` / `RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1`: switch the test fixture from `.json` to a genuinely never-supported extension (e.g. `.xml`) so these tests stay valid once Phase 3 adds `.json` support, and update the expected message to match `FormatDetector`'s wording. `RunAsync_WithUnknownExtension_ReturnsExitCode1`: update the expected message to match `FormatDetector`'s wording (exact message text decided at implementation time). Remove `RunAsync_JsonLinesToCsv_WithZeroRecordInput` / `RunAsync_JsonLinesToJsonLines_WithZeroRecordInput` (their `""` case is now an error, and the newline-only case is not a real scenario worth a contract); add one test asserting a zero-byte input file returns exit code 1 with the `File is empty` message |
+
+#### JsonLinesRecordReader Zero-Record Path
+
+`RowIndexer.TotalRows == 0` occurs only for a zero-byte file — any file with content yields at least one row. Now that `Runner` rejects zero-byte input before dispatch, neither `JsonLinesRecordReaderFactory` nor `ColumnNameResolver` can reach its `TotalRows == 0` branch, so those two branches become dead and are removed. The reader's constructor parameter drops its `?` (the factory always passes a real `RowReader`). The `_rowReader` field itself stays nullable and is still nulled in `Dispose` — matching the post-dispose fail-fast idiom used by the sibling `CsvRecordReader` / `CsvRecordWriter` / `JsonLinesRecordWriter` in the same directory; revisiting that idiom across all four is out of scope here.
+
+**Affected Files**
+
+| File | Change |
+|---|---|
+| `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Remove the `TotalRows == 0` branch that constructs the reader with a `null` `RowReader` |
+| `src/App/Cli/JsonLinesRecordReader.cs` | Constructor parameter `RowReader? rowReader` → `RowReader rowReader`; `_rowReader` field stays `RowReader?` with the `Dispose` `_rowReader = null` and the `_rowReader is null` guard in `MoveNextAsync` kept; update the zero-record explanatory comment to reflect that `null` now only arises post-dispose |
+| `src/App/Cli/ColumnNameResolver.cs` | Remove the `if (rowIndexer.TotalRows == 0) return [];` guard in `ResolveJsonLinesColumnNames` and its zero-record comment |
 
 ### Phase 3: Extract JSON Array/Object DrillDown Rows
 
