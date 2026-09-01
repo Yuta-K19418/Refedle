@@ -56,11 +56,12 @@ When `--output` is `.json`, a new `JsonArrayRecordWriter` is added, writing a JS
 
 ### Phase 1: Source Generator Test Infrastructure
 
-Set up exact-match test coverage for `FormatDispatcherGenerator` before modifying its output in the next phase. Use the official `Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit` harness to diff the full generated source against an expected string per test case, covering the current dispatch behavior (CSV/JSON Lines reader/writer pairs) as a regression baseline before Phase 2 changes the generated `CreateAsync` call sites.
+Set up exact-match test coverage for `FormatDispatcherGenerator` before modifying its output in the next phase. Use the `Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing` harness with `DefaultVerifier` (the `.XUnit` variant is deprecated — its `XUnitVerifier` carries `[Obsolete]`, which the zero-warnings policy rejects) to diff the full generated source against an expected string per test case, covering the current dispatch behavior (CSV/JSON Lines reader/writer pairs) as a regression baseline before Phase 2 changes the generated `CreateAsync` call sites.
 
 ```
 tests/Refedle.Tests.csproj
-  + PackageReference: Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing.XUnit
+  + PackageReference: Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing
+  + PackageReference: Microsoft.CodeAnalysis.CSharp.Workspaces (pinned to align the harness's Roslyn with Refedle.Generators')
   + ProjectReference: src/Generators/Refedle.Generators.csproj
 ```
 
