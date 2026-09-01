@@ -41,6 +41,16 @@ internal static class Runner
                 return ExitCode.Failure;
             }
 
+            var inputFormat = inputFormatResult.Value;
+
+            // JSON Object/Array input requires a DrillDown-scoped recipe
+            var validationResult = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+            if (validationResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error validating recipe: {validationResult.Error}");
+                return ExitCode.Failure;
+            }
+
             var outputFormatResult = FormatDetector.DetectOutputFile(args.OutputFile);
             if (outputFormatResult.IsFailure)
             {
@@ -48,7 +58,6 @@ internal static class Runner
                 return ExitCode.Failure;
             }
 
-            var inputFormat = inputFormatResult.Value;
             var outputFormat = outputFormatResult.Value;
 
             // Resolve the full input column name set (no type inference);
