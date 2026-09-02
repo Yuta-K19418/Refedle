@@ -1,3 +1,4 @@
+using Refedle.Engine;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
@@ -9,17 +10,52 @@ internal static class ColumnNameResolver
 {
     private const int BatchSize = 1000;
 
-    public static IReadOnlyList<string> ResolveColumnNames(
+    public static async Task<Result<IReadOnlyList<string>>> ResolveColumnNamesAsync(
         DataFormat inputFormat,
         string inputFile,
         IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
-        CancellationToken ct) =>
-        inputFormat switch
+        CancellationToken ct)
+    {
+        return inputFormat switch
         {
-            DataFormat.Csv => ColumnNameScanner.ScanColumnNames(inputFile),
-            DataFormat.JsonLines => ResolveJsonLinesColumnNames(inputFile, ct),
+            DataFormat.Csv => Results.Success(ColumnNameScanner.ScanColumnNames(inputFile)),
+            DataFormat.JsonLines => Results.Success<IReadOnlyList<string>>(ResolveJsonLinesColumnNames(inputFile, ct)),
+            DataFormat.JsonObject => await ResolveJsonObjectColumnNamesAsync(inputFile, drillDownKeyPath, ct).ConfigureAwait(false),
             _ => throw new NotSupportedException($"Unsupported format: {inputFormat}"),
         };
+    }
+
+    // Single DrillDown: resolve the recorded KeyPath to its node, then infer the column set
+    // from that node's child objects (the same KeyPathNodeResolver + DrillDownSchemaExtractor
+    // pair the TUI replays recipes with).
+    private static async Task<Result<IReadOnlyList<string>>> ResolveJsonObjectColumnNamesAsync(
+        string inputFile,
+        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
+        CancellationToken ct)
+    {
+        if (drillDownKeyPath is not { Count: > 0 })
+        {
+            // Same message as the TUI's RecipeCommandHandler.LoadSingleDrillDownRecipe.
+            return Results.Failure<IReadOnlyList<string>>(
+                "This recipe's DrillDown path is empty, which is not valid for a JSON Object file.");
+        }
+
+        var fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
+        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(fileBytes, drillDownKeyPath);
+        if (nodeResult.IsFailure)
+        {
+            return Results.Failure<IReadOnlyList<string>>(nodeResult.Error);
+        }
+
+        var extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
+        if (extractResult.IsFailure)
+        {
+            return Results.Failure<IReadOnlyList<string>>(extractResult.Error);
+        }
+
+        return Results.Success<IReadOnlyList<string>>(
+            [.. extractResult.Value.schema.Columns.Select(c => c.Name)]);
+    }
 
     private static List<string> ResolveJsonLinesColumnNames(string inputFile, CancellationToken ct)
     {

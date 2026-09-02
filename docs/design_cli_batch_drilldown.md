@@ -231,7 +231,7 @@ Each reader keeps `private readonly Memory<byte>[] _columnNameUtf8Bytes;` and `p
 
 #### JsonObjectRecordReader (Single DrillDown)
 
-New `IRecordReader` implementation for JSON Object input, reusing `KeyPathNodeResolver.ResolveSingleNode` + `DrillDownSchemaExtractor.ExtractFromNode` unchanged — no new streaming infrastructure needed, since a Single DrillDown node is bounded to one resolved reference, not the whole file. `DrillDownRecipeValidator` already guarantees `drillDownKeyPath` is non-null for `JsonObject` input by the time this factory runs — defended with `UnreachableException` rather than a repeated check.
+New `IRecordReader` implementation for JSON Object input, reusing `KeyPathNodeResolver.ResolveSingleNode` + `DrillDownSchemaExtractor.ExtractFromNode` unchanged — no new streaming infrastructure needed, since a Single DrillDown node is bounded to one resolved reference, not the whole file. By the time this factory runs, `ColumnNameResolver` has already resolved the same input for the column set, so a null/empty `drillDownKeyPath` or a resolution failure here means a broken upstream invariant — the factory throws `InvalidOperationException` (caught by `Runner`'s outer `catch (Exception)`), not `UnreachableException`.
 
 ```csharp
 [RecordReader(DataFormat.JsonObject)]
@@ -245,11 +245,12 @@ internal readonly struct JsonObjectRecordReaderFactory : IRecordReaderFactory<Js
         IAppLogger logger,
         CancellationToken ct)
     {
-        if (drillDownKeyPath is null)
+        if (drillDownKeyPath is not { Count: > 0 })
         {
-            throw new UnreachableException("DrillDownRecipeValidator already validated drillDownKeyPath for JsonObject input.");
+            throw new InvalidOperationException("ColumnNameResolver rejects null/empty drillDownKeyPath upstream.");
         }
-        // ... resolve node via KeyPathNodeResolver.ResolveSingleNode, extract rows via DrillDownSchemaExtractor.ExtractFromNode
+        // resolve node via KeyPathNodeResolver.ResolveSingleNode, extract rows via
+        // DrillDownSchemaExtractor.ExtractFromNode; a Result.Failure from either → InvalidOperationException
     }
 }
 
@@ -267,7 +268,9 @@ internal readonly struct JsonObjectRecordReader : IRecordReader
 |---|---|
 | `src/App/Cli/JsonObjectRecordReader.cs` | New |
 | `src/App/Cli/Factories/JsonObjectRecordReaderFactory.cs` | New |
-| `src/App/Cli/ColumnNameResolver.cs` | Add `JsonObject` branch: resolve node via `KeyPathNodeResolver`, extract schema via `DrillDownSchemaExtractor` |
+| `src/App/Cli/ColumnNameResolver.cs` | `ResolveColumnNames` → `ResolveColumnNamesAsync` returning `Task<Result<IReadOnlyList<string>>>` (async forced by the `JsonObject` branch's `File.ReadAllBytesAsync` — MA0045); existing branches wrap in `Results.Success`. Add the `JsonObject` branch: reject null/empty `drillDownKeyPath` with the TUI message, else `KeyPathNodeResolver` + `DrillDownSchemaExtractor`, propagating failures as `Results.Failure` |
+| `src/App/Cli/Runner.cs` | `await` + handle the new `Result` with the existing early-return (`Error resolving columns: {error}`); still passes `drillDownKeyPath: null` (Phase 5 wires the real value) |
+| `src/App/GlobalSuppressions.cs` | Drop the `IDE0060` suppression for `ResolveColumnNames`; add a CA1001 suppression for the `JsonObjectRecordReader` struct (same false positive as `JsonLinesRecordReader`) |
 
 #### FullAggregationRecordReader (Full Aggregation DrillDown)
 
@@ -811,6 +814,7 @@ Where should the check "input is JSON Array/Object but `recipe.DrillDownKeyPath`
 **Consequence**
 
 - Adds one more call site in `Runner.cs` (immediately before `ColumnNameResolver`).
+- Phase 3 makes `ColumnNameResolver` return `Result<T>`, which is not a reversal of Option A: the applicability check still lives in the standalone `DrillDownRecipeValidator`; the `Result` only carries the `JsonObject` branch's own resolution failures.
 
 ### ADR-3: New streaming design for `FullAggregationRecordReader`
 

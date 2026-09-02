@@ -62,8 +62,15 @@ internal static class Runner
 
             // Resolve the full input column name set (no type inference);
             // drillDownKeyPath is not yet sourced from the recipe
-            var columnNames = ColumnNameResolver.ResolveColumnNames(
-                inputFormat, args.InputFile, drillDownKeyPath: null, ct);
+            var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+                inputFormat, args.InputFile, drillDownKeyPath: null, ct).ConfigureAwait(false);
+            if (columnNamesResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error resolving columns: {columnNamesResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var columnNames = columnNamesResult.Value;
 
             // Build output schema
             var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);

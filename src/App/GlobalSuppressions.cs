@@ -220,6 +220,14 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "type",
     Target = "~T:Refedle.App.Cli.JsonLinesRecordReader",
     Justification = "JsonLinesRecordReader is a struct designed for monomorphization (RecordProcessor.ProcessAsync<TReader, TWriter>). It implements IRecordReader (which inherits IDisposable) and disposes _valueBuffer in Dispose(), but the CA1001 analyzer is confused by structs — same false positive as JsonLinesRecordWriter.")]
+
+// Cli.JsonObjectRecordReader
+[assembly: SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Scope = "type",
+    Target = "~T:Refedle.App.Cli.JsonObjectRecordReader",
+    Justification = "JsonObjectRecordReader is a struct designed for monomorphization (RecordProcessor.ProcessAsync<TReader, TWriter>). It implements IRecordReader (which inherits IDisposable) and disposes _valueBuffer in Dispose(), but the CA1001 analyzer is confused by structs — same false positive as JsonLinesRecordReader.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA1849:Call async methods when in an async method",
@@ -266,14 +274,6 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Cli.Factories.CsvRecordWriterFactory.CreateAsync(System.String,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Ownership is transferred to the caller.")]
-
-// Cli.ColumnNameResolver
-[assembly: SuppressMessage(
-    "Style",
-    "IDE0060:Remove unused parameter",
-    Scope = "member",
-    Target = "~M:Refedle.App.Cli.ColumnNameResolver.ResolveColumnNames(Refedle.Engine.Types.DataFormat,System.String,System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Threading.CancellationToken)",
-    Justification = "Reserved for DrillDown column resolution; the CSV/JSON Lines branches ignore it until that phase.")]
 
 // Views.Dialogs
 [assembly: SuppressMessage(
