@@ -36,8 +36,8 @@ To build and run from source instead, see [TUI Usage](#tui-usage) below.
 |---|---|---|---|
 | CSV (`.csv`) | — | ✅ | ✅ |
 | JSON Lines (`.jsonl`) | ✅ | ✅ | ✅ |
-| JSON Array (`.json`) | ✅ | via drill-down only | planned |
-| JSON Object (`.json`) | ✅ | via drill-down only | planned |
+| JSON Array (`.json`) | ✅ | via drill-down only | drill-down recipe only |
+| JSON Object (`.json`) | ✅ | via drill-down only | drill-down recipe only |
 
 Any file extension other than those listed above results in a `NotSupportedException`.
 
@@ -45,9 +45,9 @@ Any file extension other than those listed above results in a `NotSupportedExcep
 
 **JSON Lines (`.jsonl`)** — TUI Tree and Table view (toggle with `t`), plus full-file aggregation drill-down (see [TUI Usage](#tui-usage)).
 
-**JSON Array (`.json`)** — TUI Tree view, with Table view available only via full-file aggregation drill-down (see [TUI Usage](#tui-usage)). Not yet supported in CLI batch mode.
+**JSON Array (`.json`)** — TUI Tree view, with Table view available only via full-file aggregation drill-down (see [TUI Usage](#tui-usage)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](#cli-batch-usage)).
 
-**JSON Object (`.json`)** — TUI Tree view, with Table view available only via single-node drill-down (see [TUI Usage](#tui-usage)). Not yet supported in CLI batch mode.
+**JSON Object (`.json`)** — TUI Tree view, with Table view available only via single-node drill-down (see [TUI Usage](#tui-usage)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](#cli-batch-usage)).
 
 ## TUI Usage
 
@@ -274,16 +274,20 @@ Recipes can then be replayed against other files via [CLI Batch Usage](#cli-batc
 
 ## CLI Batch Usage
 
-| Input \ Output | CSV | JSON Lines | JSON Array | JSON Object |
-|---|---|---|---|---|
-| CSV | ✅ | ✅ | planned | planned |
-| JSON Lines | in development | in development | planned | planned |
-| JSON Array | planned | planned | planned | planned |
-| JSON Object | planned | planned | planned | planned |
+| Input \ Output | CSV | JSON Lines | JSON (`.json`) |
+|---|---|---|---|
+| CSV | ✅ | ✅ | ✅ |
+| JSON Lines | ✅ | ✅ | ✅ |
+| JSON Array | ✅ ¹ | ✅ ¹ | ✅ ¹ |
+| JSON Object | ✅ ¹ | ✅ ¹ | ✅ ¹ |
+
+¹ JSON Array / JSON Object input requires a drill-down-scoped recipe — the recipe's `drillDownKeyPath` selects the table to transform. Bare (non-drill-down) batch mode for these formats is out of scope. JSON Lines input works with or without a drill-down scope.
 
 ```bash
 dotnet run --project src/App -- --cli --input <input> --recipe <recipe.yaml> --output <output>
 ```
+
+`.json` output is always a JSON array (`[{...}, ...]`), regardless of row count or input format.
 
 Format dispatch (reader → transform → writer) is resolved at compile time via a source generator (`src/Generators/FormatDispatcherGenerator.cs`), not reflection.
 
