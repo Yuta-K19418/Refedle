@@ -8,14 +8,20 @@ public sealed partial class RecordProcessorTests
     {
         public Action? WriteHeaderCallback;
         public Action<string[]>? WriteCellCallback;
+        public Action? WriteFooterCallback;
+        public Action? FlushCallback;
         private readonly List<string> _cells;
 
         public TestRecordWriter(
             Action? writeHeaderCallback = null,
-            Action<string[]>? writeCellCallback = null)
+            Action<string[]>? writeCellCallback = null,
+            Action? writeFooterCallback = null,
+            Action? flushCallback = null)
         {
             WriteHeaderCallback = writeHeaderCallback;
             WriteCellCallback = writeCellCallback;
+            WriteFooterCallback = writeFooterCallback;
+            FlushCallback = flushCallback;
             _cells = [];
         }
 
@@ -45,8 +51,15 @@ public sealed partial class RecordProcessorTests
             return ValueTask.CompletedTask;
         }
 
+        public readonly ValueTask WriteFooterAsync(CancellationToken ct)
+        {
+            WriteFooterCallback?.Invoke();
+            return ValueTask.CompletedTask;
+        }
+
         public readonly ValueTask FlushAsync(CancellationToken ct)
         {
+            FlushCallback?.Invoke();
             return ValueTask.CompletedTask;
         }
     }

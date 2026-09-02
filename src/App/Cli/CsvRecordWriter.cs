@@ -75,6 +75,13 @@ internal struct CsvRecordWriter : IRecordWriter
         await _writer.WriteLineAsync(_sb.ToString().AsMemory(), ct).ConfigureAwait(false);
     }
 
+    // CSV has no closing frame.
+    public readonly ValueTask WriteFooterAsync(CancellationToken ct)
+    {
+        ThrowIfDisposed();
+        return default;
+    }
+
     public async readonly ValueTask FlushAsync(CancellationToken ct)
     {
         ThrowIfDisposed();

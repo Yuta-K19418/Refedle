@@ -11,10 +11,10 @@ public sealed class JsonLinesRecordWriterTests
         [new BatchOutputColumn("value", "value")],
         []);
 
-    // CellPresence/CellEncoding are internal, so each Presence x Encoding combination
-    // is a standalone case (the enums are constructed inside the test body in Step 2).
+    // Cell-encoding branches are covered by JsonCellWriterTests; this exercises the JSON Lines
+    // record framing (one object per line, trailing newline) and the delegation to JsonCellWriter.
     [Fact]
-    public async Task WriteCellData_ValuePlainText_WritesJsonString()
+    public async Task WriteRecord_WithSingleCell_WritesJsonObjectLineWithNewline()
     {
         // Arrange
         using var stream = new MemoryStream();
@@ -32,111 +32,44 @@ public sealed class JsonLinesRecordWriterTests
     }
 
     [Fact]
-    public async Task WriteCellData_ValueRaw_WritesRawJson()
+    public async Task WriteMultipleRecords_WritesOneObjectPerLine()
     {
         // Arrange
         using var stream = new MemoryStream();
         using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
-        await writer.WriteStartRecordAsync(default);
 
         // Act
-        writer.WriteCellData(0, new CellData("""{"nested":1}""", CellPresence.Value, CellEncoding.Raw));
+        await writer.WriteStartRecordAsync(default);
+        writer.WriteCellData(0, new CellData("a", CellPresence.Value, CellEncoding.PlainText));
         await writer.WriteEndRecordAsync(default);
+        await writer.WriteStartRecordAsync(default);
+        writer.WriteCellData(0, new CellData("b", CellPresence.Value, CellEncoding.PlainText));
+        await writer.WriteEndRecordAsync(default);
+        await writer.WriteFooterAsync(default);
         await writer.FlushAsync(default);
 
         // Assert
         var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{\"value\":{\"nested\":1}}\n");
+        output.Should().Be("{\"value\":\"a\"}\n{\"value\":\"b\"}\n");
     }
 
     [Fact]
-    public async Task WriteCellData_ValueNumeric_WritesJsonNumber()
+    public async Task WriteFooterAsync_IsNoOp()
     {
         // Arrange
         using var stream = new MemoryStream();
         using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
         await writer.WriteStartRecordAsync(default);
+        writer.WriteCellData(0, new CellData("x", CellPresence.Value, CellEncoding.PlainText));
+        await writer.WriteEndRecordAsync(default);
 
         // Act
-        writer.WriteCellData(0, new CellData("007", CellPresence.Value, CellEncoding.Numeric));
-        await writer.WriteEndRecordAsync(default);
+        await writer.WriteFooterAsync(default);
         await writer.FlushAsync(default);
 
-        // Assert
+        // Assert — no closing frame is appended.
         var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{\"value\":7}\n");
-    }
-
-    [Fact]
-    public async Task WriteCellData_ValueBoolean_WritesJsonBoolean()
-    {
-        // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
-        await writer.WriteStartRecordAsync(default);
-
-        // Act
-        writer.WriteCellData(0, new CellData("TRUE", CellPresence.Value, CellEncoding.Boolean));
-        await writer.WriteEndRecordAsync(default);
-        await writer.FlushAsync(default);
-
-        // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{\"value\":true}\n");
-    }
-
-    [Fact]
-    public async Task WriteCellData_Null_WritesJsonNull()
-    {
-        // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
-        await writer.WriteStartRecordAsync(default);
-
-        // Act
-        writer.WriteCellData(0, new CellData([], CellPresence.Null));
-        await writer.WriteEndRecordAsync(default);
-        await writer.FlushAsync(default);
-
-        // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{\"value\":null}\n");
-    }
-
-    [Fact]
-    public async Task WriteCellData_Missing_OmitsProperty()
-    {
-        // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
-        await writer.WriteStartRecordAsync(default);
-
-        // Act
-        writer.WriteCellData(0, new CellData([], CellPresence.Missing));
-        await writer.WriteEndRecordAsync(default);
-        await writer.FlushAsync(default);
-
-        // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{}\n");
-    }
-
-    [Fact]
-    public async Task WriteCellData_Invalid_WritesEmptyString()
-    {
-        // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
-        await writer.WriteStartRecordAsync(default);
-
-        // Act
-        writer.WriteCellData(0, new CellData([], CellPresence.Invalid));
-        await writer.WriteEndRecordAsync(default);
-        await writer.FlushAsync(default);
-
-        // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
-        output.Should().Be("{\"value\":\"\"}\n");
+        output.Should().Be("{\"value\":\"x\"}\n");
     }
 
     [Fact]

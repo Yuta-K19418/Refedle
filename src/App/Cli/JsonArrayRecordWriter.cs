@@ -4,16 +4,23 @@ using Refedle.Engine;
 
 namespace Refedle.App.Cli;
 
-internal struct JsonLinesRecordWriter : IRecordWriter
+/// <summary>
+/// Writes the output as a single JSON array regardless of row count (ADR-1). The array framing
+/// (<c>[</c>, inter-record <c>,</c>, <c>]</c>) is emitted as raw bytes into the staging buffer;
+/// each record's object body is written by a per-record <see cref="Utf8JsonWriter.Reset()"/> and
+/// flushed to the stream immediately, so the whole array is never buffered at once.
+/// </summary>
+internal struct JsonArrayRecordWriter : IRecordWriter
 {
     private const int InitialBufferSize = 1024 * 64; // 64 KB
     private readonly BatchOutputSchema _outputSchema;
     private Stream? _stream;
     private PooledBufferWriter? _bufferWriter;
     private Utf8JsonWriter? _jsonWriter;
+    private bool _isFirstRecord;
     private bool _disposed;
 
-    public JsonLinesRecordWriter(Stream stream, BatchOutputSchema outputSchema)
+    public JsonArrayRecordWriter(Stream stream, BatchOutputSchema outputSchema)
     {
         _stream = stream;
         _outputSchema = outputSchema;
@@ -28,16 +35,24 @@ internal struct JsonLinesRecordWriter : IRecordWriter
             throw;
         }
 
+        _isFirstRecord = true;
         _disposed = false;
     }
 
-    public readonly ValueTask WriteHeaderAsync(CancellationToken ct)
+    public async readonly ValueTask WriteHeaderAsync(CancellationToken ct)
     {
         ThrowIfDisposed();
-        return default;
+        if (_stream is null || _bufferWriter is null)
+        {
+            return;
+        }
+
+        WriteByte(_bufferWriter, (byte)'[');
+        await _stream.WriteAsync(_bufferWriter.WrittenMemory, ct).ConfigureAwait(false);
+        _bufferWriter.Clear();
     }
 
-    public readonly ValueTask WriteStartRecordAsync(CancellationToken ct)
+    public ValueTask WriteStartRecordAsync(CancellationToken ct)
     {
         ThrowIfDisposed();
         if (_jsonWriter is null || _bufferWriter is null)
@@ -46,8 +61,14 @@ internal struct JsonLinesRecordWriter : IRecordWriter
         }
 
         _bufferWriter.Clear();
+        if (!_isFirstRecord)
+        {
+            WriteByte(_bufferWriter, (byte)',');
+        }
+
         _jsonWriter.Reset();
         _jsonWriter.WriteStartObject();
+        _isFirstRecord = false;
         return default;
     }
 
@@ -71,15 +92,8 @@ internal struct JsonLinesRecordWriter : IRecordWriter
         }
 
         _jsonWriter.WriteEndObject();
-
         _jsonWriter.Flush();
 
-        // Add newline (using \n as standard for JSONL across platforms)
-        var span = _bufferWriter.GetSpan(1);
-        span[0] = (byte)'\n';
-        _bufferWriter.Advance(1);
-
-        // Write to stream
         var memory = _bufferWriter.WrittenMemory;
         if (memory.Length > 0)
         {
@@ -87,11 +101,17 @@ internal struct JsonLinesRecordWriter : IRecordWriter
         }
     }
 
-    // JSON Lines has no closing frame — each line is a self-contained document.
-    public readonly ValueTask WriteFooterAsync(CancellationToken ct)
+    public async readonly ValueTask WriteFooterAsync(CancellationToken ct)
     {
         ThrowIfDisposed();
-        return default;
+        if (_stream is null || _bufferWriter is null)
+        {
+            return;
+        }
+
+        _bufferWriter.Clear();
+        WriteByte(_bufferWriter, (byte)']');
+        await _stream.WriteAsync(_bufferWriter.WrittenMemory, ct).ConfigureAwait(false);
     }
 
     public async readonly ValueTask FlushAsync(CancellationToken ct)
@@ -107,7 +127,7 @@ internal struct JsonLinesRecordWriter : IRecordWriter
 
     public readonly void ThrowIfDisposed()
     {
-        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonLinesRecordWriter));
+        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonArrayRecordWriter));
     }
 
     public void Dispose()
@@ -148,5 +168,12 @@ internal struct JsonLinesRecordWriter : IRecordWriter
         }
 
         _disposed = true;
+    }
+
+    private static void WriteByte(PooledBufferWriter bufferWriter, byte value)
+    {
+        var span = bufferWriter.GetSpan(1);
+        span[0] = value;
+        bufferWriter.Advance(1);
     }
 }

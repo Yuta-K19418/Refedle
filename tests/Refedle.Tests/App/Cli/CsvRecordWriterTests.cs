@@ -83,6 +83,26 @@ public sealed class CsvRecordWriterTests
     }
 
     [Fact]
+    public async Task WriteFooterAsync_IsNoOp()
+    {
+        // Arrange
+        using var stream = new MemoryStream();
+        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\n" };
+        using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        await writer.WriteStartRecordAsync(default);
+        writer.WriteCellData(0, new CellData("x", CellPresence.Value));
+        await writer.WriteEndRecordAsync(default);
+
+        // Act
+        await writer.WriteFooterAsync(default);
+        await writer.FlushAsync(default);
+
+        // Assert — no closing frame is appended.
+        var output = Encoding.UTF8.GetString(stream.ToArray());
+        output.Should().Be("x\n");
+    }
+
+    [Fact]
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange

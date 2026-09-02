@@ -49,6 +49,7 @@ internal static class RecordProcessor
             await writer.WriteEndRecordAsync(ct).ConfigureAwait(false);
         }
 
+        await writer.WriteFooterAsync(ct).ConfigureAwait(false);
         await writer.FlushAsync(ct).ConfigureAwait(false);
         return ExitCode.Success;
     }

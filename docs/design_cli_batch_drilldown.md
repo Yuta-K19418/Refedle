@@ -429,6 +429,8 @@ internal static class JsonCellWriter
 |---|---|
 | `src/App/Cli/JsonCellWriter.cs` | New |
 | `src/App/Cli/JsonLinesRecordWriter.cs` | Replace `WriteCellData` body with a call to `JsonCellWriter.WriteCellData(_jsonWriter, _outputSchema, outputColumnIndex, cell)` |
+| `src/App/Cli/PooledBufferWriter.cs` | New (promoted from `JsonLinesRecordWriter.PooledBufferWriter.cs`, unchanged) |
+| `src/App/Cli/JsonLinesRecordWriter.PooledBufferWriter.cs` | Deleted (promoted) |
 
 **Unit Tests**
 

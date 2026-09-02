@@ -213,6 +213,14 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~T:Refedle.App.Cli.JsonLinesRecordWriter",
     Justification = "JsonLinesRecordWriter is a struct designed for monomorphization as per ADR. It implements IRecordWriter which inherits from IDisposable and IAsyncDisposable, but CA1001 analyzer may be confused by structs or specific field types.")]
 
+// Cli.JsonArrayRecordWriter
+[assembly: SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Scope = "type",
+    Target = "~T:Refedle.App.Cli.JsonArrayRecordWriter",
+    Justification = "JsonArrayRecordWriter is a struct designed for monomorphization as per ADR. It implements IRecordWriter which inherits from IDisposable and IAsyncDisposable, but CA1001 analyzer may be confused by structs or specific field types — same false positive as JsonLinesRecordWriter.")]
+
 // Cli.JsonLinesRecordReader
 [assembly: SuppressMessage(
     "Design",
@@ -254,6 +262,24 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Cli.JsonLinesRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
     Justification = "Flush to IBufferWriter is synchronous and fast")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA1849:Call async methods when in an async method",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.JsonArrayRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
+    Justification = "Flush to IBufferWriter is synchronous and fast")]
+[assembly: SuppressMessage(
+    "Sonar Code Smell",
+    "S6966",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.JsonArrayRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
+    Justification = "Flush to IBufferWriter is synchronous and fast")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0042:Use the async version of a method",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.JsonArrayRecordWriter.WriteEndRecordAsync(System.Threading.CancellationToken)",
+    Justification = "Flush to IBufferWriter is synchronous and fast")]
 
 // Cli.Runner
 [assembly: SuppressMessage(
@@ -269,6 +295,12 @@ using System.Diagnostics.CodeAnalysis;
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
     Target = "~M:Refedle.App.Cli.Factories.JsonLinesRecordWriterFactory.CreateAsync(System.String,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Justification = "Ownership is transferred to the caller.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.Factories.JsonArrayRecordWriterFactory.CreateAsync(System.String,Refedle.Engine.BatchOutputSchema,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Ownership is transferred to the caller.")]
 [assembly: SuppressMessage(
     "Reliability",
