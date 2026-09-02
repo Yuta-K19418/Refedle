@@ -60,10 +60,10 @@ internal static class Runner
 
             var outputFormat = outputFormatResult.Value;
 
-            // Resolve the full input column name set (no type inference);
-            // drillDownKeyPath is not yet sourced from the recipe
+            // Resolve the full input column name set (no type inference), scoped to the recipe's
+            // DrillDown location when it has one (null for a base-table recipe).
             var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
-                inputFormat, args.InputFile, drillDownKeyPath: null, ct).ConfigureAwait(false);
+                inputFormat, args.InputFile, recipe.DrillDownKeyPath, ct).ConfigureAwait(false);
             if (columnNamesResult.IsFailure)
             {
                 await logger.WriteErrorAsync($"Error resolving columns: {columnNamesResult.Error}");
@@ -85,7 +85,7 @@ internal static class Runner
             // Dispatch to generated static monomorphization logic
             return await Generated.FormatDispatcher.DispatchAsync(
                 inputFormat, outputFormat, args.InputFile, args.OutputFile,
-                drillDownKeyPath: null, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                recipe.DrillDownKeyPath, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {

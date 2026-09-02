@@ -559,13 +559,11 @@ internal static class FormatDispatcher
 | File | Change |
 |---|---|
 | `src/App/Cli/Runner.cs` | Pass `recipe.DrillDownKeyPath` (instead of `null`) to `ColumnNameResolver.ResolveColumnNames` and to `Generated.FormatDispatcher.DispatchAsync` |
-| `src/Generators/FormatDispatcherGenerator.cs` | Add `drillDownKeyPath` parameter to generated `DispatchAsync` and each `Run{Reader}To{Writer}Async`; forward it into the reader factory's `CreateAsync` call only (writer factory call unchanged) |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` | Update expected generated source strings to include the new parameter |
 | `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Add/update test case(s) verifying `recipe.DrillDownKeyPath` reaches `ColumnNameResolver`/`FormatDispatcher.DispatchAsync` |
 
 ### Phase 6: Extend DrillDown to JSON Lines Input
