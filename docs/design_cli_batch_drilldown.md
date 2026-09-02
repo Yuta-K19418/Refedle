@@ -325,10 +325,11 @@ internal readonly struct JsonArrayBatchSourceReader(ElementReader reader) : IBat
 `src/App/Cli/FullAggregationRecordReader.cs`
 
 ```csharp
-internal readonly struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
+internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
     where TBatchSourceReader : struct, IBatchSourceReader
 {
-    // Holds the source reader + KeyPath; MoveNextAsync fetches a batch via ReadBatch,
+    // Not readonly: MoveNextAsync mutates the batch cursor. Holds the source reader + KeyPath;
+    // MoveNextAsync fetches a batch via ReadBatch,
     // runs FullAggregationRowExtractor.ExtractRows, and yields rows one at a time,
     // refetching the next batch once exhausted.
     // Also holds _columnNameUtf8Bytes + _valueBuffer; GetCellData delegates to JsonObjectCellReader.ReadCell.
@@ -358,6 +359,7 @@ internal readonly struct JsonArrayRecordReaderFactory
 | `src/App/Cli/FullAggregationRecordReader.cs` | New |
 | `src/App/Cli/Factories/JsonArrayRecordReaderFactory.cs` | New |
 | `src/App/Cli/ColumnNameResolver.cs` | Add `JsonArray` branch: call `FullAggregationSchemaScanner.Scan` |
+| `src/Generators/FormatDispatcherGenerator.cs` | `ExtractCreatedType` slices at the outermost `>` (`LastIndexOf`) so a nested-generic reader type (`FullAggregationRecordReader<JsonArrayBatchSourceReader>`) survives intact |
 
 **Unit Tests**
 
@@ -366,7 +368,10 @@ internal readonly struct JsonArrayRecordReaderFactory
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationSchemaScannerTests.cs` | New |
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationRowExtractorTests.cs` | New |
 | `tests/Refedle.Tests/App/Cli/FullAggregationRecordReaderTests.JsonArrayBatchSourceReader.cs` | New |
+| `tests/Refedle.Tests/App/Cli/JsonArrayBatchSourceReaderTests.cs` | New — direct adapter coverage (ReadBatch, delegated disposal) |
 | `tests/Refedle.Tests/App/Cli/ColumnNameResolverTests.cs` | Already exists. Add test case for the new `JsonArray` branch |
+| `tests/Refedle.Tests/App/Cli/Factories/JsonArrayRecordReaderFactoryTests.cs` | New |
+| `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` | Add a nested-generic reader-factory regression case (closed generic type kept intact in the generated `ProcessAsync<...>`) |
 
 ### Phase 4: JSON Output Writer
 

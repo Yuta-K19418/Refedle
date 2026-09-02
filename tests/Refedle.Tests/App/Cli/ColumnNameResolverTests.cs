@@ -85,14 +85,77 @@ public sealed class ColumnNameResolverTests : IDisposable
     [Fact]
     public async Task ResolveColumnNames_WithUnsupportedFormat_ThrowsNotSupportedException()
     {
-        // Arrange
-        var inputFile = CreateTestFile("input.json", "[1,2,3]");
+        // Arrange — an enum value outside the DataFormat range: every real format is now handled.
+        var inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
 
         // Act
-        var act = () => ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonArray, inputFile, drillDownKeyPath: null, CancellationToken.None);
+        var act = () => ColumnNameResolver.ResolveColumnNamesAsync((DataFormat)999, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
-        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*JsonArray*");
+        await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*999*");
+    }
+
+    [Fact]
+    public async Task ResolveColumnNames_WithJsonArrayAndKeyPath_ReturnsDrilledDownColumnNames()
+    {
+        // Arrange — the union of every record's drilled-down child keys, in first-seen order.
+        var inputFile = CreateTestFile(
+            "input.json",
+            """[{"orders":[{"id":1,"item":"a"},{"id":2}]},{"orders":[{"id":3,"note":"x"}]}]""");
+        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonArray, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
+
+        // Assert
+        namesResult.IsSuccess.Should().BeTrue();
+        namesResult.Value.Should().Equal(["id", "item", "note"]);
+    }
+
+    [Fact]
+    public async Task ResolveColumnNames_WithJsonArrayAndNullKeyPath_ThrowsInvalidOperationException()
+    {
+        // Arrange — null cannot reach this branch: DrillDownRecipeValidator rejects it upstream.
+        var inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
+
+        // Act
+        var act = () => ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonArray, inputFile, drillDownKeyPath: null, CancellationToken.None);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>();
+    }
+
+    [Fact]
+    public async Task ResolveColumnNames_WithJsonArrayAndEmptyKeyPath_ReturnsWholeRecordColumnNames()
+    {
+        // Arrange — an empty path is a valid scope: each top-level record is itself the leaf.
+        var inputFile = CreateTestFile("input.json", """[{"a":1,"b":2},{"a":3}]""");
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonArray, inputFile, drillDownKeyPath: [], CancellationToken.None);
+
+        // Assert
+        namesResult.IsSuccess.Should().BeTrue();
+        namesResult.Value.Should().Equal(["a", "b"]);
+    }
+
+    [Fact]
+    public async Task ResolveColumnNames_WithJsonArrayAndPathAbsentInEveryRecord_PropagatesScanFailure()
+    {
+        // Arrange — the path matches nothing, so the scan reports no rows.
+        var inputFile = CreateTestFile("input.json", """[{"other":1},{"other":2}]""");
+        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonArray, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
+
+        // Assert
+        namesResult.IsFailure.Should().BeTrue();
+        namesResult.Error.Should().Be("No matching records found.");
     }
 
     [Fact]

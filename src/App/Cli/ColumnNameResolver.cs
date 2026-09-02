@@ -21,6 +21,10 @@ internal static class ColumnNameResolver
             DataFormat.Csv => Results.Success(ColumnNameScanner.ScanColumnNames(inputFile)),
             DataFormat.JsonLines => Results.Success<IReadOnlyList<string>>(ResolveJsonLinesColumnNames(inputFile, ct)),
             DataFormat.JsonObject => await ResolveJsonObjectColumnNamesAsync(inputFile, drillDownKeyPath, ct).ConfigureAwait(false),
+            DataFormat.JsonArray => drillDownKeyPath is null
+                ? throw new InvalidOperationException(
+                    "DrillDownRecipeValidator already rejects null drillDownKeyPath for JsonArray input.")
+                : ResolveFullAggregationColumnNames(inputFile, inputFormat, drillDownKeyPath, ct),
             _ => throw new NotSupportedException($"Unsupported format: {inputFormat}"),
         };
     }
@@ -55,6 +59,26 @@ internal static class ColumnNameResolver
 
         return Results.Success<IReadOnlyList<string>>(
             [.. extractResult.Value.schema.Columns.Select(c => c.Name)]);
+    }
+
+    // Full Aggregation DrillDown (JSON Array; reused for JSON Lines DrillDown later): streams
+    // the file through the same batch primitives the record reader uses, folding the schema
+    // only — rows are discarded per record. An empty KeyPath is a valid scope (the whole
+    // record is the leaf); a null KeyPath is rejected upstream, hence the non-nullable param.
+    private static Result<IReadOnlyList<string>> ResolveFullAggregationColumnNames(
+        string inputFile,
+        DataFormat format,
+        IReadOnlyList<KeyPathSegment> drillDownKeyPath,
+        CancellationToken ct)
+    {
+        var scanResult = FullAggregationSchemaScanner.Scan(inputFile, format, drillDownKeyPath, ct);
+        if (scanResult.IsFailure)
+        {
+            return Results.Failure<IReadOnlyList<string>>(scanResult.Error);
+        }
+
+        return Results.Success<IReadOnlyList<string>>(
+            [.. scanResult.Value.Columns.Select(c => c.Name)]);
     }
 
     private static List<string> ResolveJsonLinesColumnNames(string inputFile, CancellationToken ct)

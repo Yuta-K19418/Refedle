@@ -138,7 +138,10 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
             }
 
             var startIndex = baseStr.IndexOf('<') + 1;
-            var endIndex = baseStr.IndexOf('>');
+            // LastIndexOf, not IndexOf: a nested generic reader type (e.g.
+            // IRecordReaderFactory<FullAggregationRecordReader<JsonArrayBatchSourceReader>>)
+            // must be sliced at the outermost '>' so the closed type stays intact.
+            var endIndex = baseStr.LastIndexOf('>');
             if (startIndex > 0 && endIndex > startIndex)
             {
                 return baseStr.Substring(startIndex, endIndex - startIndex);
