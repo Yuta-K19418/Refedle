@@ -96,6 +96,43 @@ public sealed class ColumnNameResolverTests : IDisposable
     }
 
     [Fact]
+    public async Task ResolveColumnNames_WithJsonLinesAndKeyPath_ReturnsFullAggregationColumnNames()
+    {
+        // Arrange — the KeyPath is traversed for every line; the column set is the union of leaves.
+        var lines = new[]
+        {
+            """{"orders":[{"id":1,"item":"a"}]}""",
+            """{"orders":[{"id":2,"note":"x"}]}""",
+        };
+        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonLines, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
+
+        // Assert
+        namesResult.IsSuccess.Should().BeTrue();
+        namesResult.Value.Should().Equal(["id", "item", "note"]);
+    }
+
+    [Fact]
+    public async Task ResolveColumnNames_WithJsonLinesAndKeyPathMatchingNothing_PropagatesScanFailure()
+    {
+        // Arrange — the DrillDown path is absent from every line.
+        var inputFile = CreateTestFile("input.jsonl", "{\"other\":1}\n{\"other\":2}\n");
+        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonLines, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
+
+        // Assert
+        namesResult.IsFailure.Should().BeTrue();
+        namesResult.Error.Should().Be("No matching records found.");
+    }
+
+    [Fact]
     public async Task ResolveColumnNames_WithJsonArrayAndKeyPath_ReturnsDrilledDownColumnNames()
     {
         // Arrange — the union of every record's drilled-down child keys, in first-seen order.

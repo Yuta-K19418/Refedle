@@ -24,8 +24,8 @@ public static class FullAggregationSchemaScanner
     /// (the same conditions <see cref="FullAggregationScanner"/> reports).
     /// </summary>
     /// <remarks>
-    /// <paramref name="format"/> is kept for the JSON Lines DrillDown route (Phase 6); today only
-    /// <see cref="DataFormat.JsonArray"/> is wired — every other value is unreachable.
+    /// Full Aggregation applies to JSON Array and JSON Lines input; <see cref="DataFormat.JsonObject"/>
+    /// and any other value are unreachable.
     /// </remarks>
     public static Result<TableSchema> Scan(
         string filePath,
@@ -39,6 +39,7 @@ public static class FullAggregationSchemaScanner
         return format switch
         {
             DataFormat.JsonArray => ScanJsonArray(filePath, format, keyPath, ct),
+            DataFormat.JsonLines => ScanJsonLines(filePath, format, keyPath, ct),
             _ => throw new UnreachableException($"Full aggregation schema scan does not handle format '{format}'."),
         };
     }
@@ -54,6 +55,25 @@ public static class FullAggregationSchemaScanner
 
         using var elementReader = new ElementReader(filePath);
         return ScanBatches(rowIndexer, elementReader.ReadElements, format, keyPath, ct);
+    }
+
+    private static Result<TableSchema> ScanJsonLines(
+        string filePath,
+        DataFormat format,
+        IReadOnlyList<KeyPathSegment> keyPath,
+        CancellationToken ct)
+    {
+        var rowIndexer = new JsonLines.RowIndexer(filePath);
+        rowIndexer.BuildIndex(ct);
+
+        // A zero-record file is zero bytes, which MmapService rejects — do not construct RowReader.
+        if (rowIndexer.TotalRows == 0)
+        {
+            return Results.Failure<TableSchema>("No matching records found.");
+        }
+
+        using var rowReader = new JsonLines.RowReader(filePath);
+        return ScanBatches(rowIndexer, rowReader.ReadLines, format, keyPath, ct);
     }
 
     // The shared accumulation loop: reads bounded batches through the format's batch reader,

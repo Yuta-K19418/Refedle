@@ -1,0 +1,80 @@
+using System.Text;
+using AwesomeAssertions;
+using Refedle.App.Cli;
+using Refedle.Engine.IO.JsonLines;
+
+namespace Refedle.Tests.App.Cli;
+
+public sealed class JsonLinesBatchSourceReaderTests : IDisposable
+{
+    private readonly List<string> _tempFiles = [];
+
+    public void Dispose()
+    {
+        foreach (var path in _tempFiles)
+        {
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+    }
+
+    [Fact]
+    public void ReadBatch_ReturnsRawLineBytesFromTheCheckpoint()
+    {
+        // Arrange
+        var path = CreateFile("{\"id\":1}\n{\"id\":2}\n{\"id\":3}\n");
+        var indexer = new RowIndexer(path);
+        indexer.BuildIndex(CancellationToken.None);
+        var (byteOffset, rowOffset) = indexer.GetCheckPoint(0);
+        using var source = new JsonLinesBatchSourceReader(new RowReader(path));
+
+        // Act
+        var batch = source.ReadBatch(byteOffset, rowOffset, 3);
+
+        // Assert
+        batch.Select(b => Encoding.UTF8.GetString(b.Span))
+            .Should().Equal(["""{"id":1}""", """{"id":2}""", """{"id":3}"""]);
+    }
+
+    [Fact]
+    public void ReadBatch_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange — disposal delegates to the wrapped RowReader's own guard.
+        var path = CreateFile("{\"id\":1}\n");
+        var indexer = new RowIndexer(path);
+        indexer.BuildIndex(CancellationToken.None);
+        var (byteOffset, rowOffset) = indexer.GetCheckPoint(0);
+        var source = new JsonLinesBatchSourceReader(new RowReader(path));
+        source.ReadBatch(byteOffset, rowOffset, 1);
+        source.Dispose();
+
+        // Act
+        Action act = () => source.ReadBatch(byteOffset, rowOffset, 1);
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>();
+    }
+
+    [Fact]
+    public void ReadBatch_WithNullRowReader_ReturnsEmpty()
+    {
+        // Arrange — a zero-record JSON Lines input is a zero-byte file, so no RowReader exists.
+        using var source = new JsonLinesBatchSourceReader(reader: null);
+
+        // Act
+        var batch = source.ReadBatch(0, 0, 10);
+
+        // Assert
+        batch.Should().BeEmpty();
+    }
+
+    private string CreateFile(string content)
+    {
+        var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        File.WriteAllText(path, content);
+        _tempFiles.Add(path);
+        return path;
+    }
+}

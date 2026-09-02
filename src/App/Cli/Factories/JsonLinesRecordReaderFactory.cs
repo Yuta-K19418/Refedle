@@ -5,6 +5,10 @@ using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli.Factories;
 
+/// <summary>
+/// Creates the JSON Lines record reader, selecting the bare or Full Aggregation DrillDown arm
+/// of <see cref="JsonLinesRecordReader"/> (ADR-6) from whether the recipe carries a KeyPath.
+/// </summary>
 [RecordReader(DataFormat.JsonLines)]
 internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<JsonLinesRecordReader>
 {
@@ -16,13 +20,23 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
         IAppLogger logger,
         CancellationToken ct)
     {
-        // Runner rejects zero-byte input before dispatch, so RowIndexer.TotalRows is
-        // always > 0 here and RowReader (which MmapService cannot open on an empty file)
-        // is always constructible.
         RowIndexer rowIndexer = new(inputFile);
-        rowIndexer.BuildIndex(CancellationToken.None);
+        rowIndexer.BuildIndex(ct);
 
-        RowReader rowReader = new(inputFile);
-        return new(new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema));
+        if (drillDownKeyPath is null)
+        {
+            // Runner rejects zero-byte input before dispatch, so RowReader (which MmapService
+            // cannot open on an empty file) is always constructible on the bare path.
+            RowReader bareRowReader = new(inputFile);
+            return new(new JsonLinesRecordReader(
+                new BareJsonLinesRecordReader(rowIndexer, bareRowReader, inputColumnNames, outputSchema)));
+        }
+
+        // Zero-record input yields no RowReader; FullAggregationRecordReader never calls
+        // ReadBatch when TotalRows == 0, so the null source is only reached via `?? []`.
+        var drillDownRowReader = rowIndexer.TotalRows == 0 ? null : new RowReader(inputFile);
+        return new(new JsonLinesRecordReader(
+            new FullAggregationRecordReader<JsonLinesBatchSourceReader>(
+                rowIndexer, new JsonLinesBatchSourceReader(drillDownRowReader), drillDownKeyPath, inputColumnNames, outputSchema)));
     }
 }

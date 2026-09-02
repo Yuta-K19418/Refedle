@@ -577,7 +577,8 @@ Bare (non-DrillDown) and Full Aggregation DrillDown reading are held in a single
 | From | To |
 |---|---|
 | `src/App/Cli/JsonLinesRecordReader.cs` | `src/App/Cli/BareJsonLinesRecordReader.cs` (logic unchanged) |
-| `src/App/Cli/JsonLinesRecordReader.PooledValueBuffer.cs` | `src/App/Cli/BareJsonLinesRecordReader.PooledValueBuffer.cs` |
+
+`PooledValueBuffer` is already a standalone `src/App/Cli/PooledValueBuffer.cs` (Phase 3 §2), so the bare rename is a single file.
 
 #### `JsonLinesRecordReader` (dispatch struct)
 
@@ -594,31 +595,28 @@ internal struct JsonLinesRecordReader : IRecordReader
     private BareJsonLinesRecordReader _bare;
     private FullAggregationRecordReader<JsonLinesBatchSourceReader> _drillDown;
 
-    // Neither path selected — exists only so the two real constructors can chain
-    // `: this()` and skip zeroing the unused field.
-    private JsonLinesRecordReader()
-    {
-    }
-
-    public JsonLinesRecordReader(BareJsonLinesRecordReader bare) : this()
+    public JsonLinesRecordReader(BareJsonLinesRecordReader bare)
     {
         _isDrillDown = false;
         _bare = bare;
+        _drillDown = default;
     }
 
-    public JsonLinesRecordReader(FullAggregationRecordReader<JsonLinesBatchSourceReader> drillDown) : this()
+    public JsonLinesRecordReader(FullAggregationRecordReader<JsonLinesBatchSourceReader> drillDown)
     {
         _isDrillDown = true;
+        _bare = default;
         _drillDown = drillDown;
     }
 
     public ValueTask<bool> MoveNextAsync(CancellationToken ct) =>
         _isDrillDown ? _drillDown.MoveNextAsync(ct) : _bare.MoveNextAsync(ct);
 
-    public bool EvaluateFilters() =>
+    // readonly: the forwarded members on both arms are themselves readonly, so no defensive copy.
+    public readonly bool EvaluateFilters() =>
         _isDrillDown ? _drillDown.EvaluateFilters() : _bare.EvaluateFilters();
 
-    public CellData GetCellData(int outputColumnIndex) =>
+    public readonly CellData GetCellData(int outputColumnIndex) =>
         _isDrillDown ? _drillDown.GetCellData(outputColumnIndex) : _bare.GetCellData(outputColumnIndex);
 
     public void Dispose()
@@ -675,21 +673,21 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
         CancellationToken ct)
     {
         var rowIndexer = new RowIndexer(inputFile);
-        rowIndexer.BuildIndex(CancellationToken.None);
-
-        // RowReader must not be constructed for zero-record input (MmapService rejects empty files).
-        var rowReader = rowIndexer.TotalRows == 0 ? null : new RowReader(inputFile);
+        rowIndexer.BuildIndex(ct);
 
         if (drillDownKeyPath is null)
         {
-            return new(new JsonLinesRecordReader(
-                new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema)));
+            // Runner rejects zero-byte input before dispatch, so RowReader is always constructible.
+            return new(new JsonLinesRecordReader(new BareJsonLinesRecordReader(
+                rowIndexer, new RowReader(inputFile), inputColumnNames, outputSchema)));
         }
 
-        // Wraps RowReader in JsonLinesBatchSourceReader, constructs FullAggregationRecordReader.
+        // Zero-record input has no RowReader; FullAggregationRecordReader never calls ReadBatch
+        // when TotalRows == 0, so the null source is only reached via `?? []`.
+        var rowReader = rowIndexer.TotalRows == 0 ? null : new RowReader(inputFile);
         return new(new JsonLinesRecordReader(
             new FullAggregationRecordReader<JsonLinesBatchSourceReader>(
-                rowIndexer, new JsonLinesBatchSourceReader(rowReader), drillDownKeyPath, outputSchema)));
+                rowIndexer, new JsonLinesBatchSourceReader(rowReader), drillDownKeyPath, inputColumnNames, outputSchema)));
     }
 }
 ```
@@ -719,8 +717,6 @@ DataFormat.JsonLines => drillDownKeyPath is null
 |---|---|
 | `src/App/Cli/JsonLinesRecordReader.cs` | Replace contents with the new dispatch struct |
 | `src/App/Cli/BareJsonLinesRecordReader.cs` | New (renamed from `JsonLinesRecordReader.cs`, logic unchanged) |
-| `src/App/Cli/BareJsonLinesRecordReader.PooledValueBuffer.cs` | New (renamed) |
-| `src/App/Cli/JsonLinesRecordReader.PooledValueBuffer.cs` | Deleted (moved) |
 | `src/App/Cli/JsonLinesBatchSourceReader.cs` | New |
 | `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Branch on `drillDownKeyPath`; add `using Refedle.Engine.IO.JsonLines;` |
 | `src/App/Cli/ColumnNameResolver.cs` | Add a `drillDownKeyPath` branch to the `JsonLines` arm |
@@ -736,8 +732,9 @@ DataFormat.JsonLines => drillDownKeyPath is null
 | `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.cs` | New — dispatch contract: `[Theory]` over `bool drillDown`, exercising every `IRecordReader` member in both modes |
 | `tests/Refedle.Tests/App/Cli/JsonLinesBatchSourceReaderTests.cs` | New |
 | `tests/Refedle.Tests/App/Cli/FullAggregationRecordReaderTests.JsonLinesBatchSourceReader.cs` | New (pairs with the Phase 3 `.JsonArrayBatchSourceReader.cs`) |
-| `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationSchemaScannerTests.cs` | Add JSON Lines input cases |
+| `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationSchemaScannerTests.cs` | Add JSON Lines input cases; drop `JsonLines` from the format-unreachable theory |
 | `tests/Refedle.Tests/App/Cli/ColumnNameResolverTests.cs` | Add a `JsonLines` + DrillDown case |
+| `tests/Refedle.Tests/App/Cli/RunnerTests.DrillDown.cs` | Add a JSON Lines DrillDown → JSON output end-to-end case (the silent bug this phase fixes) |
 | `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` | No change (asserts the generated source is unchanged) |
 
 ### Phase 7: E2E Tests

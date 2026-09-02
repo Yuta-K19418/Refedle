@@ -19,7 +19,9 @@ internal static class ColumnNameResolver
         return inputFormat switch
         {
             DataFormat.Csv => Results.Success(ColumnNameScanner.ScanColumnNames(inputFile)),
-            DataFormat.JsonLines => Results.Success<IReadOnlyList<string>>(ResolveJsonLinesColumnNames(inputFile, ct)),
+            DataFormat.JsonLines => drillDownKeyPath is null
+                ? Results.Success<IReadOnlyList<string>>(ResolveJsonLinesColumnNames(inputFile, ct))
+                : ResolveFullAggregationColumnNames(inputFile, inputFormat, drillDownKeyPath, ct),
             DataFormat.JsonObject => await ResolveJsonObjectColumnNamesAsync(inputFile, drillDownKeyPath, ct).ConfigureAwait(false),
             DataFormat.JsonArray => drillDownKeyPath is null
                 ? throw new InvalidOperationException(
@@ -61,7 +63,7 @@ internal static class ColumnNameResolver
             [.. extractResult.Value.schema.Columns.Select(c => c.Name)]);
     }
 
-    // Full Aggregation DrillDown (JSON Array; reused for JSON Lines DrillDown later): streams
+    // Full Aggregation DrillDown (JSON Array and JSON Lines): streams
     // the file through the same batch primitives the record reader uses, folding the schema
     // only — rows are discarded per record. An empty KeyPath is a valid scope (the whole
     // record is the leaf); a null KeyPath is rejected upstream, hence the non-nullable param.

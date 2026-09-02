@@ -1,142 +1,47 @@
-using System.Text;
-using Refedle.Engine;
-using Refedle.Engine.Filtering;
-using Refedle.Engine.IO.Json;
-using Refedle.Engine.IO.JsonLines;
-using Refedle.Engine.Utilities;
-
 namespace Refedle.App.Cli;
 
+/// <summary>
+/// Union dispatch for JSON Lines reading: <c>[RecordReader(DataFormat.JsonLines)]</c> binds to
+/// exactly one reader type, so the bare (non-DrillDown) and Full Aggregation DrillDown paths
+/// share this struct. The active path is fixed at construction time (ADR-6).
+/// </summary>
 internal struct JsonLinesRecordReader : IRecordReader
 {
-    private readonly RowIndexer _rowIndexer;
-    private readonly Memory<byte>[] _columnNameUtf8Bytes;
-    private readonly Dictionary<int, ReadOnlyMemory<byte>> _filterIndexToNameBytes;
-    private readonly IReadOnlyList<BatchFilterSpec> _filters;
-    private RowReader? _rowReader;
-    private long _batchStart;
-    private IReadOnlyList<JsonRawBytes> _currentBatch;
-    private int _batchIndex;
-    private JsonRawBytes _currentLineBytes;
-    private bool _disposed;
-    private readonly PooledValueBuffer _valueBuffer;
+    private readonly bool _isDrillDown;
+    private BareJsonLinesRecordReader _bare;
+    private FullAggregationRecordReader<JsonLinesBatchSourceReader> _drillDown;
 
-    // _rowReader is non-null on construction; it becomes null only after Dispose, matching
-    // the post-dispose fail-fast idiom of the sibling Csv/JsonLines readers and writers.
-    public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema)
+    public JsonLinesRecordReader(BareJsonLinesRecordReader bare)
     {
-        _rowIndexer = rowIndexer;
-        _rowReader = rowReader;
-
-        _columnNameUtf8Bytes = [.. outputSchema.Columns
-            .Select(c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
-
-        _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
-        for (var i = 0; i < inputColumnNames.Count; i++)
-        {
-            _filterIndexToNameBytes[i] = Encoding.UTF8.GetBytes(inputColumnNames[i]).AsMemory();
-        }
-
-        _filters = outputSchema.Filters;
-
-        _batchStart = 0;
-        _currentBatch = [];
-        _batchIndex = -1;
-        _currentLineBytes = default;
-        _disposed = false;
-        _valueBuffer = new PooledValueBuffer();
+        _isDrillDown = false;
+        _bare = bare;
+        _drillDown = default;
     }
 
-    public ValueTask<bool> MoveNextAsync(CancellationToken ct)
+    public JsonLinesRecordReader(FullAggregationRecordReader<JsonLinesBatchSourceReader> drillDown)
     {
-        ThrowIfDisposed();
-        if (_rowReader is null)
-        {
-            return new ValueTask<bool>(false);
-        }
-
-        while (true)
-        {
-            _batchIndex++;
-            if (_batchIndex < _currentBatch.Count)
-            {
-                _currentLineBytes = _currentBatch[_batchIndex];
-                if (_currentLineBytes.IsEmpty || StringUtility.IsWhiteSpace(_currentLineBytes.Span))
-                {
-                    continue;
-                }
-
-                return new ValueTask<bool>(true);
-            }
-
-            if (_batchStart >= _rowIndexer.TotalRows)
-            {
-                return new ValueTask<bool>(false);
-            }
-
-            ct.ThrowIfCancellationRequested();
-
-            var (byteOffset, rowOffset) = _rowIndexer.GetCheckPoint(_batchStart);
-            var linesToRead = (int)Math.Min(1000, _rowIndexer.TotalRows - _batchStart);
-
-            _currentBatch = _rowReader.ReadLines(byteOffset, rowOffset, linesToRead);
-            _batchStart += linesToRead;
-            _batchIndex = -1;
-        }
+        _isDrillDown = true;
+        _bare = default;
+        _drillDown = drillDown;
     }
 
-    public readonly void ThrowIfDisposed()
-    {
-        ObjectDisposedException.ThrowIf(_disposed, typeof(JsonLinesRecordReader));
-    }
+    public ValueTask<bool> MoveNextAsync(CancellationToken ct) =>
+        _isDrillDown ? _drillDown.MoveNextAsync(ct) : _bare.MoveNextAsync(ct);
 
-    public readonly bool EvaluateFilters()
-    {
-        ThrowIfDisposed();
+    public readonly bool EvaluateFilters() =>
+        _isDrillDown ? _drillDown.EvaluateFilters() : _bare.EvaluateFilters();
 
-        foreach (var filter in _filters)
-        {
-            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out var sourceColNameBytes))
-            {
-                continue;
-            }
-
-            var value = JsonObjectCellExtractor.ExtractCell(_currentLineBytes.Span, sourceColNameBytes.Span);
-
-            if (value == "<null>" || value == "<error>")
-            {
-                return false;
-            }
-
-            if (!FilterEvaluator.EvaluateFilter(value.AsSpan(), filter))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    public readonly CellData GetCellData(int outputColumnIndex)
-    {
-        ThrowIfDisposed();
-
-        return JsonObjectCellReader.ReadCell(
-            _currentLineBytes, _columnNameUtf8Bytes[outputColumnIndex].Span, _valueBuffer);
-    }
+    public readonly CellData GetCellData(int outputColumnIndex) =>
+        _isDrillDown ? _drillDown.GetCellData(outputColumnIndex) : _bare.GetCellData(outputColumnIndex);
 
     public void Dispose()
     {
-        if (_disposed)
+        if (_isDrillDown)
         {
+            _drillDown.Dispose();
             return;
         }
 
-        _rowReader?.Dispose();
-        _rowReader = null;
-
-        _valueBuffer.Dispose();
-
-        _disposed = true;
+        _bare.Dispose();
     }
 }

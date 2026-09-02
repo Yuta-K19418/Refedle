@@ -115,6 +115,31 @@ public sealed partial class RunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_JsonLinesToJson_WithDrillDownFilterRecipe_AppliesTheActionToAggregatedRows()
+    {
+        // Arrange — before Phase 6 the Runner ignored recipe.DrillDownKeyPath for JSON Lines and
+        // applied the recipe against the KeyPath-less base schema (the silent bug this fixes).
+        var inputFile = CreateTestFile(
+            "input.jsonl",
+            "{\"orders\":[{\"id\":1}]}\n{\"orders\":[{\"id\":2},{\"id\":3}]}\n");
+        var recipeFile = CreateTestFile(
+            "recipe.yaml",
+            "name: DrillDown Filter\nactions:\n  - type: Filter\n    columnName: id\n    operator: GreaterThan\n    comparisonType: Number\n    value: 1\ndrillDownKeyPath:\n  - key: orders");
+        var outputFile = Path.Combine(_testDir, "output.json");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().Be("""[{"id":2},{"id":3}]""");
+    }
+
+    [Fact]
     public async Task RunAsync_JsonObjectInput_WithBaseTableRecipe_ReturnsExitCode1()
     {
         // Arrange — a recipe with no DrillDown scope cannot be replayed against JSON Object input.

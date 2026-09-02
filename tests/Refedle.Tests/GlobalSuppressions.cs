@@ -55,3 +55,25 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.Tests.App.Cli.JsonArrayBatchSourceReaderTests.ReadBatch_AfterDispose_ThrowsObjectDisposedException",
     Justification = "ElementReader ownership is transferred to the JsonArrayBatchSourceReader under test, which is disposed.")]
+
+// JsonLinesBatchSourceReaderTests
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Cli.JsonLinesBatchSourceReaderTests.ReadBatch_ReturnsRawLineBytesFromTheCheckpoint",
+    Justification = "RowReader ownership is transferred to the JsonLinesBatchSourceReader under test, which is disposed.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Cli.JsonLinesBatchSourceReaderTests.ReadBatch_AfterDispose_ThrowsObjectDisposedException",
+    Justification = "RowReader ownership is transferred to the JsonLinesBatchSourceReader under test, which is disposed.")]
+
+// FullAggregationRecordReaderTests (JSON Lines)
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Cli.FullAggregationRecordReaderTests.BuildJsonLinesReader(System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.Filtering.BatchFilterSpec})",
+    Justification = "RowReader ownership is transferred to the reader under test; each test disposes it.")]
