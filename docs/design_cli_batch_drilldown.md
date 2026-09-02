@@ -254,8 +254,9 @@ internal readonly struct JsonObjectRecordReaderFactory : IRecordReaderFactory<Js
     }
 }
 
-internal readonly struct JsonObjectRecordReader : IRecordReader
+internal struct JsonObjectRecordReader : IRecordReader
 {
+    // Not readonly: MoveNextAsync advances the row cursor (same as the other IRecordReader structs).
     // Wraps the resolved child rows (IReadOnlyList<JsonRawBytes>) from DrillDownSchemaExtractor.ExtractFromNode.
     // MoveNextAsync just indexes through them — already fully resolved in memory, no further I/O.
     // Holds _columnNameUtf8Bytes + _valueBuffer; GetCellData delegates to JsonObjectCellReader.ReadCell.
