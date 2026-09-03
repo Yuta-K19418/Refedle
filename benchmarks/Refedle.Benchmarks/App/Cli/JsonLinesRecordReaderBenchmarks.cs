@@ -7,7 +7,7 @@ using Refedle.Engine.IO.JsonLines;
 namespace Refedle.Benchmarks.App.Cli;
 
 /// <summary>
-/// Benchmarks for JsonLinesRecordReader.GetCellData. Measures per-cell managed
+/// Benchmarks for BareJsonLinesRecordReader.GetCellData. Measures per-cell managed
 /// allocation across representative token types (Number, String, Object, Array);
 /// zero allocation is the target once GetCellData is backed by a pooled buffer.
 /// </summary>
@@ -27,7 +27,7 @@ public class JsonLinesRecordReaderBenchmarks
         """{"number":1.50,"string":"hello","object":{"a":1},"array":[1,2,3]}""";
 
     private string _tempFilePath = string.Empty;
-    private JsonLinesRecordReader _reader;
+    private BareJsonLinesRecordReader _reader;
 
     /// <summary>
     /// Writes a representative JSON Lines row, builds the reader, advances to the
@@ -45,7 +45,7 @@ public class JsonLinesRecordReaderBenchmarks
         rowIndexer.BuildIndex();
         var rowReader = new RowReader(_tempFilePath);
         var (inputColumnNames, outputSchema) = BuildSchemas();
-        _reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+        _reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
         _ = _reader.MoveNextAsync(default).AsTask().GetAwaiter().GetResult();
 
         // Warm up each branch in Setup so the measured Allocated excludes first-call

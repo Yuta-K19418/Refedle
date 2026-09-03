@@ -1,6 +1,5 @@
 using Refedle.Engine;
 using Refedle.Engine.Recipes;
-using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli;
 
@@ -34,12 +33,44 @@ internal static class Runner
 
             var recipe = recipeResult.Value;
 
-            // Detect formats (throws NotSupportedException if invalid)
-            var inputFormat = DetectFileFormat(args.InputFile);
-            var outputFormat = DetectFileFormat(args.OutputFile);
+            // Detect formats: input by content, output by extension (it does not exist yet)
+            var inputFormatResult = FormatDetector.DetectInputFile(args.InputFile);
+            if (inputFormatResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error detecting input format: {inputFormatResult.Error}");
+                return ExitCode.Failure;
+            }
 
-            // Resolve the full input column name set (no type inference)
-            var columnNames = ColumnNameResolver.ResolveColumnNames(inputFormat, args.InputFile, ct);
+            var inputFormat = inputFormatResult.Value;
+
+            // JSON Object/Array input requires a DrillDown-scoped recipe
+            var validationResult = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+            if (validationResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error validating recipe: {validationResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var outputFormatResult = FormatDetector.DetectOutputFile(args.OutputFile);
+            if (outputFormatResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error detecting output format: {outputFormatResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var outputFormat = outputFormatResult.Value;
+
+            // Resolve the full input column name set (no type inference), scoped to the recipe's
+            // DrillDown location when it has one (null for a base-table recipe).
+            var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+                inputFormat, args.InputFile, recipe.DrillDownKeyPath, ct).ConfigureAwait(false);
+            if (columnNamesResult.IsFailure)
+            {
+                await logger.WriteErrorAsync($"Error resolving columns: {columnNamesResult.Error}");
+                return ExitCode.Failure;
+            }
+
+            var columnNames = columnNamesResult.Value;
 
             // Build output schema
             var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
@@ -53,7 +84,8 @@ internal static class Runner
 
             // Dispatch to generated static monomorphization logic
             return await Generated.FormatDispatcher.DispatchAsync(
-                inputFormat, outputFormat, args, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                inputFormat, outputFormat, args.InputFile, args.OutputFile,
+                recipe.DrillDownKeyPath, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
@@ -70,18 +102,5 @@ internal static class Runner
             await logger.WriteErrorAsync($"Error: {ex.Message}");
             return ExitCode.Failure;
         }
-    }
-
-    private static DataFormat DetectFileFormat(string filePath)
-    {
-        var extension = Path.GetExtension(filePath).ToUpperInvariant();
-        return extension switch
-        {
-            ".CSV" => DataFormat.Csv,
-            ".JSONL" => DataFormat.JsonLines,
-            // .json is a JSON array/object format, not JSON Lines — unsupported
-            ".JSON" => throw new NotSupportedException($"Unsupported format: {extension} (Standard JSON format is not supported for batch processing. Use .jsonl for JSON Lines.)"),
-            _ => throw new NotSupportedException($"Unsupported file extension: {extension}"),
-        };
     }
 }

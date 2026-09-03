@@ -1,24 +1,39 @@
 using Refedle.Engine;
+using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli.Factories;
 
+/// <summary>
+/// Creates the JSON Lines record reader, selecting the bare or Full Aggregation DrillDown arm
+/// of <see cref="JsonLinesRecordReader"/> (ADR-6) from whether the recipe carries a KeyPath.
+/// </summary>
 [RecordReader(DataFormat.JsonLines)]
 internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<JsonLinesRecordReader>
 {
-    public ValueTask<JsonLinesRecordReader> CreateAsync(Arguments args, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+    public ValueTask<JsonLinesRecordReader> CreateAsync(
+        string inputFile,
+        IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
+        IReadOnlyList<string> inputColumnNames,
+        BatchOutputSchema outputSchema,
+        IAppLogger logger,
+        CancellationToken ct)
     {
-        Engine.IO.JsonLines.RowIndexer rowIndexer = new(args.InputFile);
-        rowIndexer.BuildIndex(CancellationToken.None);
+        RowIndexer rowIndexer = new(inputFile);
+        rowIndexer.BuildIndex(ct);
 
-        // Zero-record input: RowReader must not be constructed (MmapService rejects empty
-        // files); a reader without one yields no rows.
-        if (rowIndexer.TotalRows == 0)
+        if (drillDownKeyPath is null)
         {
-            return new(new JsonLinesRecordReader(rowIndexer, null, inputColumnNames, outputSchema));
+            // Runner rejects zero-byte input before dispatch, so RowReader (which MmapService
+            // cannot open on an empty file) is always constructible on either arm.
+            RowReader bareRowReader = new(inputFile);
+            return new(new JsonLinesRecordReader(
+                new BareJsonLinesRecordReader(rowIndexer, bareRowReader, inputColumnNames, outputSchema)));
         }
 
-        Engine.IO.JsonLines.RowReader rowReader = new(args.InputFile);
-        return new(new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema));
+        return new(new JsonLinesRecordReader(
+            new FullAggregationRecordReader<JsonLinesBatchSourceReader>(
+                rowIndexer, new JsonLinesBatchSourceReader(new RowReader(inputFile)), drillDownKeyPath, inputColumnNames, outputSchema)));
     }
 }

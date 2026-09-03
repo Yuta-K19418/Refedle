@@ -1,454 +1,115 @@
 using AwesomeAssertions;
 using Refedle.App.Cli;
+using Refedle.App.Cli.Factories;
 using Refedle.Engine;
 using Refedle.Engine.Filtering;
-using Refedle.Engine.IO.JsonLines;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models.Actions;
 
 namespace Refedle.Tests.App.Cli;
 
-public sealed partial class JsonLinesRecordReaderTests
+// ADR-6: JsonLinesRecordReader is a union dispatch struct. A member that forgets its
+// `_isDrillDown` branch would silently run the wrong reader — every IRecordReader member is
+// exercised here in both modes, with fixtures built so both modes yield the same rows.
+public sealed class JsonLinesRecordReaderTests : IDisposable
 {
-    private const string ColumnName = "value";
+    private readonly List<string> _tempFiles = [];
 
-    [Fact]
-    public async Task GetCellData_NumberToken_ReturnsValueRaw()
+    public void Dispose()
     {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
+        foreach (var path in _tempFiles)
         {
-            File.WriteAllText(filePath, """{"value":1.50}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("1.50");
-        }
-        finally
-        {
-            File.Delete(filePath);
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
         }
     }
 
-    [Fact]
-    public async Task GetCellData_ObjectToken_ReturnsValueRaw()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Dispatch_MoveNextAndGetCellData_ForwardToTheSelectedReader(bool drillDown)
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":{"a":1}}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
+        using var reader = await BuildReaderAsync(drillDown, ["id", "item"], []);
 
-            // Act
-            var cell = reader.GetCellData(0);
+        // Act
+        var items = await DrainColumnAsync(reader, 1);
 
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("""{"a":1}""");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        items.Should().Equal(["a", "b"]);
     }
 
-    [Fact]
-    public async Task GetCellData_ArrayToken_ReturnsValueRaw()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Dispatch_EvaluateFilters_ForwardsToTheSelectedReader(bool drillDown)
+    {
+        // Arrange — the filter keeps only the row whose item is "a".
+        BatchFilterSpec[] filters = [new(1, ComparisonType.Text, FilterOperator.Equals, "a")];
+        using var reader = await BuildReaderAsync(drillDown, ["id", "item"], filters);
+
+        // Act
+        await reader.MoveNextAsync(default);
+        var firstMatches = reader.EvaluateFilters();
+        await reader.MoveNextAsync(default);
+        var secondMatches = reader.EvaluateFilters();
+
+        // Assert
+        firstMatches.Should().BeTrue();
+        secondMatches.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Dispatch_AfterDispose_MoveNextThrows(bool drillDown)
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":[1,2,3]}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
+        var reader = await BuildReaderAsync(drillDown, ["id"], []);
+        reader.Dispose();
 
-            // Act
-            var cell = reader.GetCellData(0);
+        // Act
+        var act = async () => await reader.MoveNextAsync(default);
 
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Raw);
-            cell.Value.ToString().Should().Be("[1,2,3]");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        await act.Should().ThrowAsync<ObjectDisposedException>();
     }
 
-    [Fact]
-    public async Task GetCellData_StringToken_ReturnsValuePlainText()
+    // Drains one column without a loop in the test body. The struct is advanced in this local
+    // copy; callers only read the returned values.
+    private static async Task<IReadOnlyList<string>> DrainColumnAsync(JsonLinesRecordReader reader, int columnIndex)
     {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
+        List<string> values = [];
+        while (await reader.MoveNextAsync(default))
         {
-            File.WriteAllText(filePath, """{"value":"hello"}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.PlainText);
-            cell.Value.ToString().Should().Be("hello");
+            values.Add(reader.GetCellData(columnIndex).Value.ToString());
         }
-        finally
-        {
-            File.Delete(filePath);
-        }
+
+        return values;
     }
 
-    [Fact]
-    public async Task GetCellData_BooleanToken_ReturnsValueBoolean()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":true}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Boolean);
-            cell.Value.ToString().Should().Be("true");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_FalseToken_ReturnsValueBoolean()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":false}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Value);
-            cell.Encoding.Should().Be(CellEncoding.Boolean);
-            cell.Value.ToString().Should().Be("false");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_NullToken_ReturnsNullPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":null}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Null);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_MissingProperty_ReturnsMissingPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"other":1}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Missing);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task GetCellData_MalformedJson_ReturnsInvalidPresence()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, "not valid json");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var cell = reader.GetCellData(0);
-
-            // Assert
-            cell.Presence.Should().Be(CellPresence.Invalid);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":1.50}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            reader.Dispose();
-
-            // Act
-            Action act = () => reader.ThrowIfDisposed();
-
-            // Assert
-            var exception = act.Should().Throw<ObjectDisposedException>().Which;
-            exception.ObjectName.Should().Be(typeof(JsonLinesRecordReader).FullName);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    // JSON null extracts to the "<null>" sentinel, which the reader rejects.
-    [Fact]
-    public async Task EvaluateFilters_NullJsonValue_ReturnsFalse()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":null}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var result = reader.EvaluateFilters();
-
-            // Assert
-            result.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    // A non-object line extracts to the "<error>" sentinel, which the reader rejects.
-    [Fact]
-    public async Task EvaluateFilters_MalformedJsonValue_ReturnsFalse()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, "not valid json");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var result = reader.EvaluateFilters();
-
-            // Assert
-            result.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    // A filter whose source column index is absent from the input schema is ignored, not rejected.
-    [Fact]
-    public async Task EvaluateFilters_FilterColumnAbsentFromInputSchema_IgnoresFilter()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":1}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            BatchFilterSpec[] filters = [new(9, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var result = reader.EvaluateFilters();
-
-            // Assert
-            result.Should().BeTrue();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    [Fact]
-    public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, """{"value":"hello"}""");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "hello")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-            await reader.MoveNextAsync(default);
-
-            // Act
-            var result = reader.EvaluateFilters();
-
-            // Assert
-            result.Should().BeTrue();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    // Leading empty and whitespace-only lines are skipped before the first JSON object,
-    // exercising StringUtility.IsWhiteSpace at its production call site.
-    [Fact]
-    public async Task MoveNextAsync_LeadingEmptyAndWhitespaceLines_SkipsToFirstObject()
-    {
-        // Arrange
-        var filePath = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllText(filePath, "\n \t\n{\"value\":1}\n");
-            var rowIndexer = new RowIndexer(filePath);
-            rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new JsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
-
-            // Act
-            var hasObject = await reader.MoveNextAsync(default);
-
-            // Assert
-            hasObject.Should().BeTrue();
-            reader.GetCellData(0).Value.ToString().Should().Be("1");
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
-    }
-
-    private static (IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema) BuildSchemas() =>
-        BuildSchemas([ColumnName]);
-
-    private static (IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema) BuildSchemas(IReadOnlyList<string> columnNames)
-        => BuildSchemas(columnNames, []);
-
-    private static (IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema) BuildSchemas(
-        IReadOnlyList<string> columnNames,
+    private async Task<JsonLinesRecordReader> BuildReaderAsync(
+        bool drillDown,
+        IReadOnlyList<string> columns,
         IReadOnlyList<BatchFilterSpec> filters)
     {
-        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
-        return (columnNames, outputSchema);
+        // Both fixtures yield rows [(id:1,item:a),(id:2,item:b)]: bare reads each line, the
+        // DrillDown path traverses "orders" in the single line.
+        var content = drillDown
+            ? """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""" + "\n"
+            : "{\"id\":1,\"item\":\"a\"}\n{\"id\":2,\"item\":\"b\"}\n";
+        IReadOnlyList<KeyPathSegment>? keyPath = drillDown
+            ? [new KeyPathSegment("orders", KeyPathSegmentKind.Key)]
+            : null;
+
+        var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        File.WriteAllText(path, content);
+        _tempFiles.Add(path);
+
+        var outputSchema = new BatchOutputSchema([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
+        return await new JsonLinesRecordReaderFactory().CreateAsync(
+            path, keyPath, columns, outputSchema, new TestAppLogger(), CancellationToken.None);
     }
 }

@@ -134,7 +134,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var format = FormatDetector.Detect(_state.CurrentFilePath);
+        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsSuccess && format.Value == DataFormat.JsonLines)
         {
             _ = _viewManager.ToggleJsonLinesModeAsync().ContinueWith(
@@ -178,7 +178,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var format = FormatDetector.Detect(_state.CurrentFilePath);
+        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(format.Error));
@@ -201,7 +201,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var treeFormat = FormatDetector.Detect(_state.CurrentFilePath);
+        var treeFormat = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (treeFormat.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(treeFormat.Error));

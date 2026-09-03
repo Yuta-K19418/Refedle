@@ -41,7 +41,7 @@ internal sealed class FileDialogHandler(
 
     internal async Task HandleFileSelectedAsync(string path)
     {
-        var detectionResult = FormatDetector.Detect(path);
+        var detectionResult = FormatDetector.DetectInputFile(path);
         if (detectionResult.IsFailure)
         {
             _viewManager.ShowError(detectionResult.Error);

@@ -7,9 +7,13 @@ namespace Refedle.App.Cli.Factories;
 internal readonly struct JsonLinesRecordWriterFactory : IRecordWriterFactory<JsonLinesRecordWriter>
 {
     private const int StreamBufferSize = 1024 * 64; // 64 KB
-    public ValueTask<JsonLinesRecordWriter> CreateAsync(Arguments args, BatchOutputSchema outputSchema, IAppLogger logger, CancellationToken ct)
+    public ValueTask<JsonLinesRecordWriter> CreateAsync(
+        string outputFile,
+        BatchOutputSchema outputSchema,
+        IAppLogger logger,
+        CancellationToken ct)
     {
-        FileStream stream = new(args.OutputFile, FileMode.Create, FileAccess.Write, FileShare.Read, StreamBufferSize, useAsync: true);
+        FileStream stream = new(outputFile, FileMode.Create, FileAccess.Write, FileShare.Read, StreamBufferSize, useAsync: true);
         return new(new JsonLinesRecordWriter(stream, outputSchema));
     }
 }

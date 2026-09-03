@@ -54,10 +54,10 @@ public sealed class FormatDetectorTests : IDisposable
     [Theory]
     [InlineData(null)]
     [InlineData("")]
-    public void Detect_WithNullOrEmptyPath_ReturnsFailure(string? path)
+    public void DetectInputFile_WithNullOrEmptyPath_ReturnsFailure(string? path)
     {
         // Act
-        var result = FormatDetector.Detect(path!);
+        var result = FormatDetector.DetectInputFile(path!);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -65,13 +65,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithCsvFile_ReturnsCsvFormat()
+    public async Task DetectInputFile_WithCsvFile_ReturnsCsvFormat()
     {
         // Arrange
         await File.WriteAllTextAsync(_csvFilePath, "header\ndata");
 
         // Act
-        var result = FormatDetector.Detect(_csvFilePath);
+        var result = FormatDetector.DetectInputFile(_csvFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -79,13 +79,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonLinesFile_ReturnsJsonLinesFormat()
+    public async Task DetectInputFile_WithJsonLinesFile_ReturnsJsonLinesFormat()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{}");
 
         // Act
-        var result = FormatDetector.Detect(_jsonlFilePath);
+        var result = FormatDetector.DetectInputFile(_jsonlFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -93,13 +93,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonArrayFile_ReturnsJsonArrayFormat()
+    public async Task DetectInputFile_WithJsonArrayFile_ReturnsJsonArrayFormat()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonArrayFilePath, "[1,2,3]");
 
         // Act
-        var result = FormatDetector.Detect(_jsonArrayFilePath);
+        var result = FormatDetector.DetectInputFile(_jsonArrayFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -107,13 +107,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithUnsupportedFormat_ReturnsFailure()
+    public async Task DetectInputFile_WithUnsupportedFormat_ReturnsFailure()
     {
         // Arrange
         await File.WriteAllTextAsync(_unsupportedFilePath, "{}");
 
         // Act
-        var result = FormatDetector.Detect(_unsupportedFilePath);
+        var result = FormatDetector.DetectInputFile(_unsupportedFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -121,10 +121,10 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public void Detect_WithNonExistentFile_ReturnsFailure()
+    public void DetectInputFile_WithNonExistentFile_ReturnsFailure()
     {
         // Act
-        var result = FormatDetector.Detect(_nonExistentFilePath);
+        var result = FormatDetector.DetectInputFile(_nonExistentFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -132,13 +132,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithEmptyFile_ReturnsFailure()
+    public async Task DetectInputFile_WithEmptyFile_ReturnsFailure()
     {
         // Arrange
         await File.WriteAllBytesAsync(_emptyFilePath, []);
 
         // Act
-        var result = FormatDetector.Detect(_emptyFilePath);
+        var result = FormatDetector.DetectInputFile(_emptyFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -146,13 +146,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonObjectFile_ReturnsJsonObject()
+    public async Task DetectInputFile_WithJsonObjectFile_ReturnsJsonObject()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonObjectFilePath, "{\"id\":1}");
 
         // Act
-        var result = FormatDetector.Detect(_jsonObjectFilePath);
+        var result = FormatDetector.DetectInputFile(_jsonObjectFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -160,13 +160,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonObjectFileAndLeadingWhitespace_ReturnsJsonObject()
+    public async Task DetectInputFile_WithJsonObjectFileAndLeadingWhitespace_ReturnsJsonObject()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonObjectWithWhitespacePath, "  \n{\"id\":1}");
 
         // Act
-        var result = FormatDetector.Detect(_jsonObjectWithWhitespacePath);
+        var result = FormatDetector.DetectInputFile(_jsonObjectWithWhitespacePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -174,13 +174,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonArrayFileAndLeadingWhitespace_ReturnsJsonArray()
+    public async Task DetectInputFile_WithJsonArrayFileAndLeadingWhitespace_ReturnsJsonArray()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonArrayWithWhitespacePath, "  \n[1,2,3]");
 
         // Act
-        var result = FormatDetector.Detect(_jsonArrayWithWhitespacePath);
+        var result = FormatDetector.DetectInputFile(_jsonArrayWithWhitespacePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -188,13 +188,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonFileWithUnknownRoot_ReturnsFailure()
+    public async Task DetectInputFile_WithJsonFileWithUnknownRoot_ReturnsFailure()
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonUnknownRootPath, "\"hello\"");
 
         // Act
-        var result = FormatDetector.Detect(_jsonUnknownRootPath);
+        var result = FormatDetector.DetectInputFile(_jsonUnknownRootPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -202,13 +202,13 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithWhitespaceOnlyJsonFile_ReturnsFailure()
+    public async Task DetectInputFile_WithWhitespaceOnlyJsonFile_ReturnsFailure()
     {
         // Arrange
         await File.WriteAllTextAsync(_whitespaceOnlyJsonPath, "   \t\r\n  ");
 
         // Act
-        var result = FormatDetector.Detect(_whitespaceOnlyJsonPath);
+        var result = FormatDetector.DetectInputFile(_whitespaceOnlyJsonPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -216,17 +216,86 @@ public sealed class FormatDetectorTests : IDisposable
     }
 
     [Fact]
-    public async Task Detect_WithJsonObjectFileAndBom_ReturnsJsonObject()
+    public async Task DetectInputFile_WithJsonObjectFileAndBom_ReturnsJsonObject()
     {
         // Arrange — write UTF-8 BOM (0xEF 0xBB 0xBF) followed by a JSON object
         byte[] content = [0xEF, 0xBB, 0xBF, .. "{\"id\":1}"u8];
         await File.WriteAllBytesAsync(_jsonObjectWithBomPath, content);
 
         // Act
-        var result = FormatDetector.Detect(_jsonObjectWithBomPath);
+        var result = FormatDetector.DetectInputFile(_jsonObjectWithBomPath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(DataFormat.JsonObject);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void DetectOutputFile_WithNullOrEmptyPath_ReturnsFailure(string? path)
+    {
+        // Act
+        var result = FormatDetector.DetectOutputFile(path!);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("path cannot be empty");
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentCsvPath_ReturnsCsvFormat()
+    {
+        // Arrange — the output file does not exist yet; only the extension is inspected.
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.Csv);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentJsonLinesPath_ReturnsJsonLinesFormat()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.JsonLines);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithNonExistentJsonPath_ReturnsJsonArrayFormat()
+    {
+        // Arrange — .json output is always JSON Array shaped, so no content sniffing occurs.
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().Be(DataFormat.JsonArray);
+    }
+
+    [Fact]
+    public void DetectOutputFile_WithUnsupportedExtension_ReturnsFailure()
+    {
+        // Arrange
+        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xml");
+
+        // Act
+        var result = FormatDetector.DetectOutputFile(path);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Contain("Unsupported file format");
     }
 }

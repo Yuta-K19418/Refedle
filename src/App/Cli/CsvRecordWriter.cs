@@ -12,6 +12,9 @@ internal struct CsvRecordWriter : IRecordWriter
 
     public CsvRecordWriter(StreamWriter writer, BatchOutputSchema outputSchema)
     {
+        // Pin the line ending so batch output is byte-identical regardless of the host OS
+        // (StreamWriter otherwise defaults to Environment.NewLine — CRLF on Windows).
+        writer.NewLine = "\n";
         _writer = writer;
         _outputSchema = outputSchema;
         _sb = new StringBuilder();
@@ -73,6 +76,13 @@ internal struct CsvRecordWriter : IRecordWriter
         }
 
         await _writer.WriteLineAsync(_sb.ToString().AsMemory(), ct).ConfigureAwait(false);
+    }
+
+    // CSV has no closing frame.
+    public readonly ValueTask WriteFooterAsync(CancellationToken ct)
+    {
+        ThrowIfDisposed();
+        return default;
     }
 
     public async readonly ValueTask FlushAsync(CancellationToken ct)

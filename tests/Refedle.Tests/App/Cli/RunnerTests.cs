@@ -307,52 +307,6 @@ public sealed partial class RunnerTests : IDisposable
         output.Should().Contain("Alice");
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("\n")]
-    public async Task RunAsync_JsonLinesToCsv_WithZeroRecordInput_SucceedsWithBlankLine(string inputContent)
-    {
-        // Arrange — an empty file and a newline-only file are both zero-record input; both
-        // resolve to an empty column list and succeed.
-        var inputFile = CreateTestFile("input.jsonl", inputContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-
-        // Act
-        var exitCode = await Runner.RunAsync(args, logger);
-
-        // Assert
-        exitCode.Should().Be(ExitCode.Success);
-        logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
-        output.Should().Be(Environment.NewLine);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("\n")]
-    public async Task RunAsync_JsonLinesToJsonLines_WithZeroRecordInput_SucceedsWithEmptyOutput(string inputContent)
-    {
-        // Arrange — an empty file and a newline-only file are both zero-record input; both
-        // resolve to an empty column list and succeed.
-        var inputFile = CreateTestFile("input.jsonl", inputContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-
-        // Act
-        var exitCode = await Runner.RunAsync(args, logger);
-
-        // Assert
-        exitCode.Should().Be(ExitCode.Success);
-        logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
-        output.Should().BeEmpty();
-    }
-
     [Fact]
     public async Task RunAsync_WithNonExistentInputPath_ReturnsExitCode1()
     {
@@ -368,7 +322,27 @@ public sealed partial class RunnerTests : IDisposable
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
-        logger.Errors.Should().ContainSingle().Which.Should().StartWith("Error: Could not find file");
+        logger.Errors.Should().ContainSingle().Which.Should().Be("Error detecting input format: File does not exist");
+        File.Exists(outputFile).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithZeroByteInputFile_ReturnsExitCode1()
+    {
+        // Arrange — a zero-byte input file is rejected by input format detection,
+        // aligning CLI behavior with the TUI's FormatDetector.
+        var inputFile = CreateTestFile("input.jsonl", "");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Failure);
+        logger.Errors.Should().ContainSingle().Which.Should().Be("Error detecting input format: File is empty");
         File.Exists(outputFile).Should().BeFalse();
     }
 
@@ -394,8 +368,8 @@ public sealed partial class RunnerTests : IDisposable
     [Fact]
     public async Task RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1()
     {
-        // Arrange
-        var inputFile = CreateTestFile("input.json", "[]");
+        // Arrange — .xml is an extension no phase of this feature will support.
+        var inputFile = CreateTestFile("input.xml", "[]");
         var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
         var outputFile = Path.Combine(_testDir, "output.csv");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
@@ -406,7 +380,7 @@ public sealed partial class RunnerTests : IDisposable
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
-        logger.Errors.Should().ContainSingle().Which.Should().Be("Unsupported format: .JSON (Standard JSON format is not supported for batch processing. Use .jsonl for JSON Lines.)");
+        logger.Errors.Should().ContainSingle().Which.Should().Be("Error detecting input format: Unsupported file format: .xml");
         File.Exists(outputFile).Should().BeFalse();
     }
 
@@ -416,7 +390,7 @@ public sealed partial class RunnerTests : IDisposable
         // Arrange
         var inputFile = CreateTestFile("input.csv", TestCsvContent);
         var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.json");
+        var outputFile = Path.Combine(_testDir, "output.xml");
         var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
         var logger = new TestAppLogger();
 
@@ -425,7 +399,7 @@ public sealed partial class RunnerTests : IDisposable
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
-        logger.Errors.Should().ContainSingle().Which.Should().Be("Unsupported format: .JSON (Standard JSON format is not supported for batch processing. Use .jsonl for JSON Lines.)");
+        logger.Errors.Should().ContainSingle().Which.Should().Be("Error detecting output format: Unsupported file format: .xml");
         File.Exists(outputFile).Should().BeFalse();
     }
 
@@ -444,7 +418,7 @@ public sealed partial class RunnerTests : IDisposable
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
-        logger.Errors.Should().ContainSingle().Which.Should().Be("Unsupported file extension: .UNKNOWN");
+        logger.Errors.Should().ContainSingle().Which.Should().Be("Error detecting input format: Unsupported file format: .unknown");
         File.Exists(outputFile).Should().BeFalse();
     }
 

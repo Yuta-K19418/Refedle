@@ -25,6 +25,9 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="4.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.SourceGenerators.Testing" Version="1.1.2" />
+    <!-- Pinned to align the testing harness's Roslyn with Refedle.Generators' 5.9.0 -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.9.0" />
   </ItemGroup>
 
   <ItemGroup>
@@ -34,6 +37,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
     <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+    <ProjectReference Include="..\..\src\Generators\Refedle.Generators.csproj" />
   </ItemGroup>
 
 </Project>

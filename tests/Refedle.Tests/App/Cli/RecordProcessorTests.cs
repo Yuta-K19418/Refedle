@@ -706,4 +706,51 @@ public sealed partial class RecordProcessorTests
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "2024/03/15", "NY"]);
     }
+
+    // -------------------------------------------------------------------------
+    // ProcessAsync — WriteFooterAsync
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task ProcessAsync_CallsWriteFooterOnce_AfterTheRecordLoopAndBeforeFlush()
+    {
+        // Arrange
+        var events = new List<string>();
+        var reader = new TestRecordReader(
+            [
+                ["Alice", "30", "NY"],
+                ["Bob", "25", "CA"],
+            ],
+            []);
+        var writer = new TestRecordWriter(
+            writeHeaderCallback: () => events.Add("header"),
+            writeCellCallback: _ => events.Add("record"),
+            writeFooterCallback: () => events.Add("footer"),
+            flushCallback: () => events.Add("flush"));
+
+        // Act
+        await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+
+        // Assert
+        events.Should().Equal(["header", "record", "record", "footer", "flush"]);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithNoRecords_StillCallsWriteFooterBeforeFlush()
+    {
+        // Arrange
+        var events = new List<string>();
+        var reader = new TestRecordReader([], []);
+        var writer = new TestRecordWriter(
+            writeHeaderCallback: () => events.Add("header"),
+            writeCellCallback: _ => events.Add("record"),
+            writeFooterCallback: () => events.Add("footer"),
+            flushCallback: () => events.Add("flush"));
+
+        // Act
+        await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+
+        // Assert
+        events.Should().Equal(["header", "footer", "flush"]);
+    }
 }
