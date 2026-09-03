@@ -12,6 +12,9 @@ internal struct CsvRecordWriter : IRecordWriter
 
     public CsvRecordWriter(StreamWriter writer, BatchOutputSchema outputSchema)
     {
+        // Pin the line ending so batch output is byte-identical regardless of the host OS
+        // (StreamWriter otherwise defaults to Environment.NewLine — CRLF on Windows).
+        writer.NewLine = "\n";
         _writer = writer;
         _outputSchema = outputSchema;
         _sb = new StringBuilder();

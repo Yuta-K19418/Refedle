@@ -87,7 +87,7 @@ public sealed class CsvRecordWriterTests
     {
         // Arrange
         using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\n" };
+        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
         using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
         await writer.WriteStartRecordAsync(default);
         writer.WriteCellData(0, new CellData("x", CellPresence.Value));
@@ -103,11 +103,31 @@ public sealed class CsvRecordWriterTests
     }
 
     [Fact]
+    public async Task Constructor_WithCrlfConfiguredWriter_PinsLineEndingsToLf()
+    {
+        // Arrange — an explicitly CRLF-configured StreamWriter proves the constructor's NewLine
+        // override deterministically, independent of the host OS's Environment.NewLine.
+        using var stream = new MemoryStream();
+        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\r\n" };
+        using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        await writer.WriteStartRecordAsync(default);
+        writer.WriteCellData(0, new CellData("x", CellPresence.Value));
+        await writer.WriteEndRecordAsync(default);
+
+        // Act
+        await writer.FlushAsync(default);
+
+        // Assert — the record terminator is LF regardless of the injected writer's NewLine.
+        var output = Encoding.UTF8.GetString(stream.ToArray());
+        output.Should().Be("x\n");
+    }
+
+    [Fact]
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
         using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\n" };
+        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
         var writer = new CsvRecordWriter(streamWriter, _outputSchema);
         writer.Dispose();
 
@@ -122,7 +142,7 @@ public sealed class CsvRecordWriterTests
     private static async Task<string> WriteSingleCellAndReadAsync(CellPresence presence, string value = "", CellEncoding encoding = CellEncoding.PlainText)
     {
         using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\n" };
+        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
         using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
 
         await writer.WriteStartRecordAsync(default);
