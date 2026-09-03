@@ -497,12 +497,14 @@ internal readonly struct JsonArrayRecordWriterFactory : IRecordWriterFactory<Jso
 
 ### Phase 5: Wire `DrillDownKeyPath` from Runner to Reader Factory
 
-`ActionApplier.BuildOutputSchema` is already called unconditionally from `Runner.cs`, format-agnostic, and `RecordProcessor.ProcessAsync` is already fully generic over any `IRecordReader`/`IRecordWriter` — so once the DrillDown-scoped rows extracted in Phase 3 flow into the pipeline, recipe Actions apply to them automatically with no new code in either. What remains is wiring: `recipe.DrillDownKeyPath` (`IReadOnlyList<KeyPathSegment>?`, `src/Engine/Models/Recipe.cs`) needs to travel from `Runner.cs` through `ColumnNameResolver.ResolveColumnNames` and `FormatDispatcher.DispatchAsync` down to each reader factory's `CreateAsync` — both already have a `drillDownKeyPath` parameter as of Phase 2, but Runner passes `null` until this phase. The writer side never needs it (Phase 2 confirmed).
+`ActionApplier.BuildOutputSchema` is already called unconditionally from `Runner.cs`, format-agnostic, and `RecordProcessor.ProcessAsync` is already fully generic over any `IRecordReader`/`IRecordWriter` — so once the DrillDown-scoped rows extracted in Phase 3 flow into the pipeline, recipe Actions apply to them automatically with no new code in either. What remains is wiring: `recipe.DrillDownKeyPath` (`IReadOnlyList<KeyPathSegment>?`, `src/Engine/Models/Recipe.cs`) needs to travel from `Runner.cs` through `ColumnNameResolver.ResolveColumnNamesAsync` and `FormatDispatcher.DispatchAsync` down to each reader factory's `CreateAsync` — both already have a `drillDownKeyPath` parameter as of Phase 2, but Runner passes `null` until this phase. The writer side never needs it (Phase 2 confirmed).
 
 ```csharp
 // Runner.cs
-var columnNames = ColumnNameResolver.ResolveColumnNames(
-    inputFormat, args.InputFile, recipe.DrillDownKeyPath, ct); // was: null-equivalent (Phase 2 stub)
+var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+    inputFormat, args.InputFile, recipe.DrillDownKeyPath, ct).ConfigureAwait(false); // was: drillDownKeyPath null (Phase 2 stub)
+// ... unchanged: IsFailure early-return, then ActionApplier.BuildOutputSchema
+var columnNames = columnNamesResult.Value;
 
 ...
 
@@ -558,7 +560,7 @@ internal static class FormatDispatcher
 
 | File | Change |
 |---|---|
-| `src/App/Cli/Runner.cs` | Pass `recipe.DrillDownKeyPath` (instead of `null`) to `ColumnNameResolver.ResolveColumnNames` and to `Generated.FormatDispatcher.DispatchAsync` |
+| `src/App/Cli/Runner.cs` | Pass `recipe.DrillDownKeyPath` (instead of `null`) to `ColumnNameResolver.ResolveColumnNamesAsync` and to `Generated.FormatDispatcher.DispatchAsync` |
 
 **Unit Tests**
 
