@@ -7,9 +7,8 @@ using Refedle.Engine.IO.JsonLines;
 namespace Refedle.Benchmarks.App.Cli;
 
 /// <summary>
-/// Benchmarks for BareJsonLinesRecordReader.GetCellData. Measures per-cell managed
-/// allocation across representative token types (Number, String, Object, Array);
-/// zero allocation is the target once GetCellData is backed by a pooled buffer.
+/// Verifies GetCellData stays allocation-free for Number, String, Object, and Array,
+/// whose distinct parsing branches need independent coverage.
 /// </summary>
 [MemoryDiagnoser]
 [SimpleJob(RuntimeMoniker.NativeAot10_0)]
@@ -20,9 +19,7 @@ public class JsonLinesRecordReaderBenchmarks
     private const string ObjectColumn = "object";
     private const string ArrayColumn = "array";
 
-    // A representative single JSON Lines row exercising the four token types GetCellData
-    // branches on. Phase A: each branch allocates a string per cell; this benchmark
-    // visualizes that per-call cost (it does not reach zero until Phase B).
+    // Covers each token type because their parsing paths are independently allocation-sensitive.
     private const string JsonLine =
         """{"number":1.50,"string":"hello","object":{"a":1},"array":[1,2,3]}""";
 
@@ -30,10 +27,8 @@ public class JsonLinesRecordReaderBenchmarks
     private BareJsonLinesRecordReader _reader;
 
     /// <summary>
-    /// Writes a representative JSON Lines row, builds the reader, advances to the
-    /// first row, and warms up each token-type branch so measured Allocated reflects
-    /// steady-state per-cell cost rather than first-call setup. After Phase B this
-    /// warm-up also forces the initial pooled-buffer Reserve.
+    /// Warms each parsing path so allocation measurements exclude one-time reader and
+    /// pooled-buffer initialization costs.
     /// </summary>
     [GlobalSetup]
     public void Setup()
@@ -48,18 +43,13 @@ public class JsonLinesRecordReaderBenchmarks
         _reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
         _ = _reader.MoveNextAsync(default).AsTask().GetAwaiter().GetResult();
 
-        // Warm up each branch in Setup so the measured Allocated excludes first-call
-        // cost: JIT today, and (post-Phase-B) the one-time pooled-buffer rent.
         _ = _reader.GetCellData(0).Value.Length;
         _ = _reader.GetCellData(1).Value.Length;
         _ = _reader.GetCellData(2).Value.Length;
         _ = _reader.GetCellData(3).Value.Length;
     }
 
-    /// <summary>
-    /// Disposes the reader (returning any rented buffer to ArrayPool after Phase B) and
-    /// deletes the temporary input file.
-    /// </summary>
+    /// <summary>Returns pooled storage and deletes the temporary input file.</summary>
     [GlobalCleanup]
     public void Cleanup()
     {
