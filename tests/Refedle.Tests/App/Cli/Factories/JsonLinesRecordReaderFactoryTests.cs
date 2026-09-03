@@ -66,23 +66,6 @@ public sealed class JsonLinesRecordReaderFactoryTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_WithDrillDownAndZeroRecordFile_ReturnsReaderThatYieldsNoRows()
-    {
-        // Arrange — an empty file indexes to zero rows, so no RowReader is constructed; the
-        // Full Aggregation reader must never call ReadBatch on the null batch source.
-        var inputFile = CreateTestFile("input.jsonl", "");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
-        var factory = new JsonLinesRecordReaderFactory();
-
-        // Act
-        using var reader = await factory.CreateAsync(
-            inputFile, keyPath, ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
-
-        // Assert
-        (await reader.MoveNextAsync(default)).Should().BeFalse();
-    }
-
-    [Fact]
     public async Task CreateAsync_WithCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange — the factory forwards its token to RowIndexer.BuildIndex.

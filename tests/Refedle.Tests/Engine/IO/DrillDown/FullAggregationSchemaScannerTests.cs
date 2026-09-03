@@ -204,20 +204,6 @@ public sealed class FullAggregationSchemaScannerTests : IDisposable
     }
 
     [Fact]
-    public void Scan_JsonLinesZeroRecords_ReturnsNoMatchingRecordsFailure()
-    {
-        // Arrange — an empty file indexes to zero rows; RowReader is never constructed.
-        var file = CreateRawFile("");
-
-        // Act
-        var result = FullAggregationSchemaScanner.Scan(file, DataFormat.JsonLines, KeyPath("orders"), CancellationToken.None);
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be("No matching records found.");
-    }
-
-    [Fact]
     public void Scan_JsonLinesPathAbsentInEveryRecord_ReturnsNoMatchingRecordsFailure()
     {
         // Arrange

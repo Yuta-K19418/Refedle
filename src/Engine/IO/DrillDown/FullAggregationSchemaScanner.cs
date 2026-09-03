@@ -66,12 +66,6 @@ public static class FullAggregationSchemaScanner
         var rowIndexer = new JsonLines.RowIndexer(filePath);
         rowIndexer.BuildIndex(ct);
 
-        // A zero-record file is zero bytes, which MmapService rejects — do not construct RowReader.
-        if (rowIndexer.TotalRows == 0)
-        {
-            return Results.Failure<TableSchema>("No matching records found.");
-        }
-
         using var rowReader = new JsonLines.RowReader(filePath);
         return ScanBatches(rowIndexer, rowReader.ReadLines, format, keyPath, ct);
     }

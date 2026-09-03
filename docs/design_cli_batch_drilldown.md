@@ -156,7 +156,7 @@ Another effect, unforeseen at design time: a zero-byte input file now fails with
 
 #### JsonLinesRecordReader Zero-Record Path
 
-`RowIndexer.TotalRows == 0` occurs only for a zero-byte file — any file with content yields at least one row. Now that `Runner` rejects zero-byte input before dispatch, neither `JsonLinesRecordReaderFactory` nor `ColumnNameResolver` can reach its `TotalRows == 0` branch, so those two branches become dead and are removed. The reader's constructor parameter drops its `?` (the factory always passes a real `RowReader`). The `_rowReader` field itself stays nullable and is still nulled in `Dispose` — matching the post-dispose fail-fast idiom used by the sibling `CsvRecordReader` / `CsvRecordWriter` / `JsonLinesRecordWriter` in the same directory; revisiting that idiom across all four is out of scope here.
+`RowIndexer.TotalRows == 0` occurs only for a zero-byte file — any file with content yields at least one row. Now that `Runner` rejects zero-byte input before dispatch, neither `JsonLinesRecordReaderFactory` nor `ColumnNameResolver` can reach its `TotalRows == 0` branch, so those two branches become dead and are removed. The reader's constructor parameter drops its `?` (the factory always passes a real `RowReader`). The `_rowReader` field itself stays nullable and is still nulled in `Dispose` — matching the post-dispose fail-fast idiom used by the sibling `CsvRecordReader` / `CsvRecordWriter` / `JsonLinesRecordWriter` in the same directory; revisiting that idiom across all four is out of scope here. The Phase 6 DrillDown arm (`JsonLinesBatchSourceReader`) initially reintroduced a nullable `RowReader` for the same zero-record case; it was later made non-nullable to match this cleanup. The Engine-side `FullAggregationSchemaScanner.ScanJsonLines` `TotalRows == 0` guard was removed in the same pass (its only caller is the CLI batch path, which never reaches it with a zero-byte file).
 
 **Affected Files**
 
@@ -634,25 +634,23 @@ internal struct JsonLinesRecordReader : IRecordReader
 
 #### `JsonLinesBatchSourceReader`
 
-A thin struct adapting `FullAggregationRecordReader<TBatchSourceReader>` (Phase 3) to JSON Lines batch reads. `RowReader.ReadLines(long, int, int)` matches `IBatchSourceReader.ReadBatch(long, int, int)`.
+A thin struct adapting `FullAggregationRecordReader<TBatchSourceReader>` (Phase 3) to JSON Lines batch reads. `RowReader.ReadLines(long, int, int)` matches `IBatchSourceReader.ReadBatch(long, int, int)`. Like `JsonArrayBatchSourceReader` (Phase 3), it holds a non-nullable reader: `Runner` rejects zero-byte input before dispatch (Phase 2), so `RowReader` is always constructible.
 
-Unlike `JsonArrayBatchSourceReader` (Phase 3), it holds a nullable `RowReader?`. Zero-record JSON Lines input is a zero-byte file, which `MmapService.Open` rejects (`fileInfo.Length == 0`), so `RowReader` cannot be constructed. Zero-element JSON Array is `[]` (2 bytes) and `ElementReader` always constructs — this asymmetry is deliberate.
-
-A `ReadBatch` after disposal throws via `RowReader`'s own `ObjectDisposedException` guard (the same way `JsonArrayBatchSourceReader` relies on `ElementReader`'s guard). `_reader` is not nulled out, so the `?? []` only applies to the zero-record case.
+A `ReadBatch` after disposal throws via `RowReader`'s own `ObjectDisposedException` guard (the same way `JsonArrayBatchSourceReader` relies on `ElementReader`'s guard).
 
 ```csharp
 using Refedle.Engine.IO.JsonLines;
 
 namespace Refedle.App.Cli;
 
-internal readonly struct JsonLinesBatchSourceReader(RowReader? reader) : IBatchSourceReader
+internal readonly struct JsonLinesBatchSourceReader(RowReader reader) : IBatchSourceReader
 {
-    private readonly RowReader? _reader = reader;
+    private readonly RowReader _reader = reader;
 
     public IReadOnlyList<JsonRawBytes> ReadBatch(long byteOffset, int skip, int fetch) =>
-        _reader?.ReadLines(byteOffset, skip, fetch) ?? [];
+        _reader.ReadLines(byteOffset, skip, fetch);
 
-    public void Dispose() => _reader?.Dispose();
+    public void Dispose() => _reader.Dispose();
 }
 ```
 
@@ -677,17 +675,16 @@ internal readonly struct JsonLinesRecordReaderFactory : IRecordReaderFactory<Jso
 
         if (drillDownKeyPath is null)
         {
-            // Runner rejects zero-byte input before dispatch, so RowReader is always constructible.
-            return new(new JsonLinesRecordReader(new BareJsonLinesRecordReader(
-                rowIndexer, new RowReader(inputFile), inputColumnNames, outputSchema)));
+            // Runner rejects zero-byte input before dispatch, so RowReader (which MmapService
+            // cannot open on an empty file) is always constructible on either arm.
+            RowReader bareRowReader = new(inputFile);
+            return new(new JsonLinesRecordReader(
+                new BareJsonLinesRecordReader(rowIndexer, bareRowReader, inputColumnNames, outputSchema)));
         }
 
-        // Zero-record input has no RowReader; FullAggregationRecordReader never calls ReadBatch
-        // when TotalRows == 0, so the null source is only reached via `?? []`.
-        var rowReader = rowIndexer.TotalRows == 0 ? null : new RowReader(inputFile);
         return new(new JsonLinesRecordReader(
             new FullAggregationRecordReader<JsonLinesBatchSourceReader>(
-                rowIndexer, new JsonLinesBatchSourceReader(rowReader), drillDownKeyPath, inputColumnNames, outputSchema)));
+                rowIndexer, new JsonLinesBatchSourceReader(new RowReader(inputFile)), drillDownKeyPath, inputColumnNames, outputSchema)));
     }
 }
 ```

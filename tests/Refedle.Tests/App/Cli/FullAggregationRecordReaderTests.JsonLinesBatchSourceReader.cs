@@ -43,19 +43,6 @@ public sealed partial class FullAggregationRecordReaderTests
     }
 
     [Fact]
-    public async Task JsonLines_MoveNextAsync_WithZeroRecordFile_ReturnsFalseWithoutReadingABatch()
-    {
-        // Arrange — an empty file indexes to zero rows and yields no RowReader.
-        using var reader = BuildJsonLinesReader([], KeyPath(), ["id"]);
-
-        // Act
-        var hasNext = await reader.MoveNextAsync(default);
-
-        // Assert
-        hasNext.Should().BeFalse();
-    }
-
-    [Fact]
     public async Task JsonLines_MoveNextAsync_PathAbsentInEveryRecord_YieldsNothing()
     {
         // Arrange
@@ -110,12 +97,12 @@ public sealed partial class FullAggregationRecordReaderTests
         IReadOnlyList<BatchFilterSpec> filters)
     {
         var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
-        File.WriteAllText(path, lines.Count == 0 ? "" : string.Join("\n", lines) + "\n");
+        File.WriteAllText(path, string.Join("\n", lines) + "\n");
         _tempFiles.Add(path);
 
         var rowIndexer = new RowIndexer(path);
         rowIndexer.BuildIndex(CancellationToken.None);
-        var rowReader = rowIndexer.TotalRows == 0 ? null : new RowReader(path);
+        var rowReader = new RowReader(path);
 
         var outputSchema = new BatchOutputSchema([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
         return new FullAggregationRecordReader<JsonLinesBatchSourceReader>(

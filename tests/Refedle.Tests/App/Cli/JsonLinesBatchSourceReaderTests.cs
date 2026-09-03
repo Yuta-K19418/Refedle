@@ -57,19 +57,6 @@ public sealed class JsonLinesBatchSourceReaderTests : IDisposable
         act.Should().Throw<ObjectDisposedException>();
     }
 
-    [Fact]
-    public void ReadBatch_WithNullRowReader_ReturnsEmpty()
-    {
-        // Arrange — a zero-record JSON Lines input is a zero-byte file, so no RowReader exists.
-        using var source = new JsonLinesBatchSourceReader(reader: null);
-
-        // Act
-        var batch = source.ReadBatch(0, 0, 10);
-
-        // Assert
-        batch.Should().BeEmpty();
-    }
-
     private string CreateFile(string content)
     {
         var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
