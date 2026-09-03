@@ -49,7 +49,7 @@ public class JsonLinesRecordReaderBenchmarks
         _ = _reader.GetCellData(3).Value.Length;
     }
 
-    /// <inheritdoc/>
+    /// <summary>Returns pooled storage and deletes the temporary input file.</summary>
     [GlobalCleanup]
     public void Cleanup()
     {
