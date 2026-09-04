@@ -9,7 +9,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithAllRequiredFlags_ReturnsSuccess()
     {
         // Arrange
-        string[] args = ["--cli", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -25,7 +25,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithMissingInputFlag_ReturnsFailure()
     {
         // Arrange
-        string[] args = ["--cli", "--recipe", "recipe.yaml", "--output", "output.csv"];
+        string[] args = ["--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -39,7 +39,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithMissingRecipeFlag_ReturnsFailure()
     {
         // Arrange
-        string[] args = ["--cli", "--input", "input.csv", "--output", "output.csv"];
+        string[] args = ["--input", "input.csv", "--output", "output.csv"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -53,7 +53,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithMissingOutputFlag_ReturnsFailure()
     {
         // Arrange
-        string[] args = ["--cli", "--input", "input.csv", "--recipe", "recipe.yaml"];
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -67,7 +67,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithUnknownFlag_ReturnsFailure()
     {
         // Arrange
-        string[] args = ["--cli", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv", "--unknown", "value"];
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv", "--unknown", "value"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -78,10 +78,24 @@ public sealed class ArgumentParserTests
     }
 
     [Fact]
+    public void Parse_WithLegacyCliFlag_ReturnsUnknownFlagFailure()
+    {
+        // Arrange — "--cli" was removed; it must now be rejected like any unrecognized flag
+        string[] args = ["--cli", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Unknown flag: --cli");
+    }
+
+    [Fact]
     public void Parse_WithFlagMissingValue_ReturnsFailure()
     {
         // Arrange
-        string[] args = ["--cli", "--input", "--recipe", "recipe.yaml", "--output", "output.csv"];
+        string[] args = ["--input", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -109,7 +123,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithBareValueWithoutFlag_ReturnsFailure()
     {
         // Arrange — "input.csv" appears without a preceding --flag
-        string[] args = ["--cli", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
+        string[] args = ["input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -120,10 +134,10 @@ public sealed class ArgumentParserTests
     }
 
     [Fact]
-    public void Parse_WithVersionTokenInCliMode_ReturnsInvalidFlagFailure()
+    public void Parse_WithBareVersionToken_ReturnsInvalidFlagFailure()
     {
-        // Arrange — "version" after "--cli" is a bare token, not a recognized flag
-        string[] args = ["--cli", "version"];
+        // Arrange — "version" is a bare token, not a recognized flag
+        string[] args = ["version"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -137,7 +151,7 @@ public sealed class ArgumentParserTests
     public void Parse_WithInputFlagAtEnd_ReturnsFailure()
     {
         // Arrange — --input is the last argument with no following value
-        string[] args = ["--cli", "--recipe", "recipe.yaml", "--output", "output.csv", "--input"];
+        string[] args = ["--recipe", "recipe.yaml", "--output", "output.csv", "--input"];
 
         // Act
         var result = ArgumentParser.Parse(args);
@@ -145,19 +159,5 @@ public sealed class ArgumentParserTests
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("Missing value for --input");
-    }
-
-    [Fact]
-    public void Parse_WithCliFlag_Alone_ReturnsFailure()
-    {
-        // Arrange
-        string[] args = ["--cli"];
-
-        // Act
-        var result = ArgumentParser.Parse(args);
-
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Contain("Missing required flag: --input");
     }
 }
