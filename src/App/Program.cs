@@ -1,5 +1,26 @@
 using Refedle.App;
 using Refedle.App.Cli;
+using Refedle.App.Cli.Update;
+
+// "--version" wins even when combined with other modes (e.g. "refedle --cli --version"),
+// while the "version" subcommand form is only recognized as the first argument so that a
+// positional file name never triggers the version output.
+if (VersionCommand.IsMatch(args))
+{
+    return (int)await new VersionCommand(BuildInfo.Version, new ConsoleAppLogger()).RunAsync();
+}
+
+if (args is ["update", ..])
+{
+    using var cts = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, e) =>
+    {
+        e.Cancel = true;
+        cts.Cancel();
+    };
+
+    return (int)await UpdateRunner.RunAsync(cts.Token);
+}
 
 if (args.Contains("--cli"))
 {
@@ -30,15 +51,10 @@ if (parseTuiResult.IsFailure)
 }
 
 var tuiOptions = parseTuiResult.Value;
-if (tuiOptions.InputFile is not null && !File.Exists(tuiOptions.InputFile))
+var missingFileError = tuiOptions.FindMissingFileError();
+if (missingFileError is not null)
 {
-    await Console.Error.WriteLineAsync($"Error: File not found: {tuiOptions.InputFile}");
-    return (int)ExitCode.Failure;
-}
-
-if (tuiOptions.RecipeFile is not null && !File.Exists(tuiOptions.RecipeFile))
-{
-    await Console.Error.WriteLineAsync($"Error: Recipe file not found: {tuiOptions.RecipeFile}");
+    await Console.Error.WriteLineAsync(missingFileError);
     return (int)ExitCode.Failure;
 }
 

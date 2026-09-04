@@ -40,7 +40,8 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Publish with Native AOT
-        run: dotnet publish src/App/Refedle.App.csproj --configuration Release -r ${{ matrix.rid }}
+        shell: bash
+        run: dotnet publish src/App/Refedle.App.csproj --configuration Release -r ${{ matrix.rid }} -p:Version=${GITHUB_REF_NAME#v}
 
       - name: Stage release contents
         shell: bash
@@ -84,6 +85,11 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          sha256sum refedle-* > checksums.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3

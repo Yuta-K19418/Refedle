@@ -2,9 +2,28 @@
 
 Refedle is a TUI-driven data transformation tool for CSV and JSON files, built with .NET 10 and Terminal.Gui v2. It lets you explore a file interactively, apply column-level transformations, and replay them as a recipe against large files from the command line.
 
-## Download
+## Install
 
-Prebuilt binaries (no .NET SDK required) are published on the [Releases page](https://github.com/Yuta-K19418/DataMorph/releases) for:
+On macOS and Linux, install the latest release with:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Yuta-K19418/Refedle/main/install.sh | sh
+```
+
+This downloads the prebuilt binary for your platform, verifies its SHA-256 checksum against the release's `checksums.txt`, and installs `refedle` into the first writable directory among `$XDG_BIN_HOME`, `$HOME/.local/bin`, and `/usr/local/bin`. It never uses `sudo`.
+
+Then check and update it with:
+
+```bash
+refedle version      # print the installed version
+refedle update       # replace the binary in place with the latest release
+```
+
+`refedle update` is not available on Windows or for development builds; download a new archive manually instead.
+
+### Manual download
+
+Prebuilt binaries (no .NET SDK required) are published on the [Releases page](https://github.com/Yuta-K19418/Refedle/releases) for:
 
 | OS | Architecture |
 |---|---|
@@ -13,20 +32,28 @@ Prebuilt binaries (no .NET SDK required) are published on the [Releases page](ht
 | Linux | x64 |
 | Linux | arm64 |
 
-Intel Macs are not covered by a prebuilt binary (Apple discontinued Intel support as of macOS 26 Tahoe, and GitHub Actions retired its `osx-x64` runner). Build from source instead with `dotnet publish src/App/Refedle.App.csproj -r osx-x64 -c Release`.
+macOS on Intel (`osx-x64`) is not supported; build from source with `dotnet publish src/App/Refedle.App.csproj -r osx-x64 -c Release`.
 
-Download the archive matching your platform, extract it, and run the `refedle` (or `refedle.exe` on Windows) binary directly:
+Download the archive for your platform and `checksums.txt`, verify, extract, and put `refedle` on your `PATH` (Linux x64 example):
 
 ```bash
-./refedle [--file <path>] [--recipe <path.yaml>]
+tag=v0.3.0
+base=https://github.com/Yuta-K19418/Refedle/releases/download/$tag
+curl -fLO $base/refedle-$tag-linux-x64.tar.gz
+curl -fLO $base/checksums.txt
+sha256sum -c --ignore-missing checksums.txt
+tar -xzf refedle-$tag-linux-x64.tar.gz
+install -Dm755 refedle-$tag-linux-x64/refedle ~/.local/bin/refedle
 ```
+
+On Windows, download `refedle-<tag>-win-x64.zip`, extract it, and move `refedle.exe` onto your `PATH`.
 
 The binaries are unsigned, so the OS may block them on first launch:
 
 - **macOS**: Gatekeeper quarantines downloaded files. Run `xattr -d com.apple.quarantine refedle` before launching, or allow it via System Settings → Privacy & Security.
 - **Windows**: SmartScreen may warn about an unrecognized app. Click "More info" → "Run anyway".
 
-In the examples below, `dotnet run --project src/App --` can be replaced with `./refedle` (or `refedle.exe` on Windows) when using a downloaded binary instead of building from source.
+Run the binary directly as `./refedle [--file <path>] [--recipe <path.yaml>]` (or `refedle.exe` on Windows). In the examples below, `dotnet run --project src/App --` can be replaced with `./refedle` when using a downloaded binary instead of building from source.
 
 To build and run from source instead, see [TUI Usage](#tui-usage) below.
 
