@@ -79,7 +79,7 @@ jobs:
         dotnet-version: '10.0.x'
 
     - name: Publish with Native AOT
-      run: dotnet publish src/App/Refedle.App.csproj --configuration Release -r ${{ matrix.rid }}
+      run: dotnet publish src/App/Refedle.App.csproj --configuration Release -r ${{ matrix.rid }} -p:Version=9.9.9
 
     - name: Verify AOT binary exists
       shell: bash
@@ -91,3 +91,15 @@ jobs:
           echo "✗ Native AOT binary not found"
           exit 1
         fi
+
+    - name: Verify -p:Version propagates to the AOT binary
+      shell: bash
+      run: |
+        binary="src/App/bin/Release/net10.0/${{ matrix.rid }}/publish/${{ matrix.binary }}"
+        output="$("$binary" --version)"
+        output="${output%$'\r'}"
+        if [ "$output" != "refedle 9.9.9" ]; then
+          echo "✗ Unexpected version output: $output"
+          exit 1
+        fi
+        echo "✓ -p:Version propagated to the AOT binary: $output"

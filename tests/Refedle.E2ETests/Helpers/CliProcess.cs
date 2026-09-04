@@ -28,16 +28,7 @@ internal static class CliProcess
     /// <exception cref="TimeoutException">Thrown when the process does not exit in time.</exception>
     public static async Task<CliProcessResult> RunAsync(string inputFile, string recipeFile, string outputFile, string workingDirectory)
     {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = "dotnet",
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        startInfo.ArgumentList.Add("exec");
-        startInfo.ArgumentList.Add(AppPathResolver.AppDllPath);
+        var startInfo = CreateStartInfo(workingDirectory);
         startInfo.ArgumentList.Add("--cli");
         startInfo.ArgumentList.Add("--input");
         startInfo.ArgumentList.Add(inputFile);
@@ -46,6 +37,43 @@ internal static class CliProcess
         startInfo.ArgumentList.Add("--output");
         startInfo.ArgumentList.Add(outputFile);
 
+        return await RunProcessAsync(startInfo).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Runs <c>refedle</c> with raw arguments (without <c>--cli</c>) and waits for exit.
+    /// </summary>
+    /// <param name="arguments">The raw arguments passed to the refedle binary.</param>
+    /// <returns>The exit code and captured output streams of the process.</returns>
+    /// <exception cref="TimeoutException">Thrown when the process does not exit in time.</exception>
+    public static async Task<CliProcessResult> RunWithArgumentsAsync(IReadOnlyList<string> arguments)
+    {
+        var startInfo = CreateStartInfo(workingDirectory: null);
+        foreach (var argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
+
+        return await RunProcessAsync(startInfo).ConfigureAwait(false);
+    }
+
+    private static ProcessStartInfo CreateStartInfo(string? workingDirectory)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            WorkingDirectory = workingDirectory ?? string.Empty,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true,
+        };
+        startInfo.ArgumentList.Add("exec");
+        startInfo.ArgumentList.Add(AppPathResolver.AppDllPath);
+        return startInfo;
+    }
+
+    private static async Task<CliProcessResult> RunProcessAsync(ProcessStartInfo startInfo)
+    {
         using var process = new Process { StartInfo = startInfo };
         process.Start();
 

@@ -1,4 +1,9 @@
 <Project>
+  <PropertyGroup>
+    <!-- Fallback version for local builds; CI release builds override it with -p:Version. -->
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
+  </PropertyGroup>
+
   <!-- Include solution-level GlobalUsings.cs -->
   <ItemGroup Condition="'$(ProjectName)' != 'Refedle.Generators' and '$(ProjectName)' != 'Refedle.Benchmarks'">
     <Compile Include="$(MSBuildThisFileDirectory)GlobalUsings.cs" Link="GlobalUsings.cs" />

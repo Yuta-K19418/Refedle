@@ -1,6 +1,15 @@
 using Refedle.App;
 using Refedle.App.Cli;
 
+// "--version" wins even when combined with other modes (e.g. "refedle --cli --version"),
+// while the "version" subcommand form is only recognized as the first argument so that a
+// positional file name never triggers the version output.
+if (args.Contains("--version") || args is ["version", ..])
+{
+    await Console.Out.WriteLineAsync($"refedle {BuildInfo.Version}");
+    return (int)ExitCode.Success;
+}
+
 if (args.Contains("--cli"))
 {
     var parseResult = ArgumentParser.Parse(args);

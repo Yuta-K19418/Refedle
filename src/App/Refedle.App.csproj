@@ -50,4 +50,27 @@
     <SuppressTrimAnalysisWarnings>false</SuppressTrimAnalysisWarnings>
   </PropertyGroup>
 
+  <!-- Embed $(Version) into the binary; consumed by the version command and self-update.
+       WriteOnlyWhenDifferent keeps the file timestamp stable when unchanged (preserves
+       incremental builds); no Inputs/Outputs so -p:Version overrides are always picked up. -->
+  <Target Name="GenerateBuildInfo" BeforeTargets="BeforeCompile">
+    <PropertyGroup>
+      <BuildInfoFilePath>$(IntermediateOutputPath)BuildInfo.g.cs</BuildInfoFilePath>
+    </PropertyGroup>
+    <ItemGroup>
+      <!-- %3B / %20 keep semicolons and indentation intact: raw ';' would split items
+           and leading whitespace would be trimmed before the file is written. -->
+      <BuildInfoLine Include="// &lt;auto-generated/&gt;" />
+      <BuildInfoLine Include="namespace Refedle.App%3B" />
+      <BuildInfoLine Include="internal static class BuildInfo" />
+      <BuildInfoLine Include="{" />
+      <BuildInfoLine Include="%20%20%20%20public const string Version = &quot;$(Version)&quot;%3B" />
+      <BuildInfoLine Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(BuildInfoFilePath)" Lines="@(BuildInfoLine)" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(BuildInfoFilePath)" AutoGen="true" Visible="false" />
+    </ItemGroup>
+  </Target>
+
 </Project>
