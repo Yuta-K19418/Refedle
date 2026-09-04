@@ -120,6 +120,20 @@ public sealed class ArgumentParserTests
     }
 
     [Fact]
+    public void Parse_WithVersionTokenInCliMode_ReturnsInvalidFlagFailure()
+    {
+        // Arrange — "version" after "--cli" is a bare token, not a recognized flag
+        string[] args = ["--cli", "version"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Invalid flag: 'version'");
+    }
+
+    [Fact]
     public void Parse_WithInputFlagAtEnd_ReturnsFailure()
     {
         // Arrange — --input is the last argument with no following value

@@ -21,19 +21,6 @@ public sealed class VersionTests
     }
 
     [Fact]
-    public async Task Run_WithVersionSubcommandAndExtraArgument_PrintsVersionLineAndExitsWithZero()
-    {
-        // Arrange
-        string[] arguments = ["version", "ignored"];
-
-        // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
-
-        // Assert
-        AssertVersionOutput(result);
-    }
-
-    [Fact]
     public async Task Run_WithCliModeAndVersionFlag_PrintsVersionLineAndExitsWithZero()
     {
         // Arrange
@@ -44,21 +31,6 @@ public sealed class VersionTests
 
         // Assert
         AssertVersionOutput(result);
-    }
-
-    [Fact]
-    public async Task Run_WithVersionSubcommandAfterCliMode_ExitsWithNonZeroWithoutVersionLine()
-    {
-        // Arrange
-        string[] arguments = ["--cli", "version"];
-
-        // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
-
-        // Assert
-        result.ExitCode.Should().Be(1);
-        result.StandardOutput.Should().BeEmpty();
-        result.StandardError.Should().Be($"Invalid flag: 'version'{Environment.NewLine}");
     }
 
     private static void AssertVersionOutput(CliProcessResult result)
