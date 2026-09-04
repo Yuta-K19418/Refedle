@@ -21,10 +21,10 @@ public sealed class VersionTests
     }
 
     [Fact]
-    public async Task Run_WithCliModeAndVersionFlag_PrintsVersionLineAndExitsWithZero()
+    public async Task Run_WithApplyModeAndVersionFlag_PrintsVersionLineAndExitsWithZero()
     {
         // Arrange
-        string[] arguments = ["--cli", "--version"];
+        string[] arguments = ["apply", "--version"];
 
         // Act
         var result = await CliProcess.RunWithArgumentsAsync(arguments);

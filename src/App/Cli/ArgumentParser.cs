@@ -5,7 +5,7 @@ namespace Refedle.App.Cli;
 /// <summary>
 /// Parses command-line arguments into an <see cref="Arguments"/> record.
 /// Accepts named flags in the form <c>--key value</c>.
-/// Required flags: <c>--cli</c>, <c>--input</c>, <c>--recipe</c>, <c>--output</c>.
+/// Required flags: <c>--input</c>, <c>--recipe</c>, <c>--output</c>.
 /// Unknown flags are rejected.
 /// </summary>
 internal static partial class ArgumentParser
@@ -13,7 +13,6 @@ internal static partial class ArgumentParser
     private const string InputFlag = "--input";
     private const string RecipeFlag = "--recipe";
     private const string OutputFlag = "--output";
-    private const string CliFlag = "--cli";
 
     /// <summary>
     /// Parses the given command-line argument array into an <see cref="Arguments"/> record.
@@ -52,11 +51,6 @@ internal static partial class ArgumentParser
         if (!args[i].StartsWith("--", StringComparison.Ordinal))
         {
             return Results.Failure<int>($"Invalid flag: '{args[i]}'");
-        }
-
-        if (args[i].Equals(CliFlag, StringComparison.Ordinal))
-        {
-            return Results.Success(i + 1);
         }
 
         if (args[i].Equals(InputFlag, StringComparison.Ordinal))

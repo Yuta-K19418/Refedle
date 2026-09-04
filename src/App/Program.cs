@@ -2,7 +2,7 @@ using Refedle.App;
 using Refedle.App.Cli;
 using Refedle.App.Cli.Update;
 
-// "--version" wins even when combined with other modes (e.g. "refedle --cli --version"),
+// "--version" wins even when combined with other modes (e.g. "refedle apply --version"),
 // while the "version" subcommand form is only recognized as the first argument so that a
 // positional file name never triggers the version output.
 if (VersionCommand.IsMatch(args))
@@ -22,17 +22,8 @@ if (args is ["update", ..])
     return (int)await UpdateRunner.RunAsync(cts.Token);
 }
 
-if (args.Contains("--cli"))
+if (args is ["apply", ..])
 {
-    var parseResult = ArgumentParser.Parse(args);
-    if (parseResult.IsFailure)
-    {
-        await Console.Error.WriteLineAsync(parseResult.Error);
-        return (int)ExitCode.Failure;
-    }
-
-    var logger = new ConsoleAppLogger();
-
     using var cts = new CancellationTokenSource();
     Console.CancelKeyPress += (_, e) =>
     {
@@ -40,7 +31,7 @@ if (args.Contains("--cli"))
         cts.Cancel();
     };
 
-    return (int)await Runner.RunAsync(parseResult.Value, logger, cts.Token);
+    return (int)await ApplyRunner.RunAsync(args[1..], cts.Token);
 }
 
 var parseTuiResult = TuiArgumentParser.Parse(args);
