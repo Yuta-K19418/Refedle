@@ -29,13 +29,17 @@ public sealed class HelpCommandTests
     [Theory]
     [InlineData("Usage:")]
     [InlineData("Commands:")]
+    [InlineData("apply options:")]
     [InlineData("Options:")]
     [InlineData("apply")]
     [InlineData("update")]
     [InlineData("version")]
     [InlineData("help")]
-    [InlineData("--file <path>")]
+    [InlineData("--input <path>")]
     [InlineData("--recipe <path>")]
+    [InlineData("--output <path>")]
+    [InlineData("--dry-run")]
+    [InlineData("--file <path>")]
     [InlineData("--version")]
     [InlineData("--help, -h")]
     public async Task RunAsync_WithAnyState_WritesAllHelpSectionsAndEntriesAndReturnsSuccess(string expectedFragment)
@@ -52,5 +56,28 @@ public sealed class HelpCommandTests
         logger.Infos.Should().ContainSingle().Which.Should().Contain(expectedFragment);
         logger.Warnings.Should().BeEmpty();
         logger.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithAnyState_WritesApplyOptionsSectionAsAContiguousBlock()
+    {
+        // Arrange — a contiguous block proves the four options belong to the 'apply options:'
+        // section rather than each line floating anywhere in the help text.
+        const string expectedSection = """
+            apply options:
+              --input <path>     Input data file (CSV / JSON / JSON Lines)
+              --recipe <path>    Recipe YAML to apply
+              --output <path>    Output file (optional with --dry-run)
+              --dry-run          Validate and print the resolved plan without writing output
+            """;
+        var logger = new TestAppLogger();
+        var command = new HelpCommand(logger);
+
+        // Act
+        var exitCode = await command.RunAsync();
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Infos.Should().ContainSingle().Which.Should().Contain(expectedSection);
     }
 }

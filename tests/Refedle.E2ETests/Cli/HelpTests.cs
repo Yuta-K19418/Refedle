@@ -6,6 +6,16 @@ namespace Refedle.E2ETests.Cli;
 
 public sealed class HelpTests
 {
+    // A contiguous block proves the four options belong to the 'apply options:' section
+    // rather than each line floating anywhere in the help text.
+    private const string ApplyOptionsSection = """
+        apply options:
+          --input <path>     Input data file (CSV / JSON / JSON Lines)
+          --recipe <path>    Recipe YAML to apply
+          --output <path>    Output file (optional with --dry-run)
+          --dry-run          Validate and print the resolved plan without writing output
+        """;
+
     [Theory]
     [InlineData("--help")]
     [InlineData("-h")]
@@ -56,14 +66,19 @@ public sealed class HelpTests
         result.StandardError.Should().BeEmpty();
         result.StandardOutput.Should().Contain("Usage:");
         result.StandardOutput.Should().Contain("Commands:");
+        result.StandardOutput.Should().Contain("apply options:");
         result.StandardOutput.Should().Contain("Options:");
         result.StandardOutput.Should().Contain("apply");
         result.StandardOutput.Should().Contain("update");
         result.StandardOutput.Should().Contain("version");
         result.StandardOutput.Should().Contain("help");
-        result.StandardOutput.Should().Contain("--file <path>");
+        result.StandardOutput.Should().Contain("--input <path>");
         result.StandardOutput.Should().Contain("--recipe <path>");
+        result.StandardOutput.Should().Contain("--output <path>");
+        result.StandardOutput.Should().Contain("--dry-run");
+        result.StandardOutput.Should().Contain("--file <path>");
         result.StandardOutput.Should().Contain("--version");
         result.StandardOutput.Should().Contain("--help, -h");
+        result.StandardOutput.Should().Contain(ApplyOptionsSection);
     }
 }
