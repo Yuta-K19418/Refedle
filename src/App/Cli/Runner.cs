@@ -1,11 +1,11 @@
-using Refedle.Engine;
-using Refedle.Engine.Recipes;
+using System.Diagnostics;
+using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli;
 
 /// <summary>
 /// Orchestrates CLI headless batch processing pipeline:
-/// recipe load → column resolution → output schema build → transform → write.
+/// preparation (recipe load → column resolution → output schema build) → transform → write.
 /// Supports CSV and JSON Lines for both input and output (cross-format conversion included).
 /// </summary>
 internal static class Runner
@@ -21,71 +21,34 @@ internal static class Runner
     {
         ArgumentNullException.ThrowIfNull(args);
 
+        // The parser already rejects a missing --output for a normal run; this guards direct
+        // RunAsync callers against the null that is only valid for a dry run.
+        if (string.IsNullOrWhiteSpace(args.OutputFile))
+        {
+            await logger.WriteErrorAsync("Missing required flag: --output");
+            return ExitCode.Failure;
+        }
+
         try
         {
-            // Load recipe
-            var recipeResult = await new RecipeManager().LoadAsync(args.RecipeFile, ct).ConfigureAwait(false);
-            if (recipeResult.IsFailure)
+            var preparationResult = await ApplyPreparer.PrepareAsync(
+                args.InputFile, args.RecipeFile, args.OutputFile, logger, ct).ConfigureAwait(false);
+            if (preparationResult.IsFailure)
             {
-                await logger.WriteErrorAsync($"Error loading recipe: {recipeResult.Error}");
                 return ExitCode.Failure;
             }
 
-            var recipe = recipeResult.Value;
-
-            // Detect formats: input by content, output by extension (it does not exist yet)
-            var inputFormatResult = FormatDetector.DetectInputFile(args.InputFile);
-            if (inputFormatResult.IsFailure)
+            var preparation = preparationResult.Value;
+            if (preparation.OutputFormat is not DataFormat outputFormat)
             {
-                await logger.WriteErrorAsync($"Error detecting input format: {inputFormatResult.Error}");
-                return ExitCode.Failure;
+                // Unreachable: an output file is given on this path, so PrepareAsync resolved its format.
+                throw new UnreachableException("Output format was not resolved for the write path.");
             }
-
-            var inputFormat = inputFormatResult.Value;
-
-            // JSON Object/Array input requires a DrillDown-scoped recipe
-            var validationResult = DrillDownRecipeValidator.Validate(inputFormat, recipe);
-            if (validationResult.IsFailure)
-            {
-                await logger.WriteErrorAsync($"Error validating recipe: {validationResult.Error}");
-                return ExitCode.Failure;
-            }
-
-            var outputFormatResult = FormatDetector.DetectOutputFile(args.OutputFile);
-            if (outputFormatResult.IsFailure)
-            {
-                await logger.WriteErrorAsync($"Error detecting output format: {outputFormatResult.Error}");
-                return ExitCode.Failure;
-            }
-
-            var outputFormat = outputFormatResult.Value;
-
-            // Resolve the full input column name set (no type inference), scoped to the recipe's
-            // DrillDown location when it has one (null for a base-table recipe).
-            var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
-                inputFormat, args.InputFile, recipe.DrillDownKeyPath, ct).ConfigureAwait(false);
-            if (columnNamesResult.IsFailure)
-            {
-                await logger.WriteErrorAsync($"Error resolving columns: {columnNamesResult.Error}");
-                return ExitCode.Failure;
-            }
-
-            var columnNames = columnNamesResult.Value;
-
-            // Build output schema
-            var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
-            if (outputSchemaResult.IsFailure)
-            {
-                await logger.WriteErrorAsync($"Error building output schema: {outputSchemaResult.Error}");
-                return ExitCode.Failure;
-            }
-
-            var outputSchema = outputSchemaResult.Value;
 
             // Dispatch to generated static monomorphization logic
             return await Generated.FormatDispatcher.DispatchAsync(
-                inputFormat, outputFormat, args.InputFile, args.OutputFile,
-                recipe.DrillDownKeyPath, columnNames, outputSchema, logger, ct).ConfigureAwait(false);
+                preparation.InputFormat, outputFormat, args.InputFile, args.OutputFile,
+                preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
         }
         catch (OperationCanceledException)
         {
