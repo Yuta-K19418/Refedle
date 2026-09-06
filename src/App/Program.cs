@@ -2,6 +2,14 @@ using Refedle.App;
 using Refedle.App.Cli;
 using Refedle.App.Cli.Update;
 
+// "--help" / "-h" win even when combined with other modes (e.g. "refedle apply --help") and take
+// precedence over --version, while the "help" subcommand form is only recognized as the first
+// argument so that a positional file name never triggers the help output.
+if (HelpCommand.IsMatch(args))
+{
+    return (int)await new HelpCommand(new ConsoleAppLogger()).RunAsync();
+}
+
 // "--version" wins even when combined with other modes (e.g. "refedle apply --version"),
 // while the "version" subcommand form is only recognized as the first argument so that a
 // positional file name never triggers the version output.
