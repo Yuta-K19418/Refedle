@@ -8,7 +8,7 @@ streaming the transformed output to a new file.
 **Invocation:**
 
 ```
-refedle --cli --input <input> --recipe <recipe.yaml> --output <output>
+refedle apply --input <input> --recipe <recipe.yaml> --output <output>
 ```
 
 **Supported input/output formats:**
@@ -51,7 +51,7 @@ match the input format (e.g., `.csv` input → `.jsonl` output is valid).
 
 | File | Change |
 |------|--------|
-| `src/App/Program.cs` | Branch to `Runner` when `--cli` is present; otherwise run TUI |
+| `src/App/Program.cs` | Branch to `Runner` (via `ApplyRunner`) when the first argument is `apply`; otherwise run TUI |
 
 ### New — Tests
 
@@ -67,8 +67,8 @@ match the input format (e.g., `.csv` input → `.jsonl` output is valid).
 
 ### 1. Argument Parsing (`ArgumentParser`)
 
-Accepts the named-flag style `--key value`. Required flags: `--cli`,
-`--input`, `--recipe`, `--output`. Unknown flags are rejected. The result
+Accepts the named-flag style `--key value`. Required flags: `--input`,
+`--recipe`, `--output`. Unknown flags are rejected. The result
 is an `Arguments` record (all fields non-nullable `string`).
 
 ```
@@ -170,14 +170,17 @@ Runner.RunAsync(Arguments args, CancellationToken ct) → Task<int>
 ### 4. Program Entry (`Program.cs`)
 
 ```csharp
-if (args.Contains("--cli"))
+if (args is ["apply", ..])
 {
-    var parseResult = ArgumentParser.Parse(args);
-    if (parseResult.IsFailure) { /* stderr + exit 1 */ }
-    return await Runner.RunAsync(parseResult.Value, ct);
+    return await ApplyRunner.RunAsync(args[1..], ct);
 }
 // existing TUI path
 ```
+
+`ApplyRunner` is the composition root for the `apply` subcommand: it parses the
+remaining arguments via `ArgumentParser.Parse`, reports parse failures to
+`stderr` with `ExitCode.Failure`, and otherwise runs `Runner.RunAsync` with a
+production `ConsoleAppLogger`.
 
 ---
 
@@ -251,7 +254,7 @@ mmap-backed I/O, outweighs the cost of a second file scan. The alternative scan
 cost is low, and no new parsing logic is needed.
 
 **C — Use `System.CommandLine` for argument parsing**
-Rejected: The current flag surface is minimal (`--cli`, `--input`, `--recipe`,
+Rejected: The current flag surface is minimal (`apply`, `--input`, `--recipe`,
 `--output`). A full command-line library would add a non-AOT-safe dependency
 and significant complexity for four flags. This is documented as accepted debt
 for a future CLI expansion.
@@ -268,9 +271,9 @@ Rejected: Virtual method calls in the hot path (millions of rows) prevent inlini
 - Cross-format conversion (CSV → JSON Lines and vice versa) works out of the
   box at no extra cost.
 - JSON Lines batch processing performs two full file scans (index + read).
-- The `--cli` flag approach is not extensible to subcommands; if the CLI surface
-  grows significantly, replacing `ArgumentParser` with `System.CommandLine`
-  is the natural next step.
+- The `apply` subcommand's flag parsing (`ArgumentParser`) is hand-rolled and
+  not shared across subcommands; if the CLI surface grows significantly,
+  replacing it with `System.CommandLine` is the natural next step.
 - `ActionApplier.BuildOutputSchema` is pure and stateless, making it
   straightforward to unit-test in isolation from the file system.
 - Performance is maximized through Monomorphization and Inlining by the compiler, despite the high-level abstraction.

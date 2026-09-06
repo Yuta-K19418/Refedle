@@ -9,8 +9,8 @@ public sealed class VersionCommandTests
     [InlineData(true, "--version")]
     [InlineData(true, "version")]
     [InlineData(true, "version", "ignored")]
-    [InlineData(true, "--cli", "--version")]
-    [InlineData(false, "--cli", "version")]
+    [InlineData(true, "apply", "--version")]
+    [InlineData(false, "apply", "version")]
     [InlineData(false, "input.csv", "version")]
     [InlineData(false)]
     public void IsMatch_WithArguments_ReturnsExpectedDispatchDecision(bool expected, params string[] arguments)

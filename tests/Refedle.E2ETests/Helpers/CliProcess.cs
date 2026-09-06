@@ -18,7 +18,7 @@ internal static class CliProcess
     private static readonly TimeSpan Timeout = TimeSpan.FromMinutes(2);
 
     /// <summary>
-    /// Runs <c>refedle --cli</c> with the given batch-conversion arguments and waits for exit.
+    /// Runs <c>refedle apply</c> with the given batch-conversion arguments and waits for exit.
     /// </summary>
     /// <param name="inputFile">The path passed to <c>--input</c>.</param>
     /// <param name="recipeFile">The path passed to <c>--recipe</c>.</param>
@@ -29,7 +29,7 @@ internal static class CliProcess
     public static async Task<CliProcessResult> RunAsync(string inputFile, string recipeFile, string outputFile, string workingDirectory)
     {
         var startInfo = CreateStartInfo(workingDirectory);
-        startInfo.ArgumentList.Add("--cli");
+        startInfo.ArgumentList.Add("apply");
         startInfo.ArgumentList.Add("--input");
         startInfo.ArgumentList.Add(inputFile);
         startInfo.ArgumentList.Add("--recipe");
@@ -41,7 +41,7 @@ internal static class CliProcess
     }
 
     /// <summary>
-    /// Runs <c>refedle</c> with raw arguments (without <c>--cli</c>) and waits for exit.
+    /// Runs <c>refedle</c> with raw arguments (without the <c>apply</c> subcommand) and waits for exit.
     /// </summary>
     /// <param name="arguments">The raw arguments passed to the refedle binary.</param>
     /// <returns>The exit code and captured output streams of the process.</returns>

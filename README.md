@@ -59,7 +59,7 @@ To build and run from source instead, see [TUI Usage](#tui-usage) below.
 
 ## Supported Formats
 
-| Format | TUI (Tree) | TUI (Table) | CLI batch (`--cli`) |
+| Format | TUI (Tree) | TUI (Table) | CLI batch (`apply`) |
 |---|---|---|---|
 | CSV (`.csv`) | — | ✅ | ✅ |
 | JSON Lines (`.jsonl`) | ✅ | ✅ | ✅ |
@@ -311,7 +311,7 @@ Recipes can then be replayed against other files via [CLI Batch Usage](#cli-batc
 ¹ JSON Array / JSON Object input requires a drill-down-scoped recipe — the recipe's `drillDownKeyPath` selects the table to transform. Bare (non-drill-down) batch mode for these formats is out of scope. JSON Lines input works with or without a drill-down scope.
 
 ```bash
-dotnet run --project src/App -- --cli --input <input> --recipe <recipe.yaml> --output <output>
+dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> --output <output>
 ```
 
 `.json` output is always a JSON array (`[{...}, ...]`), regardless of row count or input format.

@@ -45,7 +45,7 @@ Both properties are nullable because all flags are optional in TUI mode. Primary
 
 ### `TuiArgumentParser`
 
-Parses args when `--cli` is absent. Returns `Result<TuiStartupOptions>` so errors can be reported before the TUI starts.
+Parses args when the first argument is not `apply` (or `update`/`version`). Returns `Result<TuiStartupOptions>` so errors can be reported before the TUI starts.
 
 Accepted flags:
 
@@ -62,7 +62,7 @@ Missing value for a known flag → `Result.Failure`.
 ### `Program.cs` Changes
 
 ```
-if args contain --cli  → existing CLI path (unchanged)
+if args is ["apply", ..]  → existing CLI path (unchanged)
 
 else:
   parseResult = TuiArgumentParser.Parse(args)
