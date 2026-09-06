@@ -297,6 +297,14 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Cli.Runner.RunAsync(Refedle.App.Cli.Arguments,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
     Justification = "Top-level CLI handler reports any unexpected exception as an error exit code.")]
 
+// Cli.DryRunner
+[assembly: SuppressMessage(
+    "Design",
+    "CA1031:Do not catch general exception types",
+    Scope = "member",
+    Target = "~M:Refedle.App.Cli.DryRunner.RunAsync(Refedle.App.Cli.Arguments,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Justification = "Top-level CLI handler reports any unexpected exception as an error exit code.")]
+
 // Cli.Factories
 [assembly: SuppressMessage(
     "Reliability",

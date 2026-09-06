@@ -318,6 +318,14 @@ dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> --o
 
 Format dispatch (reader → transform → writer) is resolved at compile time via a source generator (`src/Generators/FormatDispatcherGenerator.cs`), not reflection.
 
+### Dry Run
+
+Adding `--dry-run` validates the recipe and input without writing any output file. It performs every preparation step of `apply` — recipe load, format detection, recipe validation, column resolution, and output schema build — and prints a summary of the resolved plan (formats, drill-down scope, input columns, output schema with transforms, and filters) to stdout. With `--dry-run`, `--output` becomes optional; when given, its format is also detected and reported (still without writing the file). Failures are reported exactly as in a normal run.
+
+```bash
+dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> [--output <output>] --dry-run
+```
+
 ## Project Structure
 
 ```

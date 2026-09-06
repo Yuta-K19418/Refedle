@@ -20,6 +20,12 @@ internal sealed class HelpCommand(IAppLogger logger)
           version    Print the version
           help       Show this help
 
+        apply options:
+          --input <path>     Input data file (CSV / JSON / JSON Lines)
+          --recipe <path>    Recipe YAML to apply
+          --output <path>    Output file (optional with --dry-run)
+          --dry-run          Validate and print the resolved plan without writing output
+
         Options:
           --file <path>      Open the given data file on TUI startup
           --recipe <path>    Load the given recipe on TUI startup

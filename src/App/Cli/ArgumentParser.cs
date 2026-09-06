@@ -4,8 +4,10 @@ namespace Refedle.App.Cli;
 
 /// <summary>
 /// Parses command-line arguments into an <see cref="Arguments"/> record.
-/// Accepts named flags in the form <c>--key value</c>.
-/// Required flags: <c>--input</c>, <c>--recipe</c>, <c>--output</c>.
+/// Accepts named flags in the form <c>--key value</c>, plus the value-less
+/// <c>--dry-run</c> flag.
+/// Required flags: <c>--input</c>, <c>--recipe</c>, <c>--output</c>
+/// (<c>--output</c> is optional when <c>--dry-run</c> is present).
 /// Unknown flags are rejected.
 /// </summary>
 internal static partial class ArgumentParser
@@ -13,6 +15,7 @@ internal static partial class ArgumentParser
     private const string InputFlag = "--input";
     private const string RecipeFlag = "--recipe";
     private const string OutputFlag = "--output";
+    private const string DryRunFlag = "--dry-run";
 
     /// <summary>
     /// Parses the given command-line argument array into an <see cref="Arguments"/> record.
@@ -68,6 +71,12 @@ internal static partial class ArgumentParser
             return ConsumeValueFlag(args, i, OutputFlag, value => result.OutputFile = value);
         }
 
+        if (args[i].Equals(DryRunFlag, StringComparison.Ordinal))
+        {
+            result.IsDryRun = true;
+            return Results.Success(i + 1);
+        }
+
         return Results.Failure<int>($"Unknown flag: {args[i]}");
     }
 
@@ -94,7 +103,8 @@ internal static partial class ArgumentParser
             return Results.Failure<Arguments>($"Missing required flag: {RecipeFlag}");
         }
 
-        if (string.IsNullOrWhiteSpace(result.OutputFile))
+        // --output is required for a normal run; a dry run writes no output file, so it may be omitted.
+        if (!result.IsDryRun && string.IsNullOrWhiteSpace(result.OutputFile))
         {
             return Results.Failure<Arguments>($"Missing required flag: {OutputFlag}");
         }
@@ -104,6 +114,7 @@ internal static partial class ArgumentParser
             InputFile = result.InputFile,
             RecipeFile = result.RecipeFile,
             OutputFile = result.OutputFile,
+            IsDryRun = result.IsDryRun,
         });
     }
 }

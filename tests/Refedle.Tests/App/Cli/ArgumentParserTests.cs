@@ -160,4 +160,79 @@ public sealed class ArgumentParserTests
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("Missing value for --input");
     }
+
+    [Fact]
+    public void Parse_WithDryRunFlag_ReturnsDryRunTrue()
+    {
+        // Arrange
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv", "--dry-run"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsDryRun.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Parse_WithoutDryRunFlag_ReturnsDryRunFalse()
+    {
+        // Arrange
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.IsDryRun.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Parse_WithDryRunAndNoOutput_ReturnsSuccessWithNullOutputFile()
+    {
+        // Arrange — --output is optional in dry-run mode
+        string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--dry-run"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.OutputFile.Should().BeNull();
+        result.Value.IsDryRun.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Parse_WithDryRunBeforeValueFlags_DoesNotConsumeTheNextFlag()
+    {
+        // Arrange — --dry-run takes no value, so the following --input must still parse as a flag
+        string[] args = ["--dry-run", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.InputFile.Should().Be("input.csv");
+        result.Value.RecipeFile.Should().Be("recipe.yaml");
+        result.Value.OutputFile.Should().Be("output.csv");
+        result.Value.IsDryRun.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Parse_WithDryRunBetweenValueFlags_DoesNotConsumeTheFollowingFlag()
+    {
+        // Arrange — a value-less flag between --input's value and --recipe
+        string[] args = ["--input", "input.csv", "--dry-run", "--recipe", "recipe.yaml"];
+
+        // Act
+        var result = ArgumentParser.Parse(args);
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.RecipeFile.Should().Be("recipe.yaml");
+        result.Value.IsDryRun.Should().BeTrue();
+    }
 }
