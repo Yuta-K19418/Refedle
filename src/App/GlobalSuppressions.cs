@@ -11,6 +11,14 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~F:Refedle.App.Views.Dialogs.HelpDialog.HelpText",
     Justification = "Repository policy fixes C# source files to LF, so the UI text is deterministic.")]
 
+// Cli.HelpCommand
+[assembly: SuppressMessage(
+    "Usage",
+    "MA0136:Raw String contains an implicit end of line character",
+    Scope = "member",
+    Target = "~F:Refedle.App.Cli.HelpCommand.HelpText",
+    Justification = "Repository policy fixes C# source files to LF, so the help text is deterministic.")]
+
 // ViewManager
 [assembly: SuppressMessage(
     "Reliability",
