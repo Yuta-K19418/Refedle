@@ -6,7 +6,8 @@ paths:
 # Testing
 
 Shared conventions for all test projects. Project-specific rules live in
-[unit-testing.md](unit-testing.md) (`tests/Refedle.Tests`).
+[unit-testing.md](unit-testing.md) (`tests/Refedle.Tests`) and
+[e2e-testing.md](e2e-testing.md) (`tests/Refedle.E2ETests`).
 
 ## Framework
 - Use **xUnit** as the primary testing framework
