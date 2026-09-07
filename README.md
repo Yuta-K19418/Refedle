@@ -2,6 +2,14 @@
 
 Refedle is a TUI-driven data transformation tool for CSV and JSON files, built with .NET 10 and Terminal.Gui v2. It lets you explore a file interactively, apply column-level transformations, and replay them as a recipe against large files from the command line.
 
+Explore a file and save the transformations as a recipe:
+
+![Exploring a CSV and saving a recipe in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/hero.gif)
+
+Then replay that recipe from the command line, no UI:
+
+![Replaying the recipe against a file with refedle apply](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/apply.gif)
+
 ## Install
 
 On macOS and Linux, install the latest release with:
@@ -107,15 +115,17 @@ Available from the action menu (`x`):
 
 **Rename** — renames a column.
 
+![Renaming a column in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/rename.gif)
+
 Before:
 
-| nm | age |
+| name | age |
 |---|---|
 | Alice | 30 |
 
-After (renamed `nm` to `name`):
+After (renamed `name` to `person name`):
 
-| name | age |
+| person name | age |
 |---|---|
 | Alice | 30 |
 
@@ -149,6 +159,8 @@ After (cast `age` from text to whole number):
 
 **Filter** — keeps only the rows where a column matches a condition (equals, not-equals, greater/less than, etc.). Multiple filters combine with AND.
 
+![Filtering rows by a column condition in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/filter.gif)
+
 Before:
 
 | age |
@@ -164,6 +176,8 @@ After (filtered `age > 25`):
 
 **Fill** — overwrites every value in a column with a fixed value; useful for anonymization, masking, or bulk initialization.
 
+![Masking a column with Fill in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/fill.gif)
+
 Before:
 
 | email |
@@ -172,15 +186,17 @@ Before:
 | bob@example.com |
 | carol@example.com |
 
-After (filled with `"REDACTED"`):
+After (filled with `***`):
 
 | email |
 |---|
-| REDACTED |
-| REDACTED |
-| REDACTED |
+| `***` |
+| `***` |
+| `***` |
 
 **Format Timestamp** — reformats a Timestamp column's string values into a different date/time format.
+
+![Reformatting a timestamp column in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/format-timestamp.gif)
 
 Before:
 
@@ -210,6 +226,8 @@ Also available from the action menu (`x`), when the current view is in Tree mode
 
 **Single-node drill-down** — turns the selected node itself into a table (JSON Object only — there's a single record to explore). The selected node must be a non-empty array of objects; selecting an object, a scalar (a plain value — not an object or array), or an array with non-object elements fails with an error.
 
+![Single-node drill-down on a JSON Object in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/drilldown-node.gif)
+
 Example — a JSON Object file:
 
 ```json
@@ -232,6 +250,8 @@ Drilling down produces:
 | 2 | Pen | 1.2 |
 
 **Full-file aggregation drill-down** — scans the entire file and aggregates the selected path across every record into a table (JSON Lines/Array).
+
+![Full-file aggregation drill-down on a JSON array in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/drilldown-aggregate.gif)
 
 <details>
 <summary>Behavior by selected node type</summary>
@@ -272,11 +292,11 @@ Example — `people.csv`:
 | Alice | 30 | alice@example.com |
 | Bob | 20 | bob@example.com |
 
-After renaming `nm` → `name`, filling `email` with `"REDACTED"`, and filtering `age > 25`:
+After renaming `nm` → `name`, filling `email` with `***`, and filtering `age > 25`:
 
 | name | age | email |
 |---|---|---|
-| Alice | 30 | REDACTED |
+| Alice | 30 | `***` |
 
 Pressing `s` at this point produces `people.yaml`:
 
@@ -289,7 +309,7 @@ actions:
     newName: "name"
   - type: Fill
     columnName: "email"
-    value: "REDACTED"
+    value: "***"
   - type: Filter
     columnName: "age"
     operator: GreaterThan
@@ -300,6 +320,8 @@ actions:
 Recipes can then be replayed against other files via [CLI Batch Usage](#cli-batch-usage), without opening the UI.
 
 ## CLI Batch Usage
+
+![Previewing a recipe with --dry-run, applying it, and reopening the result](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/apply.gif)
 
 | Input \ Output | CSV | JSON Lines | JSON (`.json`) |
 |---|---|---|---|

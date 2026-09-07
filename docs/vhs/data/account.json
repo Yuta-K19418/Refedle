@@ -1,0 +1,12 @@
+{
+  "account_id": "ACC-42",
+  "owner": "Wendy Quill",
+  "plan": "team",
+  "invoices": [
+    { "number": "INV-001", "month": "2024-01", "amount": 49.00, "paid": true },
+    { "number": "INV-002", "month": "2024-02", "amount": 49.00, "paid": true },
+    { "number": "INV-003", "month": "2024-03", "amount": 61.50, "paid": true },
+    { "number": "INV-004", "month": "2024-04", "amount": 61.50, "paid": false },
+    { "number": "INV-005", "month": "2024-05", "amount": 61.50, "paid": false }
+  ]
+}
