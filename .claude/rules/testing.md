@@ -5,13 +5,11 @@ paths:
 
 # Testing
 
+Shared conventions for all test projects. Project-specific rules live in
+[unit-testing.md](unit-testing.md) (`tests/Refedle.Tests`).
+
 ## Framework
 - Use **xUnit** as the primary testing framework
-
-## Directory Placement
-- Test classes must **mirror the directory hierarchy** of the production code they test
-- Example: a test for `src/Engine/IO/Csv/DataRowIndexer.cs` belongs in `tests/Refedle.Tests/Engine/IO/Csv/`
-- A test file placed at the wrong level makes it hard to locate and signals that the test may be covering the wrong abstraction
 
 ## Naming Conventions
 
@@ -93,7 +91,3 @@ paths:
 ### Standard xUnit Asserts
 - Use **Standard xUnit Asserts** (e.g., `Assert.Equal`) ONLY for tests intended to run in **Native AOT** environments
 - Example: `Assert.Equal(expected, actual);`
-
-## Coverage
-- Focus on **100% coverage for the "Hot Paths"** (data processing logic)
-- Prioritize core engine logic over UI state
