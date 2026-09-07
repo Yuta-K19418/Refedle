@@ -5,13 +5,12 @@ paths:
 
 # Testing
 
+Shared conventions for all test projects. Project-specific rules live in
+[unit-testing.md](unit-testing.md) (`tests/Refedle.Tests`) and
+[e2e-testing.md](e2e-testing.md) (`tests/Refedle.E2ETests`).
+
 ## Framework
 - Use **xUnit** as the primary testing framework
-
-## Directory Placement
-- Test classes must **mirror the directory hierarchy** of the production code they test
-- Example: a test for `src/Engine/IO/Csv/DataRowIndexer.cs` belongs in `tests/Refedle.Tests/Engine/IO/Csv/`
-- A test file placed at the wrong level makes it hard to locate and signals that the test may be covering the wrong abstraction
 
 ## Naming Conventions
 
@@ -57,7 +56,6 @@ paths:
 - **Do NOT use control flow statements** (`if`, `else`, `while`, `for`, `foreach`, `switch`) inside test methods
 - Tests should be deterministic and straightforward with no branching logic
 - If you need to test multiple conditions, use `[Theory]` with `[InlineData]` instead
-- **EXCEPTION**: Benchmark methods (`[Benchmark]`) using **BenchmarkDotNet** may use `for` loops to perform the work being measured.
 - Reference: [Microsoft - Avoid logic in tests](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices#avoid-logic-in-unit-tests)
 
 ## Parameterized Tests
@@ -94,20 +92,3 @@ paths:
 ### Standard xUnit Asserts
 - Use **Standard xUnit Asserts** (e.g., `Assert.Equal`) ONLY for tests intended to run in **Native AOT** environments
 - Example: `Assert.Equal(expected, actual);`
-
-## Performance Testing
-
-### BenchmarkDotNet
-- **BenchmarkDotNet** is **MANDATORY** for core engine components:
-  - `MmapService`
-  - `RowIndexer`
-  - `Parser`
-  - Other hot path components
-
-### Native AOT Toolchain
-- Benchmarks must be executed using the `NativeAot` toolchain
-- This ensures performance measurements reflect real-world Native AOT deployment
-
-## Coverage
-- Focus on **100% coverage for the "Hot Paths"** (data processing logic)
-- Prioritize core engine logic over UI state
