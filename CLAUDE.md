@@ -11,4 +11,5 @@ All development guidelines have been organized into `.claude/rules/` for better 
 - **Performance & Native AOT**: See [.claude/rules/performance-and-aot.md](.claude/rules/performance-and-aot.md)
 - **Testing (shared)**: See [.claude/rules/testing.md](.claude/rules/testing.md)
 - **Unit Testing**: See [.claude/rules/unit-testing.md](.claude/rules/unit-testing.md)
+- **End-to-End Testing**: See [.claude/rules/e2e-testing.md](.claude/rules/e2e-testing.md)
 - **Benchmarking**: See [.claude/rules/benchmarking.md](.claude/rules/benchmarking.md)
