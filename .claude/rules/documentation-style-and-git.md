@@ -17,6 +17,7 @@ paths:
 ## Git Workflow
 - **ALWAYS** run `dotnet format` and `dotnet test` BEFORE committing.
 - Ensure the project compiles with **Zero Warnings** (`TreatWarningsAsErrors` is enabled).
+- Do **not** put a Claude session ID or session URL in commit messages (or PR descriptions). A `Co-Authored-By:` trailer is fine.
 
 ## Conventional Commits
 Follow the **Conventional Commits** specification for all commit messages.
