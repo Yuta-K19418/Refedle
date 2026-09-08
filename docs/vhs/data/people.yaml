@@ -1,0 +1,8 @@
+name: "people"
+lastModified: 2024-09-01T00:00:00.0000000+00:00
+actions:
+  - type: Filter
+    columnName: "age"
+    operator: Equals
+    comparisonType: Number
+    value: "30"

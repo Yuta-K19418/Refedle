@@ -1,0 +1,34 @@
+[
+  {
+    "order_id": "A-1001",
+    "region": "West",
+    "items": [
+      { "sku": "PEN-01", "qty": 3, "price": 1.20 },
+      { "sku": "PAD-A5", "qty": 1, "price": 4.50 }
+    ]
+  },
+  {
+    "order_id": "A-1002",
+    "region": "East",
+    "items": [
+      { "sku": "MUG-CE", "qty": 2, "price": 8.00 }
+    ]
+  },
+  {
+    "order_id": "A-1003",
+    "region": "West",
+    "items": [
+      { "sku": "PEN-01", "qty": 5, "price": 1.20 },
+      { "sku": "USB-3C", "qty": 1, "price": 12.00 },
+      { "sku": "PAD-A5", "qty": 4, "price": 4.50 }
+    ]
+  },
+  {
+    "order_id": "A-1004",
+    "region": "South",
+    "items": [
+      { "sku": "MUG-CE", "qty": 1, "price": 8.00 },
+      { "sku": "USB-3C", "qty": 2, "price": 12.00 }
+    ]
+  }
+]
