@@ -40,18 +40,18 @@ Goals for the CLI batch path only:
 
 | File | Change |
 |------|--------|
-| `src/App/Cli/CellData.cs` | **New.** `CellPresence` enum, `CellEncoding` enum, `CellData` readonly `ref struct` |
-| `src/App/Cli/CellEncodingClassifier.cs` | **New.** Shared `bool`/`long`/`double` text heuristic, used by CSV reads and by transformed-column output |
-| `src/App/Cli/IRecordReader.cs` | `GetCellSpan(int) : ReadOnlySpan<char>` → `GetCellData(int) : CellData` |
-| `src/App/Cli/IRecordWriter.cs` | `WriteCellSpan(int, ReadOnlySpan<char>)` → `WriteCellData(int, CellData)` |
-| `src/App/Cli/CsvRecordReader.cs` | `GetCellData` calls `CellEncodingClassifier.Classify` inline (`Presence` always `Value`) |
-| `src/App/Cli/JsonLinesRecordReader.cs` | `GetCellData` scans with a local `Utf8JsonReader` and derives `Presence`/`Encoding` directly from `JsonTokenType`, instead of calling `ExtractCell` |
-| `src/App/Cli/CsvRecordWriter.cs` | `WriteCellData` — same output behavior, now branches on `Presence` instead of matching `"<null>"`/`"<error>"` text; `Encoding` is not read (CSV output is always plain text) |
-| `src/App/Cli/JsonLinesRecordWriter.cs` | `WriteCellData` replaces `WriteJsonValue`; branches on `Presence`/`Encoding` instead of re-parsing every `ReadOnlySpan<char>` unconditionally |
-| `src/App/Cli/RecordProcessor.cs` | Passes `CellData` through for untransformed columns; wraps `FillSpec`/`TimestampFormatSpec` output via `CellEncodingClassifier.Classify` (not a hardcoded encoding) |
-| `tests/Refedle.Tests/App/Cli/RecordProcessorTests.TestRecordReader.cs` | `GetCellSpan` → `GetCellData` (test double) |
-| `tests/Refedle.Tests/App/Cli/RecordProcessorTests.TestRecordWriter.cs` | `WriteCellSpan` → `WriteCellData` (test double), captures `Presence`/`Encoding` for assertions |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Add end-to-end cases (see "Test Plan" below) |
+| `src/App/Cli/IO/CellData.cs` | **New.** `CellPresence` enum, `CellEncoding` enum, `CellData` readonly `ref struct` |
+| `src/App/Cli/IO/CellEncodingClassifier.cs` | **New.** Shared `bool`/`long`/`double` text heuristic, used by CSV reads and by transformed-column output |
+| `src/App/Cli/IO/IRecordReader.cs` | `GetCellSpan(int) : ReadOnlySpan<char>` → `GetCellData(int) : CellData` |
+| `src/App/Cli/IO/IRecordWriter.cs` | `WriteCellSpan(int, ReadOnlySpan<char>)` → `WriteCellData(int, CellData)` |
+| `src/App/Cli/IO/Csv/CsvRecordReader.cs` | `GetCellData` calls `CellEncodingClassifier.Classify` inline (`Presence` always `Value`) |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | `GetCellData` scans with a local `Utf8JsonReader` and derives `Presence`/`Encoding` directly from `JsonTokenType`, instead of calling `ExtractCell` |
+| `src/App/Cli/IO/Csv/CsvRecordWriter.cs` | `WriteCellData` — same output behavior, now branches on `Presence` instead of matching `"<null>"`/`"<error>"` text; `Encoding` is not read (CSV output is always plain text) |
+| `src/App/Cli/IO/Json/JsonLinesRecordWriter.cs` | `WriteCellData` replaces `WriteJsonValue`; branches on `Presence`/`Encoding` instead of re-parsing every `ReadOnlySpan<char>` unconditionally |
+| `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Passes `CellData` through for untransformed columns; wraps `FillSpec`/`TimestampFormatSpec` output via `CellEncodingClassifier.Classify` (not a hardcoded encoding) |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RecordProcessorTests.TestRecordReader.cs` | `GetCellSpan` → `GetCellData` (test double) |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RecordProcessorTests.TestRecordWriter.cs` | `WriteCellSpan` → `WriteCellData` (test double), captures `Presence`/`Encoding` for assertions |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.cs` | Add end-to-end cases (see "Test Plan" below) |
 
 No changes to `JsonObjectCellExtractor.cs`, `JsonByteExtractor.cs`,
 `ColumnType.cs`, or `TypeInferrer.cs`. This design does not read or produce a
@@ -450,7 +450,7 @@ today, with no grammar-tightening required.
 
 ### Consequences
 
-- `CellPresence`/`CellEncoding`/`CellData` are internal to `src/App/Cli/`;
+- `CellPresence`/`CellEncoding`/`CellData` are internal to `src/App/Cli/IO/`;
   TUI code paths (`ExtractCell` and its callers) and the Engine-wide
   `ColumnType`/`TypeInferrer` vocabulary are completely unaffected.
 - The `"<null>"`/`"<error>"` sentinel convention is removed from the batch

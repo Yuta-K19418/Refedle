@@ -1,6 +1,9 @@
 using Refedle.App;
 using Refedle.App.Cli;
-using Refedle.App.Cli.Update;
+using Refedle.App.Cli.Commands.Apply;
+using Refedle.App.Cli.Commands.Help;
+using Refedle.App.Cli.Commands.Update;
+using Refedle.App.Cli.Commands.Version;
 
 // "--help" / "-h" win even when combined with other modes (e.g. "refedle apply --help") and take
 // precedence over --version, while the "help" subcommand form is only recognized as the first

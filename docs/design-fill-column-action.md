@@ -19,7 +19,7 @@ Add a `FillColumnAction` that overwrites every value in a named column with a fi
 | `src/Engine/Models/JsonContext.cs` | Add `[JsonSerializable(typeof(FillColumnAction))]` |
 | `src/Engine/BatchOutputSchema.cs` | Add `CellTransformSpec?` to `BatchOutputColumn` |
 | `src/Engine/ActionApplier.cs` | Handle `FillColumnAction`; set `Transform = new FillSpec(value)` on the output column |
-| `src/App/Cli/RecordProcessor.cs` | Change `outputColumnCount: int` → `columns: IReadOnlyList<BatchOutputColumn>`; apply transform per cell |
+| `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Change `outputColumnCount: int` → `columns: IReadOnlyList<BatchOutputColumn>`; apply transform per cell |
 | `src/Engine/Recipes/MorphActionParser.cs` | Add `"Fill"` case |
 | `src/Engine/Recipes/RecipeYamlSerializer.cs` | Add `FillColumnAction` case |
 | `src/Generators/FormatDispatcherGenerator.cs` | Pass `outputSchema.Columns` instead of `outputSchema.Columns.Count` to `RecordProcessor.ProcessAsync` |
