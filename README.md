@@ -29,41 +29,9 @@ refedle update       # replace the binary in place with the latest release
 
 `refedle update` is not available on Windows or for development builds; download a new archive manually instead.
 
-### Manual download
+For manual downloads, prebuilt binaries by platform, and OS security warnings, see [docs/usage/installation.md](docs/usage/installation.md).
 
-Prebuilt binaries (no .NET SDK required) are published on the [Releases page](https://github.com/Yuta-K19418/Refedle/releases) for:
-
-| OS | Architecture |
-|---|---|
-| Windows | x64 |
-| macOS | Apple Silicon (arm64) |
-| Linux | x64 |
-| Linux | arm64 |
-
-macOS on Intel (`osx-x64`) is not supported; build from source with `dotnet publish src/App/Refedle.App.csproj -r osx-x64 -c Release`.
-
-Download the archive for your platform and `checksums.txt`, verify, extract, and put `refedle` on your `PATH` (Linux x64 example):
-
-```bash
-tag=v0.3.0
-base=https://github.com/Yuta-K19418/Refedle/releases/download/$tag
-curl -fLO $base/refedle-$tag-linux-x64.tar.gz
-curl -fLO $base/checksums.txt
-sha256sum -c --ignore-missing checksums.txt
-tar -xzf refedle-$tag-linux-x64.tar.gz
-install -Dm755 refedle-$tag-linux-x64/refedle ~/.local/bin/refedle
-```
-
-On Windows, download `refedle-<tag>-win-x64.zip`, extract it, and move `refedle.exe` onto your `PATH`.
-
-The binaries are unsigned, so the OS may block them on first launch:
-
-- **macOS**: Gatekeeper quarantines downloaded files. Run `xattr -d com.apple.quarantine refedle` before launching, or allow it via System Settings → Privacy & Security.
-- **Windows**: SmartScreen may warn about an unrecognized app. Click "More info" → "Run anyway".
-
-Run the binary directly as `./refedle [--file <path>] [--recipe <path.yaml>]` (or `refedle.exe` on Windows). In the examples below, `dotnet run --project src/App --` can be replaced with `./refedle` when using a downloaded binary instead of building from source.
-
-To build and run from source instead, see [TUI Usage](#tui-usage) below.
+To build and run from source instead, see [Usage](#usage) below.
 
 ## Supported Formats
 
@@ -78,275 +46,59 @@ Any file extension other than those listed above results in a `NotSupportedExcep
 
 **CSV (`.csv`)** — TUI Table view. No Tree view, since CSV rows have no nested structure to drill into.
 
-**JSON Lines (`.jsonl`)** — TUI Tree and Table view (toggle with `t`), plus full-file aggregation drill-down (see [TUI Usage](#tui-usage)).
+**JSON Lines (`.jsonl`)** — TUI Tree and Table view (toggle with `t`), plus full-file aggregation drill-down (see [TUI Usage](docs/usage/tui.md)).
 
-**JSON Array (`.json`)** — TUI Tree view, with Table view available only via full-file aggregation drill-down (see [TUI Usage](#tui-usage)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](#cli-batch-usage)).
+**JSON Array (`.json`)** — TUI Tree view, with Table view available only via full-file aggregation drill-down (see [TUI Usage](docs/usage/tui.md)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](docs/usage/cli.md)).
 
-**JSON Object (`.json`)** — TUI Tree view, with Table view available only via single-node drill-down (see [TUI Usage](#tui-usage)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](#cli-batch-usage)).
+**JSON Object (`.json`)** — TUI Tree view, with Table view available only via single-node drill-down (see [TUI Usage](docs/usage/tui.md)). In CLI batch mode, supported only when the recipe is drill-down-scoped (see [CLI Batch Usage](docs/usage/cli.md)).
 
-## TUI Usage
+## Usage
 
 ```bash
 dotnet run --project src/App -- [--file <path>] [--recipe <path.yaml>]
 ```
 
-Key bindings:
+Full key bindings and action details: [docs/usage/tui.md](docs/usage/tui.md)
 
-| Key | Action |
-|---|---|
-| `o` | Open file |
-| `s` | Save recipe |
-| `t` | Toggle Tree/Table view (JSON Lines only) |
-| `x` | Action menu (Column/Row Actions, Drill-down) |
-| `c` | Clear action stack |
-| `Backspace` | Back from drill-down |
-| `?` | Help |
-| `q` | Quit (confirms if there are unsaved actions) |
+### What you can do
 
-### Column/Row Actions
-
-Available from the action menu (`x`):
-
-| View | Column/Row Actions |
-|---|---|
-| CSV (Table) | ✅ |
-| JSON Lines (Table) | ✅ |
-| Table from drill-down (any format) | planned |
-
-**Rename** — renames a column.
+**Rename** a column:
 
 ![Renaming a column in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/rename.gif)
 
-Before:
+**Delete** a column, or **cast** its values to a different type (text, whole number, floating point, etc.).
 
-| name | age |
-|---|---|
-| Alice | 30 |
-
-After (renamed `name` to `person name`):
-
-| person name | age |
-|---|---|
-| Alice | 30 |
-
-**Delete** — removes a column from the dataset.
-
-Before:
-
-| name | age |
-|---|---|
-| Alice | 30 |
-
-After (deleted `age`):
-
-| name |
-|---|
-| Alice |
-
-**Cast** — converts a column's values to a different type (text, whole number, floating point, etc.).
-
-Before:
-
-| age |
-|---|
-| "30" |
-
-After (cast `age` from text to whole number):
-
-| age |
-|---|
-| 30 |
-
-**Filter** — keeps only the rows where a column matches a condition (equals, not-equals, greater/less than, etc.). Multiple filters combine with AND.
+**Filter** rows by a column condition:
 
 ![Filtering rows by a column condition in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/filter.gif)
 
-Before:
-
-| age |
-|---|
-| 30 |
-| 20 |
-
-After (filtered `age > 25`):
-
-| age |
-|---|
-| 30 |
-
-**Fill** — overwrites every value in a column with a fixed value; useful for anonymization, masking, or bulk initialization.
+**Fill** a column with a fixed value — useful for anonymization or masking:
 
 ![Masking a column with Fill in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/fill.gif)
 
-Before:
-
-| email |
-|---|
-| alice@example.com |
-| bob@example.com |
-| carol@example.com |
-
-After (filled with `***`):
-
-| email |
-|---|
-| `***` |
-| `***` |
-| `***` |
-
-**Format Timestamp** — reformats a Timestamp column's string values into a different date/time format.
+**Format timestamp** columns into a different date/time format:
 
 ![Reformatting a timestamp column in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/format-timestamp.gif)
 
-Before:
-
-| created_at |
-|---|
-| 2024-01-15T09:30:00Z |
-| 2024-03-02T14:05:00Z |
-| 2024-06-21T08:45:00Z |
-
-After (formatted as `yyyy-MM-dd`):
-
-| created_at |
-|---|
-| 2024-01-15 |
-| 2024-03-02 |
-| 2024-06-21 |
-
-### Drill-down
-
-Also available from the action menu (`x`), when the current view is in Tree mode. Two modes exist:
-
-| View | Drill-down type |
-|---|---|
-| JSON Lines (Tree) | Full-aggregation |
-| JSON Array (Tree) | Full-aggregation |
-| JSON Object (Tree) | Single-node |
-
-**Single-node drill-down** — turns the selected node itself into a table (JSON Object only — there's a single record to explore). The selected node must be a non-empty array of objects; selecting an object, a scalar (a plain value — not an object or array), or an array with non-object elements fails with an error.
+**Drill down** into nested JSON — pick a path and it's aggregated into a table:
 
 ![Single-node drill-down on a JSON Object in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/drilldown-node.gif)
 
-Example — a JSON Object file:
-
-```json
-{
-  "user": "alice",
-  "orders": [
-    { "id": 1, "item": "Book", "price": 12.5 },
-    { "id": 2, "item": "Pen", "price": 1.2 }
-  ]
-}
-```
-
-Path: `orders`
-
-Drilling down produces:
-
-| id | item | price |
-|---|---|---|
-| 1 | Book | 12.5 |
-| 2 | Pen | 1.2 |
-
-**Full-file aggregation drill-down** — scans the entire file and aggregates the selected path across every record into a table (JSON Lines/Array).
-
 ![Full-file aggregation drill-down on a JSON array in the Refedle TUI](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/drilldown-aggregate.gif)
 
-<details>
-<summary>Behavior by selected node type</summary>
+See [docs/usage/drilldown.md](docs/usage/drilldown.md) for exact behavior per node type.
 
-The shape of the resulting table depends on what the selected path resolves to in each record:
-
-- **Object** — one row per record, using the object's keys as columns.
-- **Array** — one row per element; object elements become row columns, primitive elements become a single `value` column (always typed as Text). Selecting a specific array element (e.g. `tags[0]`) produces the same result as selecting the array itself — the whole array is always expanded.
-- **Scalar** (a plain value — not an object or array) — one row with a single column (named after the path's last key), always typed as Text regardless of the actual value.
-
-</details>
-
-Example — a JSON Lines file (one record per line):
-
-```json
-{"user": "alice", "cart": {"orders": [{"id": 1, "item": "Book"}]}}
-{"user": "bob", "cart": {"orders": [{"id": 2, "item": "Pen"}, {"id": 3, "item": "Mug"}]}}
-```
-
-Path: `cart > orders`
-
-Drilling down scans every line and aggregates all matching arrays into one table:
-
-| id | item |
-|---|---|
-| 1 | Book |
-| 2 | Pen |
-| 3 | Mug |
-
-### Recipes
-
-Pressing `s` saves the current action stack as a `.yaml` recipe, named after the source file.
-
-Example — `people.csv`:
-
-| nm | age | email |
-|---|---|---|
-| Alice | 30 | alice@example.com |
-| Bob | 20 | bob@example.com |
-
-After renaming `nm` → `name`, filling `email` with `***`, and filtering `age > 25`:
-
-| name | age | email |
-|---|---|---|
-| Alice | 30 | `***` |
-
-Pressing `s` at this point produces `people.yaml`:
-
-```yaml
-name: "people"
-lastModified: 2026-07-26T12:34:56.0000000+00:00
-actions:
-  - type: Rename
-    oldName: "nm"
-    newName: "name"
-  - type: Fill
-    columnName: "email"
-    value: "***"
-  - type: Filter
-    columnName: "age"
-    operator: GreaterThan
-    comparisonType: Number
-    value: "25"
-```
-
-Recipes can then be replayed against other files via [CLI Batch Usage](#cli-batch-usage), without opening the UI.
+**Save a recipe** (`s`) to replay every action above against other files from the CLI — see [docs/usage/recipes.md](docs/usage/recipes.md).
 
 ## CLI Batch Usage
-
-![Previewing a recipe with --dry-run, applying it, and reopening the result](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/apply.gif)
-
-| Input \ Output | CSV | JSON Lines | JSON (`.json`) |
-|---|---|---|---|
-| CSV | ✅ | ✅ | ✅ |
-| JSON Lines | ✅ | ✅ | ✅ |
-| JSON Array | ✅ ¹ | ✅ ¹ | ✅ ¹ |
-| JSON Object | ✅ ¹ | ✅ ¹ | ✅ ¹ |
-
-¹ JSON Array / JSON Object input requires a drill-down-scoped recipe — the recipe's `drillDownKeyPath` selects the table to transform. Bare (non-drill-down) batch mode for these formats is out of scope. JSON Lines input works with or without a drill-down scope.
 
 ```bash
 dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> --output <output>
 ```
 
-`.json` output is always a JSON array (`[{...}, ...]`), regardless of row count or input format.
+Replays a saved recipe against a file, no UI. Add `--dry-run` to preview the plan without writing output.
 
-Format dispatch (reader → transform → writer) is resolved at compile time via a source generator (`src/Generators/FormatDispatcherGenerator.cs`), not reflection.
-
-### Dry Run
-
-Adding `--dry-run` validates the recipe and input without writing any output file. It performs every preparation step of `apply` — recipe load, format detection, recipe validation, column resolution, and output schema build — and prints a summary of the resolved plan (formats, drill-down scope, input columns, output schema with transforms, and filters) to stdout. With `--dry-run`, `--output` becomes optional; when given, its format is also detected and reported (still without writing the file). Failures are reported exactly as in a normal run.
-
-```bash
-dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> [--output <output>] --dry-run
-```
+Supported input/output combinations, drill-down recipe rules, and `--dry-run` details: [docs/usage/cli.md](docs/usage/cli.md)
 
 ## Project Structure
 
@@ -357,7 +109,7 @@ src/
   Generators/  Roslyn incremental source generator for format-agnostic dispatch
 tests/
   Refedle.Tests/
-docs/          Design documents
+docs/          Design documents and usage guides
 ```
 
 ## Implementation Notes
