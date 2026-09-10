@@ -1,7 +1,7 @@
 # TUI Usage
 
 ```bash
-dotnet run --project src/App -- [--file <path>] [--recipe <path.yaml>]
+refedle [--file <path>] [--recipe <path.yaml>]
 ```
 
 Key bindings:

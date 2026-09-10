@@ -32,4 +32,4 @@ The binaries are unsigned, so the OS may block them on first launch:
 - **macOS**: Gatekeeper quarantines downloaded files. Run `xattr -d com.apple.quarantine refedle` before launching, or allow it via System Settings → Privacy & Security.
 - **Windows**: SmartScreen may warn about an unrecognized app. Click "More info" → "Run anyway".
 
-Run the binary directly as `./refedle [--file <path>] [--recipe <path.yaml>]` (or `refedle.exe` on Windows). In the [TUI usage guide](tui.md) and [CLI usage guide](cli.md), `dotnet run --project src/App --` can be replaced with `./refedle` when using a downloaded binary instead of building from source.
+Run the binary directly as `./refedle [--file <path>] [--recipe <path.yaml>]` (or `refedle.exe` on Windows). Building from source instead? Replace `refedle` with `dotnet run --project src/App --` in the [TUI usage guide](tui.md) and [CLI usage guide](cli.md) examples.

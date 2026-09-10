@@ -31,7 +31,7 @@ refedle update       # replace the binary in place with the latest release
 
 For manual downloads, prebuilt binaries by platform, and OS security warnings, see [docs/usage/installation.md](docs/usage/installation.md).
 
-To build and run from source instead, see [Usage](#usage) below.
+To build and run from source instead, replace `refedle` with `dotnet run --project src/App --` in the examples below.
 
 ## Supported Formats
 
@@ -55,7 +55,7 @@ Any file extension other than those listed above results in a `NotSupportedExcep
 ## Usage
 
 ```bash
-dotnet run --project src/App -- [--file <path>] [--recipe <path.yaml>]
+refedle [--file <path>] [--recipe <path.yaml>]
 ```
 
 Full key bindings and action details: [docs/usage/tui.md](docs/usage/tui.md)
@@ -93,7 +93,7 @@ See [docs/usage/drilldown.md](docs/usage/drilldown.md) for exact behavior per no
 ## CLI Batch Usage
 
 ```bash
-dotnet run --project src/App -- apply --input <input> --recipe <recipe.yaml> --output <output>
+refedle apply --input <input> --recipe <recipe.yaml> --output <output>
 ```
 
 Replays a saved recipe against a file, no UI. Add `--dry-run` to preview the plan without writing output.
