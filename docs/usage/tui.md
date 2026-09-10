@@ -25,7 +25,7 @@ Available from the action menu (`x`):
 |---|---|
 | CSV (Table) | ✅ |
 | JSON Lines (Table) | ✅ |
-| Table from drill-down (any format) | planned |
+| Table from drill-down (any format) | ✅ |
 
 **Rename** — renames a column.
 
