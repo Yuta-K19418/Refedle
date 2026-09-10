@@ -104,12 +104,15 @@ Supported input/output combinations, drill-down recipe rules, and `--dry-run` de
 
 ```
 src/
-  App/         TUI (Terminal.Gui v2) and CLI entry point (Program.cs, Cli/)
-  Engine/      File I/O (mmap-backed), schema scanning, filtering, actions, recipe (de)serialization
-  Generators/  Roslyn incremental source generator for format-agnostic dispatch
+  App/               TUI (Terminal.Gui v2) and CLI entry point (Program.cs, Cli/)
+  Engine/            File I/O (mmap-backed), schema scanning, filtering, actions, recipe (de)serialization
+  Generators/        Roslyn incremental source generator for format-agnostic dispatch
 tests/
-  Refedle.Tests/
-docs/          Design documents and usage guides
+  Refedle.Tests/     Unit tests
+  Refedle.E2ETests/  End-to-end tests (real refedle binary, real TUI)
+benchmarks/
+  Refedle.Benchmarks/  BenchmarkDotNet performance benchmarks
+docs/                Design documents and usage guides
 ```
 
 ## Implementation Notes
