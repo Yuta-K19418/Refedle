@@ -81,8 +81,6 @@ This activates the commented-out extension point already present in
 |------|---------|
 | `src/Engine/Models/Actions/FormatTimestampAction.cs` | New record |
 | `tests/Refedle.Tests/Engine/Models/Actions/FormatTimestampActionTests.cs` | Unit tests for the record |
-| `tests/Refedle.Tests/Engine/ActionApplierTests.FormatTimestamp.cs` | `ActionApplier` tests for the new action |
-| `tests/Refedle.Tests/App/Cli/RecordProcessorFormatTimestampTests.cs` | `RecordProcessor` transform tests |
 
 ### Modified
 
@@ -93,6 +91,8 @@ This activates the commented-out extension point already present in
 | `src/Engine/Models/CellTransformSpec.cs` | Uncomment / add `TimestampFormatSpec` subtype |
 | `src/Engine/ActionApplier.cs` | Handle `FormatTimestampAction`; validate column type; emit `TimestampFormatSpec` |
 | `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Add `TimestampFormatSpec` arm to the transform switch |
+| `tests/Refedle.Tests/Engine/ActionApplierTests.cs` | Add `ActionApplier` tests for `FormatTimestampAction` |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RecordProcessorTests.cs` | Add `RecordProcessor` transform tests for `TimestampFormatSpec` |
 | `src/Engine/Recipes/MorphActionParser.cs` | Add `"format_timestamp"` case |
 | `src/Engine/Recipes/RecipeYamlSerializer.cs` | Add `FormatTimestampAction` case |
 
