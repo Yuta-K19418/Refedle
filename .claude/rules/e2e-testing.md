@@ -15,11 +15,12 @@ conventions in [testing.md](testing.md) also apply.
 - Assert **only on observable results**: exit code, `stdout` / `stderr`, output files on disk, rendered screen text. Never assert on production internal state — neither Engine nor App.
   - **CLI**: interact only through the process — arguments in, exit code / streams / files out.
   - **TUI**: go through the real `MainWindow` and key handling. The harness needs `Refedle.App` types to start the session, but assertions look only at rendered screen content, never at view internals.
-- Note: the engine type aliases in the shared `GlobalUsings.cs` are `<Compile Remove>`d from this project. Do not reintroduce them.
+- Note: the engine type aliases from the shared `GlobalUsings.cs` are excluded from this project via `<Compile Remove>`. Do not reintroduce them.
 
 ## Happy Path Only
 - E2E tests cover the **happy path only**. Each one shows that a feature works normally, one flow per test.
-- **Error handling, abnormal inputs, edge cases, and input validation are NOT covered by E2E tests.** Verify those in unit tests.
+- **Error handling, abnormal inputs, edge cases, and input validation are NOT covered by E2E tests.** Verify those in unit tests.  
+  Note: this does not mean unit tests may skip happy-path coverage. See the Coverage section in [unit-testing.md](unit-testing.md) for the unit test coverage policy.
 - Exhaustive coverage of values and conditions also belongs in unit tests. E2E tests start processes and event loops, so they are slow — keep them minimal, one per flow.
 
 ## When to Add an E2E Test

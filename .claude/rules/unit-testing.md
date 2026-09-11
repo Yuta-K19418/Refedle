@@ -16,3 +16,4 @@ conventions in [testing.md](testing.md) also apply.
 ## Coverage
 - Focus on **100% coverage for the "Hot Paths"** (data processing logic)
 - Prioritize core engine logic over UI state
+- Unit tests must comprehensively cover not only the happy path but also error cases (error handling, invalid input, edge cases, etc.)
