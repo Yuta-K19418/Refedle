@@ -87,7 +87,6 @@ This activates the commented-out extension point already present in
 | File | Change |
 |------|--------|
 | `src/Engine/Models/Actions/MorphAction.cs` | Add `[JsonDerivedType(typeof(FormatTimestampAction), typeDiscriminator: "format_timestamp")]` |
-| `src/Engine/Models/JsonContext.cs` | Add `[JsonSerializable(typeof(FormatTimestampAction))]` |
 | `src/Engine/Models/CellTransformSpec.cs` | Uncomment / add `TimestampFormatSpec` subtype |
 | `src/Engine/ActionApplier.cs` | Handle `FormatTimestampAction`; validate column type; emit `TimestampFormatSpec` |
 | `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Add `TimestampFormatSpec` arm to the transform switch |
