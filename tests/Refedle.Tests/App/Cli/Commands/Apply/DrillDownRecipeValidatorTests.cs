@@ -10,7 +10,7 @@ public sealed class DrillDownRecipeValidatorTests
 {
     private const string RecipeName = "Test Recipe";
 
-    private static readonly IReadOnlyList<KeyPathSegment> TestKeyPath =
+    private static readonly IReadOnlyList<KeyPathSegment> _testKeyPath =
         [new("orders", KeyPathSegmentKind.Key)];
 
     private static Recipe CreateRecipe(IReadOnlyList<KeyPathSegment>? drillDownKeyPath) =>
@@ -87,7 +87,7 @@ public sealed class DrillDownRecipeValidatorTests
     public void Validate_WithKeyPath_ReturnsSuccessForAllFormats(DataFormat inputFormat)
     {
         // Arrange
-        var recipe = CreateRecipe(TestKeyPath);
+        var recipe = CreateRecipe(_testKeyPath);
 
         // Act
         var result = DrillDownRecipeValidator.Validate(inputFormat, recipe);

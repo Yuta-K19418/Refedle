@@ -9,13 +9,13 @@ namespace Refedle.Tests.App.Views;
 
 public sealed class FocusedTableSourceTests
 {
-    private static readonly IReadOnlyList<FocusedTableRow> DefaultRows =
+    private static readonly IReadOnlyList<FocusedTableRow> _defaultRows =
     [
         new FocusedTableRow("{\"name\": \"Alice\", \"age\": 30}"u8.ToArray(), "[0]"),
         new FocusedTableRow("{\"name\": \"Bob\", \"age\": 25}"u8.ToArray(), "[1]"),
     ];
 
-    private static readonly TableSchema DefaultSchema = new()
+    private static readonly TableSchema _defaultSchema = new()
     {
         Columns =
         [
@@ -28,7 +28,7 @@ public sealed class FocusedTableSourceTests
     private static DrillDownState CreateState(
         IReadOnlyList<FocusedTableRow>? rows = null,
         TableSchema? schema = null) =>
-        new(rows ?? DefaultRows, schema ?? DefaultSchema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        new(rows ?? _defaultRows, schema ?? _defaultSchema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
 
     [Fact]
     public void Constructor_NullDrillDownState_ThrowsArgumentNullException()

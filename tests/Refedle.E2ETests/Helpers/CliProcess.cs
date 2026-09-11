@@ -15,7 +15,7 @@ internal sealed record CliProcessResult(int ExitCode, string StandardOutput, str
 /// </summary>
 internal static class CliProcess
 {
-    private static readonly TimeSpan Timeout = TimeSpan.FromMinutes(2);
+    private static readonly TimeSpan _timeout = TimeSpan.FromMinutes(2);
 
     /// <summary>
     /// Runs <c>refedle apply</c> with the given batch-conversion arguments and waits for exit.
@@ -80,7 +80,7 @@ internal static class CliProcess
         var standardOutputTask = process.StandardOutput.ReadToEndAsync();
         var standardErrorTask = process.StandardError.ReadToEndAsync();
 
-        using var timeoutCts = new CancellationTokenSource(Timeout);
+        using var timeoutCts = new CancellationTokenSource(_timeout);
         try
         {
             await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -90,7 +90,7 @@ internal static class CliProcess
             // Kill first so the redirected streams reach EOF and the read tasks complete.
             process.Kill(entireProcessTree: true);
             await process.WaitForExitAsync(CancellationToken.None).ConfigureAwait(false);
-            throw new TimeoutException($"The refedle CLI process did not exit within {Timeout}.");
+            throw new TimeoutException($"The refedle CLI process did not exit within {_timeout}.");
         }
 
         var standardOutput = await standardOutputTask.ConfigureAwait(false);

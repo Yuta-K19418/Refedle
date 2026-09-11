@@ -11,13 +11,13 @@ public sealed class ArchiveBinaryReplacerTests
         | UnixFileMode.GroupRead | UnixFileMode.GroupExecute
         | UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
 
-    private static readonly byte[] NewBinaryBytes = "new refedle binary v1.2.3"u8.ToArray();
+    private static readonly byte[] _newBinaryBytes = "new refedle binary v1.2.3"u8.ToArray();
 
     [Fact]
     public async Task ReplaceAsync_WithValidArchive_ReplacesTargetAndLeavesNoTempFile()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(NewBinaryBytes);
+        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
         var replacer = new ArchiveBinaryReplacer();
 
         // Act
@@ -25,7 +25,7 @@ public sealed class ArchiveBinaryReplacerTests
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        (await File.ReadAllBytesAsync(fixture.TargetPath)).Should().Equal(NewBinaryBytes);
+        (await File.ReadAllBytesAsync(fixture.TargetPath)).Should().Equal(_newBinaryBytes);
         fixture.TargetDirectory.GetFiles("*.tmp").Should().BeEmpty();
     }
 
@@ -69,7 +69,7 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WhenTargetDirectoryDoesNotExist_ReturnsFailure()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(NewBinaryBytes);
+        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
         var missingTarget = Path.Combine(fixture.RootPath, "no-such-dir", "refedle");
         var replacer = new ArchiveBinaryReplacer();
 
@@ -85,7 +85,7 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WhenCancelledBeforeMove_PreservesTargetAndThrows()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(NewBinaryBytes);
+        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
         using var cts = new CancellationTokenSource();
         await cts.CancelAsync();
         var replacer = new ArchiveBinaryReplacer();
@@ -104,7 +104,7 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_OnUnix_MarksReplacedBinaryExecutable()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(NewBinaryBytes);
+        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
         var replacer = new ArchiveBinaryReplacer();
 
         // Act
