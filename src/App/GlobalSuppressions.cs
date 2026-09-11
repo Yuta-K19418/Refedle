@@ -398,7 +398,7 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Program.<Main>$(System.String[])",
+    Target = "~M:Refedle.App.Cli.CliCancellationScope.HandleCancelKeyPress(System.Object,System.ConsoleCancelEventArgs)",
     Justification = "ConsoleCancelEventHandler must cancel synchronously when the process receives Ctrl+C.")]
 [assembly: SuppressMessage(
     "Design",
