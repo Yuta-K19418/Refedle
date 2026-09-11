@@ -174,6 +174,70 @@ public sealed partial class RunnerTests
     }
 
     // -------------------------------------------------------------------------
+    // JSON Lines → JSON Lines — FormatTimestamp on unparseable / non-value cells
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public async Task RunAsync_JsonLinesToJsonLines_WithTimestampFormatOnUnparseableMissingAndNullCells_PreservesTheirSemantics()
+    {
+        // Arrange
+        const string content = """
+            {"date":"not-a-date"}
+            {"other":1}
+            {"date":null}
+            """;
+        const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
+        var inputFile = CreateTestFile("input.jsonl", content);
+        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        var outputFile = Path.Combine(_testDir, "output.jsonl");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        var outputLines = await File.ReadAllLinesAsync(outputFile);
+        outputLines.Should().HaveCount(3);
+
+        using var stringDoc = JsonDocument.Parse(outputLines[0]);
+        var stringValue = stringDoc.RootElement.GetProperty("date");
+        stringValue.ValueKind.Should().Be(JsonValueKind.String);
+        stringValue.GetString().Should().Be("not-a-date");
+
+        using var missingDoc = JsonDocument.Parse(outputLines[1]);
+        missingDoc.RootElement.TryGetProperty("date", out _).Should().BeFalse();
+
+        using var nullDoc = JsonDocument.Parse(outputLines[2]);
+        nullDoc.RootElement.GetProperty("date").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonLinesToJsonLines_WithUnparseableBooleanLookingTimestamp_PreservesJsonString()
+    {
+        // Arrange
+        const string line = """{"date":"true"}""";
+        const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
+        var inputFile = CreateTestFile("input.jsonl", line);
+        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        var outputFile = Path.Combine(_testDir, "output.jsonl");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using var outputDoc = JsonDocument.Parse(outputLine);
+        var date = outputDoc.RootElement.GetProperty("date");
+        date.ValueKind.Should().Be(JsonValueKind.String);
+        date.GetString().Should().Be("true");
+    }
+
+    // -------------------------------------------------------------------------
     // CSV → JSON Lines — numeric normalization (regression guards)
     // -------------------------------------------------------------------------
 

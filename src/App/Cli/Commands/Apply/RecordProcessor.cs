@@ -1,8 +1,5 @@
-using System.Diagnostics;
-using System.Globalization;
 using Refedle.App.Cli.IO;
 using Refedle.Engine;
-using Refedle.Engine.Models;
 
 namespace Refedle.App.Cli.Commands.Apply;
 
@@ -37,14 +34,7 @@ internal static class RecordProcessor
                     continue;
                 }
 
-                var formatted = transform switch
-                {
-                    FillSpec fill => fill.Value,
-                    TimestampFormatSpec fmt => ApplyTimestampFormat(reader.GetCellData(i).Value, fmt),
-                    _ => throw new UnreachableException($"Unhandled CellTransformSpec: {transform.GetType().Name}"),
-                };
-
-                writer.WriteCellData(i, new CellData(formatted, CellPresence.Value, CellEncodingClassifier.Classify(formatted)));
+                writer.WriteCellData(i, CellTransformFormatter.Format(transform, reader.GetCellData(i)));
             }
 
             await writer.WriteEndRecordAsync(ct).ConfigureAwait(false);
@@ -53,15 +43,5 @@ internal static class RecordProcessor
         await writer.WriteFooterAsync(ct).ConfigureAwait(false);
         await writer.FlushAsync(ct).ConfigureAwait(false);
         return ExitCode.Success;
-    }
-
-    private static string ApplyTimestampFormat(ReadOnlySpan<char> raw, TimestampFormatSpec fmt)
-    {
-        if (!DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-        {
-            throw new FormatException($"Could not parse timestamp value '{raw}'.");
-        }
-
-        return parsed.ToString(fmt.TargetFormat, CultureInfo.InvariantCulture);
     }
 }

@@ -626,27 +626,71 @@ public sealed partial class RecordProcessorTests
         writtenRecords[0].Should().BeEquivalentTo(["2024-03-15"]);
     }
 
-    [Fact]
-    public async Task ProcessAsync_WithTimestampFormatSpec_UnparseableCell_ThrowsFormatException()
+    [Theory]
+    [InlineData("not-a-date")]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ProcessAsync_WithTimestampFormatSpec_UnparseableCell_PassesRawValueThrough(string rawValue)
     {
         // Arrange
+        var writtenRecords = new List<string[]>();
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
 
         var reader = new TestRecordReader(
-            [["not-a-date"]],
+            [[rawValue]],
             []
         );
 
-        var writer = new TestRecordWriter(null, null);
+        var writer = new TestRecordWriter(
+            null,
+            (record) => writtenRecords.Add([.. record])
+        );
 
         // Act
-        var act = async () => await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        await act.Should().ThrowAsync<FormatException>();
+        result.Should().Be(0);
+        writtenRecords.Should().HaveCount(1);
+        writtenRecords[0].Should().BeEquivalentTo([rawValue]);
+    }
+
+    [Fact]
+    public async Task ProcessAsync_WithTimestampFormatSpec_MixedParseableAndUnparseableCells_WritesAllRows()
+    {
+        // Arrange
+        var writtenRecords = new List<string[]>();
+        IReadOnlyList<BatchOutputColumn> columns =
+        [
+            new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
+        ];
+
+        var reader = new TestRecordReader(
+            [
+                ["2024-03-15T10:30:00"],
+                ["not-a-date"],
+                ["2023-12-25T00:00:00"],
+            ],
+            []
+        );
+
+        var writer = new TestRecordWriter(
+            null,
+            (record) => writtenRecords.Add([.. record])
+        );
+
+        // Act
+        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+
+        // Assert
+        result.Should().Be(0);
+        writtenRecords.Should().HaveCount(3);
+        writtenRecords[0].Should().BeEquivalentTo(["2024/03/15"]);
+        writtenRecords[1].Should().BeEquivalentTo(["not-a-date"]);
+        writtenRecords[2].Should().BeEquivalentTo(["2023/12/25"]);
     }
 
     [Fact]
