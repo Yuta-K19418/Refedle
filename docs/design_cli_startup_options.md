@@ -16,7 +16,7 @@
 |------|---------|
 | `src/App/TuiStartupOptions.cs` | Record holding optional startup arguments for TUI mode |
 | `src/App/TuiArgumentParser.cs` | Parses `--file` / `--recipe` from `args[]` in TUI mode |
-| `tests/Refedle.Tests/App/Cli/TuiArgumentParserTests.cs` | Unit tests for `TuiArgumentParser` |
+| `tests/Refedle.Tests/App/TuiArgumentParserTests.cs` | Unit tests for `TuiArgumentParser` |
 
 ### Modified Files
 
