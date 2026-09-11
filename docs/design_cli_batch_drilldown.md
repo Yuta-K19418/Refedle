@@ -99,18 +99,18 @@ ValueTask<TWriter> CreateAsync(
 
 | File | Change |
 |---|---|
-| `src/App/Cli/Factories/IRecordReaderFactory.cs` | `CreateAsync` signature change |
-| `src/App/Cli/Factories/IRecordWriterFactory.cs` | `CreateAsync` signature change |
-| `src/App/Cli/Factories/CsvRecordReaderFactory.cs` | Follow new signature (`args.InputFile` → `inputFile`) |
-| `src/App/Cli/Factories/CsvRecordWriterFactory.cs` | Follow new signature (`args.OutputFile` → `outputFile`) |
-| `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Follow new signature |
-| `src/App/Cli/Factories/JsonLinesRecordWriterFactory.cs` | Follow new signature |
+| `src/App/Cli/IO/Factories/IRecordReaderFactory.cs` | `CreateAsync` signature change |
+| `src/App/Cli/IO/Factories/IRecordWriterFactory.cs` | `CreateAsync` signature change |
+| `src/App/Cli/IO/Factories/CsvRecordReaderFactory.cs` | Follow new signature (`args.InputFile` → `inputFile`) |
+| `src/App/Cli/IO/Factories/CsvRecordWriterFactory.cs` | Follow new signature (`args.OutputFile` → `outputFile`) |
+| `src/App/Cli/IO/Factories/JsonLinesRecordReaderFactory.cs` | Follow new signature |
+| `src/App/Cli/IO/Factories/JsonLinesRecordWriterFactory.cs` | Follow new signature |
 | `src/Generators/FormatDispatcherGenerator.cs` | Update the `CreateAsync(...)` call emitted inside the generated `Run{Reader}To{Writer}Async` methods to match the new signature |
-| `src/App/Cli/Runner.cs` | Change the call into `FormatDispatcher.DispatchAsync` to pass `args.InputFile`/`args.OutputFile` instead of `args` as a whole |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Change the call into `FormatDispatcher.DispatchAsync` to pass `args.InputFile`/`args.OutputFile` instead of `args` as a whole |
 | `src/App/GlobalSuppressions.cs` | Update `Target` strings that embed the full `CreateAsync` overload signatures |
-| `tests/Refedle.Tests/App/Cli/CsvRecordReaderTests.cs`, `CsvRecordWriterTests.cs`, `JsonLinesRecordReaderTests.cs`, `JsonLinesRecordWriterTests.cs` | Follow new signature |
+| `tests/Refedle.Tests/App/Cli/IO/Csv/CsvRecordReaderTests.cs`, `CsvRecordWriterTests.cs`, `JsonLinesRecordReaderTests.cs`, `JsonLinesRecordWriterTests.cs` | Follow new signature |
 | `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` (added in Phase 1) | Update expected generated source strings to match the new signature |
-| `benchmarks/Refedle.Benchmarks/App/Cli/JsonLinesRecordReaderBenchmarks.cs` | Follow new signature |
+| `benchmarks/Refedle.Benchmarks/App/Cli/IO/Json/JsonLinesRecordReaderBenchmarks.cs` | Follow new signature |
 
 #### ColumnNameResolver
 
@@ -124,8 +124,8 @@ public static IReadOnlyList<string> ResolveColumnNames(
 
 | File | Change |
 |---|---|
-| `src/App/Cli/ColumnNameResolver.cs` | Signature change (add `drillDownKeyPath` parameter; existing branches ignore it) |
-| `src/App/Cli/Runner.cs` | Pass `drillDownKeyPath` (always `null` at this phase) to `ColumnNameResolver.ResolveColumnNames` |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | Signature change (add `drillDownKeyPath` parameter; existing branches ignore it) |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Pass `drillDownKeyPath` (always `null` at this phase) to `ColumnNameResolver.ResolveColumnNames` |
 
 #### FormatDetector Split
 
@@ -144,7 +144,7 @@ Another effect, unforeseen at design time: a zero-byte input file now fails with
 | File | Change |
 |---|---|
 | `src/App/FormatDetector.cs` | Rename `Detect` → `DetectInputFile`; add new `DetectOutputFile` (extension-only) |
-| `src/App/Cli/Runner.cs` | Delete private `DetectFileFormat`; call `FormatDetector.DetectInputFile(args.InputFile)` / `FormatDetector.DetectOutputFile(args.OutputFile)`, handling `Result<DataFormat>` failure explicitly |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Delete private `DetectFileFormat`; call `FormatDetector.DetectInputFile(args.InputFile)` / `FormatDetector.DetectOutputFile(args.OutputFile)`, handling `Result<DataFormat>` failure explicitly |
 | `src/App/AppKeyHandler.cs`, `FileDialogHandler.cs`, `RecipeCommandHandler.cs`, `ViewManager.cs` | Rename `FormatDetector.Detect(...)` call sites to `FormatDetector.DetectInputFile(...)` |
 
 **Unit Tests**
@@ -152,7 +152,7 @@ Another effect, unforeseen at design time: a zero-byte input file now fails with
 | File | Change |
 |---|---|
 | `tests/Refedle.Tests/App/FormatDetectorTests.cs` | Already exists. Rename existing `Detect` test cases to `DetectInputFile`; add new test cases for `DetectOutputFile` (extension-only mapping, including `.json`→`JsonArray` and the unsupported-extension failure case) |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Already exists. `RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1` / `RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1`: switch the test fixture from `.json` to a genuinely never-supported extension (e.g. `.xml`) so these tests stay valid once Phase 3 adds `.json` support, and update the expected message to match `FormatDetector`'s wording. `RunAsync_WithUnknownExtension_ReturnsExitCode1`: update the expected message to match `FormatDetector`'s wording (exact message text decided at implementation time). Remove `RunAsync_JsonLinesToCsv_WithZeroRecordInput` / `RunAsync_JsonLinesToJsonLines_WithZeroRecordInput` (their `""` case is now an error, and the newline-only case is not a real scenario worth a contract); add one test asserting a zero-byte input file returns exit code 1 with the `File is empty` message |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.cs` | Already exists. `RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1` / `RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1`: switch the test fixture from `.json` to a genuinely never-supported extension (e.g. `.xml`) so these tests stay valid once Phase 3 adds `.json` support, and update the expected message to match `FormatDetector`'s wording. `RunAsync_WithUnknownExtension_ReturnsExitCode1`: update the expected message to match `FormatDetector`'s wording (exact message text decided at implementation time). Remove `RunAsync_JsonLinesToCsv_WithZeroRecordInput` / `RunAsync_JsonLinesToJsonLines_WithZeroRecordInput` (their `""` case is now an error, and the newline-only case is not a real scenario worth a contract); add one test asserting a zero-byte input file returns exit code 1 with the `File is empty` message |
 
 #### JsonLinesRecordReader Zero-Record Path
 
@@ -162,9 +162,9 @@ Another effect, unforeseen at design time: a zero-byte input file now fails with
 
 | File | Change |
 |---|---|
-| `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Remove the `TotalRows == 0` branch that constructs the reader with a `null` `RowReader` |
-| `src/App/Cli/JsonLinesRecordReader.cs` | Constructor parameter `RowReader? rowReader` → `RowReader rowReader`; `_rowReader` field stays `RowReader?` with the `Dispose` `_rowReader = null` and the `_rowReader is null` guard in `MoveNextAsync` kept; update the zero-record explanatory comment to reflect that `null` now only arises post-dispose |
-| `src/App/Cli/ColumnNameResolver.cs` | Remove the `if (rowIndexer.TotalRows == 0) return [];` guard in `ResolveJsonLinesColumnNames` and its zero-record comment |
+| `src/App/Cli/IO/Factories/JsonLinesRecordReaderFactory.cs` | Remove the `TotalRows == 0` branch that constructs the reader with a `null` `RowReader` |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | Constructor parameter `RowReader? rowReader` → `RowReader rowReader`; `_rowReader` field stays `RowReader?` with the `Dispose` `_rowReader = null` and the `_rowReader is null` guard in `MoveNextAsync` kept; update the zero-record explanatory comment to reflect that `null` now only arises post-dispose |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | Remove the `if (rowIndexer.TotalRows == 0) return [];` guard in `ResolveJsonLinesColumnNames` and its zero-record comment |
 
 ### Phase 3: Extract JSON Array/Object DrillDown Rows
 
@@ -185,20 +185,20 @@ internal static class DrillDownRecipeValidator
 
 | File | Change |
 |---|---|
-| `src/App/Cli/DrillDownRecipeValidator.cs` | New |
-| `src/App/Cli/Runner.cs` | Call `DrillDownRecipeValidator.Validate(inputFormat, recipe)` after recipe load and input format detection; handle failure with the existing early-return pattern |
+| `src/App/Cli/Commands/Apply/DrillDownRecipeValidator.cs` | New |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Call `DrillDownRecipeValidator.Validate(inputFormat, recipe)` after recipe load and input format detection; handle failure with the existing early-return pattern |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/DrillDownRecipeValidatorTests.cs` | New |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/DrillDownRecipeValidatorTests.cs` | New |
 
 #### JsonObjectCellReader (shared typed cell extraction)
 
 Both DrillDown readers below (and the existing `JsonLinesRecordReader`) decode a typed `CellData` from one JSON object's bytes by column name into a pooled `char[]`. That logic — currently inline in `JsonLinesRecordReader.GetCellData` — moves to a shared static `JsonObjectCellReader.ReadCell`, with `PooledValueBuffer` (promoted from a private nested type of `JsonLinesRecordReader` to a standalone `internal sealed class`) passed in and still owned by each reader. See ADR-7.
 
-`src/App/Cli/JsonObjectCellReader.cs`
+`src/App/Cli/IO/Json/JsonObjectCellReader.cs`
 
 ```csharp
 internal static class JsonObjectCellReader
@@ -217,16 +217,16 @@ Each reader keeps `private readonly Memory<byte>[] _columnNameUtf8Bytes;` and `p
 
 | File | Change |
 |---|---|
-| `src/App/Cli/JsonObjectCellReader.cs` | New |
+| `src/App/Cli/IO/Json/JsonObjectCellReader.cs` | New |
 | `src/App/Cli/PooledValueBuffer.cs` | New (promoted from `JsonLinesRecordReader.PooledValueBuffer.cs`, unchanged) |
 | `src/App/Cli/JsonLinesRecordReader.PooledValueBuffer.cs` | Deleted (promoted) |
-| `src/App/Cli/JsonLinesRecordReader.cs` | `GetCellData` delegates to `JsonObjectCellReader.ReadCell`; remove `ReadPropertyValue` / `NumberToCellData` / `ObjectOrArrayToCellData` / `StringToCellData` |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | `GetCellData` delegates to `JsonObjectCellReader.ReadCell`; remove `ReadPropertyValue` / `NumberToCellData` / `ObjectOrArrayToCellData` / `StringToCellData` |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/JsonObjectCellReaderTests.cs` | New — the cell-decoding branch cases move here from `JsonLinesRecordReaderTests.GetCellData.PooledBuffer.cs` (pooled-buffer reuse, span invalidation, number/string/object/array/bool/null) |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonObjectCellReaderTests.cs` | New — the cell-decoding branch cases move here from `JsonLinesRecordReaderTests.GetCellData.PooledBuffer.cs` (pooled-buffer reuse, span invalidation, number/string/object/array/bool/null) |
 | `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.GetCellData.PooledBuffer.cs` | Deleted (cases moved) |
 
 #### JsonObjectRecordReader (Single DrillDown)
@@ -267,10 +267,10 @@ internal struct JsonObjectRecordReader : IRecordReader
 
 | File | Change |
 |---|---|
-| `src/App/Cli/JsonObjectRecordReader.cs` | New |
-| `src/App/Cli/Factories/JsonObjectRecordReaderFactory.cs` | New |
-| `src/App/Cli/ColumnNameResolver.cs` | `ResolveColumnNames` → `ResolveColumnNamesAsync` returning `Task<Result<IReadOnlyList<string>>>` (async forced by the `JsonObject` branch's `File.ReadAllBytesAsync` — MA0045); existing branches wrap in `Results.Success`. Add the `JsonObject` branch: reject null/empty `drillDownKeyPath` with the TUI message, else `KeyPathNodeResolver` + `DrillDownSchemaExtractor`, propagating failures as `Results.Failure` |
-| `src/App/Cli/Runner.cs` | `await` + handle the new `Result` with the existing early-return (`Error resolving columns: {error}`); still passes `drillDownKeyPath: null` (Phase 5 wires the real value) |
+| `src/App/Cli/IO/Json/JsonObjectRecordReader.cs` | New |
+| `src/App/Cli/IO/Factories/JsonObjectRecordReaderFactory.cs` | New |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | `ResolveColumnNames` → `ResolveColumnNamesAsync` returning `Task<Result<IReadOnlyList<string>>>` (async forced by the `JsonObject` branch's `File.ReadAllBytesAsync` — MA0045); existing branches wrap in `Results.Success`. Add the `JsonObject` branch: reject null/empty `drillDownKeyPath` with the TUI message, else `KeyPathNodeResolver` + `DrillDownSchemaExtractor`, propagating failures as `Results.Failure` |
+| `src/App/Cli/Commands/Apply/Runner.cs` | `await` + handle the new `Result` with the existing early-return (`Error resolving columns: {error}`); still passes `drillDownKeyPath: null` (Phase 5 wires the real value) |
 | `src/App/GlobalSuppressions.cs` | Drop the `IDE0060` suppression for `ResolveColumnNames`; add a CA1001 suppression for the `JsonObjectRecordReader` struct (same false positive as `JsonLinesRecordReader`) |
 
 #### FullAggregationRecordReader (Full Aggregation DrillDown)
@@ -303,7 +303,7 @@ public static class FullAggregationRowExtractor
 }
 ```
 
-`src/App/Cli/IBatchSourceReader.cs`
+`src/App/Cli/IO/IBatchSourceReader.cs`
 
 ```csharp
 internal interface IBatchSourceReader : IDisposable
@@ -312,7 +312,7 @@ internal interface IBatchSourceReader : IDisposable
 }
 ```
 
-`src/App/Cli/JsonArrayBatchSourceReader.cs`
+`src/App/Cli/IO/Json/JsonArrayBatchSourceReader.cs`
 
 ```csharp
 internal readonly struct JsonArrayBatchSourceReader(ElementReader reader) : IBatchSourceReader
@@ -323,7 +323,7 @@ internal readonly struct JsonArrayBatchSourceReader(ElementReader reader) : IBat
 }
 ```
 
-`src/App/Cli/FullAggregationRecordReader.cs`
+`src/App/Cli/IO/Json/FullAggregationRecordReader.cs`
 
 ```csharp
 internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
@@ -337,7 +337,7 @@ internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
 }
 ```
 
-`src/App/Cli/Factories/JsonArrayRecordReaderFactory.cs`
+`src/App/Cli/IO/Factories/JsonArrayRecordReaderFactory.cs`
 
 ```csharp
 [RecordReader(DataFormat.JsonArray)]
@@ -355,11 +355,11 @@ internal readonly struct JsonArrayRecordReaderFactory
 |---|---|
 | `src/Engine/IO/DrillDown/FullAggregationSchemaScanner.cs` | New |
 | `src/Engine/IO/DrillDown/FullAggregationRowExtractor.cs` | New |
-| `src/App/Cli/IBatchSourceReader.cs` | New |
-| `src/App/Cli/JsonArrayBatchSourceReader.cs` | New |
-| `src/App/Cli/FullAggregationRecordReader.cs` | New |
-| `src/App/Cli/Factories/JsonArrayRecordReaderFactory.cs` | New |
-| `src/App/Cli/ColumnNameResolver.cs` | Add `JsonArray` branch: call `FullAggregationSchemaScanner.Scan` |
+| `src/App/Cli/IO/IBatchSourceReader.cs` | New |
+| `src/App/Cli/IO/Json/JsonArrayBatchSourceReader.cs` | New |
+| `src/App/Cli/IO/Json/FullAggregationRecordReader.cs` | New |
+| `src/App/Cli/IO/Factories/JsonArrayRecordReaderFactory.cs` | New |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | Add `JsonArray` branch: call `FullAggregationSchemaScanner.Scan` |
 | `src/Generators/FormatDispatcherGenerator.cs` | `ExtractCreatedType` slices at the outermost `>` (`LastIndexOf`) so a nested-generic reader type (`FullAggregationRecordReader<JsonArrayBatchSourceReader>`) survives intact |
 
 **Unit Tests**
@@ -368,10 +368,10 @@ internal readonly struct JsonArrayRecordReaderFactory
 |---|---|
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationSchemaScannerTests.cs` | New |
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationRowExtractorTests.cs` | New |
-| `tests/Refedle.Tests/App/Cli/FullAggregationRecordReaderTests.JsonArrayBatchSourceReader.cs` | New |
-| `tests/Refedle.Tests/App/Cli/JsonArrayBatchSourceReaderTests.cs` | New — direct adapter coverage (ReadBatch, delegated disposal) |
-| `tests/Refedle.Tests/App/Cli/ColumnNameResolverTests.cs` | Already exists. Add test case for the new `JsonArray` branch |
-| `tests/Refedle.Tests/App/Cli/Factories/JsonArrayRecordReaderFactoryTests.cs` | New |
+| `tests/Refedle.Tests/App/Cli/IO/Json/FullAggregationRecordReaderTests.JsonArrayBatchSourceReader.cs` | New |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonArrayBatchSourceReaderTests.cs` | New — direct adapter coverage (ReadBatch, delegated disposal) |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/ColumnNameResolverTests.cs` | Already exists. Add test case for the new `JsonArray` branch |
+| `tests/Refedle.Tests/App/Cli/IO/Factories/JsonArrayRecordReaderFactoryTests.cs` | New |
 | `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` | Add a nested-generic reader-factory regression case (closed generic type kept intact in the generated `ProcessAsync<...>`) |
 
 ### Phase 4: JSON Output Writer
@@ -398,18 +398,18 @@ internal interface IRecordWriter : IDisposable, IAsyncDisposable
 
 | File | Change |
 |---|---|
-| `src/App/Cli/IRecordWriter.cs` | Add `WriteFooterAsync` |
-| `src/App/Cli/RecordProcessor.cs` | Call `writer.WriteFooterAsync(ct)` after the loop, before `FlushAsync` |
-| `src/App/Cli/CsvRecordWriter.cs` | Add no-op `WriteFooterAsync` |
-| `src/App/Cli/JsonLinesRecordWriter.cs` | Add no-op `WriteFooterAsync` |
+| `src/App/Cli/IO/IRecordWriter.cs` | Add `WriteFooterAsync` |
+| `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Call `writer.WriteFooterAsync(ct)` after the loop, before `FlushAsync` |
+| `src/App/Cli/IO/Csv/CsvRecordWriter.cs` | Add no-op `WriteFooterAsync` |
+| `src/App/Cli/IO/Json/JsonLinesRecordWriter.cs` | Add no-op `WriteFooterAsync` |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/CsvRecordWriterTests.cs` | Add case: `WriteFooterAsync` is a no-op |
-| `tests/Refedle.Tests/App/Cli/JsonLinesRecordWriterTests.cs` | Add case: `WriteFooterAsync` is a no-op |
-| `tests/Refedle.Tests/App/Cli/RecordProcessorTests.cs` (if it exists) | Add case: `WriteFooterAsync` is called once, after the loop and before `FlushAsync` |
+| `tests/Refedle.Tests/App/Cli/IO/Csv/CsvRecordWriterTests.cs` | Add case: `WriteFooterAsync` is a no-op |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonLinesRecordWriterTests.cs` | Add case: `WriteFooterAsync` is a no-op |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RecordProcessorTests.cs` (if it exists) | Add case: `WriteFooterAsync` is called once, after the loop and before `FlushAsync` |
 
 #### `JsonCellWriter` (extracted from `JsonLinesRecordWriter`)
 
@@ -427,8 +427,8 @@ internal static class JsonCellWriter
 
 | File | Change |
 |---|---|
-| `src/App/Cli/JsonCellWriter.cs` | New |
-| `src/App/Cli/JsonLinesRecordWriter.cs` | Replace `WriteCellData` body with a call to `JsonCellWriter.WriteCellData(_jsonWriter, _outputSchema, outputColumnIndex, cell)` |
+| `src/App/Cli/IO/Json/JsonCellWriter.cs` | New |
+| `src/App/Cli/IO/Json/JsonLinesRecordWriter.cs` | Replace `WriteCellData` body with a call to `JsonCellWriter.WriteCellData(_jsonWriter, _outputSchema, outputColumnIndex, cell)` |
 | `src/App/Cli/PooledBufferWriter.cs` | New (promoted from `JsonLinesRecordWriter.PooledBufferWriter.cs`, unchanged) |
 | `src/App/Cli/JsonLinesRecordWriter.PooledBufferWriter.cs` | Deleted (promoted) |
 
@@ -436,7 +436,7 @@ internal static class JsonCellWriter
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/JsonCellWriterTests.cs` | New — covers the cell-encoding branches moved out of `JsonLinesRecordWriterTests` |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonCellWriterTests.cs` | New — covers the cell-encoding branches moved out of `JsonLinesRecordWriterTests` |
 
 #### `JsonArrayRecordWriter`
 
@@ -486,14 +486,14 @@ internal readonly struct JsonArrayRecordWriterFactory : IRecordWriterFactory<Jso
 
 | File | Change |
 |---|---|
-| `src/App/Cli/JsonArrayRecordWriter.cs` | New |
-| `src/App/Cli/Factories/JsonArrayRecordWriterFactory.cs` | New |
+| `src/App/Cli/IO/Json/JsonArrayRecordWriter.cs` | New |
+| `src/App/Cli/IO/Factories/JsonArrayRecordWriterFactory.cs` | New |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/JsonArrayRecordWriterTests.cs` | New — covers empty-array (`[]`), single-record, and multi-record (comma placement) output shapes |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonArrayRecordWriterTests.cs` | New — covers empty-array (`[]`), single-record, and multi-record (comma placement) output shapes |
 
 ### Phase 5: Wire `DrillDownKeyPath` from Runner to Reader Factory
 
@@ -560,13 +560,13 @@ internal static class FormatDispatcher
 
 | File | Change |
 |---|---|
-| `src/App/Cli/Runner.cs` | Pass `recipe.DrillDownKeyPath` (instead of `null`) to `ColumnNameResolver.ResolveColumnNamesAsync` and to `Generated.FormatDispatcher.DispatchAsync` |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Pass `recipe.DrillDownKeyPath` (instead of `null`) to `ColumnNameResolver.ResolveColumnNamesAsync` and to `Generated.FormatDispatcher.DispatchAsync` |
 
 **Unit Tests**
 
 | File | Change |
 |---|---|
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Add/update test case(s) verifying `recipe.DrillDownKeyPath` reaches `ColumnNameResolver`/`FormatDispatcher.DispatchAsync` |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.cs` | Add/update test case(s) verifying `recipe.DrillDownKeyPath` reaches `ColumnNameResolver`/`FormatDispatcher.DispatchAsync` |
 
 ### Phase 6: Extend DrillDown to JSON Lines Input
 
@@ -580,7 +580,7 @@ Bare (non-DrillDown) and Full Aggregation DrillDown reading are held in a single
 |---|---|
 | `src/App/Cli/JsonLinesRecordReader.cs` | `src/App/Cli/BareJsonLinesRecordReader.cs` (logic unchanged) |
 
-`PooledValueBuffer` is already a standalone `src/App/Cli/PooledValueBuffer.cs` (Phase 3 §2), so the bare rename is a single file.
+`PooledValueBuffer` is already a standalone `src/App/Cli/IO/PooledValueBuffer.cs` (Phase 3 §2), so the bare rename is a single file.
 
 #### `JsonLinesRecordReader` (dispatch struct)
 
@@ -714,13 +714,13 @@ DataFormat.JsonLines => drillDownKeyPath is null
 
 | File | Change |
 |---|---|
-| `src/App/Cli/JsonLinesRecordReader.cs` | Replace contents with the new dispatch struct |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | Replace contents with the new dispatch struct |
 | `src/App/Cli/BareJsonLinesRecordReader.cs` | New (renamed from `JsonLinesRecordReader.cs`, logic unchanged) |
-| `src/App/Cli/JsonLinesBatchSourceReader.cs` | New |
-| `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Branch on `drillDownKeyPath`; add `using Refedle.Engine.IO.JsonLines;` |
-| `src/App/Cli/ColumnNameResolver.cs` | Add a `drillDownKeyPath` branch to the `JsonLines` arm |
+| `src/App/Cli/IO/Json/JsonLinesBatchSourceReader.cs` | New |
+| `src/App/Cli/IO/Factories/JsonLinesRecordReaderFactory.cs` | Branch on `drillDownKeyPath`; add `using Refedle.Engine.IO.JsonLines;` |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | Add a `drillDownKeyPath` branch to the `JsonLines` arm |
 | `src/App/GlobalSuppressions.cs` | Update any `Target` strings referencing `JsonLinesRecordReader` |
-| `benchmarks/Refedle.Benchmarks/App/Cli/JsonLinesRecordReaderBenchmarks.cs` | Point at `BareJsonLinesRecordReader` (keeps the bare-path benchmark) |
+| `benchmarks/Refedle.Benchmarks/App/Cli/IO/Json/JsonLinesRecordReaderBenchmarks.cs` | Point at `BareJsonLinesRecordReader` (keeps the bare-path benchmark) |
 | `benchmarks/Refedle.Benchmarks/GlobalSuppressions.cs` | Update the two `Target` strings referencing `JsonLinesRecordReaderBenchmarks` |
 
 #### Unit Tests
@@ -728,12 +728,12 @@ DataFormat.JsonLines => drillDownKeyPath is null
 | File | Change |
 |---|---|
 | `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.cs` → `BareJsonLinesRecordReaderTests.cs` | Rename; `new JsonLinesRecordReader(...)` → `new BareJsonLinesRecordReader(...)` (constructs the struct directly, assertions unchanged) |
-| `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.cs` | New — dispatch contract: `[Theory]` over `bool drillDown`, exercising every `IRecordReader` member in both modes |
-| `tests/Refedle.Tests/App/Cli/JsonLinesBatchSourceReaderTests.cs` | New |
-| `tests/Refedle.Tests/App/Cli/FullAggregationRecordReaderTests.JsonLinesBatchSourceReader.cs` | New (pairs with the Phase 3 `.JsonArrayBatchSourceReader.cs`) |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonLinesRecordReaderTests.cs` | New — dispatch contract: `[Theory]` over `bool drillDown`, exercising every `IRecordReader` member in both modes |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonLinesBatchSourceReaderTests.cs` | New |
+| `tests/Refedle.Tests/App/Cli/IO/Json/FullAggregationRecordReaderTests.JsonLinesBatchSourceReader.cs` | New (pairs with the Phase 3 `.JsonArrayBatchSourceReader.cs`) |
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationSchemaScannerTests.cs` | Add JSON Lines input cases; drop `JsonLines` from the format-unreachable theory |
-| `tests/Refedle.Tests/App/Cli/ColumnNameResolverTests.cs` | Add a `JsonLines` + DrillDown case |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.DrillDown.cs` | Add a JSON Lines DrillDown → JSON output end-to-end case (the silent bug this phase fixes) |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/ColumnNameResolverTests.cs` | Add a `JsonLines` + DrillDown case |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.DrillDown.cs` | Add a JSON Lines DrillDown → JSON output end-to-end case (the silent bug this phase fixes) |
 | `tests/Refedle.Tests/Generators/FormatDispatcherGeneratorTests.cs` | No change (asserts the generated source is unchanged) |
 
 ### Phase 7: E2E Tests

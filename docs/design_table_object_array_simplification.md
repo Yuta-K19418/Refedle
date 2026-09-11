@@ -11,7 +11,7 @@ helper. Confirmed callers beyond Table Mode's `JsonLinesTableSource`:
 - `src/App/Cli/FilterEvaluator.cs` — CLI filter evaluation.
 - `src/Engine/IO/JsonLines/FilterRowIndexer.cs` — background filter-row indexing, shared by
   Table Mode and DrillDown.
-- `src/App/Cli/JsonLinesRecordReader.cs` — CLI export pipeline.
+- `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` — CLI export pipeline.
 
 Changing `ExtractCell`'s output therefore changes what DrillDown renders and what the CLI
 filter/export pipeline sees for nested columns too, not just the Table Mode grid. This is

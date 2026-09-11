@@ -178,7 +178,7 @@ Introduces the per-format dispatch and the JSON Lines full-file batch-read loop,
 
 Unlike `FormatDispatcherGenerator` (reader × writer), this dispatch is not combinatorial — it depends on `inputFormat` only, so it stays linear (one `case` per format) as new formats are added, never an M×N matrix. It also isn't a hot path (called once per CLI run, not once per row), so there's no boxing/devirtualization concern motivating struct+generics either. Neither condition that justifies `FormatDispatcherGenerator` (see `design_cli_headless_batch_processing.md`'s Decision Record) applies here, so a hand-written `switch` in one small class is used instead — `Runner.cs` still never branches by hand; it always calls the same one line.
 
-**File**: `src/App/Cli/ColumnNameResolver.cs` (new)
+**File**: `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` (new)
 
 ```csharp
 namespace Refedle.App.Cli;
@@ -234,7 +234,7 @@ No `Task.Run`, no `async`/`ValueTask`: neither branch does genuine asynchronous 
 
 #### `Runner.cs` changes
 
-**File**: `src/App/Cli/Runner.cs`
+**File**: `src/App/Cli/Commands/Apply/Runner.cs`
 
 ```csharp
 var inputFormat = DetectFileFormat(args.InputFile);
@@ -256,10 +256,10 @@ return await Generated.FormatDispatcher.DispatchAsync(inputFormat, outputFormat,
 
 | File | Change |
 |---|---|
-| `src/App/Cli/ColumnNameResolver.cs` | New; per-format dispatch (`switch`) and JSON Lines full-file batch-read loop |
-| `src/App/Cli/Runner.cs` | Replace `ScanInputSchemaAsync`/`IncrementalSchemaScanner` usage with `ColumnNameResolver.ResolveColumnNames` |
-| `tests/Refedle.Tests/App/Cli/ColumnNameResolverTests.cs` | New; per-format dispatch, JSON Lines batch-boundary and cancellation cases |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | Update/add integration cases: a column first appearing after row 200 is included in CLI batch output |
+| `src/App/Cli/Commands/Apply/ColumnNameResolver.cs` | New; per-format dispatch (`switch`) and JSON Lines full-file batch-read loop |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Replace `ScanInputSchemaAsync`/`IncrementalSchemaScanner` usage with `ColumnNameResolver.ResolveColumnNames` |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/ColumnNameResolverTests.cs` | New; per-format dispatch, JSON Lines batch-boundary and cancellation cases |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.cs` | Update/add integration cases: a column first appearing after row 200 is included in CLI batch output |
 
 ### Phase 3: Simplify `ActionApplier.BuildOutputSchema` and remove `TableSchema` from the CLI path
 
@@ -391,7 +391,7 @@ The `(string Name, ColumnType Type, int ColumnIndex, string OutputName)` tuple l
 
 #### `JsonLinesRecordReader` constructor
 
-**File**: `src/App/Cli/JsonLinesRecordReader.cs`
+**File**: `src/App/Cli/IO/Json/JsonLinesRecordReader.cs`
 
 ```csharp
 public JsonLinesRecordReader(RowIndexer rowIndexer, RowReader rowReader, IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema)
@@ -417,7 +417,7 @@ Replaces `inputSchema.Columns.ToDictionary(c => c.ColumnIndex, c => (ReadOnlyMem
 
 #### Reader factory interface and implementations
 
-**File**: `src/App/Cli/Factories/IRecordReaderFactory.cs`
+**File**: `src/App/Cli/IO/Factories/IRecordReaderFactory.cs`
 
 ```csharp
 internal interface IRecordReaderFactory<TReader> where TReader : struct, IRecordReader
@@ -443,14 +443,14 @@ Every emitted `TableSchema inputSchema` parameter (in both `DispatchAsync` and e
 | File | Change |
 |---|---|
 | `src/Engine/ActionApplier.cs` | `BuildOutputSchema` takes `IReadOnlyList<string>`; `workingColumns` tuple drops `ColumnType`; `ApplyCast` becomes an inline no-op; unused `using Refedle.Engine.Types;` removed |
-| `src/App/Cli/JsonLinesRecordReader.cs` | Constructor takes `IReadOnlyList<string> inputColumnNames` instead of `TableSchema inputSchema` |
-| `src/App/Cli/Factories/IRecordReaderFactory.cs` | `CreateAsync` parameter retyped |
-| `src/App/Cli/Factories/CsvRecordReaderFactory.cs` | Parameter retyped (still unused) |
-| `src/App/Cli/Factories/JsonLinesRecordReaderFactory.cs` | Parameter retyped, passed through |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | Constructor takes `IReadOnlyList<string> inputColumnNames` instead of `TableSchema inputSchema` |
+| `src/App/Cli/IO/Factories/IRecordReaderFactory.cs` | `CreateAsync` parameter retyped |
+| `src/App/Cli/IO/Factories/CsvRecordReaderFactory.cs` | Parameter retyped (still unused) |
+| `src/App/Cli/IO/Factories/JsonLinesRecordReaderFactory.cs` | Parameter retyped, passed through |
 | `src/Generators/FormatDispatcherGenerator.cs` | Emitted signatures retyped; possibly drops an emitted `using` |
-| `src/App/Cli/Runner.cs` | Possible unused-`using` cleanup |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Possible unused-`using` cleanup |
 | `tests/Refedle.Tests/Engine/ActionApplierTests.cs` | ~30 call sites: replace constructed `TableSchema` with plain `IReadOnlyList<string>` (e.g. `["A", "B"]`); test intent unchanged |
-| `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.cs` | Shared `BuildSchemas` helper (constructs `TableSchema` today) updated to build `IReadOnlyList<string>` instead |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonLinesRecordReaderTests.cs` | Shared `BuildSchemas` helper (constructs `TableSchema` today) updated to build `IReadOnlyList<string>` instead |
 
 ## Architecture Decision Log
 

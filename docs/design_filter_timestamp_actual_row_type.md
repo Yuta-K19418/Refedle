@@ -43,7 +43,7 @@ today. `FilterSpec` is used unchanged throughout this phase.
 `App/Cli/FilterEvaluator.cs` is deleted. Its logic is absorbed into the two
 readers, which already own the filter-invocation call site.
 
-**File**: `src/App/Cli/CsvRecordReader.cs`
+**File**: `src/App/Cli/IO/Csv/CsvRecordReader.cs`
 
 ```csharp
 private readonly IReadOnlyList<FilterSpec> _filters; // unchanged type in this phase
@@ -74,7 +74,7 @@ public readonly bool EvaluateFilters()
 }
 ```
 
-**File**: `src/App/Cli/JsonLinesRecordReader.cs`
+**File**: `src/App/Cli/IO/Json/JsonLinesRecordReader.cs`
 
 ```csharp
 private readonly IReadOnlyList<FilterSpec> _filters; // unchanged type in this phase
@@ -144,8 +144,8 @@ instead of the removed `FilterEvaluator.IsWhiteSpace`.
 | File | Change |
 |---|---|
 | `src/App/Cli/FilterEvaluator.cs` | Deleted |
-| `src/App/Cli/CsvRecordReader.cs` | Absorbs `EvaluateCsvFilters` logic |
-| `src/App/Cli/JsonLinesRecordReader.cs` | Absorbs `EvaluateJsonFilters` logic |
+| `src/App/Cli/IO/Csv/CsvRecordReader.cs` | Absorbs `EvaluateCsvFilters` logic |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | Absorbs `EvaluateJsonFilters` logic |
 | `src/Engine/Utilities/StringUtility.cs` | New; houses relocated `IsWhiteSpace` |
 
 ### Phase 2: Type Resolution Logic (behavior change)
@@ -291,7 +291,7 @@ public sealed record BatchOutputSchema(
 
 #### Readers: switch to `BatchFilterSpec`
 
-**Files**: `src/App/Cli/CsvRecordReader.cs`, `src/App/Cli/JsonLinesRecordReader.cs`
+**Files**: `src/App/Cli/IO/Csv/CsvRecordReader.cs`, `src/App/Cli/IO/Json/JsonLinesRecordReader.cs`
 
 ```csharp
 private readonly IReadOnlyList<BatchFilterSpec> _filters; // was FilterSpec after Phase 1
@@ -309,5 +309,5 @@ call site now resolves to the new `BatchFilterSpec` overload.
 | `src/Engine/Filtering/FilterEvaluator.cs` | Extract shared `Evaluate`; add `BatchFilterSpec` overload with per-row resolution |
 | `src/Engine/ActionApplier.cs` | `ApplyFilter` builds `BatchFilterSpec` from `filter.ComparisonType`; `ApplyFormatTimestamp` drops the schema-time gate |
 | `src/Engine/BatchOutputSchema.cs` | `Filters` type changes to `IReadOnlyList<BatchFilterSpec>` |
-| `src/App/Cli/CsvRecordReader.cs` | `_filters` field type changes to `BatchFilterSpec` |
-| `src/App/Cli/JsonLinesRecordReader.cs` | `_filters` field type changes to `BatchFilterSpec` |
+| `src/App/Cli/IO/Csv/CsvRecordReader.cs` | `_filters` field type changes to `BatchFilterSpec` |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | `_filters` field type changes to `BatchFilterSpec` |

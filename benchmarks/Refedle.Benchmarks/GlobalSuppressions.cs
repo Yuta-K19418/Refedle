@@ -4,14 +4,14 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Benchmarks.App.Cli.JsonLinesRecordReaderBenchmarks.Setup",
+    Target = "~M:Refedle.Benchmarks.App.Cli.IO.Json.JsonLinesRecordReaderBenchmarks.Setup",
     Justification = "RowReader ownership is transferred to BareJsonLinesRecordReader; Cleanup disposes the reader.")]
 
 [assembly: SuppressMessage(
     "Design",
     "CA1515:Consider making public types internal",
     Scope = "type",
-    Target = "~T:Refedle.Benchmarks.App.Cli.JsonLinesRecordReaderBenchmarks",
+    Target = "~T:Refedle.Benchmarks.App.Cli.IO.Json.JsonLinesRecordReaderBenchmarks",
     Justification = "BenchmarkDotNet generates a derived type in a separate assembly.")]
 [assembly: SuppressMessage(
     "Design",

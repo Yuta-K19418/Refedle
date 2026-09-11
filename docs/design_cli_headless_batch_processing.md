@@ -43,9 +43,9 @@ match the input format (e.g., `.csv` input → `.jsonl` output is valid).
 
 | File | Purpose |
 |------|---------|
-| `src/App/Cli/Arguments.cs` | Record holding validated CLI argument values |
-| `src/App/Cli/ArgumentParser.cs` | Parses `string[]` into `Result<Arguments>` |
-| `src/App/Cli/Runner.cs` | Orchestrates recipe load → schema detection → transform → write for both formats |
+| `src/App/Cli/Parsing/Arguments.cs` | Record holding validated CLI argument values |
+| `src/App/Cli/Parsing/ArgumentParser.cs` | Parses `string[]` into `Result<Arguments>` |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Orchestrates recipe load → schema detection → transform → write for both formats |
 
 ### Modified
 
@@ -58,8 +58,8 @@ match the input format (e.g., `.csv` input → `.jsonl` output is valid).
 | File | Covers |
 |------|--------|
 | `tests/Refedle.Tests/Engine/ActionApplierTests.cs` | `ActionApplier.BuildOutputSchema` under all action combinations |
-| `tests/Refedle.Tests/App/Cli/ArgumentParserTests.cs` | All valid and invalid argument scenarios |
-| `tests/Refedle.Tests/App/Cli/RunnerTests.cs` | End-to-end: real temp files for both CSV and JSON Lines, verifies output content |
+| `tests/Refedle.Tests/App/Cli/Parsing/ArgumentParserTests.cs` | All valid and invalid argument scenarios |
+| `tests/Refedle.Tests/App/Cli/Commands/Apply/RunnerTests.cs` | End-to-end: real temp files for both CSV and JSON Lines, verifies output content |
 
 ---
 

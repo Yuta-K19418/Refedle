@@ -92,7 +92,7 @@ This activates the commented-out extension point already present in
 | `src/Engine/Models/JsonContext.cs` | Add `[JsonSerializable(typeof(FormatTimestampAction))]` |
 | `src/Engine/Models/CellTransformSpec.cs` | Uncomment / add `TimestampFormatSpec` subtype |
 | `src/Engine/ActionApplier.cs` | Handle `FormatTimestampAction`; validate column type; emit `TimestampFormatSpec` |
-| `src/App/Cli/RecordProcessor.cs` | Add `TimestampFormatSpec` arm to the transform switch |
+| `src/App/Cli/Commands/Apply/RecordProcessor.cs` | Add `TimestampFormatSpec` arm to the transform switch |
 | `src/Engine/Recipes/MorphActionParser.cs` | Add `"format_timestamp"` case |
 | `src/Engine/Recipes/RecipeYamlSerializer.cs` | Add `FormatTimestampAction` case |
 
@@ -191,7 +191,7 @@ This is a breaking change for all callers. Known call sites:
 
 | Caller | Required change |
 |--------|----------------|
-| `src/App/Cli/Runner.cs` | Unwrap `Result`; propagate failure to `ExitCode.Failure` |
+| `src/App/Cli/Commands/Apply/Runner.cs` | Unwrap `Result`; propagate failure to `ExitCode.Failure` |
 | `tests/Refedle.Tests/Engine/ActionApplierTests.cs` | All existing tests unwrap `.Value` or assert on `Result.IsSuccess` |
 
 ---

@@ -60,10 +60,10 @@
 
 | File | Change |
 |------|--------|
-| `src/App/Cli/JsonLinesRecordReader.cs` | Main change — see "Implementation Approach" below |
-| `src/App/Cli/IRecordReader.cs` | XML doc update only: document on `GetCellData` that the returned `CellData.Value` is valid only until the next `GetCellData` call, and becomes invalid once the reader is `Dispose()`d |
-| `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderTests.cs` | Add cases for buffer reuse across cells, growth beyond the initial size, escape-sequence resolution, and the empty-string boundary |
-| `tests/Refedle.Tests/App/Cli/JsonLinesRecordReaderBenchmarks.cs` | **New.** `[MemoryDiagnoser]` benchmark for `GetCellData`, following the `JsonObjectCellExtractorBenchmarks.cs` pattern |
+| `src/App/Cli/IO/Json/JsonLinesRecordReader.cs` | Main change — see "Implementation Approach" below |
+| `src/App/Cli/IO/IRecordReader.cs` | XML doc update only: document on `GetCellData` that the returned `CellData.Value` is valid only until the next `GetCellData` call, and becomes invalid once the reader is `Dispose()`d |
+| `tests/Refedle.Tests/App/Cli/IO/Json/JsonLinesRecordReaderTests.cs` | Add cases for buffer reuse across cells, growth beyond the initial size, escape-sequence resolution, and the empty-string boundary |
+| `benchmarks/Refedle.Benchmarks/App/Cli/IO/Json/JsonLinesRecordReaderBenchmarks.cs` | **New.** `[MemoryDiagnoser]` benchmark for `GetCellData`, following the `JsonObjectCellExtractorBenchmarks.cs` pattern |
 
 No changes to `CsvRecordReader.cs`, `CsvRecordWriter.cs`, `JsonLinesRecordWriter.cs`, `CellData.cs`, `IRecordWriter.cs`, `RecordProcessor.cs`, `JsonByteExtractor.cs`, `JsonObjectCellExtractor.cs`, `ColumnType.cs`, or `TypeInferrer.cs` — see "Out of Scope" above.
 

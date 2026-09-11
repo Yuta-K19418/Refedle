@@ -48,12 +48,9 @@ public sealed class FormatDispatcherGeneratorTests
         }
         """;
 
+    // Each stub mirrors the production layout as its own source: a compilation file
+    // may contain only one file-scoped namespace declaration.
     private const string AppCliStubsSource = """
-        using System;
-        using System.Threading;
-        using System.Threading.Tasks;
-        using Refedle.Engine.Types;
-
         namespace Refedle.App.Cli;
 
         public enum ExitCode
@@ -62,13 +59,24 @@ public sealed class FormatDispatcherGeneratorTests
             Failure,
         }
 
-        public sealed class Arguments
-        {
-        }
-
         public interface IAppLogger
         {
         }
+        """;
+
+    private const string ParsingStubsSource = """
+        namespace Refedle.App.Cli.Parsing;
+
+        public sealed class Arguments
+        {
+        }
+        """;
+
+    private const string IOStubsSource = """
+        using System;
+        using Refedle.Engine.Types;
+
+        namespace Refedle.App.Cli.IO;
 
         public interface IRecordReader : IDisposable
         {
@@ -76,42 +84,6 @@ public sealed class FormatDispatcherGeneratorTests
 
         public interface IRecordWriter : IDisposable, IAsyncDisposable
         {
-        }
-
-        public struct CsvRecordReader : IRecordReader
-        {
-            public void Dispose() { }
-        }
-
-        public struct JsonLinesRecordReader : IRecordReader
-        {
-            public void Dispose() { }
-        }
-
-        public struct CsvRecordWriter : IRecordWriter
-        {
-            public void Dispose() { }
-
-            public ValueTask DisposeAsync() => default;
-        }
-
-        public struct JsonLinesRecordWriter : IRecordWriter
-        {
-            public void Dispose() { }
-
-            public ValueTask DisposeAsync() => default;
-        }
-
-        public static class RecordProcessor
-        {
-            public static ValueTask<ExitCode> ProcessAsync<TReader, TWriter>(
-                TReader reader,
-                TWriter writer,
-                IReadOnlyList<string> columns,
-                CancellationToken ct)
-                where TReader : struct, IRecordReader
-                where TWriter : struct, IRecordWriter
-                => new(ExitCode.Success);
         }
 
         public sealed class RecordReaderAttribute : Attribute
@@ -125,13 +97,69 @@ public sealed class FormatDispatcherGeneratorTests
         }
         """;
 
+    private const string CsvStubsSource = """
+        using System.Threading.Tasks;
+
+        namespace Refedle.App.Cli.IO.Csv;
+
+        public struct CsvRecordReader : IRecordReader
+        {
+            public void Dispose() { }
+        }
+
+        public struct CsvRecordWriter : IRecordWriter
+        {
+            public void Dispose() { }
+
+            public ValueTask DisposeAsync() => default;
+        }
+        """;
+
+    private const string JsonStubsSource = """
+        using System.Threading.Tasks;
+
+        namespace Refedle.App.Cli.IO.Json;
+
+        public struct JsonLinesRecordReader : IRecordReader
+        {
+            public void Dispose() { }
+        }
+
+        public struct JsonLinesRecordWriter : IRecordWriter
+        {
+            public void Dispose() { }
+
+            public ValueTask DisposeAsync() => default;
+        }
+        """;
+
+    private const string ApplyStubsSource = """
+        using System.Threading;
+        using System.Threading.Tasks;
+        using Refedle.App.Cli.IO;
+
+        namespace Refedle.App.Cli.Commands.Apply;
+
+        public static class RecordProcessor
+        {
+            public static ValueTask<ExitCode> ProcessAsync<TReader, TWriter>(
+                TReader reader,
+                TWriter writer,
+                IReadOnlyList<string> columns,
+                CancellationToken ct)
+                where TReader : struct, IRecordReader
+                where TWriter : struct, IRecordWriter
+                => new(ExitCode.Success);
+        }
+        """;
+
     private const string FactoryInterfacesSource = """
         using System.Threading;
         using System.Threading.Tasks;
         using Refedle.Engine;
         using Refedle.Engine.IO.DrillDown;
 
-        namespace Refedle.App.Cli.Factories;
+        namespace Refedle.App.Cli.IO.Factories;
 
         internal interface IRecordReaderFactory<TReader>
             where TReader : struct, IRecordReader
@@ -149,11 +177,13 @@ public sealed class FormatDispatcherGeneratorTests
     private const string AllFactoriesSource = """
         using System.Threading;
         using System.Threading.Tasks;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Json;
         using Refedle.Engine;
         using Refedle.Engine.IO.DrillDown;
         using Refedle.Engine.Types;
 
-        namespace Refedle.App.Cli.Factories;
+        namespace Refedle.App.Cli.IO.Factories;
 
         [RecordReader(DataFormat.Csv)]
         internal readonly struct CsvRecordReaderFactory : IRecordReaderFactory<CsvRecordReader>
@@ -187,11 +217,13 @@ public sealed class FormatDispatcherGeneratorTests
     private const string ReaderFactoriesOnlySource = """
         using System.Threading;
         using System.Threading.Tasks;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Json;
         using Refedle.Engine;
         using Refedle.Engine.IO.DrillDown;
         using Refedle.Engine.Types;
 
-        namespace Refedle.App.Cli.Factories;
+        namespace Refedle.App.Cli.IO.Factories;
 
         [RecordReader(DataFormat.Csv)]
         internal readonly struct CsvRecordReaderFactory : IRecordReaderFactory<CsvRecordReader>
@@ -211,10 +243,12 @@ public sealed class FormatDispatcherGeneratorTests
     private const string WriterFactoriesOnlySource = """
         using System.Threading;
         using System.Threading.Tasks;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Json;
         using Refedle.Engine;
         using Refedle.Engine.Types;
 
-        namespace Refedle.App.Cli.Factories;
+        namespace Refedle.App.Cli.IO.Factories;
 
         [RecordWriter(DataFormat.Csv)]
         internal readonly struct CsvRecordWriterFactory : IRecordWriterFactory<CsvRecordWriter>
@@ -244,7 +278,10 @@ public sealed class FormatDispatcherGeneratorTests
         using Refedle.Engine.Types;
         using Refedle.Engine.IO.DrillDown;
         using Refedle.App.Cli;
-        using Refedle.App.Cli.Factories;
+        using Refedle.App.Cli.Commands.Apply;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Factories;
+        using Refedle.App.Cli.IO.Json;
 
         namespace Refedle.App.Cli.Generated;
 
@@ -356,14 +393,18 @@ public sealed class FormatDispatcherGeneratorTests
 
     // A reader factory whose reader type is itself generic:
     // IRecordReaderFactory<FullAggregationRecordReader<JsonArrayBatchSourceReader>>.
-    private const string NestedGenericReaderStubsSource = """
+    private const string BatchSourceStubsSource = """
         using System;
 
-        namespace Refedle.App.Cli;
+        namespace Refedle.App.Cli.IO;
 
         public interface IBatchSourceReader : IDisposable
         {
         }
+        """;
+
+    private const string NestedGenericReaderStubsSource = """
+        namespace Refedle.App.Cli.IO.Json;
 
         public readonly struct JsonArrayBatchSourceReader : IBatchSourceReader
         {
@@ -380,11 +421,13 @@ public sealed class FormatDispatcherGeneratorTests
     private const string NestedGenericFactoriesSource = """
         using System.Threading;
         using System.Threading.Tasks;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Json;
         using Refedle.Engine;
         using Refedle.Engine.IO.DrillDown;
         using Refedle.Engine.Types;
 
-        namespace Refedle.App.Cli.Factories;
+        namespace Refedle.App.Cli.IO.Factories;
 
         [RecordReader(DataFormat.JsonArray)]
         internal readonly struct JsonArrayRecordReaderFactory : IRecordReaderFactory<FullAggregationRecordReader<JsonArrayBatchSourceReader>>
@@ -414,7 +457,10 @@ public sealed class FormatDispatcherGeneratorTests
         using Refedle.Engine.Types;
         using Refedle.Engine.IO.DrillDown;
         using Refedle.App.Cli;
-        using Refedle.App.Cli.Factories;
+        using Refedle.App.Cli.Commands.Apply;
+        using Refedle.App.Cli.IO.Csv;
+        using Refedle.App.Cli.IO.Factories;
+        using Refedle.App.Cli.IO.Json;
 
         namespace Refedle.App.Cli.Generated;
 
@@ -473,6 +519,12 @@ public sealed class FormatDispatcherGeneratorTests
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
                     ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
+                    ("ParsingStubs.cs", ParsingStubsSource),
+                    ("IOStubs.cs", IOStubsSource),
+                    ("CsvStubs.cs", CsvStubsSource),
+                    ("JsonStubs.cs", JsonStubsSource),
+                    ("ApplyStubs.cs", ApplyStubsSource),
+                    ("BatchSourceStubs.cs", BatchSourceStubsSource),
                     ("NestedGenericReaderStubs.cs", NestedGenericReaderStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("Factories.cs", NestedGenericFactoriesSource),
@@ -506,6 +558,11 @@ public sealed class FormatDispatcherGeneratorTests
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
                     ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
+                    ("ParsingStubs.cs", ParsingStubsSource),
+                    ("IOStubs.cs", IOStubsSource),
+                    ("CsvStubs.cs", CsvStubsSource),
+                    ("JsonStubs.cs", JsonStubsSource),
+                    ("ApplyStubs.cs", ApplyStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("Factories.cs", AllFactoriesSource),
                 },
@@ -538,6 +595,11 @@ public sealed class FormatDispatcherGeneratorTests
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
                     ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
+                    ("ParsingStubs.cs", ParsingStubsSource),
+                    ("IOStubs.cs", IOStubsSource),
+                    ("CsvStubs.cs", CsvStubsSource),
+                    ("JsonStubs.cs", JsonStubsSource),
+                    ("ApplyStubs.cs", ApplyStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("ReaderFactories.cs", ReaderFactoriesOnlySource),
                 },
@@ -566,6 +628,11 @@ public sealed class FormatDispatcherGeneratorTests
                     ("BatchOutputSchema.cs", BatchOutputSchemaSource),
                     ("KeyPathSegment.cs", KeyPathSegmentSource),
                     ("AppCliStubs.cs", AppCliStubsSource),
+                    ("ParsingStubs.cs", ParsingStubsSource),
+                    ("IOStubs.cs", IOStubsSource),
+                    ("CsvStubs.cs", CsvStubsSource),
+                    ("JsonStubs.cs", JsonStubsSource),
+                    ("ApplyStubs.cs", ApplyStubsSource),
                     ("FactoryInterfaces.cs", FactoryInterfacesSource),
                     ("WriterFactories.cs", WriterFactoriesOnlySource),
                 },
