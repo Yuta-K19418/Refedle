@@ -5,70 +5,70 @@ namespace Refedle.Tests.App.Cli.Commands.Update;
 
 public sealed class ChecksumsTests
 {
-    private static readonly string HexA = new('a', 64);
-    private static readonly string HexB = new('b', 64);
+    private static readonly string _hexA = new('a', 64);
+    private static readonly string _hexB = new('b', 64);
 
     [Fact]
     public void FindHex_WithMatchingEntry_ReturnsUpperCaseHex()
     {
         // Arrange
-        var content = $"{HexA}  refedle-v0.3.0-linux-x64.tar.gz\n{HexB}  refedle-v0.3.0-osx-arm64.tar.gz\n";
+        var content = $"{_hexA}  refedle-v0.3.0-linux-x64.tar.gz\n{_hexB}  refedle-v0.3.0-osx-arm64.tar.gz\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle-v0.3.0-osx-arm64.tar.gz");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(HexB.ToUpperInvariant());
+        result.Value.Should().Be(_hexB.ToUpperInvariant());
     }
 
     [Fact]
     public void FindHex_WithUpperCaseHexInFile_NormalizesToUpperCase()
     {
         // Arrange
-        var content = $"{HexA.ToUpperInvariant()}  refedle.tar.gz\n";
+        var content = $"{_hexA.ToUpperInvariant()}  refedle.tar.gz\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle.tar.gz");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(HexA.ToUpperInvariant());
+        result.Value.Should().Be(_hexA.ToUpperInvariant());
     }
 
     [Fact]
     public void FindHex_WithCrlfLineEndings_MatchesEntry()
     {
         // Arrange
-        var content = $"{HexA}  other.tar.gz\r\n{HexB}  refedle.tar.gz\r\n";
+        var content = $"{_hexA}  other.tar.gz\r\n{_hexB}  refedle.tar.gz\r\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle.tar.gz");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(HexB.ToUpperInvariant());
+        result.Value.Should().Be(_hexB.ToUpperInvariant());
     }
 
     [Fact]
     public void FindHex_WithBinaryMarkerPrefix_MatchesFileName()
     {
         // Arrange
-        var content = $"{HexA} *refedle.tar.gz\n";
+        var content = $"{_hexA} *refedle.tar.gz\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle.tar.gz");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(HexA.ToUpperInvariant());
+        result.Value.Should().Be(_hexA.ToUpperInvariant());
     }
 
     [Fact]
     public void FindHex_WhenFileNameIsAbsent_FailsWithNotFoundMessage()
     {
         // Arrange
-        var content = $"{HexA}  refedle-v0.3.0-linux-x64.tar.gz\n";
+        var content = $"{_hexA}  refedle-v0.3.0-linux-x64.tar.gz\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle-v0.3.0-linux-arm64.tar.gz");
@@ -99,13 +99,13 @@ public sealed class ChecksumsTests
     public void FindHex_WithBlankLinesAroundEntry_IgnoresBlankLines()
     {
         // Arrange
-        var content = $"\n\n{HexA}  refedle.tar.gz\n\n";
+        var content = $"\n\n{_hexA}  refedle.tar.gz\n\n";
 
         // Act
         var result = Checksums.FindHex(content, "refedle.tar.gz");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(HexA.ToUpperInvariant());
+        result.Value.Should().Be(_hexA.ToUpperInvariant());
     }
 }

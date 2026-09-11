@@ -13,7 +13,7 @@ public sealed class UpdateCommandTests
     private const string ArchiveName = "refedle-v0.3.0-linux-x64.tar.gz";
     private const string ChecksumsName = "checksums.txt";
 
-    private static readonly byte[] ArchiveBytes = [1, 2, 3, 4, 5];
+    private static readonly byte[] _archiveBytes = [1, 2, 3, 4, 5];
 
     [Fact]
     public async Task RunAsync_WithDevelopmentBuild_SkipsUpdateAndReturnsSuccess()
@@ -67,8 +67,8 @@ public sealed class UpdateCommandTests
     public async Task RunAsync_WhenNewerVersionAvailable_RequestsAssetsInOrderAndWritesExactProgress()
     {
         // Arrange
-        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(ArchiveBytes)}  {ArchiveName}\n");
-        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, ArchiveBytes);
+        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(_archiveBytes)}  {ArchiveName}\n");
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
         var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
@@ -197,7 +197,7 @@ public sealed class UpdateCommandTests
     public async Task RunAsync_WhenArchiveDownloadFails_ReturnsFailureWithoutReplacing()
     {
         // Arrange
-        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(ArchiveBytes)}  {ArchiveName}\n");
+        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(_archiveBytes)}  {ArchiveName}\n");
         var releaseClient = new FakeReleaseClient(
             Results.Success("v0.3.0"),
             checksums,
@@ -221,7 +221,7 @@ public sealed class UpdateCommandTests
     {
         // Arrange
         var wrongChecksums = Encoding.UTF8.GetBytes($"{new string('a', 64)}  {ArchiveName}\n");
-        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), wrongChecksums, ArchiveBytes);
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), wrongChecksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
         var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
@@ -239,8 +239,8 @@ public sealed class UpdateCommandTests
     public async Task RunAsync_WhenBinaryReplacerFails_ReturnsFailure()
     {
         // Arrange
-        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(ArchiveBytes)}  {ArchiveName}\n");
-        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, ArchiveBytes);
+        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(_archiveBytes)}  {ArchiveName}\n");
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Failure("The archive does not contain the 'refedle' binary."));
         var logger = new TestAppLogger();
         var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);

@@ -16,9 +16,9 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 {
     private const int Cols = 80;
     private const int Rows = 24;
-    private static readonly TimeSpan PollTimeout = TimeSpan.FromSeconds(10);
-    private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(50);
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _pollTimeout = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan _pollInterval = TimeSpan.FromMilliseconds(50);
+    private static readonly TimeSpan _stopTimeout = TimeSpan.FromSeconds(5);
 
     private readonly IApplication _app;
     private readonly MainWindow _mainWindow;
@@ -110,7 +110,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
     /// <summary>
     /// Polls <see cref="GetSelectedCellAsync"/> until it satisfies <paramref name="predicate"/>,
-    /// or throws <see cref="TimeoutException"/> after <see cref="PollTimeout"/>. Lets vim-key
+    /// or throws <see cref="TimeoutException"/> after <see cref="_pollTimeout"/>. Lets vim-key
     /// navigation tests assert the exact cursor position a key is expected to produce, rather
     /// than only the rendered viewport content.
     /// </summary>
@@ -121,18 +121,18 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
     /// <summary>
     /// Waits for the TUI event loop to stop — e.g. after a 'q' quit key —
-    /// within <see cref="StopTimeout"/>.
+    /// within <see cref="_stopTimeout"/>.
     /// </summary>
     public async Task WaitForExitAsync()
     {
-        using var timeoutCts = new CancellationTokenSource(StopTimeout);
+        using var timeoutCts = new CancellationTokenSource(_stopTimeout);
         try
         {
             await _runTask.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
-            throw new TimeoutException($"The TUI event loop did not stop within {StopTimeout}.");
+            throw new TimeoutException($"The TUI event loop did not stop within {_stopTimeout}.");
         }
     }
 
@@ -222,7 +222,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// <summary>
     /// Polls the rendered screen (as one string per row) until some row contains every one of
     /// <paramref name="requiredSubstrings"/>, or throws <see cref="TimeoutException"/> after
-    /// <see cref="PollTimeout"/>. Background indexing completes asynchronously, so callers must
+    /// <see cref="_pollTimeout"/>. Background indexing completes asynchronously, so callers must
     /// not assert immediately.
     /// </summary>
     public Task<string[]> WaitForContentsAsync(params string[] requiredSubstrings)
@@ -237,7 +237,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// <summary>
     /// Polls the rendered screen (as one string per row) until <paramref name="predicate"/>
     /// returns <see langword="true"/>, or throws <see cref="TimeoutException"/> after
-    /// <see cref="PollTimeout"/>. Use this instead of a fixed delay when the awaited transition
+    /// <see cref="_pollTimeout"/>. Use this instead of a fixed delay when the awaited transition
     /// isn't expressible as "some row contains this substring" — e.g. a header or value that
     /// disappears rather than appears, as <see cref="WaitForContentsAsync"/> can only wait for
     /// substrings to show up, not for them to be gone.
@@ -256,17 +256,17 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// Shared polling loop backing <see cref="WaitForConditionAsync"/> and
     /// <see cref="WaitForSelectedCellAsync"/>: repeatedly awaits <paramref name="read"/> until
     /// <paramref name="predicate"/> is satisfied, or throws <see cref="TimeoutException"/> after
-    /// <see cref="PollTimeout"/>.
+    /// <see cref="_pollTimeout"/>.
     /// </summary>
     private static async Task<T> PollAsync<T>(Func<Task<T>> read, Func<T, bool> predicate, string description)
     {
-        using var timeoutCts = new CancellationTokenSource(PollTimeout);
+        using var timeoutCts = new CancellationTokenSource(_pollTimeout);
         try
         {
             var value = await read().WaitAsync(timeoutCts.Token).ConfigureAwait(false);
             while (!predicate(value))
             {
-                await Task.Delay(PollInterval, timeoutCts.Token).ConfigureAwait(false);
+                await Task.Delay(_pollInterval, timeoutCts.Token).ConfigureAwait(false);
                 value = await read().WaitAsync(timeoutCts.Token).ConfigureAwait(false);
             }
 
@@ -274,7 +274,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
-            throw new TimeoutException($"{description} did not satisfy the condition within {PollTimeout}.");
+            throw new TimeoutException($"{description} did not satisfy the condition within {_pollTimeout}.");
         }
     }
 
@@ -285,7 +285,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
         // Cancel and wait only. The worker task (see StartAsync) owns app/mainWindow disposal
         // and DisableRealDriverIO restoration in its own finally, once RunAsync actually returns,
         // so this side never races a loop thread that may still be running.
-        using var timeoutCts = new CancellationTokenSource(StopTimeout);
+        using var timeoutCts = new CancellationTokenSource(_stopTimeout);
         try
         {
             await _runTask.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -293,7 +293,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
         {
             throw new TimeoutException(
-                $"TUI event loop did not stop within {StopTimeout} after cancellation; the worker thread still owns cleanup.");
+                $"TUI event loop did not stop within {_stopTimeout} after cancellation; the worker thread still owns cleanup.");
         }
 
         _stopCts.Dispose();

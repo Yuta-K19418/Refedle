@@ -12,7 +12,7 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
 {
     private const string BaseUrl = "https://github.com/Yuta-K19418/Refedle";
 
-    private static readonly Uri LatestReleaseUri = new($"{BaseUrl}/releases/latest");
+    private static readonly Uri _latestReleaseUri = new($"{BaseUrl}/releases/latest");
 
     // Auto-redirect must stay off so the /releases/latest redirect itself is observable.
     private readonly SocketsHttpHandler _latestHandler = new() { AllowAutoRedirect = false };
@@ -48,7 +48,7 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
     /// <inheritdoc/>
     public async ValueTask<Result<string>> GetLatestTagAsync(CancellationToken cancellationToken)
     {
-        using var response = await _latestClient.GetAsync(LatestReleaseUri, cancellationToken)
+        using var response = await _latestClient.GetAsync(_latestReleaseUri, cancellationToken)
             .ConfigureAwait(false);
 
         var location = response.Headers.Location?.ToString();

@@ -86,7 +86,7 @@ internal static class DryRunner
         foreach (var filter in preparation.OutputSchema.Filters)
         {
             await logger.WriteInfoAsync(
-                $"    {preparation.ColumnNames[filter.SourceColumnIndex]} {OperatorSymbols[filter.Operator]} {filter.Value}").ConfigureAwait(false);
+                $"    {preparation.ColumnNames[filter.SourceColumnIndex]} {_operatorSymbols[filter.Operator]} {filter.Value}").ConfigureAwait(false);
         }
     }
 
@@ -103,7 +103,7 @@ internal static class DryRunner
         };
 
     // Symbols follow the FilterOperator XML docs; the text-match operators have no symbol form.
-    private static readonly FrozenDictionary<FilterOperator, string> OperatorSymbols =
+    private static readonly FrozenDictionary<FilterOperator, string> _operatorSymbols =
         new Dictionary<FilterOperator, string>
         {
             [FilterOperator.Equals] = "==",
