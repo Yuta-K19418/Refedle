@@ -12,13 +12,24 @@ namespace Refedle.App.Cli.Commands.Apply;
 internal static class Runner
 {
     /// <summary>
-    /// Runs CLI headless batch processing pipeline.
+    /// Runs CLI headless batch processing pipeline. Output is written to a temp file in the
+    /// same directory as the real output path and renamed into place only on success, so a
+    /// mid-run failure never leaves a truncated file at the real output path. A symlinked
+    /// <c>--output</c> is resolved to its final target before publishing, so content lands at
+    /// the link's destination, matching the pre-atomic-write <c>FileMode.Create</c> behavior.
     /// </summary>
     /// <param name="args">The validated CLI arguments.</param>
     /// <param name="logger">The app logger for logging messages.</param>
+    /// <param name="dispatcher">The format dispatcher that runs the batch pipeline.</param>
+    /// <param name="tempOutputPathProvider">Mints temp paths for the atomic output write.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Exit code: <see cref="ExitCode.Success"/> on success, <see cref="ExitCode.Failure"/> on any failure.</returns>
-    public static async ValueTask<ExitCode> RunAsync(Arguments args, IAppLogger logger, CancellationToken ct = default)
+    public static async ValueTask<ExitCode> RunAsync(
+        Arguments args,
+        IAppLogger logger,
+        IFormatDispatcher dispatcher,
+        ITempOutputPathProvider tempOutputPathProvider,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(args);
 
@@ -30,6 +41,8 @@ internal static class Runner
             return ExitCode.Failure;
         }
 
+        // Null until PrepareAsync succeeds: a preparation failure means no temp path was ever computed.
+        string? tempOutputFile = null;
         try
         {
             var preparationResult = await ApplyPreparer.PrepareAsync(
@@ -46,10 +59,27 @@ internal static class Runner
                 throw new UnreachableException("Output format was not resolved for the write path.");
             }
 
-            // Dispatch to generated static monomorphization logic
-            return await Generated.FormatDispatcher.DispatchAsync(
-                preparation.InputFormat, outputFormat, args.InputFile, args.OutputFile,
+            // File.Move replaces a destination symlink itself instead of following it, so
+            // resolve the final target first to keep publishing through the link. LinkTarget
+            // detects broken links without following them; null means a fresh output path,
+            // which ResolveLinkTarget cannot resolve (it throws on a missing path).
+            var outputInfo = new FileInfo(args.OutputFile);
+            var publishPath = outputInfo.LinkTarget is null
+                ? args.OutputFile
+                : outputInfo.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? args.OutputFile;
+
+            // The publish path is only ever touched by the rename below; the batch itself
+            // writes to the temp path. Unconditional overwrite matches FileMode.Create semantics.
+            tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
+            var exitCode = await dispatcher.DispatchAsync(
+                preparation.InputFormat, outputFormat, args.InputFile, tempOutputFile,
                 preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
+            if (exitCode is ExitCode.Success)
+            {
+                File.Move(tempOutputFile, publishPath, overwrite: true);
+            }
+
+            return exitCode;
         }
         catch (OperationCanceledException)
         {
@@ -65,6 +95,21 @@ internal static class Runner
         {
             await logger.WriteErrorAsync($"Error: {ex.Message}");
             return ExitCode.Failure;
+        }
+        finally
+        {
+            if (tempOutputFile is not null && File.Exists(tempOutputFile))
+            {
+                // Best-effort cleanup: on success this is a no-op (already moved away).
+                try
+                {
+                    File.Delete(tempOutputFile);
+                }
+                catch (Exception)
+                {
+                    // Swallowed intentionally: cleanup must not mask the already-decided exit code.
+                }
+            }
         }
     }
 }

@@ -28,7 +28,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -58,7 +58,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -83,7 +83,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -107,7 +107,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -132,7 +132,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -159,7 +159,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -194,7 +194,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -226,7 +226,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -253,7 +253,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -277,7 +277,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -301,7 +301,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger);
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
