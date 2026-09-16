@@ -99,29 +99,29 @@ public sealed class FileDialogHandlerTests : IDisposable
     public async Task HandleFileSelectedAsync_JsonLinesFile_SwitchesToTreeViewAfterFirstCheckpoint()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
         IRowIndexer? capturedIndexer = null;
-        var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            capturedIndexer = indexer;
-            // Simulate indexing start
-            Task.Run(() => indexer.BuildIndex());
-        }, () => { });
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+            {
+                capturedIndexer = indexer;
+                // Simulate indexing start
+                Task.Run(() => indexer.BuildIndex());
+            }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonLinesFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonLinesFile));
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
-        viewManager.GetCurrentView().Should().BeOfType<JsonLinesTreeView>();
+        mode.Should().Be(ViewMode.JsonLinesTree);
+        viewType.Should().Be<JsonLinesTreeView>();
         Assert.NotNull(capturedIndexer);
         capturedIndexer.TotalRows.Should().BeGreaterThan(0);
     }
@@ -130,176 +130,181 @@ public sealed class FileDialogHandlerTests : IDisposable
     public async Task HandleFileSelectedAsync_JsonObjectFile_SwitchesToJsonObjectTree()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonObjectFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.JsonObjectTree);
-        viewManager.GetCurrentView().Should().BeOfType<JsonObjectTreeView>();
+        mode.Should().Be(ViewMode.JsonObjectTree);
+        viewType.Should().Be<JsonObjectTreeView>();
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_JsonObjectFile_WhenCancelled_DoesNotSwitchView()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        viewManager.SwitchToFileSelection();
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            viewManager.SwitchToFileSelection();
 
-        // _stopIndexing is called after RenewCtsWithCancel(), so cancelling state.Cts
-        // here pre-cancels the token before TopLevelScanner.Scan runs.
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { },
-            () => state.Cts.Cancel());
+            // _stopIndexing is called after RenewCtsWithCancel(), so cancelling state.Cts
+            // here pre-cancels the token before TopLevelScanner.Scan runs.
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { },
+                () => state.Cts.Cancel());
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonObjectFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().NotBe(ViewMode.JsonObjectTree);
-        viewManager.GetCurrentView().Should().NotBeOfType<JsonObjectTreeView>();
+        mode.Should().NotBe(ViewMode.JsonObjectTree);
+        viewType.Should().NotBe<JsonObjectTreeView>();
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_JsonLinesFileBeforeFirstCheckpoint_DoesNotSwitchToTreeView()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        viewManager.SwitchToFileSelection(); // Ensure initial view is not null
-
-        var tcs = new TaskCompletionSource();
-        var handler = new FileDialogHandler(app, state, viewManager, _ =>
+        var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            // Do NOT start indexing yet, so FirstCheckpointReached won't fire
-            tcs.TrySetResult();
-        }, () => { });
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            viewManager.SwitchToFileSelection(); // Ensure initial view is not null
 
-        // Act
-        app.Begin(window);
-        var handleTask = handler.HandleFileSelectedAsync(_jsonLinesFile);
-        await tcs.Task; // Wait until _onIndexerStart is called
+            var handler = new FileDialogHandler(app, state, viewManager, _ =>
+            {
+                // Do NOT start indexing yet, so FirstCheckpointReached won't fire
+                tcs.TrySetResult();
+            }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
-        // Process any potential early Invokes
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        // Act — the pump stays live for the whole scenario: start the handler, wait for
+        // _onIndexerStart's completion, then read the pre-checkpoint state on the loop thread.
+        var handleTask = await session.InvokeAsync(async (_, ctx) =>
+        {
+            var task = ctx.Handler.HandleFileSelectedAsync(_jsonLinesFile);
+            await tcs.Task; // Wait until _onIndexerStart is called
+            return task;
+        });
+        var (modeBeforeCheckpoint, viewTypeBeforeCheckpoint) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().NotBe(ViewMode.JsonLinesTree);
-        viewManager.GetCurrentView().Should().NotBeOfType<JsonLinesTreeView>();
+        handleTask.IsCompleted.Should().BeFalse();
+        modeBeforeCheckpoint.Should().NotBe(ViewMode.JsonLinesTree);
+        viewTypeBeforeCheckpoint.Should().NotBe<JsonLinesTreeView>();
 
-        // Cleanup: actually start indexing to let the task complete
-        Assert.NotNull(state.RowIndexer);
-        state.RowIndexer.BuildIndex();
-        await handleTask;
+        // Cleanup: actually start indexing to let the task complete, on the same live pump.
+        await session.InvokeAsync((_, ctx) =>
+        {
+            Assert.NotNull(ctx.State.RowIndexer);
+            ctx.State.RowIndexer.BuildIndex();
+            return handleTask;
+        });
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_WhenDrillDownStateIsPopulated_ResetsDrillDownState()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
-        var schema = new TableSchema
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            SourceFormat = DataFormat.JsonObject,
-            Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
-        };
-        state.DrillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-            schema,
-            ViewMode.JsonObjectTree,
-            KeyPath: [],
-            ActionStack: []);
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
 
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            var schema = new TableSchema
+            {
+                SourceFormat = DataFormat.JsonObject,
+                Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
+            };
+            state.DrillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonObjectTree,
+                KeyPath: [],
+                ActionStack: []);
+
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonObjectFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
+        var drillDown = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.DrillDown));
 
         // Assert
-        state.DrillDown.Should().BeNull();
+        drillDown.Should().BeNull();
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_JsonObjectFile_PopulatesJsonObjectEntries()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonObjectFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
+        var entryKeys = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult(ctx.State.JsonObjectEntries?.Select(e => e.Key).ToArray()));
 
         // Assert
-        state.JsonObjectEntries.Should().NotBeNull();
-        state.JsonObjectEntries.Should().HaveCount(2);
-        state.JsonObjectEntries.Should().SatisfyRespectively(
-            e => e.Key.Should().Be("name"),
-            e => e.Key.Should().Be("count"));
+        entryKeys.Should().Equal("name", "count");
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_NonJsonObjectFile_ResetsJsonObjectEntriesToNull()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            JsonObjectEntries = [new JsonObjectEntry("stale", JsonRawBytes.Empty)],
-        };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
         IRowIndexer? capturedIndexer = null;
-        var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            capturedIndexer = indexer;
-            Task.Run(() => indexer.BuildIndex());
-        }, () => { });
+            var state = new AppState
+            {
+                JsonObjectEntries = [new JsonObjectEntry("stale", JsonRawBytes.Empty)],
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+            {
+                capturedIndexer = indexer;
+                Task.Run(() => indexer.BuildIndex());
+            }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonLinesFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonLinesFile));
+        var entries = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.JsonObjectEntries));
 
         // Assert
-        state.JsonObjectEntries.Should().BeNull();
+        entries.Should().BeNull();
         capturedIndexer.Should().NotBeNull();
     }
 
@@ -307,52 +312,52 @@ public sealed class FileDialogHandlerTests : IDisposable
     public async Task HandleFileSelectedAsync_CsvFile_SwitchesToCsvTable()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_csvFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_csvFile));
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.CsvTable);
-        viewManager.GetCurrentView().Should().BeOfType<CsvTableView>();
+        mode.Should().Be(ViewMode.CsvTable);
+        viewType.Should().Be<CsvTableView>();
     }
 
     [Fact]
     public async Task HandleFileSelectedAsync_JsonArrayFile_SwitchesToTreeViewAfterFirstCheckpoint()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
         IRowIndexer? capturedIndexer = null;
-        var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            capturedIndexer = indexer;
-            // Simulate indexing start
-            Task.Run(() => indexer.BuildIndex());
-        }, () => { });
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+            {
+                capturedIndexer = indexer;
+                // Simulate indexing start
+                Task.Run(() => indexer.BuildIndex());
+            }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_jsonArrayFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonArrayFile));
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.JsonArrayTree);
-        viewManager.GetCurrentView().Should().BeOfType<JsonArrayTreeView>();
+        mode.Should().Be(ViewMode.JsonArrayTree);
+        viewType.Should().Be<JsonArrayTreeView>();
         Assert.NotNull(capturedIndexer);
         capturedIndexer.TotalRows.Should().BeGreaterThan(0);
     }
@@ -361,23 +366,27 @@ public sealed class FileDialogHandlerTests : IDisposable
     public async Task HandleFileSelectedAsync_UnsupportedExtension_ShowsErrorAndSwitchesToPlaceholderView()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-
-        var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
 
         // Act
-        app.Begin(window);
-        await handler.HandleFileSelectedAsync(_unsupportedFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_unsupportedFile));
+        var (mode, isPlaceholder, placeholderText) = await session.InvokeAsync((_, ctx) =>
+        {
+            var view = ctx.ViewManager.GetCurrentView();
+            var text = view is PlaceholderView placeholderView ? placeholderView.Text : null;
+            return Task.FromResult((ctx.State.CurrentMode, view is PlaceholderView, text));
+        });
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        viewManager.GetCurrentView().Should().BeOfType<PlaceholderView>()
-            .Which.Text.Should().Contain("Unsupported file format: .txt");
+        mode.Should().Be(ViewMode.PlaceholderView);
+        isPlaceholder.Should().BeTrue();
+        placeholderText.Should().Contain("Unsupported file format: .txt");
     }
 }

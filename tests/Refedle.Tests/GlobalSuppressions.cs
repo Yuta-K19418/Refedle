@@ -77,3 +77,17 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.Tests.App.Cli.IO.Json.FullAggregationRecordReaderTests.BuildJsonLinesReader(System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.Filtering.BatchFilterSpec})",
     Justification = "RowReader ownership is transferred to the reader under test; each test disposes it.")]
+
+// LivePumpTestSession<T>
+[assembly: SuppressMessage(
+    "Design",
+    "CA1031:Do not catch general exception types",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.LivePumpTestSession`1.InvokeAsync``1(System.Func{Terminal.Gui.App.IApplication,`0,System.Threading.Tasks.Task{``0}})",
+    Justification = "Converts any exception from the marshalled action into the TCS's result so the caller observes it via await, instead of it escaping on the loop thread.")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1031:Do not catch general exception types",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.LivePumpTestSession`1.CancelAndObserveAsync(System.Threading.CancellationTokenSource,System.Threading.Tasks.Task)",
+    Justification = "The startup failure the caller is about to rethrow is what matters; this only prevents pumpTask's own fault from surfacing as an unobserved task exception.")]

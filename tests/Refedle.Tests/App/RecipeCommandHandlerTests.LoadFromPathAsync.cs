@@ -6,7 +6,6 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App;
 
@@ -58,24 +57,24 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
     public async Task LoadFromPathAsync_NonDrillDownRecipe_SetsBaseActionStack()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = _jsonLinesFile };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         var action = new RenameColumnAction { OldName = "old", NewName = "new" };
         await SaveRecipeAsync(new Recipe { Name = "test", Actions = [action] }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState { CurrentFilePath = _jsonLinesFile };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var actionStack = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.ToArray()));
 
         // Assert
-        state.ActionStack.Should().Equal(action);
+        actionStack.Should().Equal(action);
     }
 
     [Fact]
@@ -84,39 +83,52 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // Arrange
         File.WriteAllText(_jsonObjectFile, """{"orders":[{"id":"A1"},{"id":"A2"}]}""");
 
-        using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = _jsonObjectFile,
-            JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
-                "orders", """[{"id":"A1"},{"id":"A2"}]"""u8.ToArray())],
-        };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
         var action = new RenameColumnAction { OldName = "id", NewName = "orderId" };
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [action], DrillDownKeyPath = keyPath }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonObjectFile,
+                JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
+                    "orders", """[{"id":"A1"},{"id":"A2"}]"""u8.ToArray())],
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var (mode, drillDownKeyPath, drillDownActionStack, isFocusedTableTransformer, columnNames) =
+            await session.InvokeAsync((_, ctx) =>
+            {
+                var view = ctx.ViewManager.GetCurrentView();
+                var isTransformer = view is FocusedTableView focusedView && focusedView.Table is FocusedTableTransformer;
+                var columns = view is FocusedTableView { Table: FocusedTableTransformer transformer }
+                    ? transformer.ColumnNames.ToArray()
+                    : null;
+                var drillDown = ctx.State.DrillDown;
+                return Task.FromResult((
+                    ctx.State.CurrentMode,
+                    drillDown?.KeyPath.ToArray(),
+                    drillDown?.ActionStack.ToArray(),
+                    isTransformer,
+                    columns));
+            });
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
-        drillDown.KeyPath.Should().Equal(keyPath);
-        drillDown.ActionStack.Should().Equal(action);
+        mode.Should().Be(ViewMode.FocusedTable);
+        drillDownKeyPath.Should().Equal(keyPath);
+        drillDownActionStack.Should().Equal(action);
 
-        var focusedView = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var transformer = focusedView.Table.Should().BeOfType<FocusedTableTransformer>().Which;
-        transformer.ColumnNames.Should().ContainSingle(name => name.StartsWith("orderId", StringComparison.Ordinal));
-        transformer.ColumnNames.Should().NotContain(name => name.StartsWith("id ", StringComparison.Ordinal));
+        isFocusedTableTransformer.Should().BeTrue();
+        columnNames.Should().ContainSingle(name => name.StartsWith("orderId", StringComparison.Ordinal));
+        columnNames.Should().NotContain(name => name.StartsWith("id ", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -125,34 +137,47 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // Arrange
         File.WriteAllText(_jsonLinesFile, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
 
-        using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = _jsonLinesFile };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
         var action = new RenameColumnAction { OldName = "name", NewName = "fullName" };
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [action], DrillDownKeyPath = keyPath }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState { CurrentFilePath = _jsonLinesFile };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var (mode, drillDownKeyPath, drillDownActionStack, isFocusedTableTransformer, columnNames) =
+            await session.InvokeAsync((_, ctx) =>
+            {
+                var view = ctx.ViewManager.GetCurrentView();
+                var isTransformer = view is FocusedTableView focusedView && focusedView.Table is FocusedTableTransformer;
+                var columns = view is FocusedTableView { Table: FocusedTableTransformer transformer }
+                    ? transformer.ColumnNames.ToArray()
+                    : null;
+                var drillDown = ctx.State.DrillDown;
+                return Task.FromResult((
+                    ctx.State.CurrentMode,
+                    drillDown?.KeyPath.ToArray(),
+                    drillDown?.ActionStack.ToArray(),
+                    isTransformer,
+                    columns));
+            });
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
-        drillDown.KeyPath.Should().Equal(keyPath);
-        drillDown.ActionStack.Should().Equal(action);
+        mode.Should().Be(ViewMode.FocusedTable);
+        drillDownKeyPath.Should().Equal(keyPath);
+        drillDownActionStack.Should().Equal(action);
 
-        var focusedView = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var transformer = focusedView.Table.Should().BeOfType<FocusedTableTransformer>().Which;
-        transformer.ColumnNames.Should().ContainSingle(name => name.StartsWith("fullName", StringComparison.Ordinal));
-        transformer.ColumnNames.Should().NotContain(name => name.StartsWith("name ", StringComparison.Ordinal));
+        isFocusedTableTransformer.Should().BeTrue();
+        columnNames.Should().ContainSingle(name => name.StartsWith("fullName", StringComparison.Ordinal));
+        columnNames.Should().NotContain(name => name.StartsWith("name ", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -162,32 +187,37 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // (e.g. the file changed since the recipe was saved).
         File.WriteAllText(_jsonObjectFile, """{"orders":[{"id":"A1"}]}""");
 
-        using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = _jsonObjectFile,
-            JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
-                "orders", """[{"id":"A1"}]"""u8.ToArray())],
-        };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("missing", KeyPathSegmentKind.Key)];
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [], DrillDownKeyPath = keyPath }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonObjectFile,
+                JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
+                    "orders", """[{"id":"A1"}]"""u8.ToArray())],
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var (mode, isPlaceholder, placeholderText) = await session.InvokeAsync((_, ctx) =>
+        {
+            var view = ctx.ViewManager.GetCurrentView();
+            var text = view is PlaceholderView placeholderView ? placeholderView.Text : null;
+            return Task.FromResult((ctx.State.CurrentMode, view is PlaceholderView, text));
+        });
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        viewManager.GetCurrentView().Should().BeOfType<PlaceholderView>()
-            .Which.Text.Should().Contain("not found");
+        mode.Should().Be(ViewMode.PlaceholderView);
+        isPlaceholder.Should().BeTrue();
+        placeholderText.Should().Contain("not found");
     }
 
     [Fact]
@@ -197,31 +227,36 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // or a Full Aggregation DrillDown recipe mistakenly loaded against a JSON Object file.
         File.WriteAllText(_jsonObjectFile, """{"orders":[{"id":"A1"}]}""");
 
-        using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = _jsonObjectFile,
-            JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
-                "orders", """[{"id":"A1"}]"""u8.ToArray())],
-        };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [], DrillDownKeyPath = [] }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonObjectFile,
+                JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
+                    "orders", """[{"id":"A1"}]"""u8.ToArray())],
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var (mode, isPlaceholder, placeholderText) = await session.InvokeAsync((_, ctx) =>
+        {
+            var view = ctx.ViewManager.GetCurrentView();
+            var text = view is PlaceholderView placeholderView ? placeholderView.Text : null;
+            return Task.FromResult((ctx.State.CurrentMode, view is PlaceholderView, text));
+        });
 
         // Assert
-        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        viewManager.GetCurrentView().Should().BeOfType<PlaceholderView>()
-            .Which.Text.Should().Contain("empty");
+        mode.Should().Be(ViewMode.PlaceholderView);
+        isPlaceholder.Should().BeTrue();
+        placeholderText.Should().Contain("empty");
     }
 
     [Fact]
@@ -232,30 +267,33 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // which throws UnreachableException for any other format.
         File.WriteAllText(_csvFile, "id,name\n1,Alice\n");
 
-        using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = _csvFile };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
-
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [], DrillDownKeyPath = keyPath }, _recipeFile);
 
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState { CurrentFilePath = _csvFile };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
         // Act
         Func<Task> act = async () =>
-        {
-            app.Begin(window);
-            await handler.LoadFromPathAsync(_recipeFile);
-            app.StopAfterFirstIteration = true;
-            app.Run(window);
-        };
+            await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
 
         // Assert
         await act.Should().NotThrowAsync();
-        viewManager.GetCurrentView().Should().BeOfType<PlaceholderView>()
-            .Which.Text.Should().Contain("Csv");
+        var (isPlaceholder, placeholderText) = await session.InvokeAsync((_, ctx) =>
+        {
+            var view = ctx.ViewManager.GetCurrentView();
+            var text = view is PlaceholderView placeholderView ? placeholderView.Text : null;
+            return Task.FromResult((view is PlaceholderView, text));
+        });
+        isPlaceholder.Should().BeTrue();
+        placeholderText.Should().Contain("Csv");
     }
 
     [Fact]
@@ -266,7 +304,6 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         // overwritten before the transition is known to succeed.
         File.WriteAllText(_jsonLinesFile, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
 
-        using var app = CreateTestApp();
         var existingSchema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         var existingAction = new RenameColumnAction { OldName = "existing", NewName = "renamed_existing" };
         var existingDrillDown = new DrillDownState(
@@ -275,30 +312,34 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
             ViewMode.JsonLinesTree,
             KeyPath: [new KeyPathSegment("previous", KeyPathSegmentKind.Key)],
             ActionStack: [existingAction]);
-        using var state = new AppState
-        {
-            CurrentFilePath = _jsonLinesFile,
-            CurrentMode = ViewMode.FocusedTable,
-            DrillDown = existingDrillDown,
-        };
-        using var window = new Window();
-        var modeController = new ModeController(state);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
-        var handler = new RecipeCommandHandler(app, state, viewManager);
 
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("missing", KeyPathSegmentKind.Key)];
         var recipeAction = new RenameColumnAction { OldName = "name", NewName = "fullName" };
         await SaveRecipeAsync(
             new Recipe { Name = "test", Actions = [recipeAction], DrillDownKeyPath = keyPath }, _recipeFile);
 
-        // Act
-        app.Begin(window);
-        await handler.LoadFromPathAsync(_recipeFile);
-        app.StopAfterFirstIteration = true;
-        app.Run(window);
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonLinesFile,
+                CurrentMode = ViewMode.FocusedTable,
+                DrillDown = existingDrillDown,
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
 
-        // Assert
-        state.DrillDown.Should().BeSameAs(existingDrillDown);
-        state.DrillDown.Should().BeOfType<DrillDownState>().Which.ActionStack.Should().Equal(existingAction);
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var (drillDown, actionStack) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.DrillDown, ctx.State.DrillDown?.ActionStack.ToArray())));
+
+        // Assert — comparing the reference itself is safe (no dereference of its mutable fields);
+        // ActionStack is read on the worker thread above instead of through this reference.
+        drillDown.Should().BeSameAs(existingDrillDown);
+        actionStack.Should().Equal(existingAction);
     }
 }
