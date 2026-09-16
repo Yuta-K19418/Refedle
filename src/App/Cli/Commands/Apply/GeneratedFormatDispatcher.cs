@@ -11,7 +11,7 @@ namespace Refedle.App.Cli.Commands.Apply;
 internal sealed class GeneratedFormatDispatcher : IFormatDispatcher
 {
     /// <inheritdoc/>
-    public ValueTask<ExitCode> DispatchAsync(
+    public ValueTask<BatchRunResult> DispatchAsync(
         DataFormat inputFormat,
         DataFormat outputFormat,
         string inputFile,

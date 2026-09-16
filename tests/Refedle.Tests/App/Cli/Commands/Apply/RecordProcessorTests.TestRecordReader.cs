@@ -11,6 +11,7 @@ public sealed partial class RecordProcessorTests
         public IReadOnlyList<FilterSpec> Filters;
         public CancellationTokenSource? CancellationTokenSource;
         public int CancelAfter;
+        public CellPresence[][]? Presences;
         private int _currentIndex;
         private int _recordsProcessed;
 
@@ -18,12 +19,14 @@ public sealed partial class RecordProcessorTests
             string[][] records,
             IReadOnlyList<FilterSpec> filters,
             CancellationTokenSource? cancellationTokenSource = null,
-            int cancelAfter = -1)
+            int cancelAfter = -1,
+            CellPresence[][]? presences = null)
         {
             Records = records;
             Filters = filters;
             CancellationTokenSource = cancellationTokenSource;
             CancelAfter = cancelAfter;
+            Presences = presences;
             _currentIndex = -1;
             _recordsProcessed = 0;
         }
@@ -75,7 +78,8 @@ public sealed partial class RecordProcessorTests
 
         public readonly CellData GetCellData(int outputColumnIndex)
         {
-            return new CellData(Records[_currentIndex][outputColumnIndex], CellPresence.Value);
+            var presence = Presences is null ? CellPresence.Value : Presences[_currentIndex][outputColumnIndex];
+            return new CellData(Records[_currentIndex][outputColumnIndex], presence);
         }
     }
 }

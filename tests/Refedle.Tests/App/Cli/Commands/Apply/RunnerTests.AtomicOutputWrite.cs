@@ -233,15 +233,19 @@ public sealed partial class RunnerTests
     /// <summary>
     /// Stub dispatcher that simulates the real batch pipeline: writes partial content to the
     /// output path it receives, then throws the configured exception (or reports the
-    /// configured exit code).
+    /// configured exit code and cell issues).
     /// </summary>
-    private sealed class TestFormatDispatcher(Exception? exception = null, ExitCode result = ExitCode.Success) : IFormatDispatcher
+    private sealed class TestFormatDispatcher(
+        Exception? exception = null,
+        ExitCode result = ExitCode.Success,
+        IReadOnlyList<CellIssue>? cellIssues = null,
+        bool hasMoreCellIssues = false) : IFormatDispatcher
     {
         public const string WrittenContent = "partial output written by the dispatcher";
 
         public string? ReceivedOutputFile { get; private set; }
 
-        public async ValueTask<ExitCode> DispatchAsync(
+        public async ValueTask<BatchRunResult> DispatchAsync(
             DataFormat inputFormat,
             DataFormat outputFormat,
             string inputFile,
@@ -259,7 +263,7 @@ public sealed partial class RunnerTests
                 throw exception;
             }
 
-            return result;
+            return new BatchRunResult(result, cellIssues ?? [], hasMoreCellIssues);
         }
     }
 }

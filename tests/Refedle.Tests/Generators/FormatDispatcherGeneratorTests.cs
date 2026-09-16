@@ -140,16 +140,18 @@ public sealed class FormatDispatcherGeneratorTests
 
         namespace Refedle.App.Cli.Commands.Apply;
 
+        public sealed record BatchRunResult(ExitCode ExitCode);
+
         public static class RecordProcessor
         {
-            public static ValueTask<ExitCode> ProcessAsync<TReader, TWriter>(
+            public static ValueTask<BatchRunResult> ProcessAsync<TReader, TWriter>(
                 TReader reader,
                 TWriter writer,
                 IReadOnlyList<string> columns,
                 CancellationToken ct)
                 where TReader : struct, IRecordReader
                 where TWriter : struct, IRecordWriter
-                => new(ExitCode.Success);
+                => new(new BatchRunResult(ExitCode.Success));
         }
         """;
 
@@ -287,7 +289,7 @@ public sealed class FormatDispatcherGeneratorTests
 
         internal static class FormatDispatcher
         {
-            public static async ValueTask<ExitCode> DispatchAsync(
+            public static async ValueTask<BatchRunResult> DispatchAsync(
                 DataFormat inputFormat,
                 DataFormat outputFormat,
                 string inputFile,
@@ -312,7 +314,7 @@ public sealed class FormatDispatcherGeneratorTests
                 };
             }
 
-            private static async ValueTask<ExitCode> RunCsvToCsvAsync(
+            private static async ValueTask<BatchRunResult> RunCsvToCsvAsync(
                 string inputFile,
                 string outputFile,
                 IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
@@ -328,7 +330,7 @@ public sealed class FormatDispatcherGeneratorTests
                 return await RecordProcessor.ProcessAsync<CsvRecordReader, CsvRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
-            private static async ValueTask<ExitCode> RunCsvToJsonLinesAsync(
+            private static async ValueTask<BatchRunResult> RunCsvToJsonLinesAsync(
                 string inputFile,
                 string outputFile,
                 IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
@@ -344,7 +346,7 @@ public sealed class FormatDispatcherGeneratorTests
                 return await RecordProcessor.ProcessAsync<CsvRecordReader, JsonLinesRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
-            private static async ValueTask<ExitCode> RunJsonLinesToCsvAsync(
+            private static async ValueTask<BatchRunResult> RunJsonLinesToCsvAsync(
                 string inputFile,
                 string outputFile,
                 IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
@@ -360,7 +362,7 @@ public sealed class FormatDispatcherGeneratorTests
                 return await RecordProcessor.ProcessAsync<JsonLinesRecordReader, CsvRecordWriter>(reader, writer, outputSchema.Columns, ct).ConfigureAwait(false);
             }
 
-            private static async ValueTask<ExitCode> RunJsonLinesToJsonLinesAsync(
+            private static async ValueTask<BatchRunResult> RunJsonLinesToJsonLinesAsync(
                 string inputFile,
                 string outputFile,
                 IReadOnlyList<KeyPathSegment>? drillDownKeyPath,
@@ -466,7 +468,7 @@ public sealed class FormatDispatcherGeneratorTests
 
         internal static class FormatDispatcher
         {
-            public static async ValueTask<ExitCode> DispatchAsync(
+            public static async ValueTask<BatchRunResult> DispatchAsync(
                 DataFormat inputFormat,
                 DataFormat outputFormat,
                 string inputFile,
@@ -485,7 +487,7 @@ public sealed class FormatDispatcherGeneratorTests
                 };
             }
 
-            private static async ValueTask<ExitCode> RunJsonArrayToCsvAsync(
+            private static async ValueTask<BatchRunResult> RunJsonArrayToCsvAsync(
                 string inputFile,
                 string outputFile,
                 IReadOnlyList<KeyPathSegment>? drillDownKeyPath,

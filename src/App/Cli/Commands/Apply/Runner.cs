@@ -17,6 +17,8 @@ internal static class Runner
     /// mid-run failure never leaves a truncated file at the real output path. A symlinked
     /// <c>--output</c> is resolved to its final target before publishing, so content lands at
     /// the link's destination, matching the pre-atomic-write <c>FileMode.Create</c> behavior.
+    /// Cell issues collected during a successful run are reported as warnings once, after the
+    /// output has been published.
     /// </summary>
     /// <param name="args">The validated CLI arguments.</param>
     /// <param name="logger">The app logger for logging messages.</param>
@@ -71,15 +73,20 @@ internal static class Runner
             // The publish path is only ever touched by the rename below; the batch itself
             // writes to the temp path. Unconditional overwrite matches FileMode.Create semantics.
             tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
-            var exitCode = await dispatcher.DispatchAsync(
+            var runResult = await dispatcher.DispatchAsync(
                 preparation.InputFormat, outputFormat, args.InputFile, tempOutputFile,
                 preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
-            if (exitCode is ExitCode.Success)
+            if (runResult.ExitCode is ExitCode.Success)
             {
                 File.Move(tempOutputFile, publishPath, overwrite: true);
+
+                // Reported only on success: a failed run discards its output and already
+                // reports its own error, so cell-level detail would only add noise.
+                await CellIssueReporter.ReportAsync(
+                    runResult.CellIssues, runResult.HasMoreCellIssues, logger).ConfigureAwait(false);
             }
 
-            return exitCode;
+            return runResult.ExitCode;
         }
         catch (OperationCanceledException)
         {

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.App.Cli;
 using Refedle.App.Cli.Commands.Apply;
 using Refedle.Engine;
 using Refedle.Engine.Filtering;
@@ -53,7 +54,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenHeader.Should().BeTrue();
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "30", "NY"]);
@@ -93,7 +94,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "30", "NY"]);
     }
@@ -128,7 +129,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "30", "NY"]);
         writtenRecords[1].Should().BeEquivalentTo(["Charlie", "22", "TX"]);
@@ -163,7 +164,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenHeader.Should().BeTrue();
         writtenRecords.Should().BeEmpty();
     }
@@ -195,7 +196,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _twoColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "30"]);
         writtenRecords[1].Should().BeEquivalentTo(["Bob", "25"]);
@@ -224,7 +225,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _oneColumn, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["Alice"]);
         writtenRecords[1].Should().BeEquivalentTo(["Bob"]);
@@ -255,7 +256,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenHeader.Should().BeTrue();
         writtenRecords.Should().BeEmpty();
     }
@@ -360,7 +361,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["", "", ""]);
         writtenRecords[1].Should().BeEquivalentTo(["NonEmpty", "Value", "Here"]);
@@ -388,7 +389,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["  spaces  ", "\ttabs\t", " mixed "]);
     }
@@ -425,7 +426,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["ANON", "30"]);
         writtenRecords[1].Should().BeEquivalentTo(["ANON", "25"]);
@@ -460,7 +461,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "***", "NY"]);
         writtenRecords[1].Should().BeEquivalentTo(["Bob", "***", "CA"]);
@@ -498,7 +499,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["ANON", "30"]);
     }
@@ -528,7 +529,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["", "30"]);
     }
@@ -555,7 +556,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenHeader.Should().BeTrue();
         writtenRecords.Should().BeEmpty();
     }
@@ -591,7 +592,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(2);
         writtenRecords[0].Should().BeEquivalentTo(["2024/03/15"]);
         writtenRecords[1].Should().BeEquivalentTo(["2023/12/25"]);
@@ -621,7 +622,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["2024-03-15"]);
     }
@@ -653,7 +654,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo([rawValue]);
     }
@@ -686,7 +687,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(3);
         writtenRecords[0].Should().BeEquivalentTo(["2024/03/15"]);
         writtenRecords[1].Should().BeEquivalentTo(["not-a-date"]);
@@ -715,7 +716,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenHeader.Should().BeTrue();
         writtenRecords.Should().BeEmpty();
     }
@@ -746,7 +747,7 @@ public sealed partial class RecordProcessorTests
         var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
-        result.Should().Be(0);
+        result.ExitCode.Should().Be(ExitCode.Success);
         writtenRecords.Should().HaveCount(1);
         writtenRecords[0].Should().BeEquivalentTo(["Alice", "2024/03/15", "NY"]);
     }

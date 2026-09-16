@@ -26,8 +26,8 @@ internal interface IFormatDispatcher
     /// <param name="outputSchema">The format-agnostic output plan.</param>
     /// <param name="logger">The app logger for logging messages.</param>
     /// <param name="ct">Cancellation token.</param>
-    /// <returns>Exit code: <see cref="ExitCode.Success"/> on success, <see cref="ExitCode.Failure"/> on any failure.</returns>
-    ValueTask<ExitCode> DispatchAsync(
+    /// <returns>The batch run result: exit code plus the collected cell issues.</returns>
+    ValueTask<BatchRunResult> DispatchAsync(
         DataFormat inputFormat,
         DataFormat outputFormat,
         string inputFile,

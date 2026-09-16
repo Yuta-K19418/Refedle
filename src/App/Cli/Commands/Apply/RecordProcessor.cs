@@ -5,7 +5,7 @@ namespace Refedle.App.Cli.Commands.Apply;
 
 internal static class RecordProcessor
 {
-    public static async ValueTask<ExitCode> ProcessAsync<TReader, TWriter>(
+    public static async ValueTask<BatchRunResult> ProcessAsync<TReader, TWriter>(
         TReader reader,
         TWriter writer,
         IReadOnlyList<BatchOutputColumn> columns,
@@ -15,8 +15,12 @@ internal static class RecordProcessor
     {
         await writer.WriteHeaderAsync(ct).ConfigureAwait(false);
 
+        var issues = new CellIssueCollector();
+        var rowNumber = 0;
+
         while (await reader.MoveNextAsync(ct).ConfigureAwait(false))
         {
+            rowNumber++;
             ct.ThrowIfCancellationRequested();
 
             if (!reader.EvaluateFilters())
@@ -28,13 +32,14 @@ internal static class RecordProcessor
 
             for (var i = 0; i < columns.Count; i++)
             {
-                if (columns[i].Transform is not { } transform)
+                var cell = reader.GetCellData(i);
+                var resolvedCell = CellResolver.ResolveCell(columns[i].Transform, cell);
+                if (resolvedCell.HasIssue)
                 {
-                    writer.WriteCellData(i, reader.GetCellData(i));
-                    continue;
+                    issues.Add(rowNumber, columns[i].SourceName, resolvedCell.Cell.Value, resolvedCell.Reason);
                 }
 
-                writer.WriteCellData(i, CellTransformFormatter.Format(transform, reader.GetCellData(i)));
+                writer.WriteCellData(i, resolvedCell.Cell);
             }
 
             await writer.WriteEndRecordAsync(ct).ConfigureAwait(false);
@@ -42,6 +47,6 @@ internal static class RecordProcessor
 
         await writer.WriteFooterAsync(ct).ConfigureAwait(false);
         await writer.FlushAsync(ct).ConfigureAwait(false);
-        return ExitCode.Success;
+        return new BatchRunResult(ExitCode.Success, issues.Issues, issues.HasMore);
     }
 }
