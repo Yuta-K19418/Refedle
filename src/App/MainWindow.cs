@@ -62,9 +62,12 @@ internal sealed class MainWindow : Window
 
     private void InitializeMenu()
     {
-        var openMenuItem = new MenuItem("_Open", "", async () => await _fileDialogHandler.ShowAsync());
-        var saveRecipeMenuItem = new MenuItem("_Save Recipe", "", async () => await _recipeCommandHandler.SaveAsync());
-        var loadRecipeMenuItem = new MenuItem("_Load Recipe", "", async () => await _recipeCommandHandler.LoadAsync());
+        var openMenuItem = new MenuItem(
+            "_Open", "", async () => await _fileDialogHandler.ShowAsync().ConfigureAwait(false));
+        var saveRecipeMenuItem = new MenuItem(
+            "_Save Recipe", "", async () => await _recipeCommandHandler.SaveAsync().ConfigureAwait(false));
+        var loadRecipeMenuItem = new MenuItem(
+            "_Load Recipe", "", async () => await _recipeCommandHandler.LoadAsync().ConfigureAwait(false));
         var exitMenuItem = new MenuItem("_Exit", "", () => _app.RequestStop());
         var fileMenuBarItem = new MenuBarItem("_File", [openMenuItem, saveRecipeMenuItem, loadRecipeMenuItem, exitMenuItem]);
         var menuBar = new MenuBar { Menus = [fileMenuBarItem] };
@@ -266,7 +269,7 @@ internal sealed class MainWindow : Window
 
         if (recipeFile is not null)
         {
-            await _recipeCommandHandler.LoadFromPathAsync(recipeFile);
+            await _recipeCommandHandler.LoadFromPathAsync(recipeFile).ConfigureAwait(false);
         }
     }
 }

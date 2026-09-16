@@ -8,6 +8,7 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App;
@@ -75,6 +76,27 @@ public sealed class FileDialogHandlerTests : IDisposable
         return app;
     }
 
+    /// <summary>
+    /// Waits for the next <see cref="OpenDialog"/> to become the active runnable, then sets its
+    /// <see cref="FileDialog.Path"/> and invokes <see cref="Command.Accept"/> on it — the same
+    /// command a real "OK"/Enter acceptance raises — so tests can drive the real modal dialog
+    /// opened by <see cref="FileDialogHandler.ShowAsync"/> instead of calling past it.
+    /// </summary>
+    private static void AcceptFirstOpenDialog(IApplication app, string path)
+    {
+        EventHandler<EventArgs<IApplication?>>? handler = null;
+        handler = (_, _) =>
+        {
+            if (app.TopRunnableView is OpenDialog dialog)
+            {
+                dialog.Path = path;
+                dialog.InvokeCommand(Command.Accept);
+                app.Iteration -= handler;
+            }
+        };
+        app.Iteration += handler;
+    }
+
     [Fact]
     public void Constructor_WithValidDependencies_DoesNotThrow()
     {
@@ -104,7 +126,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
                 capturedIndexer = indexer;
@@ -134,7 +156,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
@@ -157,7 +179,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             viewManager.SwitchToFileSelection();
 
             // _stopIndexing is called after RenewCtsWithCancel(), so cancelling state.Cts
@@ -186,7 +208,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             viewManager.SwitchToFileSelection(); // Ensure initial view is not null
 
             var handler = new FileDialogHandler(app, state, viewManager, _ =>
@@ -230,7 +252,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
 
             var schema = new TableSchema
             {
@@ -264,7 +286,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
@@ -290,7 +312,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 JsonObjectEntries = [new JsonObjectEntry("stale", JsonRawBytes.Empty)],
             };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
                 capturedIndexer = indexer;
@@ -316,7 +338,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
@@ -340,7 +362,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
                 capturedIndexer = indexer;
@@ -370,7 +392,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         {
             var state = new AppState();
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, action => action());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
@@ -388,5 +410,37 @@ public sealed class FileDialogHandlerTests : IDisposable
         mode.Should().Be(ViewMode.PlaceholderView);
         isPlaceholder.Should().BeTrue();
         placeholderText.Should().Contain("Unsupported file format: .txt");
+    }
+
+    [Fact]
+    public async Task ShowAsync_WithAcceptedOpenDialog_SwitchesToJsonLinesTreeView()
+    {
+        // Arrange
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new FileDialogHandler(app, state, viewManager, indexer =>
+            {
+                Task.Run(() => indexer.BuildIndex());
+            }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
+
+        // Act — drive the real OpenDialog to acceptance, exercising the ShowAsync continuation
+        // that reads dialog.Canceled/dialog.Path (and calls into HandleFileSelectedAsync) after
+        // IApplication.RunAsync returns.
+        await session.InvokeAsync((app, ctx) =>
+        {
+            AcceptFirstOpenDialog(app, _jsonLinesFile);
+            return ctx.Handler.ShowAsync();
+        });
+        var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
+
+        // Assert
+        mode.Should().Be(ViewMode.JsonLinesTree);
+        viewType.Should().Be<JsonLinesTreeView>();
     }
 }

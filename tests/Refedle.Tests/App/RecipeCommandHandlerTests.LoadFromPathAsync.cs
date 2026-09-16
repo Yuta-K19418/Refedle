@@ -64,7 +64,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         {
             var state = new AppState { CurrentFilePath = _jsonLinesFile };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -97,7 +97,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                     "orders", """[{"id":"A1"},{"id":"A2"}]"""u8.ToArray())],
             };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -146,7 +146,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         {
             var state = new AppState { CurrentFilePath = _jsonLinesFile };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -200,7 +200,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                     "orders", """[{"id":"A1"}]"""u8.ToArray())],
             };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -239,7 +239,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                     "orders", """[{"id":"A1"}]"""u8.ToArray())],
             };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -275,7 +275,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         {
             var state = new AppState { CurrentFilePath = _csvFile };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -327,7 +327,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                 DrillDown = existingDrillDown,
             };
             var modeController = new ModeController(state);
-            var viewManager = new ViewManager(window, state, modeController, viewAction => viewAction());
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });

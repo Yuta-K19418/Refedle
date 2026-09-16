@@ -46,7 +46,7 @@ internal sealed class RecipeCommandHandler(
 
         var recipe = BuildRecipe();
 
-        var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token);
+        var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token).ConfigureAwait(false);
 
         _app.Invoke(() =>
         {
@@ -100,7 +100,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        await LoadFromPathAsync(dialog.Path);
+        await LoadFromPathAsync(dialog.Path).ConfigureAwait(false);
     }
 
     internal async ValueTask LoadFromPathAsync(string path)
@@ -112,7 +112,7 @@ internal sealed class RecipeCommandHandler(
 
         // Captured before the await so the DrillDown branch never reads AppState off the UI thread.
         var currentFilePath = _state.CurrentFilePath;
-        var result = await _recipeManager.LoadAsync(path, _state.Cts.Token);
+        var result = await _recipeManager.LoadAsync(path, _state.Cts.Token).ConfigureAwait(false);
 
         if (result.IsFailure)
         {
@@ -131,7 +131,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        await LoadDrillDownRecipeAsync(recipe, keyPath, currentFilePath);
+        await LoadDrillDownRecipeAsync(recipe, keyPath, currentFilePath).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -167,7 +167,7 @@ internal sealed class RecipeCommandHandler(
         }
 
         var request = new FullAggregationDrillDownRequest(format, keyPath, recipe.Actions);
-        await _viewManager.FullAggregationDrillDownAsync(request);
+        await _viewManager.FullAggregationDrillDownAsync(request).ConfigureAwait(false);
     }
 
     private void LoadSingleDrillDownRecipe(Recipe recipe, DataFormat format, IReadOnlyList<KeyPathSegment> keyPath)

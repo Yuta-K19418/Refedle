@@ -185,7 +185,7 @@ internal sealed class ViewManager : IDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     internal async Task ToggleJsonLinesModeAsync()
     {
-        var result = await _modeController.ToggleJsonLinesModeAsync();
+        var result = await _modeController.ToggleJsonLinesModeAsync().ConfigureAwait(false);
 
         _uiThreadInvoke(() =>
         {
@@ -575,7 +575,7 @@ internal sealed class ViewManager : IDisposable
     /// </summary>
     internal async ValueTask FullAggregationDrillDownAsync(FullAggregationDrillDownRequest request)
     {
-        var result = await _modeController.FullAggregationDrillDownAsync(request);
+        var result = await _modeController.FullAggregationDrillDownAsync(request).ConfigureAwait(false);
         _uiThreadInvoke(() =>
         {
             // Fail fast before any state mutation: if the ViewManager was disposed between the

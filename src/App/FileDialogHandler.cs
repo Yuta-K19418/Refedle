@@ -36,7 +36,7 @@ internal sealed class FileDialogHandler(
             return;
         }
 
-        await HandleFileSelectedAsync(dialog.Path);
+        await HandleFileSelectedAsync(dialog.Path).ConfigureAwait(false);
     }
 
     internal async Task HandleFileSelectedAsync(string path)
@@ -61,7 +61,7 @@ internal sealed class FileDialogHandler(
         // No IRowIndexer is needed — keys are not rows.
         if (format == DataFormat.JsonObject)
         {
-            await LoadJsonObjectAsync(path);
+            await LoadJsonObjectAsync(path).ConfigureAwait(false);
             return;
         }
 
@@ -71,19 +71,19 @@ internal sealed class FileDialogHandler(
         // SwitchToView(format)
         if (format == DataFormat.Csv)
         {
-            await LoadCsvAsync(path, indexer);
+            await LoadCsvAsync(path, indexer).ConfigureAwait(false);
             return;
         }
 
         if (format == DataFormat.JsonLines)
         {
-            await LoadJsonLinesAsync(indexer);
+            await LoadJsonLinesAsync(indexer).ConfigureAwait(false);
             return;
         }
 
         if (format == DataFormat.JsonArray)
         {
-            await LoadJsonArrayAsync(indexer);
+            await LoadJsonArrayAsync(indexer).ConfigureAwait(false);
             return;
         }
 
@@ -101,7 +101,7 @@ internal sealed class FileDialogHandler(
         try
         {
             var entries = await Task.Run(
-                () => Engine.IO.JsonObject.TopLevelScanner.Scan(path, ct), ct);
+                () => Engine.IO.JsonObject.TopLevelScanner.Scan(path, ct), ct).ConfigureAwait(false);
             _app.Invoke(() =>
             {
                 _state.CurrentMode = ViewMode.JsonObjectTree;
@@ -122,7 +122,7 @@ internal sealed class FileDialogHandler(
         var schemaScanner = new IncrementalSchemaScanner(path);
         try
         {
-            var schema = await schemaScanner.InitialScanAsync();
+            var schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);
             _app.Invoke(() =>
             {
                 if (schema.Columns.Count == 0)
@@ -178,7 +178,7 @@ internal sealed class FileDialogHandler(
             indexer.FirstCheckpointReached += () => tcs.TrySetResult();
 
             _onIndexerStart(indexer);
-            await tcs.Task;
+            await tcs.Task.ConfigureAwait(false);
 
             _app.Invoke(() =>
             {
@@ -205,7 +205,7 @@ internal sealed class FileDialogHandler(
             indexer.FirstCheckpointReached += () => tcs.TrySetResult();
 
             _onIndexerStart(indexer);
-            await tcs.Task;
+            await tcs.Task.ConfigureAwait(false);
 
             _app.Invoke(() =>
             {
