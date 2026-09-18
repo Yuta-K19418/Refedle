@@ -184,7 +184,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine();
         sb.AppendLine("internal static class FormatDispatcher");
         sb.AppendLine("{");
-        sb.AppendLine("    public static async ValueTask<ExitCode> DispatchAsync(");
+        sb.AppendLine("    public static async ValueTask<BatchRunResult> DispatchAsync(");
         sb.AppendLine("        DataFormat inputFormat,");
         sb.AppendLine("        DataFormat outputFormat,");
         sb.AppendLine("        string inputFile,");
@@ -223,7 +223,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
             {
                 sb.AppendLine();
                 sb.AppendLine(
-                    $"    private static async ValueTask<ExitCode> Run{reader.FormatName}To{writer.FormatName}Async("
+                    $"    private static async ValueTask<BatchRunResult> Run{reader.FormatName}To{writer.FormatName}Async("
                 );
                 sb.AppendLine("        string inputFile,");
                 sb.AppendLine("        string outputFile,");

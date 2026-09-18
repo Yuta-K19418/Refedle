@@ -33,6 +33,7 @@ internal static class ApplyRunner
             return await DryRunner.RunAsync(parsedArgs, logger, ct).ConfigureAwait(false);
         }
 
-        return await Runner.RunAsync(parsedArgs, logger, ct).ConfigureAwait(false);
+        return await Runner.RunAsync(
+            parsedArgs, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), ct).ConfigureAwait(false);
     }
 }

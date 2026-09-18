@@ -1,14 +1,11 @@
-using System.Diagnostics;
-using System.Globalization;
 using Refedle.App.Cli.IO;
 using Refedle.Engine;
-using Refedle.Engine.Models;
 
 namespace Refedle.App.Cli.Commands.Apply;
 
 internal static class RecordProcessor
 {
-    public static async ValueTask<ExitCode> ProcessAsync<TReader, TWriter>(
+    public static async ValueTask<BatchRunResult> ProcessAsync<TReader, TWriter>(
         TReader reader,
         TWriter writer,
         IReadOnlyList<BatchOutputColumn> columns,
@@ -18,8 +15,12 @@ internal static class RecordProcessor
     {
         await writer.WriteHeaderAsync(ct).ConfigureAwait(false);
 
+        var issues = new CellIssueCollector();
+        var rowNumber = 0;
+
         while (await reader.MoveNextAsync(ct).ConfigureAwait(false))
         {
+            rowNumber++;
             ct.ThrowIfCancellationRequested();
 
             if (!reader.EvaluateFilters())
@@ -31,20 +32,14 @@ internal static class RecordProcessor
 
             for (var i = 0; i < columns.Count; i++)
             {
-                if (columns[i].Transform is not { } transform)
+                var cell = reader.GetCellData(i);
+                var resolvedCell = CellResolver.ResolveCell(columns[i].Transform, cell);
+                if (resolvedCell.HasIssue)
                 {
-                    writer.WriteCellData(i, reader.GetCellData(i));
-                    continue;
+                    issues.Add(rowNumber, columns[i].SourceName, resolvedCell.Cell.Value, resolvedCell.Reason);
                 }
 
-                var formatted = transform switch
-                {
-                    FillSpec fill => fill.Value,
-                    TimestampFormatSpec fmt => ApplyTimestampFormat(reader.GetCellData(i).Value, fmt),
-                    _ => throw new UnreachableException($"Unhandled CellTransformSpec: {transform.GetType().Name}"),
-                };
-
-                writer.WriteCellData(i, new CellData(formatted, CellPresence.Value, CellEncodingClassifier.Classify(formatted)));
+                writer.WriteCellData(i, resolvedCell.Cell);
             }
 
             await writer.WriteEndRecordAsync(ct).ConfigureAwait(false);
@@ -52,16 +47,6 @@ internal static class RecordProcessor
 
         await writer.WriteFooterAsync(ct).ConfigureAwait(false);
         await writer.FlushAsync(ct).ConfigureAwait(false);
-        return ExitCode.Success;
-    }
-
-    private static string ApplyTimestampFormat(ReadOnlySpan<char> raw, TimestampFormatSpec fmt)
-    {
-        if (!DateTime.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
-        {
-            throw new FormatException($"Could not parse timestamp value '{raw}'.");
-        }
-
-        return parsed.ToString(fmt.TargetFormat, CultureInfo.InvariantCulture);
+        return new BatchRunResult(ExitCode.Success, issues.Issues, issues.HasMore);
     }
 }
