@@ -1,11 +1,13 @@
 using System.Text;
 using AwesomeAssertions;
 using Refedle.App;
+using Refedle.App.Schema;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
 
 namespace Refedle.Tests.App;
 
+[Collection("IncrementalSchemaScannerHook")]
 public sealed class ModeControllerTests : IDisposable
 {
     private readonly string _jsonlFilePath;
@@ -50,10 +52,10 @@ public sealed class ModeControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task ToggleJsonLinesModeAsync_FromTreeMode_RaisesSchemaRefinedThroughUiThreadInvoke()
+    public async Task ToggleJsonLinesModeAsync_FromTreeMode_PublishesRefinedSchemaThroughInvoke()
     {
         // Arrange
-        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}\n{\"name\":\"Bob\"}");
+        await WriteRefinementFixtureAsync(_jsonlFilePath);
         var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         using var state = new AppState
@@ -74,12 +76,219 @@ public sealed class ModeControllerTests : IDisposable
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
-        await Task.WhenAny(refined.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+        var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        refined.Task.IsCompleted.Should().BeTrue();
+        refinedSchema.Columns.Select(c => c.Name).Should().Contain("age");
+        state.Schema.Should().BeSameAs(refinedSchema);
         Volatile.Read(ref invokeCount).Should().BeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_BackgroundSchemaCompletes_RaisesSchemaRefinedOnUiThread()
+    {
+        // Arrange
+        await WriteRefinementFixtureAsync(_jsonlFilePath);
+        var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var callbackThreadId = 0;
+        var uiThreadId = 0;
+        await using var session = await LivePumpTestSession.StartAsync((app, _) =>
+        {
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonlFilePath,
+                CurrentMode = ViewMode.JsonLinesTree,
+                RowIndexer = new RowIndexer(_jsonlFilePath),
+                OnSchemaRefined = schema =>
+                {
+                    callbackThreadId = Environment.CurrentManagedThreadId;
+                    refined.TrySetResult(schema);
+                }
+            };
+            return new ModeController(state, app.Invoke);
+        });
+
+        // Act
+        await session.InvokeAsync((_, controller) =>
+        {
+            uiThreadId = Environment.CurrentManagedThreadId;
+            return controller.ToggleJsonLinesModeAsync().AsTask();
+        });
+        var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        callbackThreadId.Should().Be(uiThreadId);
+        refinedSchema.Columns.Select(c => c.Name).Should().Contain("age");
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenScanIsCancelledBeforeUiDispatch_DoesNotPublishStaleSchema()
+    {
+        // Arrange
+        await WriteRefinementFixtureAsync(_jsonlFilePath);
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var queuedInvokes = new List<Action>();
+        var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new ModeController(
+            state,
+            action =>
+            {
+                queuedInvokes.Add(action);
+                posted.TrySetResult();
+            });
+
+        // Act
+        var result = await controller.ToggleJsonLinesModeAsync();
+        await posted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Simulate loading a different file: the CTS is renewed with cancel and the
+        // state moves to another file before the queued UI action runs.
+        state.RenewCtsWithCancel();
+        var replacementSchema = new Refedle.Engine.Models.TableSchema
+        {
+            Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
+            SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
+        };
+        state.CurrentFilePath = "replacement.jsonl";
+        state.Schema = replacementSchema;
+        Refedle.Engine.Models.TableSchema? callbackSchema = null;
+        state.OnSchemaRefined = schema => callbackSchema = schema;
+
+        queuedInvokes[0].Invoke();
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        state.Schema.Should().BeSameAs(replacementSchema);
+        callbackSchema.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenFileIsSwitchedDuringInitialScan_KeepsReplacementFileState()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
+        var scanStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scanGate = new ManualResetEventSlim(false);
+        IncrementalSchemaScannerBase.ScanStartedHook = path =>
+        {
+            if (path == _jsonlFilePath)
+            {
+                scanStarted.TrySetResult();
+                scanGate.Wait();
+            }
+        };
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var invokeCount = 0;
+        var controller = new ModeController(state, _ => Interlocked.Increment(ref invokeCount));
+
+        try
+        {
+            // Act
+            var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+            await scanStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            // Switch to another file while the gated initial scan is still pending.
+            state.RenewCtsWithCancel();
+            var replacementSchema = new Refedle.Engine.Models.TableSchema
+            {
+                Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
+                SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
+            };
+            state.CurrentFilePath = "replacement.jsonl";
+            state.Schema = replacementSchema;
+            scanGate.Set();
+
+            var result = await toggleTask;
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            state.Schema.Should().BeSameAs(replacementSchema);
+            state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
+            Volatile.Read(ref invokeCount).Should().Be(0);
+        }
+        finally
+        {
+            IncrementalSchemaScannerBase.ScanStartedHook = null;
+        }
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenInitialScanFailsAfterFileSwitch_SuppressesStaleError()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
+        var scanStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var scanGate = new ManualResetEventSlim(false);
+        IncrementalSchemaScannerBase.ScanStartedHook = path =>
+        {
+            if (path == _jsonlFilePath)
+            {
+                scanStarted.TrySetResult();
+                scanGate.Wait();
+            }
+        };
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var controller = new ModeController(state, _ => { });
+
+        try
+        {
+            // Act
+            var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+            await scanStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+            // Make the old scan fail by deleting its file, then switch to another session.
+            File.Delete(_jsonlFilePath);
+            state.RenewCtsWithCancel();
+            var replacementSchema = new Refedle.Engine.Models.TableSchema
+            {
+                Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
+                SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
+            };
+            state.CurrentFilePath = "replacement.jsonl";
+            state.Schema = replacementSchema;
+            scanGate.Set();
+
+            var result = await toggleTask;
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            state.Schema.Should().BeSameAs(replacementSchema);
+            state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
+        }
+        finally
+        {
+            IncrementalSchemaScannerBase.ScanStartedHook = null;
+        }
+    }
+
+    /// <summary>
+    /// Writes a JSON Lines fixture whose first 200 lines fit the initial scan (single
+    /// "name" column) and whose remaining lines introduce an "age" column, so the
+    /// background refinement must produce a schema that differs from the initial one.
+    /// </summary>
+    private static async Task WriteRefinementFixtureAsync(string path)
+    {
+        var initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
+        var refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
+        var content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
+        await File.WriteAllTextAsync(path, content);
     }
 
     [Fact]

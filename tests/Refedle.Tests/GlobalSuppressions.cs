@@ -2,6 +2,14 @@
 // signatures, so member types are spelled out explicitly.
 using System.Diagnostics.CodeAnalysis;
 
+// BackgroundSchemaRefinerTests
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2025:Ensure tasks using 'IDisposable' instances complete before the instances are disposed",
+    Scope = "type",
+    Target = "~T:Refedle.Tests.App.Schema.BackgroundSchemaRefinerTests",
+    Justification = "Each test awaits the refiner's returned continuation (or its publish TCS, which fires inside the continuation) before the using state is disposed; the scanner task completes before that continuation starts.")]
+
 // IndexTaskManagerTests
 [assembly: SuppressMessage(
     "Reliability",

@@ -8,10 +8,24 @@ namespace Refedle.App.Schema;
 /// - Background scan: continues refinement on remaining data in batches
 /// - Thread-safe schema updates via Copy-on-Write pattern
 /// </summary>
-internal abstract class IncrementalSchemaScannerBase
+internal abstract class IncrementalSchemaScannerBase(string filePath)
 {
     protected const int InitialScanCount = 200;
     protected const int BackgroundBatchSize = 1000;
+
+    /// <summary>
+    /// Gets the path of the file being scanned.
+    /// </summary>
+    private protected string FilePath { get; } = filePath ?? throw new ArgumentNullException(nameof(filePath));
+
+    /// <summary>
+    /// Test-only synchronization seam: invoked with the scan's file path on the scan thread
+    /// before the initial scan body runs. Tests use it to hold a scan open while they arrange
+    /// a file-session switch; it must remain <see langword="null"/> in production and be reset
+    /// immediately after use so other concurrently running scans are unaffected.
+    /// </summary>
+    internal static Action<string>? ScanStartedHook { get; set; }
+
     /// <summary>
     /// Performs initial scan to provide the first schema for UI display.
     /// Must complete before UI can render the initial table view.
@@ -19,7 +33,11 @@ internal abstract class IncrementalSchemaScannerBase
     /// <returns>The initial table schema.</returns>
     public Task<TableSchema> InitialScanAsync()
     {
-        return Task.Run(ExecuteInitialScan);
+        return Task.Run(() =>
+        {
+            ScanStartedHook?.Invoke(FilePath);
+            return ExecuteInitialScan();
+        });
     }
 
     /// <summary>

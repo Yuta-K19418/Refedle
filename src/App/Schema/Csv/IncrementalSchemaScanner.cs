@@ -13,15 +13,13 @@ namespace Refedle.App.Schema.Csv;
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 {
-    private readonly string _filePath;
-
     /// <summary>
     /// Creates a new incremental schema scanner.
     /// </summary>
     /// <param name="filePath">Path to the CSV file.</param>
     public IncrementalSchemaScanner(string filePath)
+        : base(filePath)
     {
-        _filePath = filePath ?? throw new ArgumentNullException(nameof(filePath));
     }
 
     /// <inheritdoc/>
@@ -79,7 +77,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     {
         var rows = new List<CsvDataRow>(count);
 
-        using var reader = Sep.New(',').Reader().FromFile(_filePath);
+        using var reader = Sep.New(',').Reader().FromFile(FilePath);
 
         // Skip to start row (0-based, where 0 means first data row after header)
         var currentRow = 0;
@@ -117,7 +115,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
     private string[] ReadColumnNames()
     {
-        using var reader = Sep.New(',').Reader().FromFile(_filePath);
+        using var reader = Sep.New(',').Reader().FromFile(FilePath);
 
         // Header column names are automatically available
         var header = reader.Header;
