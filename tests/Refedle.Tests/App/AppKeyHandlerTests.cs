@@ -77,7 +77,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -97,7 +97,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         using var view = new TestTableView { Table = null };
         window.Add(view);
@@ -119,7 +119,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         using var view = new TestTableView { Table = new TestTableSource() };
         window.Add(view);
@@ -141,7 +141,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         using var view = new TestTableView
         {
@@ -167,7 +167,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         using var view = new TestTableView
         {
@@ -195,7 +195,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -221,7 +221,7 @@ public sealed class AppKeyHandlerTests
         state.DrillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -252,7 +252,7 @@ public sealed class AppKeyHandlerTests
                 ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -286,7 +286,7 @@ public sealed class AppKeyHandlerTests
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -309,7 +309,7 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState { CurrentMode = ViewMode.FileSelection };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -334,7 +334,7 @@ public sealed class AppKeyHandlerTests
             using var app = CreateTestApp();
             using var state = new AppState { CurrentFilePath = filePath };
             using var window = new Window();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             using var viewManager = new ViewManager(window, state, modeController, action => action());
             viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
             var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
@@ -373,7 +373,7 @@ public sealed class AppKeyHandlerTests
             using var app = CreateTestApp();
             using var state = new AppState { CurrentFilePath = filePath };
             using var window = new Window();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             using var viewManager = new ViewManager(window, state, modeController, action => action());
             viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
             var treeView = (MorphTreeView)viewManager.GetCurrentView()!;

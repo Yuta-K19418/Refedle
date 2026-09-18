@@ -30,10 +30,56 @@ public sealed class ModeControllerTests : IDisposable
         // (no setup required)
 
         // Act
-        var act = () => new ModeController(null!);
+        var act = () => new ModeController(null!, action => action());
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullUiThreadInvoke_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var state = new AppState();
+
+        // Act
+        var act = () => new ModeController(state, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_FromTreeMode_RaisesSchemaRefinedThroughUiThreadInvoke()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}\n{\"name\":\"Bob\"}");
+        var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath),
+            OnSchemaRefined = schema => refined.TrySetResult(schema)
+        };
+        var invokeCount = 0;
+        var controller = new ModeController(
+            state,
+            action =>
+            {
+                Interlocked.Increment(ref invokeCount);
+                action();
+            });
+
+        // Act
+        var result = await controller.ToggleJsonLinesModeAsync();
+        await Task.WhenAny(refined.Task, Task.Delay(TimeSpan.FromSeconds(5)));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        refined.Task.IsCompleted.Should().BeTrue();
+        Volatile.Read(ref invokeCount).Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -45,7 +91,7 @@ public sealed class ModeControllerTests : IDisposable
             CurrentMode = ViewMode.JsonLinesTree,
             RowIndexer = null
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
@@ -63,7 +109,7 @@ public sealed class ModeControllerTests : IDisposable
         {
             CurrentMode = ViewMode.CsvTable
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
@@ -90,7 +136,7 @@ public sealed class ModeControllerTests : IDisposable
             RowIndexer = new RowIndexer(_jsonlFilePath),
             Schema = cachedSchema
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
@@ -113,7 +159,7 @@ public sealed class ModeControllerTests : IDisposable
             CurrentMode = ViewMode.JsonLinesTree,
             RowIndexer = new RowIndexer(_jsonlFilePath)
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
@@ -132,7 +178,7 @@ public sealed class ModeControllerTests : IDisposable
         {
             CurrentMode = ViewMode.JsonLinesTable
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = await controller.ToggleJsonLinesModeAsync();
@@ -156,7 +202,7 @@ public sealed class ModeControllerTests : IDisposable
             KeyPath: [],
             InitialActionStack: []);
         using var state = new AppState();
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
         var expectedHashValues = Enumerable.Range(0, childCount).Select(i => $"[{i}]");
 
         // Act
@@ -175,7 +221,7 @@ public sealed class ModeControllerTests : IDisposable
         await File.WriteAllTextAsync(
             _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
         using var state = new AppState { CurrentFilePath = _jsonlFilePath };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
@@ -198,7 +244,7 @@ public sealed class ModeControllerTests : IDisposable
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
         using var state = new AppState { CurrentFilePath = _jsonlFilePath };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
@@ -225,7 +271,7 @@ public sealed class ModeControllerTests : IDisposable
             KeyPath: [],
             InitialActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.JsonObjectTree };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = controller.DrillDown(request);
@@ -247,7 +293,7 @@ public sealed class ModeControllerTests : IDisposable
             CurrentFilePath = _jsonlFilePath,
             CurrentMode = ViewMode.JsonLinesTree,
         };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
@@ -273,7 +319,7 @@ public sealed class ModeControllerTests : IDisposable
             KeyPath: keyPath,
             InitialActionStack: []);
         using var state = new AppState();
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
 
         // Act
         var result = controller.DrillDown(request);
@@ -290,7 +336,7 @@ public sealed class ModeControllerTests : IDisposable
         await File.WriteAllTextAsync(
             _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
         using var state = new AppState { CurrentFilePath = _jsonlFilePath };
-        var controller = new ModeController(state);
+        var controller = new ModeController(state, action => action());
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
         var request = new FullAggregationDrillDownRequest(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,

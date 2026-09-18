@@ -63,7 +63,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState { CurrentFilePath = _jsonLinesFile };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -96,7 +96,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                 JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
                     "orders", """[{"id":"A1"},{"id":"A2"}]"""u8.ToArray())],
             };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -145,7 +145,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState { CurrentFilePath = _jsonLinesFile };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -199,7 +199,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                 JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
                     "orders", """[{"id":"A1"}]"""u8.ToArray())],
             };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -238,7 +238,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                 JsonObjectEntries = [new Refedle.Engine.IO.JsonObject.JsonObjectEntry(
                     "orders", """[{"id":"A1"}]"""u8.ToArray())],
             };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -274,7 +274,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState { CurrentFilePath = _csvFile };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -326,7 +326,7 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
                 CurrentMode = ViewMode.FocusedTable,
                 DrillDown = existingDrillDown,
             };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);

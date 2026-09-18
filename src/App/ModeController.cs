@@ -8,15 +8,13 @@ namespace Refedle.App;
 /// <summary>
 /// Orchestrates view mode transitions and associated lazy initialization logic.
 /// </summary>
-internal sealed class ModeController
+internal sealed class ModeController(
+    AppState state,
+    Action<Action> uiThreadInvoke)
 {
-    private readonly AppState _state;
-
-    public ModeController(AppState state)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        _state = state;
-    }
+    private readonly AppState _state = state ?? throw new ArgumentNullException(nameof(state));
+    private readonly Action<Action> _uiThreadInvoke =
+        uiThreadInvoke ?? throw new ArgumentNullException(nameof(uiThreadInvoke));
 
     /// <summary>
     /// Toggles the JSON Lines display mode between Tree and Table.
@@ -72,8 +70,11 @@ internal sealed class ModeController
                             return;
                         }
 
-                        _state.Schema = t.Result;
-                        _state.OnSchemaRefined?.Invoke(t.Result);
+                        _uiThreadInvoke(() =>
+                        {
+                            _state.Schema = t.Result;
+                            _state.OnSchemaRefined?.Invoke(t.Result);
+                        });
                     },
                     TaskScheduler.Default
                 );
