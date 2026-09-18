@@ -108,9 +108,9 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 var view = ctx.ViewManager.GetCurrentView();
-                var isTransformer = view is FocusedTableView focusedView && focusedView.Table is FocusedTableTransformer;
-                var columns = view is FocusedTableView { Table: FocusedTableTransformer transformer }
-                    ? transformer.ColumnNames.ToArray()
+                var isTransformer = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } };
+                var columns = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                    ? decoratedTable.ColumnNames.ToArray()
                     : null;
                 var drillDown = ctx.State.DrillDown;
                 return Task.FromResult((
@@ -157,9 +157,9 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 var view = ctx.ViewManager.GetCurrentView();
-                var isTransformer = view is FocusedTableView focusedView && focusedView.Table is FocusedTableTransformer;
-                var columns = view is FocusedTableView { Table: FocusedTableTransformer transformer }
-                    ? transformer.ColumnNames.ToArray()
+                var isTransformer = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } };
+                var columns = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                    ? decoratedTable.ColumnNames.ToArray()
                     : null;
                 var drillDown = ctx.State.DrillDown;
                 return Task.FromResult((

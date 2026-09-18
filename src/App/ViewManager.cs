@@ -268,10 +268,11 @@ internal sealed class ViewManager : IDisposable
             _ => throw new UnreachableException(),
         };
 
+        var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.CsvTableView
         {
-            Table = source,
-            Style = new TableStyle { AlwaysShowHeaders = true },
+            Table = new Views.ColumnWidthStabilizingTableSource(source, style),
+            Style = style,
             OnMorphAction = HandleMorphAction,
             GetRawColumnName = getRawColumnName,
         };
@@ -384,10 +385,11 @@ internal sealed class ViewManager : IDisposable
             _ => throw new UnreachableException(),
         };
 
+        var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.JsonLinesTableView
         {
-            Table = tableSource,
-            Style = new TableStyle { AlwaysShowHeaders = true },
+            Table = new Views.ColumnWidthStabilizingTableSource(tableSource, style),
+            Style = style,
             OnMorphAction = HandleMorphAction,
             GetRawColumnName = getRawColumnName,
         };
@@ -617,10 +619,11 @@ internal sealed class ViewManager : IDisposable
             _ => throw new UnreachableException(),
         };
 
+        var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.FocusedTableView
         {
-            Table = source,
-            Style = new TableStyle { AlwaysShowHeaders = true },
+            Table = new Views.ColumnWidthStabilizingTableSource(source, style),
+            Style = style,
             OnMorphAction = HandleMorphAction,
             GetRawColumnName = getRawColumnName,
         };
