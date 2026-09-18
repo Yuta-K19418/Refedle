@@ -136,7 +136,7 @@ internal sealed class ModeController
 
         var result = await Task.Run(
             () => FullAggregationScanner.Scan(filePath, request.Format, request.KeyPath, ct),
-            ct);
+            ct).ConfigureAwait(false);
 
         if (result.IsFailure)
         {
