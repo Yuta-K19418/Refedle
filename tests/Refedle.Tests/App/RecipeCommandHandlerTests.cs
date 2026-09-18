@@ -58,7 +58,7 @@ public sealed partial class RecipeCommandHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState { CurrentMode = ViewMode.FileSelection };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
@@ -90,7 +90,7 @@ public sealed partial class RecipeCommandHandlerTests
         };
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
@@ -123,7 +123,7 @@ public sealed partial class RecipeCommandHandlerTests
         };
         state.AddMorphAction(baseAction);
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
@@ -142,7 +142,7 @@ public sealed partial class RecipeCommandHandlerTests
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = string.Empty };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
@@ -164,7 +164,7 @@ public sealed partial class RecipeCommandHandlerTests
 
             var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
             state.AddMorphAction(action);
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -193,7 +193,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, _recipeFile);
 
             var state = new AppState { CurrentFilePath = _jsonLinesFile };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);

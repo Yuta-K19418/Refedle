@@ -1,3 +1,4 @@
+using Refedle.App.Schema;
 using Refedle.App.Schema.Csv;
 using Refedle.Engine.IO;
 using Refedle.Engine.Types;
@@ -120,11 +121,28 @@ internal sealed class FileDialogHandler(
     private async Task LoadCsvAsync(string path, IRowIndexer indexer)
     {
         var schemaScanner = new IncrementalSchemaScanner(path);
+        // Capture by value before the scans: RenewCtsWithCancel replaces the CTS and the
+        // file path when another file loads, and stale checks need the session at scan start.
+        var scanToken = _state.Cts.Token;
+        var scannedFilePath = path;
         try
         {
             var schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);
+
+            // Token-only check off the UI thread: CurrentFilePath is owned by the UI thread,
+            // and RenewCtsWithCancel always cancels the token when a session is replaced.
+            if (scanToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             _app.Invoke(() =>
             {
+                if (_state.IsStaleSession(scannedFilePath, scanToken))
+                {
+                    return;
+                }
+
                 if (schema.Columns.Count == 0)
                 {
                     _viewManager.ShowError("File contains no data");
@@ -137,31 +155,30 @@ internal sealed class FileDialogHandler(
 
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
-                _ = schemaScanner
-                    .StartBackgroundScanAsync(schema, _state.Cts.Token)
-                    .ContinueWith(
-                        t =>
-                        {
-                            if (!t.IsCompletedSuccessfully)
-                            {
-                                return;
-                            }
-
-                            _app.Invoke(() =>
-                            {
-                                _state.Schema = t.Result;
-                                _state.OnSchemaRefined?.Invoke(t.Result);
-                            });
-                        },
-                        TaskScheduler.Default
-                    );
+                _ = BackgroundSchemaRefiner.StartAsync(
+                    _state, schemaScanner, schema, scannedFilePath, _app.Invoke, scanToken);
 
                 _onIndexerStart(indexer);
             });
         }
         catch (Exception ex)
         {
-            _app.Invoke(() => _viewManager.ShowError($"Error scanning CSV: {ex.Message}"));
+            // Suppress errors from a scan whose session was already replaced; the UI
+            // callback re-checks staleness so a switch queued behind it is also covered.
+            if (scanToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _app.Invoke(() =>
+            {
+                if (_state.IsStaleSession(scannedFilePath, scanToken))
+                {
+                    return;
+                }
+
+                _viewManager.ShowError($"Error scanning CSV: {ex.Message}");
+            });
         }
     }
 

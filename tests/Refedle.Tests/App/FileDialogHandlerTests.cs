@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App;
+using Refedle.App.Schema;
 using Refedle.App.Views;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
@@ -13,6 +14,7 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App;
 
+[Collection("IncrementalSchemaScannerHook")]
 public sealed class FileDialogHandlerTests : IDisposable
 {
     private readonly string _jsonLinesFile;
@@ -104,7 +106,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -125,7 +127,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
@@ -155,7 +157,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
@@ -178,7 +180,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             viewManager.SwitchToFileSelection();
 
@@ -207,7 +209,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             viewManager.SwitchToFileSelection(); // Ensure initial view is not null
 
@@ -251,7 +253,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
 
             var schema = new TableSchema
@@ -285,7 +287,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
@@ -311,7 +313,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             {
                 JsonObjectEntries = [new JsonObjectEntry("stale", JsonRawBytes.Empty)],
             };
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
@@ -337,7 +339,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
@@ -354,6 +356,153 @@ public sealed class FileDialogHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleFileSelectedAsync_CsvSwitchedDuringInitialScan_KeepsReplacementFileState()
+    {
+        // Arrange
+        var csvPath = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
+        try
+        {
+            await File.WriteAllTextAsync(csvPath, "col1\ndata1");
+            var scanStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var scanGate = new ManualResetEventSlim(false);
+            IncrementalSchemaScannerBase.ScanStartedHook = path =>
+            {
+                if (path == csvPath)
+                {
+                    scanStarted.TrySetResult();
+                    scanGate.Wait();
+                }
+            };
+            TableSchema? callbackSchema = null;
+            var indexerStartCount = 0;
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState
+                {
+                    OnSchemaRefined = schema => callbackSchema = schema
+                };
+                var modeController = new ModeController(state, action => action());
+                var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+                var handler = new FileDialogHandler(
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { });
+                return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+            });
+            var replacementSchema = new TableSchema
+            {
+                Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
+                SourceFormat = DataFormat.Csv
+            };
+
+            // Act — start the load on the UI loop without awaiting it, then switch the
+            // file session on the UI loop while the gated initial scan is still pending.
+            var loadTask = Task.CompletedTask;
+            await session.InvokeAsync((_, ctx) =>
+            {
+                loadTask = ctx.Handler.HandleFileSelectedAsync(csvPath);
+                return Task.CompletedTask;
+            });
+            await scanStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            await session.InvokeAsync((_, ctx) =>
+            {
+                ctx.State.RenewCtsWithCancel();
+                ctx.State.CurrentFilePath = "replacement.csv";
+                ctx.State.Schema = replacementSchema;
+                return Task.CompletedTask;
+            });
+            scanGate.Set();
+            await loadTask;
+            var (mode, viewType, schema) = await session.InvokeAsync((_, ctx) =>
+                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType(), ctx.State.Schema)));
+
+            // Assert
+            mode.Should().Be(ViewMode.FileSelection);
+            viewType.Should().BeNull();
+            schema.Should().BeSameAs(replacementSchema);
+            callbackSchema.Should().BeNull();
+            Volatile.Read(ref indexerStartCount).Should().Be(0);
+        }
+        finally
+        {
+            IncrementalSchemaScannerBase.ScanStartedHook = null;
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public async Task HandleFileSelectedAsync_CsvScanFailsAfterFileSwitch_ShowsNoStaleError()
+    {
+        // Arrange
+        var csvPath = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
+        try
+        {
+            await File.WriteAllTextAsync(csvPath, "col1\ndata1");
+            var scanStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var scanGate = new ManualResetEventSlim(false);
+            IncrementalSchemaScannerBase.ScanStartedHook = path =>
+            {
+                if (path == csvPath)
+                {
+                    scanStarted.TrySetResult();
+                    scanGate.Wait();
+                }
+            };
+            TableSchema? callbackSchema = null;
+            var indexerStartCount = 0;
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState
+                {
+                    OnSchemaRefined = schema => callbackSchema = schema
+                };
+                var modeController = new ModeController(state, action => action());
+                var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+                var handler = new FileDialogHandler(
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { });
+                return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+            });
+            var replacementSchema = new TableSchema
+            {
+                Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
+                SourceFormat = DataFormat.Csv
+            };
+
+            // Act — start the load on the UI loop, fault the old scan by deleting its file,
+            // then switch the file session on the UI loop before releasing the scan.
+            var loadTask = Task.CompletedTask;
+            await session.InvokeAsync((_, ctx) =>
+            {
+                loadTask = ctx.Handler.HandleFileSelectedAsync(csvPath);
+                return Task.CompletedTask;
+            });
+            await scanStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+            File.Delete(csvPath);
+            await session.InvokeAsync((_, ctx) =>
+            {
+                ctx.State.RenewCtsWithCancel();
+                ctx.State.CurrentFilePath = "replacement.csv";
+                ctx.State.Schema = replacementSchema;
+                return Task.CompletedTask;
+            });
+            scanGate.Set();
+            await loadTask;
+            var (mode, viewType, schema) = await session.InvokeAsync((_, ctx) =>
+                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType(), ctx.State.Schema)));
+
+            // Assert — no stale error view is shown for the replaced file.
+            mode.Should().Be(ViewMode.FileSelection);
+            viewType.Should().BeNull();
+            schema.Should().BeSameAs(replacementSchema);
+            callbackSchema.Should().BeNull();
+            Volatile.Read(ref indexerStartCount).Should().Be(0);
+        }
+        finally
+        {
+            IncrementalSchemaScannerBase.ScanStartedHook = null;
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
     public async Task HandleFileSelectedAsync_JsonArrayFile_SwitchesToTreeViewAfterFirstCheckpoint()
     {
         // Arrange
@@ -361,7 +510,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
@@ -391,7 +540,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
@@ -419,7 +568,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var state = new AppState();
-            var modeController = new ModeController(state);
+            var modeController = new ModeController(state, action => action());
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {

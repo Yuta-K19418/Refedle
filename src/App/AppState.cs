@@ -92,6 +92,22 @@ internal sealed class AppState : IDisposable
     }
 
     /// <summary>
+    /// Determines whether a file-session snapshot captured when a scan started (the scanned
+    /// file path and the <see cref="CancellationTokenSource"/>'s token) no longer matches the
+    /// current session: the token was cancelled by <see cref="RenewCtsWithCancel"/> or
+    /// <see cref="CurrentFilePath"/> has since been replaced. Background scans report
+    /// cancellation as successful completion, so callers must validate captured scan results
+    /// against the live session before applying them.
+    /// </summary>
+    /// <param name="scannedFilePath">The file path captured when the scan started.</param>
+    /// <param name="scanToken">The token captured when the scan started.</param>
+    /// <returns><see langword="true"/> when the captured session is stale and its results must be discarded.</returns>
+    public bool IsStaleSession(string scannedFilePath, CancellationToken scanToken)
+    {
+        return scanToken.IsCancellationRequested || CurrentFilePath != scannedFilePath;
+    }
+
+    /// <summary>
     /// Appends a morph action to the Action Stack.
     /// Creates a new <see cref="IReadOnlyList{T}"/> to preserve immutability.
     /// </summary>

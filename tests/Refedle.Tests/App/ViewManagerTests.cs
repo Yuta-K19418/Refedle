@@ -62,7 +62,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -89,7 +89,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -116,7 +116,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -141,7 +141,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -166,7 +166,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var schema = new TableSchema
@@ -198,7 +198,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -222,7 +222,7 @@ public sealed class ViewManagerTests : IDisposable
             RowIndexer = new MockRowIndexer("test.jsonl")
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -241,7 +241,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonLinesTable };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Setup a valid table state
@@ -269,7 +269,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonLinesTree };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Setup a valid tree state
@@ -296,7 +296,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -314,7 +314,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.Dispose();
 
@@ -333,7 +333,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
@@ -355,7 +355,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var indexer = new RowIndexer(filePath);
 
@@ -382,7 +382,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.RefreshStatusBarHints();
         window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
@@ -405,7 +405,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -425,7 +425,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act — first call
@@ -450,7 +450,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         IRowIndexer? nullIndexer = null;
 
@@ -468,7 +468,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.Dispose();
 
@@ -486,7 +486,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = "test.json" };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         IReadOnlyList<JsonObjectEntry> entries =
         [
@@ -507,7 +507,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         IReadOnlyList<JsonObjectEntry>? nullEntries = null;
 
@@ -525,7 +525,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.Dispose();
         IReadOnlyList<JsonObjectEntry> entries = [];
@@ -547,7 +547,7 @@ public sealed class ViewManagerTests : IDisposable
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         IReadOnlyList<JsonObjectEntry> entries =
         [
@@ -576,7 +576,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new FullAggregationDrillDownRequest(
@@ -601,7 +601,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new FullAggregationDrillDownRequest(
@@ -626,7 +626,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
 
         List<Action> capturedCallbacks = [];
         using var viewManager = new ViewManager(
@@ -662,7 +662,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
 
         List<Action> capturedCallbacks = [];
         // Not 'using' — disposed manually below to simulate the race between scan completion and dispatch.
@@ -698,7 +698,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var schema = new TableSchema
         {
@@ -726,7 +726,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var schema = new TableSchema
         {
@@ -752,7 +752,7 @@ public sealed class ViewManagerTests : IDisposable
             CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -770,7 +770,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new SingleDrillDownRequest(
@@ -797,7 +797,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentFilePath = filePath };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new FullAggregationDrillDownRequest(
@@ -833,7 +833,7 @@ public sealed class ViewManagerTests : IDisposable
             ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -866,7 +866,7 @@ public sealed class ViewManagerTests : IDisposable
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "label" }]);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -896,7 +896,7 @@ public sealed class ViewManagerTests : IDisposable
             ActionStack: []);
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.SwitchToFocusedTable(drillDown);
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
@@ -932,7 +932,7 @@ public sealed class ViewManagerTests : IDisposable
         using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
         state.AddMorphAction(baseAction);
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.SwitchToFocusedTable(drillDown);
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
@@ -963,7 +963,7 @@ public sealed class ViewManagerTests : IDisposable
             ActionStack: [staleDrillDownAction]);
         using var state = new AppState { CurrentFilePath = filePath, DrillDown = staleDrillDown };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         var schema = new TableSchema
         {
@@ -992,7 +992,7 @@ public sealed class ViewManagerTests : IDisposable
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new SingleDrillDownRequest(
@@ -1018,7 +1018,7 @@ public sealed class ViewManagerTests : IDisposable
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new SingleDrillDownRequest(
@@ -1045,7 +1045,7 @@ public sealed class ViewManagerTests : IDisposable
         using var state = new AppState { CurrentFilePath = filePath };
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new FullAggregationDrillDownRequest(
@@ -1071,7 +1071,7 @@ public sealed class ViewManagerTests : IDisposable
         using var state = new AppState { CurrentFilePath = filePath };
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         var request = new FullAggregationDrillDownRequest(
@@ -1105,7 +1105,7 @@ public sealed class ViewManagerTests : IDisposable
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -1135,7 +1135,7 @@ public sealed class ViewManagerTests : IDisposable
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -1163,7 +1163,7 @@ public sealed class ViewManagerTests : IDisposable
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
         };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
 
         // Act
@@ -1182,7 +1182,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState { CurrentMode = ViewMode.FileSelection };
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.SwitchToFileSelection();
 
@@ -1201,7 +1201,7 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         using var state = new AppState();
         using var window = new Window();
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, action => action());
         var viewManager = new ViewManager(window, state, modeController, action => action());
         viewManager.Dispose();
 

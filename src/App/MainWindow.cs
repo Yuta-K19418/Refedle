@@ -33,7 +33,7 @@ internal sealed class MainWindow : Window
     {
         _app = app;
         _state = state;
-        var modeController = new ModeController(state);
+        var modeController = new ModeController(state, app.Invoke);
 
         X = 0;
         Y = 0;
