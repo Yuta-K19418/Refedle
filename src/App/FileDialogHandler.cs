@@ -29,7 +29,9 @@ internal sealed class FileDialogHandler(
         dialog.AllowedTypes.Add(new AllowedType("JSON file", ".json"));
         dialog.AllowedTypes.Add(new AllowedType("JSON Lines file", ".jsonl"));
 
-        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
+        // Modal dialog: the continuation feeds dialog.Path into HandleFileSelectedAsync, whose
+        // prologue mutates AppState without app.Invoke, so it must stay on the UI thread.
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null).ConfigureAwait(true);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
