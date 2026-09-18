@@ -40,17 +40,17 @@ internal static class DryRunner
         }
         catch (OperationCanceledException)
         {
-            await logger.WriteErrorAsync("Operation cancelled");
+            await logger.WriteErrorAsync("Operation cancelled").ConfigureAwait(false);
             return ExitCode.Failure;
         }
         catch (NotSupportedException ex)
         {
-            await logger.WriteErrorAsync(ex.Message);
+            await logger.WriteErrorAsync(ex.Message).ConfigureAwait(false);
             return ExitCode.Failure;
         }
         catch (Exception ex)
         {
-            await logger.WriteErrorAsync($"Error: {ex.Message}");
+            await logger.WriteErrorAsync($"Error: {ex.Message}").ConfigureAwait(false);
             return ExitCode.Failure;
         }
     }

@@ -58,7 +58,8 @@ internal sealed class ModeController
 
         try
         {
-            var schema = await scanner.InitialScanAsync();
+            // Continuation assigns UI-shared state (Schema/CurrentMode) directly, without app.Invoke.
+            var schema = await scanner.InitialScanAsync().ConfigureAwait(true);
             _state.Schema = schema;
             _state.CurrentMode = ViewMode.JsonLinesTable;
 

@@ -65,11 +65,23 @@ internal sealed class ArchiveBinaryReplacer : IBinaryReplacer
 
     private static async ValueTask<Result> ExtractBinaryCoreAsync(string archiveFilePath, string tempPath, CancellationToken cancellationToken)
     {
-        await using var archiveStream = new FileStream(
+        // A declaration-form await using on a stream cannot carry ConfigureAwait while keeping the
+        // concrete type, so each disposal is split into a disposer local, declared right after
+        // acquisition and disposed in reverse order at scope exit.
+        var archiveStream = new FileStream(
             archiveFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamBufferSize, useAsync: true);
-        await using var gzipStream = new GZipStream(archiveStream, CompressionMode.Decompress);
-        await using var tarReader = new TarReader(gzipStream);
+        await using var archiveStreamDisposer = archiveStream.ConfigureAwait(false);
+        var gzipStream = new GZipStream(archiveStream, CompressionMode.Decompress);
+        await using var gzipStreamDisposer = gzipStream.ConfigureAwait(false);
+        var tarReader = new TarReader(gzipStream);
+        await using var tarReaderDisposer = tarReader.ConfigureAwait(false);
 
+        return await ExtractBinaryEntryAsync(tarReader, tempPath, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<Result> ExtractBinaryEntryAsync(
+        TarReader tarReader, string tempPath, CancellationToken cancellationToken)
+    {
         TarEntry? entry;
         while ((entry = await tarReader.GetNextEntryAsync(cancellationToken: cancellationToken).ConfigureAwait(false)) is not null)
         {
@@ -84,9 +96,11 @@ internal sealed class ArchiveBinaryReplacer : IBinaryReplacer
                 return Results.Failure("The 'refedle' entry in the archive has no content.");
             }
 
-            await using var destination = new FileStream(
+            var destination = new FileStream(
                 tempPath, FileMode.Create, FileAccess.Write, FileShare.None, StreamBufferSize, useAsync: true);
+            await using var destinationDisposer = destination.ConfigureAwait(false);
             await entry.DataStream.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
+
             return Results.Success();
         }
 

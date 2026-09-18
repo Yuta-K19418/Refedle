@@ -174,8 +174,9 @@ internal sealed class UpdateCommand(
             return Results.Failure(expectedHexResult.Error);
         }
 
-        await using var archiveStream = new FileStream(
+        var archiveStream = new FileStream(
             archivePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamBufferSize, useAsync: true);
+        await using var archiveStreamDisposer = archiveStream.ConfigureAwait(false);
         var actualHex = Convert.ToHexString(await SHA256.HashDataAsync(archiveStream, cancellationToken).ConfigureAwait(false));
         return actualHex == expectedHexResult.Value
             ? Results.Success()
