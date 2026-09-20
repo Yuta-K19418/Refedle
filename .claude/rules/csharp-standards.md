@@ -80,6 +80,11 @@ paths:
 - Access modifiers (`public`, `internal`, etc.) are irrelevant to this check
 - If both A→B and B→A hold, this is a bidirectional dependency and is **forbidden**
 
+### No Test-Only Code in Production (STRICT)
+- Do NOT write code in production projects that exists only for tests: no test-only hooks, seams, callbacks, flags, or `static` mutable state; no members widened to `public` solely so tests can reach them (`internal` + `InternalsVisibleTo` to the test projects is the established mechanism and is allowed)
+- If a test needs to control or observe a collaborator, introduce an **interface** and inject it via DI (constructor injection). The production implementation is registered in production; the test supplies a test double from the test project
+- The interface must represent a real responsibility of the design, not a test-only concern
+
 ### No `else` Clause
 - Do NOT use `else` clauses
 - Use **Guard Clauses** (early return) or `continue` to keep the logic flat
