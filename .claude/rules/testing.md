@@ -52,6 +52,10 @@ Shared conventions for all test projects. Project-specific rules live in
 ## Resource Cleanup
 - When tests create external resources (files, streams, connections, etc.), ensure they are properly cleaned up after the test completes
 
+## No Test-Only Code in Production
+- Do NOT add hooks, seams, or static mutable state to production code for the sake of tests. Inject an interface and use a test double instead
+- See [csharp-standards.md](csharp-standards.md#no-test-only-code-in-production-strict)
+
 ## Avoid Logic in Tests
 - **Do NOT use control flow statements** (`if`, `else`, `while`, `for`, `foreach`, `switch`) inside test methods
 - Tests should be deterministic and straightforward with no branching logic
