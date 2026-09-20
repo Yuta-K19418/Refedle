@@ -78,6 +78,20 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.Tests.App.Cli.IO.Json.FullAggregationRecordReaderTests.BuildJsonLinesReader(System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.DrillDown.KeyPathSegment},System.Collections.Generic.IReadOnlyList{System.String},System.Collections.Generic.IReadOnlyList{Refedle.Engine.Filtering.BatchFilterSpec})",
     Justification = "RowReader ownership is transferred to the reader under test; each test disposes it.")]
 
+// ColumnWidthStabilizingTableSourceTests
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Views.ColumnWidthStabilizingTableSourceTests.Dispose_DisposesInnerSourceWhenDisposable",
+    Justification = "Ownership transferred to source, which is disposed by the single Dispose() call under test.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Views.ColumnWidthStabilizingTableSourceTests.Dispose_CalledMultipleTimes_DisposesInnerSourceExactlyOnce",
+    Justification = "Ownership transferred to source, which is disposed by the two Dispose() calls under test.")]
+
 // LivePumpTestSession<T>
 [assembly: SuppressMessage(
     "Design",
