@@ -11,7 +11,7 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App;
 
-public sealed class MainWindowTests
+public sealed partial class MainWindowTests
 {
     private static IApplication CreateTestApp()
     {

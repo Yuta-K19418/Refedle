@@ -90,18 +90,6 @@ using System.Diagnostics.CodeAnalysis;
 // MainWindow
 [assembly: SuppressMessage(
     "Reliability",
-    "CA2213:Disposable fields should be disposed",
-    Scope = "member",
-    Target = "~F:Refedle.App.MainWindow._progressBar",
-    Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2213:Disposable fields should be disposed",
-    Scope = "member",
-    Target = "~F:Refedle.App.MainWindow._progressLabel",
-    Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
-[assembly: SuppressMessage(
-    "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
     Target = "~M:Refedle.App.MainWindow.InitializeMenu",
@@ -117,12 +105,6 @@ using System.Diagnostics.CodeAnalysis;
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
     Target = "~M:Refedle.App.MainWindow.InitializeStatusBar",
-    Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.MainWindow.ShowIndexingProgress",
     Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
 
 // AppKeyHandler
