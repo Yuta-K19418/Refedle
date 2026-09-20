@@ -79,12 +79,11 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
         }
 
         var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        await using (source.ConfigureAwait(false))
-        {
-            await using var destination = new FileStream(
-                destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 8192, useAsync: true);
-            await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
-        }
+        await using var sourceDisposer = source.ConfigureAwait(false);
+        var destination = new FileStream(
+            destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 8192, useAsync: true);
+        await using var destinationDisposer = destination.ConfigureAwait(false);
+        await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
 
         return Results.Success();
     }

@@ -260,7 +260,8 @@ internal sealed class MainWindow : Window
 
     private async Task ExecuteStartupLoadAsync(string inputFile, string? recipeFile)
     {
-        await _fileDialogHandler.HandleFileSelectedAsync(inputFile);
+        // Continuation reads AppState; keep it on the UI thread before delegating to recipe I/O.
+        await _fileDialogHandler.HandleFileSelectedAsync(inputFile).ConfigureAwait(true);
 
         if (string.IsNullOrWhiteSpace(_state.CurrentFilePath))
         {

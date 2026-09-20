@@ -37,7 +37,8 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Save Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
+        // Modal dialog: the continuation reads dialog result and AppState (BuildRecipe) on the UI thread.
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null).ConfigureAwait(true);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
@@ -93,7 +94,8 @@ internal sealed class RecipeCommandHandler(
         var dialog = new OpenDialog { Title = "Load Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
-        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null);
+        // Modal dialog: the continuation reads dialog result and AppState (LoadFromPathAsync prologue) on the UI thread.
+        await _app.RunAsync(dialog, _state.Cts.Token, errorHandler: null).ConfigureAwait(true);
 
         if (dialog.Canceled || string.IsNullOrEmpty(dialog.Path))
         {
