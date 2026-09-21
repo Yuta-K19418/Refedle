@@ -15,7 +15,8 @@ internal sealed class FileDialogHandler(
     ViewManager viewManager,
     Action<IRowIndexer> onIndexerStart,
     Action stopIndexing,
-    Func<string, ISchemaScanner> scannerFactory)
+    Func<string, ISchemaScanner> scannerFactory,
+    Action<string> onFilePathChanged)
 {
     private readonly IApplication _app = app;
     private readonly AppState _state = state;
@@ -24,6 +25,8 @@ internal sealed class FileDialogHandler(
     private readonly Action _stopIndexing = stopIndexing;
     private readonly Func<string, ISchemaScanner> _scannerFactory =
         scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
+    private readonly Action<string> _onFilePathChanged =
+        onFilePathChanged ?? throw new ArgumentNullException(nameof(onFilePathChanged));
 
     internal async Task ShowAsync()
     {
@@ -57,6 +60,7 @@ internal sealed class FileDialogHandler(
 
         // Reset state for new file
         _state.CurrentFilePath = path;
+        _app.Invoke(() => _onFilePathChanged(path));
         _state.ClearMorphActions();
         // The fresh session starts clean: an empty stack cannot diverge from anything on disk.
         _state.MarkRecipeSaved();

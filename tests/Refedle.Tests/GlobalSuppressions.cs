@@ -113,3 +113,17 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.Tests.App.LivePumpTestSession`1.CancelAndObserveAsync(System.Threading.CancellationTokenSource,System.Threading.Tasks.Task)",
     Justification = "The startup failure the caller is about to rethrow is what matters; this only prevents pumpTask's own fault from surfacing as an unobserved task exception.")]
+
+// FilePathBarTests — the ANSI driver's captured screen buffer is a multidimensional array.
+[assembly: SuppressMessage(
+    "Performance",
+    "CA1814:Prefer jagged arrays over multidimensional arrays",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Views.FilePathBarTests.ScreenContents(Terminal.Gui.Drivers.IDriver)",
+    Justification = "IDriver.Contents is a multidimensional array by framework contract.")]
+[assembly: SuppressMessage(
+    "Performance",
+    "CA1814:Prefer jagged arrays over multidimensional arrays",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Views.FilePathBarTests.CellAttribute(Terminal.Gui.Drawing.Cell[0:,0:],System.Int32,System.Int32)",
+    Justification = "Reads from IDriver.Contents, which is a multidimensional array by framework contract.")]

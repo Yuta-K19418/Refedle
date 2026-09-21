@@ -112,7 +112,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         // Act
         Action act = () =>
         {
-            _ = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            _ = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         };
 
         // Assert
@@ -132,7 +132,27 @@ public sealed class FileDialogHandlerTests : IDisposable
         // Act
         Action act = () =>
         {
-            _ = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, null!);
+            _ = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, null!, _ => { });
+        };
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullFilePathChangedCallback_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        using var window = new Window();
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+
+        // Act
+        Action act = () =>
+        {
+            _ = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, null!);
         };
 
         // Assert
@@ -154,7 +174,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 capturedIndexer = indexer;
                 // Simulate indexing start
                 Task.Run(() => indexer.BuildIndex());
-            }, () => { }, TestSchemaScannerFactories.Csv);
+            }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -179,7 +199,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             var state = new AppState();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -207,7 +227,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             // _stopIndexing is called after RenewCtsWithCancel(), so cancelling state.Cts
             // here pre-cancels the token before TopLevelScanner.Scan runs.
             var handler = new FileDialogHandler(app, state, viewManager, _ => { },
-                () => state.Cts.Cancel(), TestSchemaScannerFactories.Csv);
+                () => state.Cts.Cancel(), TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -237,7 +257,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             {
                 // Do NOT start indexing yet, so FirstCheckpointReached won't fire
                 tcs.TrySetResult();
-            }, () => { }, TestSchemaScannerFactories.Csv);
+            }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -267,6 +287,58 @@ public sealed class FileDialogHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task HandleFileSelectedAsync_JsonLinesFile_NotifiesFilePathChangedWithSelectedPath()
+    {
+        // Arrange
+        List<string> notifiedPaths = [];
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new FileDialogHandler(
+                app,
+                state,
+                viewManager,
+                indexer => Task.Run(() => indexer.BuildIndex()),
+                () => { },
+                TestSchemaScannerFactories.JsonLines,
+                notifiedPaths.Add);
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonLinesFile));
+        var paths = await session.InvokeAsync((_, _) => Task.FromResult(notifiedPaths.ToArray()));
+
+        // Assert
+        paths.Should().Equal(_jsonLinesFile);
+    }
+
+    [Fact]
+    public async Task HandleFileSelectedAsync_UnsupportedFile_DoesNotNotifyFilePathChanged()
+    {
+        // Arrange
+        List<string> notifiedPaths = [];
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new FileDialogHandler(
+                app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.JsonLines, notifiedPaths.Add);
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_unsupportedFile));
+        var paths = await session.InvokeAsync((_, _) => Task.FromResult(notifiedPaths.ToArray()));
+
+        // Assert
+        paths.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task HandleFileSelectedAsync_WhenDrillDownStateIsPopulated_ResetsDrillDownState()
     {
         // Arrange
@@ -288,7 +360,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 KeyPath: [],
                 ActionStack: []);
 
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -311,7 +383,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -334,7 +406,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             var state = new AppState();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -364,7 +436,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             {
                 capturedIndexer = indexer;
                 Task.Run(() => indexer.BuildIndex());
-            }, () => { }, TestSchemaScannerFactories.Csv);
+            }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -386,7 +458,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             var state = new AppState();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -426,7 +498,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
                 var viewManager = new ViewManager(window, state, modeController, app.Invoke);
                 var handler = new FileDialogHandler(
-                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner);
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner, _ => { });
                 return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
             });
             var replacementSchema = new TableSchema
@@ -488,7 +560,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
                 var viewManager = new ViewManager(window, state, modeController, app.Invoke);
                 var handler = new FileDialogHandler(
-                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner);
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner, _ => { });
                 return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
             });
             var replacementSchema = new TableSchema
@@ -545,7 +617,7 @@ public sealed class FileDialogHandlerTests : IDisposable
                 capturedIndexer = indexer;
                 // Simulate indexing start
                 Task.Run(() => indexer.BuildIndex());
-            }, () => { }, TestSchemaScannerFactories.Csv);
+            }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -570,7 +642,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             var state = new AppState();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
-            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
@@ -601,7 +673,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
             {
                 Task.Run(() => indexer.BuildIndex());
-            }, () => { }, TestSchemaScannerFactories.Csv);
+            }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
         });
 
