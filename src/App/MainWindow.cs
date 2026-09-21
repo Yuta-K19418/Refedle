@@ -9,6 +9,8 @@ namespace Refedle.App;
 /// Main application window for Refedle TUI.
 /// Owns the menu and status bar; orchestrates file loading
 /// and content view management via <see cref="ViewManager"/>.
+/// Members must be called on the UI thread, except <see cref="ScheduleStartupLoad"/>,
+/// which defers its work through <c>_app.Invoke</c>.
 /// </summary>
 internal sealed class MainWindow : Window
 {
@@ -142,6 +144,10 @@ internal sealed class MainWindow : Window
         });
     }
 
+    /// <summary>
+    /// Starts indexing and wires its progress events to the overlay.
+    /// Must be called on the UI thread; it updates the indexing session state and Terminal.Gui views directly.
+    /// </summary>
     internal void StartIndexing(IRowIndexer indexer)
     {
         WireIndexerProgress(indexer);
