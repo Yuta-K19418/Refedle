@@ -65,6 +65,29 @@ internal sealed class AppState : IDisposable
     /// </summary>
     public IReadOnlyList<MorphAction> ActionStack => _actionStack;
 
+    private bool _hasUnsavedChanges;
+    private long _revision;
+
+    /// <summary>
+    /// Gets whether the root Action Stack contains changes not reflected in a recipe file.
+    /// Every mutation sets this. It is cleared by <see cref="MarkRecipeSaved"/> (recipe load, new-file
+    /// reset) and by <see cref="MarkRecipeSavedIfUnchanged"/> (successful root save, with the
+    /// <see cref="Revision"/> captured before the write). Unlike the stack count, this stays false
+    /// right after a successful save or load.
+    /// <para>
+    /// Threading: every AppState read and write is UI-thread-only (reach it through
+    /// <c>IApplication.Invoke</c>). No synchronization is provided.
+    /// </para>
+    /// </summary>
+    public bool HasUnsavedChanges => _hasUnsavedChanges;
+
+    /// <summary>
+    /// Gets a counter that increases on every root Action Stack mutation. A save captures it
+    /// before its asynchronous write and passes it to <see cref="MarkRecipeSavedIfUnchanged"/>, so
+    /// edits made while the write was in flight are not reported as saved.
+    /// </summary>
+    public long Revision => _revision;
+
     /// <summary>
     /// Gets or sets the DrillDown session state.
     /// Null when not in FocusedTable mode.
@@ -99,6 +122,8 @@ internal sealed class AppState : IDisposable
     internal void AddMorphAction(MorphAction action)
     {
         _actionStack = [.. _actionStack, action];
+        _hasUnsavedChanges = true;
+        _revision++;
     }
 
     /// <summary>
@@ -106,7 +131,15 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void ClearMorphActions()
     {
+        // An already-empty stack is unchanged: flagging it would raise a false unsaved-changes prompt.
+        if (_actionStack.Count == 0)
+        {
+            return;
+        }
+
         _actionStack = [];
+        _hasUnsavedChanges = true;
+        _revision++;
     }
 
     /// <summary>
@@ -116,6 +149,31 @@ internal sealed class AppState : IDisposable
     internal void SetActionStack(IReadOnlyList<MorphAction> actions)
     {
         _actionStack = actions;
+        _hasUnsavedChanges = true;
+        _revision++;
+    }
+
+    /// <summary>
+    /// Unconditionally clears <see cref="HasUnsavedChanges"/>. For resets only: after a recipe load
+    /// (the stack then mirrors the recipe file) and when opening a new file resets the session.
+    /// A root recipe save must use <see cref="MarkRecipeSavedIfUnchanged"/> instead.
+    /// </summary>
+    internal void MarkRecipeSaved()
+    {
+        _hasUnsavedChanges = false;
+    }
+
+    /// <summary>
+    /// Clears <see cref="HasUnsavedChanges"/> only when <see cref="Revision"/> still equals
+    /// <paramref name="savedRevision"/>, i.e. the root Action Stack is exactly what was persisted.
+    /// </summary>
+    /// <param name="savedRevision">The <see cref="Revision"/> captured before the save began.</param>
+    internal void MarkRecipeSavedIfUnchanged(long savedRevision)
+    {
+        if (_revision == savedRevision)
+        {
+            _hasUnsavedChanges = false;
+        }
     }
 
     /// <inheritdoc/>

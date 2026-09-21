@@ -221,4 +221,131 @@ public sealed class AppStateTests
         // Assert
         result.Should().BeNull();
     }
+
+    [Fact]
+    public void HasUnsavedChanges_Default_IsFalse()
+    {
+        // Arrange
+        using var state = new AppState();
+
+        // Act
+        var result = state.HasUnsavedChanges;
+
+        // Assert
+        result.Should().BeFalse();
+    }
+
+    [Fact]
+    public void AddMorphAction_SetsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+
+        // Act
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ClearMorphActions_WhenSavedStackIsNonEmpty_SetsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+        state.MarkRecipeSaved();
+
+        // Act
+        state.ClearMorphActions();
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeTrue();
+    }
+
+    [Fact]
+    public void ClearMorphActions_WhenStackAlreadyEmpty_LeavesStateClean()
+    {
+        // Arrange
+        using var state = new AppState();
+        var revisionBefore = state.Revision;
+
+        // Act
+        state.ClearMorphActions();
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeFalse();
+        state.Revision.Should().Be(revisionBefore);
+    }
+
+    [Fact]
+    public void SetActionStack_SetsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+
+        // Act
+        state.SetActionStack([]);
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeTrue();
+    }
+
+    [Fact]
+    public void MarkRecipeSaved_AfterMutation_ClearsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+
+        // Act
+        state.MarkRecipeSaved();
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public void DrillDownState_WithInitialActions_DefaultsToClean()
+    {
+        // Arrange — the drillDownAction comes from a loaded recipe, not an unsaved edit
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        var hasUnsavedChanges = state.DrillDown.Should().BeOfType<DrillDownState>().Which.HasUnsavedChanges;
+
+        // Assert
+        hasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkRecipeSavedIfUnchanged_WhenRevisionMatches_ClearsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+        var savedRevision = state.Revision;
+
+        // Act
+        state.MarkRecipeSavedIfUnchanged(savedRevision);
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public void MarkRecipeSavedIfUnchanged_WhenStackMutatedSinceCapture_KeepsUnsavedChanges()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+        var savedRevision = state.Revision;
+        state.ClearMorphActions();
+
+        // Act
+        state.MarkRecipeSavedIfUnchanged(savedRevision);
+
+        // Assert
+        state.HasUnsavedChanges.Should().BeTrue();
+    }
 }

@@ -912,6 +912,40 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void HandleMorphAction_WithFocusedTableModeAndDrillDown_MarksDrillDownSessionUnsaved()
+    {
+        // Arrange — the DrillDown replays a just-loaded recipe (clean); applying an action within
+        // it must flip its own flag without touching the root one
+        using var app = CreateTestApp();
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        DrillDownState drillDown = new(
+            [new FocusedTableRow(Encoding.UTF8.GetBytes("{\"name\":\"Alice\"}"), "[0]")],
+            schema,
+            ViewMode.JsonArrayTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "name", NewName = "loaded" }]);
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var window = new Window();
+        var modeController = new ModeController(state);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        viewManager.SwitchToFocusedTable(drillDown);
+        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        var action = new RenameColumnAction { OldName = "name", NewName = "label" };
+
+        // Act
+        view.OnMorphAction?.Invoke(action);
+
+        // Assert
+        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        drillDownAfter.HasUnsavedChanges.Should().BeTrue();
+        state.HasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
     public void HandleMorphAction_WithFocusedTableModeAndBaseActions_LeavesBaseStackUntouched()
     {
         // Arrange — a populated base ActionStack must survive appending a morph action to the

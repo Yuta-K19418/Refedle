@@ -61,11 +61,11 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleQuit()
     {
-        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
-            ? drillDown.ActionStack.Count
-            : _state.ActionStack.Count;
+        var hasUnsavedChanges = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+            ? drillDown.HasUnsavedChanges
+            : _state.HasUnsavedChanges;
 
-        if (currentActionCount == 0)
+        if (!hasUnsavedChanges)
         {
             _app.RequestStop();
             return true;
@@ -314,7 +314,7 @@ internal sealed class AppKeyHandler : IDisposable
 
         if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } activeDrillDown)
         {
-            _state.DrillDown = activeDrillDown with { ActionStack = [] };
+            _state.DrillDown = activeDrillDown with { ActionStack = [], HasUnsavedChanges = true };
             _viewManager.RefreshCurrentTableView();
             return true;
         }

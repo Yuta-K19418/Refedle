@@ -284,6 +284,135 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
+    public void KeyDown_WithQKey_AfterRootRecipeSaved_QuitsWithoutConfirmation()
+    {
+        // Arrange — the issue #340 scenario: a non-empty ActionStack that was just saved to a
+        // recipe; the count-based check would prompt, the unsaved-changes flag must not
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+        state.MarkRecipeSaved();
+        using var mainWindow = new MainWindow(app, state);
+        // No dialog auto-dismiss wired: if the flag were ignored, this would hang.
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithQKey_AfterDrillDownRecipeSaved_QuitsWithoutConfirmation()
+    {
+        // Arrange — FocusedTable with a saved (clean) DrillDown stack while the root stack is
+        // dirty: quitting must consult the current mode's flag, neither the stack counts nor the
+        // root flag
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
+            HasUnsavedChanges: false);
+        using var mainWindow = new MainWindow(app, state);
+        // No dialog auto-dismiss wired: if the wrong flag were consulted, this would hang.
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithQKey_WhenFocusedTableDrillDownIsDirty_ShowsQuitConfirmation()
+    {
+        // Arrange — FocusedTable with an empty but unsaved DrillDown session (e.g. actions were
+        // applied then cleared): the flag, not the stack count, must drive the confirmation
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [],
+            HasUnsavedChanges: true);
+        using var mainWindow = new MainWindow(app, state);
+        // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
+        // Without the dirty check no modal is ever opened.
+        var confirmationShown = false;
+        app.Iteration += (_, _) =>
+        {
+            confirmationShown |= app.TopRunnableView is { } topView && !ReferenceEquals(topView, mainWindow);
+            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        };
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+        confirmationShown.Should().BeTrue();
+    }
+
+    [Fact]
+    public void KeyDown_WithQKey_WhenBaseRootIsDirtyAndStaleDrillDownIsClean_ShowsQuitConfirmation()
+    {
+        // Arrange — base table with a dirty root stack and a clean stale DrillDown (left over from
+        // Backspace navigation): quitting must consult the root flag
+        using var app = CreateTestApp();
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState();
+        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+        state.DrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }],
+            HasUnsavedChanges: false);
+        using var mainWindow = new MainWindow(app, state);
+        // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
+        // Without the dirty check no modal is ever opened.
+        var confirmationShown = false;
+        app.Iteration += (_, _) =>
+        {
+            confirmationShown |= app.TopRunnableView is { } topView && !ReferenceEquals(topView, mainWindow);
+            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        };
+        app.StopAfterFirstIteration = true;
+
+        // Act
+        app.Begin(mainWindow);
+        mainWindow.SubscribeKeyHandler();
+        mainWindow.SetFocus();
+        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+
+        // Assert
+        handled.Should().BeTrue();
+        confirmationShown.Should().BeTrue();
+    }
+
+    [Fact]
     public void KeyDown_WithCKey_WhenFocusedTableDrillDownHasActions_ClearsOnlyDrillDownStack()
     {
         // Arrange — confirming the clear from FocusedTable must only clear the DrillDown's own
@@ -323,6 +452,7 @@ public sealed partial class MainWindowTests
         state.ActionStack.Should().ContainSingle();
         var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().BeEmpty();
+        drillDown.HasUnsavedChanges.Should().BeTrue();
     }
 
     [Fact]
@@ -365,6 +495,7 @@ public sealed partial class MainWindowTests
         // Assert
         handled.Should().BeTrue();
         state.ActionStack.Should().BeEmpty();
+        state.HasUnsavedChanges.Should().BeTrue();
         var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().ContainSingle();
     }
