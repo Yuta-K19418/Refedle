@@ -55,6 +55,8 @@ internal sealed class FileDialogHandler(
         // Reset state for new file
         _state.CurrentFilePath = path;
         _state.ClearMorphActions();
+        // The fresh session starts clean: an empty stack cannot diverge from anything on disk.
+        _state.MarkRecipeSaved();
         _state.RenewCtsWithCancel();
         _state.DrillDown = null;
         _state.JsonObjectEntries = null;

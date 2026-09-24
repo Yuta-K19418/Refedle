@@ -1,5 +1,7 @@
 using AwesomeAssertions;
 using Refedle.App;
+using Refedle.App.Views;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -179,6 +181,292 @@ public sealed partial class RecipeCommandHandlerTests
         var loadResult = await new RecipeManager().LoadAsync(_recipeFile);
         loadResult.IsSuccess.Should().BeTrue();
         loadResult.Value.Actions.Should().Equal(action);
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithAcceptedDialog_ClearsRootUnsavedChangesFlag()
+    {
+        // Arrange — the issue #340 scenario: actions applied (dirty), then saved successfully
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, _recipeFile);
+
+            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        var hasUnsavedChanges = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.HasUnsavedChanges));
+
+        // Assert
+        hasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task SaveAsync_FromFocusedTableWithDirtyDrillDown_ClearsOnlyDrillDownFlag()
+    {
+        // Arrange — a FocusedTable save covers the DrillDown scope, so the DrillDown flag is
+        // cleared while the dirty root stack (not part of the saved recipe) stays flagged
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, _recipeFile);
+
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonLinesFile,
+                CurrentMode = ViewMode.FocusedTable,
+                DrillDown = new DrillDownState(
+                    [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                    schema,
+                    ViewMode.JsonLinesTree,
+                    KeyPath: [],
+                    ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
+                    HasUnsavedChanges: true),
+            };
+            state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        var (drillDownFlag, rootFlag) = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult((ctx.State.DrillDown?.HasUnsavedChanges, ctx.State.HasUnsavedChanges)));
+
+        // Assert
+        drillDownFlag.Should().BeFalse();
+        rootFlag.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// A recipe manager whose save blocks until released, letting a test edit AppState while the
+    /// write is in flight.
+    /// </summary>
+    private sealed class GatedRecipeManager : IRecipeManager
+    {
+        private readonly TaskCompletionSource _writeStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private readonly TaskCompletionSource _release = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task WriteStarted => _writeStarted.Task;
+
+        public void Release() => _release.SetResult();
+
+        public ValueTask<Result<Recipe>> LoadAsync(string filePath, CancellationToken ct = default) =>
+            throw new NotSupportedException();
+
+        public async ValueTask<Result> SaveAsync(Recipe recipe, string filePath, CancellationToken ct = default)
+        {
+            _writeStarted.SetResult();
+            await _release.Task.ConfigureAwait(false);
+            return Results.Success();
+        }
+    }
+
+    private static Task<LivePumpTestSession<LiveTestContext<RecipeCommandHandler>>> StartGatedSaveSessionAsync(
+        string csvFile, string recipeFile, GatedRecipeManager gatedManager) =>
+        LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, recipeFile);
+
+            var state = new AppState { CurrentFilePath = csvFile, CurrentMode = ViewMode.CsvTable };
+            state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager, gatedManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+    [Fact]
+    public async Task SaveAsync_WhenRootActionAddedDuringWrite_KeepsUnsavedChangesFlag()
+    {
+        // Arrange — the write is suspended after the recipe was built; an edit lands before it completes
+        var gatedManager = new GatedRecipeManager();
+        await using var session = await StartGatedSaveSessionAsync(_csvFile, _recipeFile, gatedManager);
+        var saveTask = session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        await gatedManager.WriteStarted;
+
+        // Act
+        await session.InvokeAsync((_, ctx) =>
+        {
+            ctx.State.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+            return Task.CompletedTask;
+        });
+        gatedManager.Release();
+        await saveTask;
+        var hasUnsavedChanges = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.HasUnsavedChanges));
+
+        // Assert
+        hasUnsavedChanges.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAsync_WhenRootStackClearedDuringWrite_KeepsUnsavedChangesFlag()
+    {
+        // Arrange — the saved (non-empty) stack is cleared while the write is in flight
+        var gatedManager = new GatedRecipeManager();
+        await using var session = await StartGatedSaveSessionAsync(_csvFile, _recipeFile, gatedManager);
+        var saveTask = session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        await gatedManager.WriteStarted;
+
+        // Act
+        await session.InvokeAsync((_, ctx) =>
+        {
+            ctx.State.ClearMorphActions();
+            return Task.CompletedTask;
+        });
+        gatedManager.Release();
+        await saveTask;
+        var hasUnsavedChanges = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.HasUnsavedChanges));
+
+        // Assert
+        hasUnsavedChanges.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAsync_ThenRootEdit_MarksRootUnsavedAgain()
+    {
+        // Arrange — dirty root, saved successfully (clean)
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, _recipeFile);
+
+            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+
+        // Act
+        var (flagAfterSave, flagAfterEdit) = await session.InvokeAsync((_, ctx) =>
+        {
+            var afterSave = ctx.State.HasUnsavedChanges;
+            ctx.State.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
+            return Task.FromResult((afterSave, ctx.State.HasUnsavedChanges));
+        });
+
+        // Assert
+        flagAfterSave.Should().BeFalse();
+        flagAfterEdit.Should().BeTrue();
+    }
+
+    private static DrillDownState CreateDirtyDrillDown() =>
+        new(
+            [new FocusedTableRow(System.Text.Encoding.UTF8.GetBytes("{\"col1\":\"v\"}"), "[0]")],
+            new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
+            HasUnsavedChanges: true);
+
+    [Fact]
+    public async Task SaveAsync_FromFocusedTable_ThenDrillDownEdit_MarksDrillDownUnsavedAgain()
+    {
+        // Arrange — dirty DrillDown session, saved successfully (clean)
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, _recipeFile);
+
+            var drillDown = CreateDirtyDrillDown();
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonLinesFile,
+                CurrentMode = ViewMode.FocusedTable,
+                DrillDown = drillDown,
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            viewManager.SwitchToFocusedTable(drillDown);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+
+        // Act
+        var (flagAfterSave, flagAfterEdit) = await session.InvokeAsync((_, ctx) =>
+        {
+            var afterSave = ctx.State.DrillDown?.HasUnsavedChanges;
+            var view = ctx.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+            view.OnMorphAction?.Invoke(new RenameColumnAction { OldName = "col1", NewName = "again" });
+            return Task.FromResult((afterSave, ctx.State.DrillDown?.HasUnsavedChanges));
+        });
+
+        // Assert
+        flagAfterSave.Should().BeFalse();
+        flagAfterEdit.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAsync_FromFocusedTableWithFailedWrite_KeepsDrillDownUnsavedChangesFlag()
+    {
+        // Arrange — the dialog path targets a missing directory, so the DrillDown save fails
+        var unreachableRecipeFile = Path.Combine(
+            Path.GetTempPath(), $"refedle-missing-{Guid.NewGuid():N}", "recipe.yaml");
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, unreachableRecipeFile);
+
+            var state = new AppState
+            {
+                CurrentFilePath = _jsonLinesFile,
+                CurrentMode = ViewMode.FocusedTable,
+                DrillDown = CreateDirtyDrillDown(),
+            };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        var drillDownFlag = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.DrillDown?.HasUnsavedChanges));
+
+        // Assert
+        drillDownFlag.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task SaveAsync_WithFailedWrite_KeepsRootUnsavedChangesFlag()
+    {
+        // Arrange — the dialog path targets a missing directory, so RecipeManager.SaveAsync fails
+        // and the unsaved flag must survive the error path
+        var unreachableRecipeFile = Path.Combine(
+            Path.GetTempPath(), $"refedle-missing-{Guid.NewGuid():N}", "recipe.yaml");
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            AcceptModalDialogs(app, window, unreachableRecipeFile);
+
+            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
+        var (hasUnsavedChanges, isPlaceholder) = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult((ctx.State.HasUnsavedChanges, ctx.ViewManager.GetCurrentView() is PlaceholderView)));
+
+        // Assert — the write failed (error placeholder shown), so the flag must stay set
+        isPlaceholder.Should().BeTrue();
+        hasUnsavedChanges.Should().BeTrue();
     }
 
     [Fact]

@@ -5,6 +5,7 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
+using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
@@ -276,6 +277,31 @@ public sealed class FileDialogHandlerTests : IDisposable
 
         // Assert
         drillDown.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task HandleFileSelectedAsync_WhenSessionWasDirty_StartsNewSessionClean()
+    {
+        // Arrange — opening a new file discards the previous session's stack; the fresh session
+        // must not inherit its unsaved-changes flag
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
+        var (hasUnsavedChanges, actionStack) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.HasUnsavedChanges, ctx.State.ActionStack.Count)));
+
+        // Assert
+        hasUnsavedChanges.Should().BeFalse();
+        actionStack.Should().Be(0);
     }
 
     [Fact]

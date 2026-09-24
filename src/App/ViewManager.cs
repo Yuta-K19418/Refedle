@@ -444,7 +444,11 @@ internal sealed class ViewManager : IDisposable
     {
         if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is not null)
         {
-            _state.DrillDown = _state.DrillDown with { ActionStack = [.. _state.DrillDown.ActionStack, action] };
+            _state.DrillDown = _state.DrillDown with
+            {
+                ActionStack = [.. _state.DrillDown.ActionStack, action],
+                HasUnsavedChanges = true,
+            };
             RefreshCurrentTableView();
             return;
         }

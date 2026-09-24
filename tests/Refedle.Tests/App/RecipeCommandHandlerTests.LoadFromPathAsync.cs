@@ -78,6 +78,63 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
     }
 
     [Fact]
+    public async Task LoadFromPathAsync_NonDrillDownRecipe_MarksRootStackSaved()
+    {
+        // Arrange — the session was dirty before the load; loading mirrors the recipe file, so the
+        // loaded stack must not count as unsaved changes
+        var action = new RenameColumnAction { OldName = "old", NewName = "new" };
+        await SaveRecipeAsync(new Recipe { Name = "test", Actions = [action] }, _recipeFile);
+
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState { CurrentFilePath = _jsonLinesFile };
+            state.AddMorphAction(new DeleteColumnAction { ColumnName = "stale" });
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var hasUnsavedChanges = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.HasUnsavedChanges));
+
+        // Assert
+        hasUnsavedChanges.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task LoadFromPathAsync_DrillDownRecipe_DrillDownSessionStartsClean()
+    {
+        // Arrange — a replayed DrillDown recipe re-creates the session from the recipe's actions,
+        // so the fresh session must start without unsaved changes
+        File.WriteAllText(_jsonLinesFile, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
+
+        IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
+        var action = new RenameColumnAction { OldName = "name", NewName = "fullName" };
+        await SaveRecipeAsync(
+            new Recipe { Name = "test", Actions = [action], DrillDownKeyPath = keyPath }, _recipeFile);
+
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState { CurrentFilePath = _jsonLinesFile };
+            var modeController = new ModeController(state);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new RecipeCommandHandler(app, state, viewManager);
+            return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
+        var drillDownFlag = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.DrillDown?.HasUnsavedChanges));
+
+        // Assert
+        drillDownFlag.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task LoadFromPathAsync_JsonObjectRecipeWithMatchingEntry_RendersFocusedTableWithRecipeActionApplied()
     {
         // Arrange
