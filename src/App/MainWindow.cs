@@ -9,6 +9,8 @@ namespace Refedle.App;
 /// Main application window for Refedle TUI.
 /// Owns the menu and status bar; orchestrates file loading
 /// and content view management via <see cref="ViewManager"/>.
+/// Members must be called on the UI thread, except <see cref="ScheduleStartupLoad"/>,
+/// which defers its work through <c>_app.Invoke</c>.
 /// </summary>
 internal sealed class MainWindow : Window
 {
@@ -120,8 +122,27 @@ internal sealed class MainWindow : Window
 
         _indexingOverlay.Show(this);
 
-        _onProgressChanged = OnProgressChanged;
-        _onBuildIndexCompleted = OnBuildIndexCompleted;
+        // Unsubscribing cannot cancel notifications already queued via Invoke, so each handler
+        // binds its source indexer and re-checks it on the UI thread before touching the overlay.
+        _onProgressChanged = (bytesRead, fileSize) => _app.Invoke(() =>
+        {
+            if (!ReferenceEquals(_activeIndexer, indexer))
+            {
+                return;
+            }
+
+            _indexingOverlay.Update(bytesRead, fileSize);
+        });
+        _onBuildIndexCompleted = () => _app.Invoke(() =>
+        {
+            if (!ReferenceEquals(_activeIndexer, indexer))
+            {
+                return;
+            }
+
+            _indexingOverlay.Dismiss();
+            _viewManager.RefreshStatusBarHints();
+        });
         _activeIndexer = indexer;
         indexer.ProgressChanged += _onProgressChanged;
         indexer.BuildIndexCompleted += _onBuildIndexCompleted;
@@ -129,20 +150,10 @@ internal sealed class MainWindow : Window
         _indexingOverlay.Update(indexer.BytesRead, indexer.FileSize);
     }
 
-    private void OnProgressChanged(long bytesRead, long fileSize)
-    {
-        _app.Invoke(() => _indexingOverlay.Update(bytesRead, fileSize));
-    }
-
-    private void OnBuildIndexCompleted()
-    {
-        _app.Invoke(() =>
-        {
-            _indexingOverlay.Dismiss();
-            _viewManager.RefreshStatusBarHints();
-        });
-    }
-
+    /// <summary>
+    /// Starts indexing and wires its progress events to the overlay.
+    /// Must be called on the UI thread; it updates the indexing session state and Terminal.Gui views directly.
+    /// </summary>
     internal void StartIndexing(IRowIndexer indexer)
     {
         WireIndexerProgress(indexer);

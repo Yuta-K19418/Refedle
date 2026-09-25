@@ -146,4 +146,78 @@ public sealed partial class MainWindowTests
             .Where(l => l.Text.StartsWith(" Indexing…", StringComparison.Ordinal))
             .Should().BeEmpty();
     }
+
+    [Fact]
+    public void ProgressChanged_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_DoesNotOverwriteNewIndexerText()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        using var mainWindow = new MainWindow(app, state);
+        var previous = new ProgressIndexer(0L, OneGb);
+        var current = new ProgressIndexer(0L, 2 * OneGb);
+        mainWindow.StartIndexing(previous);
+        previous.RaiseProgressChanged(OneGb / 2, OneGb);
+        mainWindow.StartIndexing(current);
+        var labelBefore = GetIndexingLabel(mainWindow);
+        var textBefore = labelBefore.Text;
+
+        // Act
+        app.StopAfterFirstIteration = true;
+        app.Run(mainWindow);
+
+        // Assert
+        var labelAfter = GetIndexingLabel(mainWindow);
+        labelAfter.Should().BeSameAs(labelBefore);
+        labelAfter.Text.Should().Be(textBefore);
+    }
+
+    [Fact]
+    public void BuildIndexCompleted_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_KeepsNewIndexerOverlayShown()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        using var mainWindow = new MainWindow(app, state);
+        var previous = new ProgressIndexer(0L, OneGb);
+        var current = new ProgressIndexer(0L, 2 * OneGb);
+        mainWindow.StartIndexing(previous);
+        previous.RaiseBuildIndexCompleted();
+        mainWindow.StartIndexing(current);
+        var labelBefore = GetIndexingLabel(mainWindow);
+
+        // Act
+        app.StopAfterFirstIteration = true;
+        app.Run(mainWindow);
+
+        // Assert
+        mainWindow.SubViews.OfType<SpinnerView>().Should().ContainSingle();
+        var labelAfter = GetIndexingLabel(mainWindow);
+        labelAfter.Should().BeSameAs(labelBefore);
+    }
+
+    [Fact]
+    public void BuildIndexCompleted_WhenNotificationIsQueuedBeforeStopAndNewIndexerStarted_KeepsNewIndexerOverlayShown()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        using var state = new AppState();
+        using var mainWindow = new MainWindow(app, state);
+        var stopped = new ProgressIndexer(0L, OneGb);
+        var current = new ProgressIndexer(0L, 2 * OneGb);
+        mainWindow.StartIndexing(stopped);
+        stopped.RaiseBuildIndexCompleted();
+        mainWindow.StopCurrentIndexing();
+        mainWindow.StartIndexing(current);
+        var labelBefore = GetIndexingLabel(mainWindow);
+
+        // Act
+        app.StopAfterFirstIteration = true;
+        app.Run(mainWindow);
+
+        // Assert
+        mainWindow.SubViews.OfType<SpinnerView>().Should().ContainSingle();
+        var labelAfter = GetIndexingLabel(mainWindow);
+        labelAfter.Should().BeSameAs(labelBefore);
+    }
 }
