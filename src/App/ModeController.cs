@@ -1,5 +1,5 @@
 using System.Globalization;
-using Refedle.App.Schema.JsonLines;
+using Refedle.App.Schema;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 
@@ -8,15 +8,16 @@ namespace Refedle.App;
 /// <summary>
 /// Orchestrates view mode transitions and associated lazy initialization logic.
 /// </summary>
-internal sealed class ModeController
+internal sealed class ModeController(
+    AppState state,
+    Action<Action> uiThreadInvoke,
+    Func<string, ISchemaScanner> scannerFactory)
 {
-    private readonly AppState _state;
-
-    public ModeController(AppState state)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        _state = state;
-    }
+    private readonly AppState _state = state ?? throw new ArgumentNullException(nameof(state));
+    private readonly Action<Action> _uiThreadInvoke =
+        uiThreadInvoke ?? throw new ArgumentNullException(nameof(uiThreadInvoke));
+    private readonly Func<string, ISchemaScanner> _scannerFactory =
+        scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
 
     /// <summary>
     /// Toggles the JSON Lines display mode between Tree and Table.
@@ -54,41 +55,51 @@ internal sealed class ModeController
             return Results.Failure("No file is currently open");
         }
 
-        var scanner = new IncrementalSchemaScanner(_state.CurrentFilePath);
+        var scanner = _scannerFactory(_state.CurrentFilePath);
+        // Capture by value before the fire-and-forget scan: StartBackgroundScanAsync
+        // reports cancellation as success, so the guards must detect that the CTS was
+        // renewed while the scan was still running.
+        var scanToken = _state.Cts.Token;
 
         try
         {
-            // Continuation assigns UI-shared state (Schema/CurrentMode) directly, without app.Invoke.
             var schema = await scanner.InitialScanAsync().ConfigureAwait(true);
+
+            // Skip state writes for an already-cancelled scan: RenewCtsWithCancel always
+            // cancels the token when a session is replaced.
+            if (scanToken.IsCancellationRequested)
+            {
+                return Results.Success();
+            }
+
             _state.Schema = schema;
             _state.CurrentMode = ViewMode.JsonLinesTable;
 
-            _ = scanner
-                .StartBackgroundScanAsync(schema, _state.Cts.Token)
-                .ContinueWith(
-                    t =>
-                    {
-                        if (!t.IsCompletedSuccessfully)
-                        {
-                            return;
-                        }
-
-                        _state.Schema = t.Result;
-                        _state.OnSchemaRefined?.Invoke(t.Result);
-                    },
-                    TaskScheduler.Default
-                );
+            _ = BackgroundSchemaRefiner.StartAsync(_state, scanner, schema, _uiThreadInvoke, scanToken);
 
             return Results.Success();
         }
         catch (InvalidOperationException ex)
         {
-            return Results.Failure(ex.Message);
+            return ToScanFailure(ex.Message, scanToken);
         }
         catch (InvalidDataException ex)
         {
-            return Results.Failure($"Invalid JSON Lines format: {ex.Message}");
+            return ToScanFailure($"Invalid JSON Lines format: {ex.Message}", scanToken);
         }
+    }
+
+    /// <summary>
+    /// Converts an initial-scan failure into a result, suppressing the error when the scan
+    /// belonged to a cancelled (replaced) file session so the replacement session never sees
+    /// a stale error. Token-only: the failure is evaluated off the UI thread.
+    /// </summary>
+    /// <param name="error">The scan error message.</param>
+    /// <param name="scanToken">The token captured when the scan started.</param>
+    /// <returns>A suppressed success for a stale session, otherwise the failure.</returns>
+    private static Result ToScanFailure(string error, CancellationToken scanToken)
+    {
+        return scanToken.IsCancellationRequested ? Results.Success() : Results.Failure(error);
     }
 
     /// <summary>

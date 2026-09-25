@@ -422,18 +422,6 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.ModeController.ToggleJsonLinesModeAsync",
-    Justification = "Result is accessed only after the continuation has completed successfully.")]
-[assembly: SuppressMessage(
-    "Design",
-    "MA0045:Do not use blocking calls, even when the calling method must become async",
-    Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.LoadCsvAsync(System.String,Refedle.Engine.IO.IRowIndexer)",
-    Justification = "Result is accessed only after the continuation has completed successfully.")]
-[assembly: SuppressMessage(
-    "Design",
-    "MA0045:Do not use blocking calls, even when the calling method must become async",
-    Scope = "member",
     Target = "~M:Refedle.App.Schema.Csv.IncrementalSchemaScanner.ReadRows(System.Int32,System.Int32)",
     Justification = "The scanner base contract runs this batch reader synchronously on a background task.")]
 [assembly: SuppressMessage(
