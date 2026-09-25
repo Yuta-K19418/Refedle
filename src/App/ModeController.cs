@@ -1,5 +1,5 @@
 using System.Globalization;
-using Refedle.App.Schema.JsonLines;
+using Refedle.App.Schema;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 
@@ -8,15 +8,13 @@ namespace Refedle.App;
 /// <summary>
 /// Orchestrates view mode transitions and associated lazy initialization logic.
 /// </summary>
-internal sealed class ModeController
+internal sealed class ModeController(
+    AppState state,
+    Func<string, ISchemaScanner> scannerFactory)
 {
-    private readonly AppState _state;
-
-    public ModeController(AppState state)
-    {
-        ArgumentNullException.ThrowIfNull(state);
-        _state = state;
-    }
+    private readonly AppState _state = state ?? throw new ArgumentNullException(nameof(state));
+    private readonly Func<string, ISchemaScanner> _scannerFactory =
+        scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
 
     /// <summary>
     /// Toggles the JSON Lines display mode between Tree and Table.
@@ -54,7 +52,7 @@ internal sealed class ModeController
             return Results.Failure("No file is currently open");
         }
 
-        var scanner = new IncrementalSchemaScanner(_state.CurrentFilePath);
+        var scanner = _scannerFactory(_state.CurrentFilePath);
 
         try
         {

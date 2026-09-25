@@ -8,10 +8,16 @@ namespace Refedle.App.Schema;
 /// - Background scan: continues refinement on remaining data in batches
 /// - Thread-safe schema updates via Copy-on-Write pattern
 /// </summary>
-internal abstract class IncrementalSchemaScannerBase
+internal abstract class IncrementalSchemaScannerBase(string filePath) : ISchemaScanner
 {
     protected const int InitialScanCount = 200;
     protected const int BackgroundBatchSize = 1000;
+
+    /// <summary>
+    /// Gets the path of the file being scanned.
+    /// </summary>
+    protected string FilePath { get; } = filePath ?? throw new ArgumentNullException(nameof(filePath));
+
     /// <summary>
     /// Performs initial scan to provide the first schema for UI display.
     /// Must complete before UI can render the initial table view.

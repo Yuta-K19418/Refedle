@@ -1,4 +1,4 @@
-using Refedle.App.Schema.Csv;
+using Refedle.App.Schema;
 using Refedle.Engine.IO;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
@@ -14,13 +14,16 @@ internal sealed class FileDialogHandler(
     AppState state,
     ViewManager viewManager,
     Action<IRowIndexer> onIndexerStart,
-    Action stopIndexing)
+    Action stopIndexing,
+    Func<string, ISchemaScanner> scannerFactory)
 {
     private readonly IApplication _app = app;
     private readonly AppState _state = state;
     private readonly ViewManager _viewManager = viewManager;
     private readonly Action<IRowIndexer> _onIndexerStart = onIndexerStart;
     private readonly Action _stopIndexing = stopIndexing;
+    private readonly Func<string, ISchemaScanner> _scannerFactory =
+        scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
 
     internal async Task ShowAsync()
     {
@@ -123,7 +126,7 @@ internal sealed class FileDialogHandler(
 
     private async Task LoadCsvAsync(string path, IRowIndexer indexer)
     {
-        var schemaScanner = new IncrementalSchemaScanner(path);
+        var schemaScanner = _scannerFactory(path);
         try
         {
             var schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);

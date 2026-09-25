@@ -11,22 +11,20 @@ namespace Refedle.App.Schema.JsonLines;
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 {
-    private readonly string _filePath;
-
     /// <summary>
     /// Initializes a new instance of <see cref="IncrementalSchemaScanner"/>.
     /// </summary>
     /// <param name="filePath">Path to the JSON Lines file.</param>
     public IncrementalSchemaScanner(string filePath)
+        : base(filePath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-        _filePath = filePath;
     }
 
     /// <inheritdoc/>
     protected override TableSchema ExecuteInitialScan()
     {
-        using var reader = new RowReader(_filePath);
+        using var reader = new RowReader(FilePath);
         var lines = reader.ReadLines(
             byteOffset: 0,
             linesToSkip: 0,
@@ -52,7 +50,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            using var reader = new RowReader(_filePath);
+            using var reader = new RowReader(FilePath);
             var lines = reader.ReadLines(
                 byteOffset: 0,
                 linesToSkip: lineIndex,
