@@ -10,9 +10,12 @@ namespace Refedle.App;
 /// </summary>
 internal sealed class ModeController(
     AppState state,
+    Action<Action> uiThreadInvoke,
     Func<string, ISchemaScanner> scannerFactory)
 {
     private readonly AppState _state = state ?? throw new ArgumentNullException(nameof(state));
+    private readonly Action<Action> _uiThreadInvoke =
+        uiThreadInvoke ?? throw new ArgumentNullException(nameof(uiThreadInvoke));
     private readonly Func<string, ISchemaScanner> _scannerFactory =
         scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
 
@@ -56,26 +59,12 @@ internal sealed class ModeController(
 
         try
         {
-            // Continuation assigns UI-shared state (Schema/CurrentMode) directly, without app.Invoke.
             var schema = await scanner.InitialScanAsync().ConfigureAwait(true);
+
             _state.Schema = schema;
             _state.CurrentMode = ViewMode.JsonLinesTable;
 
-            _ = scanner
-                .StartBackgroundScanAsync(schema, _state.Cts.Token)
-                .ContinueWith(
-                    t =>
-                    {
-                        if (!t.IsCompletedSuccessfully)
-                        {
-                            return;
-                        }
-
-                        _state.Schema = t.Result;
-                        _state.OnSchemaRefined?.Invoke(t.Result);
-                    },
-                    TaskScheduler.Default
-                );
+            _ = BackgroundSchemaRefiner.StartAsync(_state, scanner, schema, _uiThreadInvoke, _state.Cts.Token);
 
             return Results.Success();
         }

@@ -144,24 +144,8 @@ internal sealed class FileDialogHandler(
 
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
-                _ = schemaScanner
-                    .StartBackgroundScanAsync(schema, _state.Cts.Token)
-                    .ContinueWith(
-                        t =>
-                        {
-                            if (!t.IsCompletedSuccessfully)
-                            {
-                                return;
-                            }
-
-                            _app.Invoke(() =>
-                            {
-                                _state.Schema = t.Result;
-                                _state.OnSchemaRefined?.Invoke(t.Result);
-                            });
-                        },
-                        TaskScheduler.Default
-                    );
+                _ = BackgroundSchemaRefiner.StartAsync(
+                    _state, schemaScanner, schema, _app.Invoke, _state.Cts.Token);
 
                 _onIndexerStart(indexer);
             });

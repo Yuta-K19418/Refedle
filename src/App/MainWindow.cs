@@ -29,7 +29,7 @@ internal sealed class MainWindow : Window
     {
         _app = app;
         _state = state;
-        var modeController = new ModeController(state, path => new Schema.JsonLines.IncrementalSchemaScanner(path));
+        var modeController = new ModeController(state, app.Invoke, path => new Schema.JsonLines.IncrementalSchemaScanner(path));
 
         X = 0;
         Y = 0;
