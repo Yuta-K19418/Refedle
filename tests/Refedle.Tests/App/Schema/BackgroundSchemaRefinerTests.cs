@@ -58,6 +58,75 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     }
 
     [Fact]
+    public async Task Start_WhenSessionIsReplacedAfterUiPost_DoesNotPublishStaleSchema()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
+        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
+        var initialSchema = await scanner.InitialScanAsync();
+        var queuedInvokes = new List<Action>();
+        var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Act
+        var continuation = BackgroundSchemaRefiner.StartAsync(
+            state,
+            scanner,
+            initialSchema,
+            action =>
+            {
+                queuedInvokes.Add(action);
+                posted.TrySetResult();
+            },
+            state.Cts.Token);
+        await posted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Replace the session after the UI post was queued but before it ran; the file
+        // path stays the scanned one, as in a same-file reopen.
+        state.RenewCtsWithCancel();
+        var replacementSchema = new TableSchema
+        {
+            Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
+            SourceFormat = DataFormat.JsonLines
+        };
+        state.Schema = replacementSchema;
+        TableSchema? callbackSchema = null;
+        state.OnSchemaRefined = schema => callbackSchema = schema;
+
+        queuedInvokes[0].Invoke();
+        await continuation;
+
+        // Assert
+        state.Schema.Should().BeSameAs(replacementSchema);
+        callbackSchema.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Start_WithAlreadyCancelledToken_NeverInvokesUiThreadInvoke()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
+        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
+        var initialSchema = await scanner.InitialScanAsync();
+        var cancelledToken = state.Cts.Token;
+        state.RenewCtsWithCancel();
+        var invokeCount = 0;
+
+        // Act
+        var continuation = BackgroundSchemaRefiner.StartAsync(
+            state,
+            scanner,
+            initialSchema,
+            _ => Interlocked.Increment(ref invokeCount),
+            cancelledToken);
+        await continuation;
+
+        // Assert
+        Volatile.Read(ref invokeCount).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Start_WithFaultedBackgroundScan_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange

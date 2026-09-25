@@ -400,6 +400,136 @@ public sealed class FileDialogHandlerTests : IDisposable
         viewType.Should().Be<CsvTableView>();
     }
 
+    private static TableSchema CreateCsvSchema() => new()
+    {
+        Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
+        SourceFormat = DataFormat.Csv
+    };
+
+    [Fact]
+    public async Task HandleFileSelectedAsync_CsvSessionReplacedDuringInitialScan_KeepsReplacementFileState()
+    {
+        // Arrange
+        var csvPath = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
+        try
+        {
+            await File.WriteAllTextAsync(csvPath, "col1\ndata1");
+            var scanner = new GatedSchemaScanner(CreateCsvSchema());
+            TableSchema? callbackSchema = null;
+            var indexerStartCount = 0;
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState
+                {
+                    OnSchemaRefined = schema => callbackSchema = schema
+                };
+                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+                var handler = new FileDialogHandler(
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner);
+                return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+            });
+            var replacementSchema = new TableSchema
+            {
+                Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
+                SourceFormat = DataFormat.Csv
+            };
+
+            // Act — start the load on the UI loop without awaiting it, then replace the
+            // session on the UI loop while the gated initial scan is still pending.
+            var loadTask = Task.CompletedTask;
+            await session.InvokeAsync((_, ctx) =>
+            {
+                loadTask = ctx.Handler.HandleFileSelectedAsync(csvPath);
+                return Task.CompletedTask;
+            });
+            await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
+            await session.InvokeAsync((_, ctx) =>
+            {
+                ctx.State.RenewCtsWithCancel();
+                ctx.State.Schema = replacementSchema;
+                return Task.CompletedTask;
+            });
+            scanner.Release();
+            await loadTask;
+            var (mode, viewType, schema) = await session.InvokeAsync((_, ctx) =>
+                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType(), ctx.State.Schema)));
+
+            // Assert
+            mode.Should().Be(ViewMode.FileSelection);
+            viewType.Should().BeNull();
+            schema.Should().BeSameAs(replacementSchema);
+            callbackSchema.Should().BeNull();
+            Volatile.Read(ref indexerStartCount).Should().Be(0);
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public async Task HandleFileSelectedAsync_CsvScanFailsAfterSessionReplacement_ShowsNoStaleError()
+    {
+        // Arrange
+        var csvPath = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
+        try
+        {
+            await File.WriteAllTextAsync(csvPath, "col1\ndata1");
+            var scanner = new GatedSchemaScanner(CreateCsvSchema(), new InvalidOperationException("scan failed"));
+            TableSchema? callbackSchema = null;
+            var indexerStartCount = 0;
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState
+                {
+                    OnSchemaRefined = schema => callbackSchema = schema
+                };
+                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+                var handler = new FileDialogHandler(
+                    app, state, viewManager, _ => Interlocked.Increment(ref indexerStartCount), () => { }, _ => scanner);
+                return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+            });
+            var replacementSchema = new TableSchema
+            {
+                Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
+                SourceFormat = DataFormat.Csv
+            };
+
+            // Act — start the load on the UI loop, replace the session on the
+            // UI loop, then release the configured failing scan.
+            var loadTask = Task.CompletedTask;
+            await session.InvokeAsync((_, ctx) =>
+            {
+                loadTask = ctx.Handler.HandleFileSelectedAsync(csvPath);
+                return Task.CompletedTask;
+            });
+            await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
+            await session.InvokeAsync((_, ctx) =>
+            {
+                ctx.State.RenewCtsWithCancel();
+                ctx.State.Schema = replacementSchema;
+                return Task.CompletedTask;
+            });
+            scanner.Release();
+            await loadTask;
+            var (mode, viewType, schema) = await session.InvokeAsync((_, ctx) =>
+                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType(), ctx.State.Schema)));
+
+            // Assert — no stale error view is shown for the replaced session.
+            mode.Should().Be(ViewMode.FileSelection);
+            viewType.Should().BeNull();
+            schema.Should().BeSameAs(replacementSchema);
+            callbackSchema.Should().BeNull();
+            Volatile.Read(ref indexerStartCount).Should().Be(0);
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
     [Fact]
     public async Task HandleFileSelectedAsync_JsonArrayFile_SwitchesToTreeViewAfterFirstCheckpoint()
     {

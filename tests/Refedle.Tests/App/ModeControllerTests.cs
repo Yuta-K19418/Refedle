@@ -136,6 +136,123 @@ public sealed class ModeControllerTests : IDisposable
         refinedSchema.Columns.Select(c => c.Name).Should().Contain("age");
     }
 
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenScanIsCancelledBeforeUiDispatch_DoesNotPublishStaleSchema()
+    {
+        // Arrange
+        await WriteRefinementFixtureAsync(_jsonlFilePath);
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var queuedInvokes = new List<Action>();
+        var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new ModeController(
+            state,
+            action =>
+            {
+                queuedInvokes.Add(action);
+                posted.TrySetResult();
+            },
+            TestSchemaScannerFactories.JsonLines);
+
+        // Act
+        var result = await controller.ToggleJsonLinesModeAsync();
+        await posted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Replace the session before the queued UI action runs; the file path stays
+        // the scanned one, as in a same-file reopen.
+        state.RenewCtsWithCancel();
+        var replacementSchema = new Refedle.Engine.Models.TableSchema
+        {
+            Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
+            SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
+        };
+        state.Schema = replacementSchema;
+        Refedle.Engine.Models.TableSchema? callbackSchema = null;
+        state.OnSchemaRefined = schema => callbackSchema = schema;
+
+        queuedInvokes[0].Invoke();
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        state.Schema.Should().BeSameAs(replacementSchema);
+        callbackSchema.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenSessionIsReplacedDuringInitialScan_KeepsReplacementFileState()
+    {
+        // Arrange
+        var scannedSchema = CreateIdSchema();
+        var scanner = new GatedSchemaScanner(scannedSchema);
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var invokeCount = 0;
+        var controller = new ModeController(state, _ => Interlocked.Increment(ref invokeCount), _ => scanner);
+
+        // Act
+        var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+        await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Replace the session while the gated initial scan is still pending.
+        state.RenewCtsWithCancel();
+        var replacementSchema = CreateIdSchema();
+        state.Schema = replacementSchema;
+        scanner.Release();
+
+        var result = await toggleTask;
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        state.Schema.Should().BeSameAs(replacementSchema);
+        state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
+        Volatile.Read(ref invokeCount).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ToggleJsonLinesModeAsync_WhenInitialScanFailsAfterSessionReplacement_SuppressesStaleError()
+    {
+        // Arrange
+        var scanner = new GatedSchemaScanner(CreateIdSchema(), new InvalidOperationException("scan failed"));
+        using var state = new AppState
+        {
+            CurrentFilePath = _jsonlFilePath,
+            CurrentMode = ViewMode.JsonLinesTree,
+            RowIndexer = new RowIndexer(_jsonlFilePath)
+        };
+        var controller = new ModeController(state, _ => { }, _ => scanner);
+
+        // Act
+        var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+        await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Replace the session, then let the old scan fail.
+        state.RenewCtsWithCancel();
+        var replacementSchema = CreateIdSchema();
+        state.Schema = replacementSchema;
+        scanner.Release();
+
+        var result = await toggleTask;
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        state.Schema.Should().BeSameAs(replacementSchema);
+        state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
+    }
+
+    private static Refedle.Engine.Models.TableSchema CreateIdSchema() => new()
+    {
+        Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
+        SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
+    };
+
     /// <summary>
     /// Writes a JSON Lines fixture whose first 200 lines fit the initial scan (single
     /// "name" column) and whose remaining lines introduce an "age" column, so the

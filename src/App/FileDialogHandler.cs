@@ -127,11 +127,28 @@ internal sealed class FileDialogHandler(
     private async Task LoadCsvAsync(string path, IRowIndexer indexer)
     {
         var schemaScanner = _scannerFactory(path);
+        // Capture by value before the scans: RenewCtsWithCancel cancels the CTS when
+        // another file loads, and the staleness check needs the token from scan start.
+        var scanToken = _state.Cts.Token;
         try
         {
             var schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);
+
+            // Skip UI posts for an already-cancelled scan; the posted callback re-checks
+            // the token because the session can be replaced between posting and execution.
+            if (scanToken.IsCancellationRequested)
+            {
+                return;
+            }
+
             _app.Invoke(() =>
             {
+                // Re-check the token on the UI thread: the session can be replaced after posting.
+                if (scanToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 if (schema.Columns.Count == 0)
                 {
                     _viewManager.ShowError("File contains no data");
@@ -145,14 +162,30 @@ internal sealed class FileDialogHandler(
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
                 _ = BackgroundSchemaRefiner.StartAsync(
-                    _state, schemaScanner, schema, _app.Invoke, _state.Cts.Token);
+                    _state, schemaScanner, schema, _app.Invoke, scanToken);
 
                 _onIndexerStart(indexer);
             });
         }
         catch (Exception ex)
         {
-            _app.Invoke(() => _viewManager.ShowError($"Error scanning CSV: {ex.Message}"));
+            // Suppress errors from a scan whose session was already replaced; the posted
+            // callback re-checks the token so a switch between posting and execution is also covered.
+            if (scanToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _app.Invoke(() =>
+            {
+                // Re-check the token on the UI thread: the session can be replaced after posting.
+                if (scanToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                _viewManager.ShowError($"Error scanning CSV: {ex.Message}");
+            });
         }
     }
 
