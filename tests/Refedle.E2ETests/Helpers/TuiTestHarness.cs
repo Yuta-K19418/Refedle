@@ -24,7 +24,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     private readonly MainWindow _mainWindow;
     private readonly CancellationTokenSource _stopCts;
     private readonly Task<object?> _runTask;
-    private readonly ConcurrentQueue<KeyCode> _pendingKeys = new();
+    private readonly ConcurrentQueue<Action> _pendingInputs = new();
     private readonly ConcurrentQueue<UiRequest> _pendingReads = new();
     private int _iterationPumpAttached;
 
@@ -55,7 +55,21 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     public void SendKey(KeyCode keyCode)
     {
         AttachIterationPump();
-        _pendingKeys.Enqueue(keyCode);
+        _pendingInputs.Enqueue(() => _app.Keyboard.RaiseKeyDownEvent(keyCode));
+    }
+
+    /// <summary>
+    /// Queues <paramref name="text"/> as a single paste, delivered through
+    /// <see cref="IApplication.RaisePasteEvent(string)"/> on the same one-input-per-iteration
+    /// channel as <see cref="SendKey"/>, so the focused view receives it as one change instead of
+    /// one change per character. Use it where per-keystroke handling is costly, e.g. an absolute
+    /// path entered into a file dialog's path field.
+    /// </summary>
+    /// <param name="text">The text to paste.</param>
+    public void SendPaste(string text)
+    {
+        AttachIterationPump();
+        _pendingInputs.Enqueue(() => _app.RaisePasteEvent(text));
     }
 
     /// <summary>
@@ -323,7 +337,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
     /// <summary>
     /// Subscribes the iteration pump exactly once. Iteration events are the delivery channel for
-    /// both queued keys and queued UI-state reads; the event-add is thread-safe, so racing the
+    /// both queued inputs (keys and pastes) and queued UI-state reads; the event-add is thread-safe, so racing the
     /// first loop iterations is harmless (the pump simply picks the queue up one iteration later).
     /// </summary>
     private void AttachIterationPump()
@@ -338,12 +352,12 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
     private void PumpQueuedWork()
     {
-        // Deliver at most one key per iteration: a key that opens a modal dialog blocks here inside
-        // a nested run loop, and spacing keys one iteration apart keeps each dialog step observable
-        // before the next key arrives.
-        if (_pendingKeys.TryDequeue(out var key))
+        // Deliver at most one input (key or paste) per iteration: an input that opens a modal dialog
+        // blocks here inside a nested run loop, and spacing inputs one iteration apart keeps each
+        // dialog step observable before the next input arrives.
+        if (_pendingInputs.TryDequeue(out var input))
         {
-            _app.Keyboard.RaiseKeyDownEvent(key);
+            input();
         }
 
         while (_pendingReads.TryDequeue(out var request))
