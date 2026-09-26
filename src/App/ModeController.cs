@@ -141,10 +141,13 @@ internal sealed class ModeController(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        // Capture by value before Task.Run to avoid reading _state on the thread-pool thread.
-        var filePath = _state.CurrentFilePath;
-        var ct = _state.Cts.Token;
-        var previousMode = _state.CurrentMode;
+        // The caller may be off the UI thread (recipe replay), so _state is read on the UI thread
+        // and captured by value before Task.Run.
+        var captured = new TaskCompletionSource<(string filePath, CancellationToken ct, ViewMode previousMode)>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        _uiThreadInvoke(() =>
+            captured.SetResult((_state.CurrentFilePath, _state.Cts.Token, _state.CurrentMode)));
+        var (filePath, ct, previousMode) = await captured.Task.ConfigureAwait(false);
 
         var result = await Task.Run(
             () => FullAggregationScanner.Scan(filePath, request.Format, request.KeyPath, ct),
