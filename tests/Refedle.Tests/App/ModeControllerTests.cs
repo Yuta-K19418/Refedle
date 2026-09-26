@@ -488,6 +488,73 @@ public sealed class ModeControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task FullAggregationDrillDownAsync_WhenStartedOnWorkerThread_UsesStateAsOfCallbackExecution()
+    {
+        // Arrange
+        var initialPath = _jsonlFilePath;
+        var laterPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+        try
+        {
+            await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
+            await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
+            using var state = new AppState();
+            state.StartNewFile(initialPath);
+            state.EnterPlaceholderMode();
+            var callbackHandoff = new TaskCompletionSource<Action>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var controller = new ModeController(
+                state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
+            var request = new FullAggregationDrillDownRequest(
+                Format: Refedle.Engine.Types.DataFormat.JsonLines,
+                KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+                InitialActionStack: []);
+
+            // Act
+            var pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+            var callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            state.StartNewFile(laterPath);
+            state.EnterJsonLinesTree();
+            callback();
+            var result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Rows.Should().HaveCount(2);
+            result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
+        }
+        finally
+        {
+            File.Delete(laterPath);
+        }
+    }
+
+    [Fact]
+    public async Task FullAggregationDrillDownAsync_WhenSessionRenewedBeforeCallbackExecution_SucceedsWithReplacementSession()
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
+        var callbackHandoff = new TaskCompletionSource<Action>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var controller = new ModeController(
+            state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
+        var request = new FullAggregationDrillDownRequest(
+            Format: Refedle.Engine.Types.DataFormat.JsonLines,
+            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
+
+        // Act
+        var pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+        var callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        state.RenewCtsWithCancel();
+        callback();
+        var result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Rows.Should().HaveCount(1);
+    }
+
+    [Fact]
     public void DrillDown_WithKeyPathOnRequest_PopulatesDrillDownStateKeyPath()
     {
         // Arrange
