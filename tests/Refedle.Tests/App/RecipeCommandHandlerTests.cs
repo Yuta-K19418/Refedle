@@ -59,7 +59,7 @@ public sealed partial class RecipeCommandHandlerTests
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentMode = ViewMode.FileSelection };
+        using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -80,17 +80,15 @@ public sealed partial class RecipeCommandHandlerTests
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
         var drillDownAction = new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" };
-        using var state = new AppState
-        {
-            CurrentFilePath = "data.jsonl",
-            CurrentMode = ViewMode.FocusedTable,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                schema,
-                ViewMode.JsonLinesTree,
-                keyPath,
-                ActionStack: [drillDownAction]),
-        };
+        using var state = new AppState();
+        state.StartNewFile("data.jsonl");
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            keyPath,
+            ActionStack: [drillDownAction]);
+        state.EnterFocusedTable(drillDown);
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -108,22 +106,21 @@ public sealed partial class RecipeCommandHandlerTests
     [Fact]
     public void BuildRecipe_FromTableModeWithStaleDrillDown_UsesBaseActionStackAndOmitsDrillDownKeyPath()
     {
-        // Arrange — a stale DrillDown (left over from Backspace navigation) must be ignored when
-        // the current view is the base table, not FocusedTable
+        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
+        // must be ignored when the current view is the base table, not FocusedTable
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         var baseAction = new RenameColumnAction { OldName = "base", NewName = "renamed_base" };
-        using var state = new AppState
-        {
-            CurrentFilePath = "data.jsonl",
-            CurrentMode = ViewMode.JsonLinesTable,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                schema,
-                ViewMode.JsonLinesTree,
-                KeyPath: [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
-                ActionStack: [new RenameColumnAction { OldName = "stale", NewName = "stale_renamed" }]),
-        };
+        using var state = new AppState();
+        state.StartNewFile("data.jsonl");
+        var staleDrillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
+            ActionStack: [new RenameColumnAction { OldName = "stale", NewName = "stale_renamed" }]);
+        state.EnterFocusedTable(staleDrillDown);
+        state.EnterPlaceholderMode();
         state.AddMorphAction(baseAction);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -143,7 +140,7 @@ public sealed partial class RecipeCommandHandlerTests
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = string.Empty };
+        using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -165,7 +162,11 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, _recipeFile);
 
-            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            var indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
+            var csvSchema = CreateCsvSchema();
+            var state = new AppState();
+            state.StartNewFile(_csvFile);
+            state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(action);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -192,7 +193,11 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, _recipeFile);
 
-            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            var indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
+            var csvSchema = CreateCsvSchema();
+            var state = new AppState();
+            state.StartNewFile(_csvFile);
+            state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -219,18 +224,16 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, _recipeFile);
 
-            var state = new AppState
-            {
-                CurrentFilePath = _jsonLinesFile,
-                CurrentMode = ViewMode.FocusedTable,
-                DrillDown = new DrillDownState(
-                    [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                    schema,
-                    ViewMode.JsonLinesTree,
-                    KeyPath: [],
-                    ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
-                    HasUnsavedChanges: true),
-            };
+            var state = new AppState();
+            state.StartNewFile(_jsonLinesFile);
+            var drillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
+                HasUnsavedChanges: true);
+            state.EnterFocusedTable(drillDown);
             state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -241,7 +244,7 @@ public sealed partial class RecipeCommandHandlerTests
         // Act
         await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
         var (drillDownFlag, rootFlag) = await session.InvokeAsync(
-            (_, ctx) => Task.FromResult((ctx.State.DrillDown?.HasUnsavedChanges, ctx.State.HasUnsavedChanges)));
+            (_, ctx) => Task.FromResult((ctx.State.GetDrillDownOrNull()?.HasUnsavedChanges, ctx.State.HasUnsavedChanges)));
 
         // Assert
         drillDownFlag.Should().BeFalse();
@@ -278,7 +281,11 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, recipeFile);
 
-            var state = new AppState { CurrentFilePath = csvFile, CurrentMode = ViewMode.CsvTable };
+            var indexer = RowIndexerFactory.Create(DataFormat.Csv, csvFile);
+            var csvSchema = CreateCsvSchema();
+            var state = new AppState();
+            state.StartNewFile(csvFile);
+            state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -342,7 +349,11 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, _recipeFile);
 
-            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            var indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
+            var csvSchema = CreateCsvSchema();
+            var state = new AppState();
+            state.StartNewFile(_csvFile);
+            state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -373,6 +384,12 @@ public sealed partial class RecipeCommandHandlerTests
             ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
             HasUnsavedChanges: true);
 
+    private static TableSchema CreateCsvSchema() => new()
+    {
+        Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
+        SourceFormat = DataFormat.Csv
+    };
+
     [Fact]
     public async Task SaveAsync_FromFocusedTable_ThenDrillDownEdit_MarksDrillDownUnsavedAgain()
     {
@@ -382,12 +399,9 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, _recipeFile);
 
             var drillDown = CreateDirtyDrillDown();
-            var state = new AppState
-            {
-                CurrentFilePath = _jsonLinesFile,
-                CurrentMode = ViewMode.FocusedTable,
-                DrillDown = drillDown,
-            };
+            var state = new AppState();
+            state.StartNewFile(_jsonLinesFile);
+            state.EnterFocusedTable(drillDown);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             viewManager.SwitchToFocusedTable(drillDown);
@@ -399,10 +413,10 @@ public sealed partial class RecipeCommandHandlerTests
         // Act
         var (flagAfterSave, flagAfterEdit) = await session.InvokeAsync((_, ctx) =>
         {
-            var afterSave = ctx.State.DrillDown?.HasUnsavedChanges;
+            var afterSave = ctx.State.GetDrillDownOrNull()?.HasUnsavedChanges;
             var view = ctx.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
             view.OnMorphAction?.Invoke(new RenameColumnAction { OldName = "col1", NewName = "again" });
-            return Task.FromResult((afterSave, ctx.State.DrillDown?.HasUnsavedChanges));
+            return Task.FromResult((afterSave, ctx.State.GetDrillDownOrNull()?.HasUnsavedChanges));
         });
 
         // Assert
@@ -420,12 +434,10 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, unreachableRecipeFile);
 
-            var state = new AppState
-            {
-                CurrentFilePath = _jsonLinesFile,
-                CurrentMode = ViewMode.FocusedTable,
-                DrillDown = CreateDirtyDrillDown(),
-            };
+            var drillDown = CreateDirtyDrillDown();
+            var state = new AppState();
+            state.StartNewFile(_jsonLinesFile);
+            state.EnterFocusedTable(drillDown);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
@@ -435,7 +447,7 @@ public sealed partial class RecipeCommandHandlerTests
         // Act
         await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
         var drillDownFlag = await session.InvokeAsync(
-            (_, ctx) => Task.FromResult(ctx.State.DrillDown?.HasUnsavedChanges));
+            (_, ctx) => Task.FromResult(ctx.State.GetDrillDownOrNull()?.HasUnsavedChanges));
 
         // Assert
         drillDownFlag.Should().BeTrue();
@@ -452,7 +464,11 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, unreachableRecipeFile);
 
-            var state = new AppState { CurrentFilePath = _csvFile, CurrentMode = ViewMode.CsvTable };
+            var indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
+            var csvSchema = CreateCsvSchema();
+            var state = new AppState();
+            state.StartNewFile(_csvFile);
+            state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
@@ -481,7 +497,8 @@ public sealed partial class RecipeCommandHandlerTests
         {
             AcceptModalDialogs(app, window, _recipeFile);
 
-            var state = new AppState { CurrentFilePath = _jsonLinesFile };
+            var state = new AppState();
+            state.StartNewFile(_jsonLinesFile);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);

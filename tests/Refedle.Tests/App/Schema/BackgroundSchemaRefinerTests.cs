@@ -29,12 +29,13 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync();
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
         var initialSchema = await scanner.InitialScanAsync();
         var refined = new TaskCompletionSource<TableSchema>(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        state.OnSchemaRefined = schema => refined.TrySetResult(schema);
+        state.SetSchemaRefinedCallback(schema => refined.TrySetResult(schema));
         var invokeCount = 0;
 
         // Act
@@ -62,7 +63,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
         var initialSchema = await scanner.InitialScanAsync();
         var queuedInvokes = new List<Action>();
@@ -89,9 +91,9 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
             Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
             SourceFormat = DataFormat.JsonLines
         };
-        state.Schema = replacementSchema;
+        state.ApplyRefinedSchema(replacementSchema);
         TableSchema? callbackSchema = null;
-        state.OnSchemaRefined = schema => callbackSchema = schema;
+        state.SetSchemaRefinedCallback(schema => callbackSchema = schema);
 
         queuedInvokes[0].Invoke();
         await continuation;
@@ -106,7 +108,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
         var initialSchema = await scanner.InitialScanAsync();
         var cancelledToken = state.Cts.Token;
@@ -130,7 +133,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WithFaultedBackgroundScan_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var initialSchema = CreateIdSchema();
         var scanner = new GatedSchemaScanner(
             initialSchema,
@@ -155,7 +159,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WithCanceledBackgroundScan_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var initialSchema = CreateIdSchema();
         var scanner = new GatedSchemaScanner(initialSchema, backgroundCanceled: true);
         var invokeCount = 0;
@@ -201,7 +206,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullScanner_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var initialSchema = CreateIdSchema();
 
         // Act
@@ -224,7 +230,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullInitialSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var scanner = new GatedSchemaScanner(CreateIdSchema());
 
         // Act
@@ -247,7 +254,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState { CurrentFilePath = _jsonlFilePath };
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
         var initialSchema = CreateIdSchema();
         var scanner = new GatedSchemaScanner(initialSchema);
 

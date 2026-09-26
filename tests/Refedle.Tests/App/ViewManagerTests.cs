@@ -59,7 +59,7 @@ public sealed class ViewManagerTests : IDisposable
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = string.Empty };
+        using var state = new AppState();
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -86,7 +86,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -113,7 +114,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -138,7 +140,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".json", "[1,2,3]");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -163,7 +166,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -195,7 +199,11 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.FocusedTable };
+        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        var drillDown = new DrillDownState([new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -216,12 +224,10 @@ public sealed class ViewManagerTests : IDisposable
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = string.Empty,
-            CurrentMode = ViewMode.JsonLinesTree,
-            RowIndexer = new MockRowIndexer("test.jsonl")
-        };
+        var indexer = new MockRowIndexer("test.jsonl");
+        using var state = new AppState();
+        state.BeginIndexedTreeLoad(indexer);
+        state.EnterJsonLinesTree();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -240,7 +246,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonLinesTable };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -251,8 +258,9 @@ public sealed class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        state.Schema = schema;
-        state.RowIndexer = new MockRowIndexer(filePath);
+        var indexer = new MockRowIndexer(filePath);
+        state.BeginIndexedTreeLoad(indexer);
+        state.CompleteJsonLinesSchemaScan(schema);
 
         // Act
         await viewManager.ToggleJsonLinesModeAsync();
@@ -268,7 +276,9 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonLinesTree };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.EnterJsonLinesTree();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -279,8 +289,9 @@ public sealed class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        state.Schema = schema;
-        state.RowIndexer = new MockRowIndexer(filePath);
+        var indexer = new MockRowIndexer(filePath);
+        state.BeginIndexedTreeLoad(indexer);
+        state.ApplyRefinedSchema(schema);
 
         // Act
         await viewManager.ToggleJsonLinesModeAsync();
@@ -332,7 +343,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".json", "[1,2,3]");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -352,7 +364,9 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".json", "[1,2,3]");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonArrayTree };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.EnterJsonArrayTree();
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -379,7 +393,11 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".csv", "col1\nval1");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, RowIndexer = new MockRowIndexer("test.csv", 5000) };
+        var indexer = new MockRowIndexer("test.csv", 5000);
+        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.CompleteCsvLoad(indexer, schema);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -389,7 +407,7 @@ public sealed class ViewManagerTests : IDisposable
         window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
 
         // Act — clear RowIndexer so the label won't be re-added
-        state.RowIndexer = null;
+        state.BeginJsonObjectLoad();
         viewManager.RefreshStatusBarHints();
 
         // Assert
@@ -402,7 +420,11 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".csv", "col1\nval1");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, RowIndexer = new MockRowIndexer("test.csv", 5000) };
+        var indexer = new MockRowIndexer("test.csv", 5000);
+        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.CompleteCsvLoad(indexer, schema);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -422,7 +444,11 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".csv", "col1\nval1");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, RowIndexer = new MockRowIndexer("test.csv", 1000) };
+        var indexer = new MockRowIndexer("test.csv", 1000);
+        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.CompleteCsvLoad(indexer, schema);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -436,7 +462,8 @@ public sealed class ViewManagerTests : IDisposable
         window.SubViews.OfType<Label>().First(l => l.Text == "1000 items").Text.Should().Be("1000 items");
 
         // Act — replace indexer with one that has a different row count
-        state.RowIndexer = new MockRowIndexer("test.csv", 5000);
+        var reloadedIndexer = new MockRowIndexer("test.csv", 5000);
+        state.CompleteCsvLoad(reloadedIndexer, schema);
         viewManager.RefreshStatusBarHints();
 
         // Assert — shows updated count, old count is gone
@@ -485,7 +512,8 @@ public sealed class ViewManagerTests : IDisposable
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = "test.json" };
+        using var state = new AppState();
+        state.StartNewFile("test.json");
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -544,7 +572,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange
         var filePath = CreateTempFile(".json", "{\"id\":1}");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath, CurrentMode = ViewMode.JsonObjectTree };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         using var statusBar = new StatusBar();
         window.Add(statusBar);
@@ -554,6 +583,7 @@ public sealed class ViewManagerTests : IDisposable
         [
             new JsonObjectEntry("id", System.Text.Encoding.UTF8.GetBytes("1")),
         ];
+        state.EnterJsonObjectTree(entries);
         viewManager.SwitchToJsonObjectTree(entries);
 
         // Act
@@ -575,7 +605,8 @@ public sealed class ViewManagerTests : IDisposable
         // success is driven by an actual scan over an actual file.
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -590,7 +621,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-        state.DrillDown.Should().NotBeNull();
+        state.GetDrillDownOrNull().Should().NotBeNull();
         viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>();
     }
 
@@ -600,7 +631,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange — real file + non-matching KeyPath, so the sealed ModeController's scan fails.
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -625,7 +657,8 @@ public sealed class ViewManagerTests : IDisposable
         // captured callback runs, mirroring how a real TUI posts work to the UI thread.
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
@@ -643,7 +676,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert — phase 1: state must be untouched before the UI-thread callback runs
         capturedCallbacks.Should().ContainSingle();
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
         state.CurrentMode.Should().Be(ViewMode.FileSelection);
 
         // Act — dispatch the captured callback (what the real UI thread would run)
@@ -651,7 +684,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert — phase 2: only now does the successful result reach AppState and switch the view
         state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-        state.DrillDown.Should().NotBeNull();
+        state.GetDrillDownOrNull().Should().NotBeNull();
     }
 
     [Fact]
@@ -661,7 +694,8 @@ public sealed class ViewManagerTests : IDisposable
         // dispose before invoking the captured callback to simulate the race.
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
@@ -683,7 +717,7 @@ public sealed class ViewManagerTests : IDisposable
         capturedCallbacks.Should().ContainSingle();
         var act = () => capturedCallbacks[0].Invoke();
         act.Should().Throw<ObjectDisposedException>();
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
         state.CurrentMode.Should().Be(ViewMode.FileSelection);
     }
 
@@ -693,11 +727,9 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into CsvTable
         var filePath = CreateTempFile(".csv", "col1\nvalue1\n");
         using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = filePath,
-            CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
-        };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -721,11 +753,9 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into JsonLinesTable
         var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
         using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentFilePath = filePath,
-            CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
-        };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -748,10 +778,8 @@ public sealed class ViewManagerTests : IDisposable
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into FileSelection
         using var app = CreateTestApp();
-        using var state = new AppState
-        {
-            CurrentKeyPath = [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
-        };
+        using var state = new AppState();
+        state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -796,7 +824,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange — FullAggregationDrillDownRequest (Phase 2) collapses array indices to [*]
         var filePath = CreateTempFile(".jsonl", "{\"list\":[{\"a\":1}]}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -832,7 +861,8 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -865,7 +895,8 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "label" }]);
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -895,7 +926,8 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -908,7 +940,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().BeEmpty();
-        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.ActionStack.Should().Equal(action);
     }
 
@@ -929,7 +961,8 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "loaded" }]);
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -941,7 +974,7 @@ public sealed class ViewManagerTests : IDisposable
         view.OnMorphAction?.Invoke(action);
 
         // Assert
-        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.HasUnsavedChanges.Should().BeTrue();
         state.HasUnsavedChanges.Should().BeFalse();
     }
@@ -964,7 +997,8 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable, DrillDown = drillDown };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
         state.AddMorphAction(baseAction);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -978,15 +1012,15 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().Equal(baseAction);
-        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.ActionStack.Should().Equal(drillDownAction);
     }
 
     [Fact]
     public void HandleMorphAction_WithTableMode_AppendsToBaseActionStack_LeavesDrillDownActionStackUntouched()
     {
-        // Arrange — a stale DrillDown (e.g. left over from Backspace navigation) must be untouched
-        // when the current view is the base table, not FocusedTable
+        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
+        // must be untouched when the current view is the base table, not FocusedTable
         var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
         using var app = CreateTestApp();
         var staleDrillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
@@ -996,7 +1030,10 @@ public sealed class ViewManagerTests : IDisposable
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [staleDrillDownAction]);
-        using var state = new AppState { CurrentFilePath = filePath, DrillDown = staleDrillDown };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.EnterFocusedTable(staleDrillDown);
+        state.EnterPlaceholderMode();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -1014,7 +1051,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().Equal(action);
-        var drillDownAfter = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.ActionStack.Should().Equal(staleDrillDownAction);
     }
 
@@ -1041,7 +1078,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().BeEmpty();
     }
 
@@ -1077,7 +1114,8 @@ public sealed class ViewManagerTests : IDisposable
         // DrillDownState must start with its own empty ActionStack
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -1093,7 +1131,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
+        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().BeEmpty();
     }
 
@@ -1103,7 +1141,8 @@ public sealed class ViewManagerTests : IDisposable
         // Arrange — a non-matching KeyPath forces the scan to fail
         var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentFilePath = filePath };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -1131,14 +1170,12 @@ public sealed class ViewManagerTests : IDisposable
         var indexer = new Refedle.Engine.IO.JsonLines.RowIndexer(filePath);
         indexer.BuildIndex();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            CurrentFilePath = filePath,
-            CurrentMode = ViewMode.FocusedTable,
-            RowIndexer = indexer,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []),
-        };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.BeginIndexedTreeLoad(indexer);
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -1148,7 +1185,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
         viewManager.GetCurrentView().Should().BeOfType<JsonLinesTreeView>();
     }
 
@@ -1161,14 +1198,12 @@ public sealed class ViewManagerTests : IDisposable
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonArray, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            CurrentFilePath = filePath,
-            CurrentMode = ViewMode.FocusedTable,
-            RowIndexer = indexer,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []),
-        };
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.BeginIndexedTreeLoad(indexer);
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -1178,7 +1213,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.JsonArrayTree);
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
         viewManager.GetCurrentView().Should().BeOfType<JsonArrayTreeView>();
     }
 
@@ -1189,14 +1224,12 @@ public sealed class ViewManagerTests : IDisposable
         using var app = CreateTestApp();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("id", Encoding.UTF8.GetBytes("1"))];
         var schema = new TableSchema { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            CurrentFilePath = "test.json",
-            CurrentMode = ViewMode.FocusedTable,
-            JsonObjectEntries = entries,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
-        };
+        using var state = new AppState();
+        state.StartNewFile("test.json");
+        state.EnterJsonObjectTree(entries);
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -1206,7 +1239,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.JsonObjectTree);
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
         viewManager.GetCurrentView().Should().BeOfType<JsonObjectTreeView>();
     }
 
@@ -1215,7 +1248,7 @@ public sealed class ViewManagerTests : IDisposable
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentMode = ViewMode.FileSelection };
+        using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -1226,7 +1259,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.FileSelection);
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
     }
 
     [Fact]

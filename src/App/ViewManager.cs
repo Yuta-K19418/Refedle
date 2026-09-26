@@ -89,7 +89,7 @@ internal sealed class ViewManager : IDisposable
         AddTreeToggleHint(hints);
         AddMenuHint(hints);
 
-        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+        var currentActionCount = _state.IsDrillDownMode && _state.TryGetDrillDown(out var drillDown)
             ? drillDown.ActionStack.Count
             : _state.ActionStack.Count;
 
@@ -163,7 +163,7 @@ internal sealed class ViewManager : IDisposable
     /// </param>
     internal void UpdateBreadcrumb(IReadOnlyList<KeyPathSegment> path, bool collapseIndices)
     {
-        _state.CurrentKeyPath = path;
+        _state.SetCurrentKeyPath(path);
         _breadcrumbBar.SetPath(path, collapseIndices);
     }
 
@@ -175,7 +175,7 @@ internal sealed class ViewManager : IDisposable
     /// </summary>
     internal void ClearBreadcrumb()
     {
-        _state.CurrentKeyPath = [];
+        _state.SetCurrentKeyPath([]);
         _breadcrumbBar.Clear();
     }
 
@@ -362,7 +362,7 @@ internal sealed class ViewManager : IDisposable
 
         var cache = new RowByteCache(indexer);
         var source = new Views.JsonLinesTableSource(cache, schema);
-        _state.OnSchemaRefined = source.UpdateSchema;
+        _state.SetSchemaRefinedCallback(source.UpdateSchema);
 
         var tableSource = _state.ActionStack.Count > 0
             ? (ITableSource)Views.LazyTransformer.Create(
@@ -423,8 +423,8 @@ internal sealed class ViewManager : IDisposable
                 SwitchToJsonLinesTableView(_state.RowIndexer, _state.Schema);
                 break;
 
-            case ViewMode.FocusedTable when _state.DrillDown is not null:
-                SwitchToFocusedTable(_state.DrillDown);
+            case ViewMode.FocusedTable when _state.TryGetDrillDown(out var drillDown):
+                SwitchToFocusedTable(drillDown);
                 break;
 
             default:
@@ -442,13 +442,9 @@ internal sealed class ViewManager : IDisposable
     /// <param name="action">The morph action to apply.</param>
     private void HandleMorphAction(MorphAction action)
     {
-        if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is not null)
+        if (_state.IsDrillDownMode && _state.TryGetDrillDown(out _))
         {
-            _state.DrillDown = _state.DrillDown with
-            {
-                ActionStack = [.. _state.DrillDown.ActionStack, action],
-                HasUnsavedChanges = true,
-            };
+            _state.AddDrillDownAction(action);
             RefreshCurrentTableView();
             return;
         }
@@ -466,7 +462,7 @@ internal sealed class ViewManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentException.ThrowIfNullOrEmpty(message);
 
-        _state.CurrentMode = ViewMode.PlaceholderView;
+        _state.EnterPlaceholderMode();
         var view = Views.PlaceholderView.Create(_state);
         view.Text = message;
         SwapView(view);
@@ -564,7 +560,7 @@ internal sealed class ViewManager : IDisposable
                 return;
             }
 
-            if (_state.DrillDown is not { } drillDown)
+            if (!_state.TryGetDrillDown(out var drillDown))
             {
                 throw new UnreachableException(
                     "ModeController.DrillDown must set DrillDown state on success.");
@@ -596,8 +592,7 @@ internal sealed class ViewManager : IDisposable
                 return;
             }
 
-            _state.DrillDown = result.Value;
-            _state.CurrentMode = ViewMode.FocusedTable;
+            _state.EnterFocusedTable(result.Value);
             UpdateBreadcrumb(request.KeyPath, collapseIndices: true);
             SwitchToFocusedTable(result.Value);
         });
@@ -631,7 +626,7 @@ internal sealed class ViewManager : IDisposable
             OnMorphAction = HandleMorphAction,
             GetRawColumnName = getRawColumnName,
         };
-        _state.OnSchemaRefined = null;
+        _state.SetSchemaRefinedCallback(null);
         view.SetSelection(0, 0, false);
         view.Update();
         SwapView(view);
@@ -648,27 +643,24 @@ internal sealed class ViewManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (_state.DrillDown is not { } drillDown)
+        if (!_state.TryGetDrillDown(out var drillDown))
         {
             return;
         }
 
-        _state.DrillDown = null;
+        _state.ExitFocusedTable(drillDown.PreviousMode);
 
         switch (drillDown.PreviousMode)
         {
             case ViewMode.JsonLinesTree when _state.RowIndexer is not null:
-                _state.CurrentMode = ViewMode.JsonLinesTree;
                 SwitchToJsonLinesTree(_state.RowIndexer);
                 break;
 
             case ViewMode.JsonArrayTree when _state.RowIndexer is not null:
-                _state.CurrentMode = ViewMode.JsonArrayTree;
                 SwitchToJsonArrayTree(_state.RowIndexer);
                 break;
 
             case ViewMode.JsonObjectTree when _state.JsonObjectEntries is not null:
-                _state.CurrentMode = ViewMode.JsonObjectTree;
                 SwitchToJsonObjectTree(_state.JsonObjectEntries);
                 break;
 

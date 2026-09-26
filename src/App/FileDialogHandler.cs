@@ -59,14 +59,8 @@ internal sealed class FileDialogHandler(
         var format = detectionResult.Value;
 
         // Reset state for new file
-        _state.CurrentFilePath = path;
+        _state.StartNewFile(path);
         _app.Invoke(() => _onFilePathChanged(path));
-        _state.ClearMorphActions();
-        // The fresh session starts clean: an empty stack cannot diverge from anything on disk.
-        _state.MarkRecipeSaved();
-        _state.RenewCtsWithCancel();
-        _state.DrillDown = null;
-        _state.JsonObjectEntries = null;
 
         // JSON Object: scan keys via TopLevelScanner, then switch to tree view directly.
         // No IRowIndexer is needed — keys are not rows.
@@ -104,9 +98,7 @@ internal sealed class FileDialogHandler(
     private async Task LoadJsonObjectAsync(string path)
     {
         _stopIndexing();
-        _state.RowIndexer = null;
-        _state.Schema = null;
-        _state.OnSchemaRefined = null;
+        _state.BeginJsonObjectLoad();
 
         var ct = _state.Cts.Token;
         try
@@ -115,8 +107,7 @@ internal sealed class FileDialogHandler(
                 () => Engine.IO.JsonObject.TopLevelScanner.Scan(path, ct), ct).ConfigureAwait(false);
             _app.Invoke(() =>
             {
-                _state.CurrentMode = ViewMode.JsonObjectTree;
-                _state.JsonObjectEntries = entries;
+                _state.EnterJsonObjectTree(entries);
                 _viewManager.SwitchToJsonObjectTree(entries);
             });
         }
@@ -159,9 +150,7 @@ internal sealed class FileDialogHandler(
                     return;
                 }
 
-                _state.Schema = schema;
-                _state.RowIndexer = indexer;
-                _state.CurrentMode = ViewMode.CsvTable;
+                _state.CompleteCsvLoad(indexer, schema);
 
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
@@ -197,9 +186,7 @@ internal sealed class FileDialogHandler(
     {
         try
         {
-            _state.RowIndexer = indexer;
-            _state.Schema = null;
-            _state.OnSchemaRefined = null;
+            _state.BeginIndexedTreeLoad(indexer);
 
             var tcs = new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
@@ -210,7 +197,7 @@ internal sealed class FileDialogHandler(
 
             _app.Invoke(() =>
             {
-                _state.CurrentMode = ViewMode.JsonLinesTree;
+                _state.EnterJsonLinesTree();
                 _viewManager.SwitchToJsonLinesTree(indexer);
             });
         }
@@ -224,9 +211,7 @@ internal sealed class FileDialogHandler(
     {
         try
         {
-            _state.RowIndexer = indexer;
-            _state.Schema = null;
-            _state.OnSchemaRefined = null;
+            _state.BeginIndexedTreeLoad(indexer);
 
             var tcs = new TaskCompletionSource(
                 TaskCreationOptions.RunContinuationsAsynchronously);
@@ -237,7 +222,7 @@ internal sealed class FileDialogHandler(
 
             _app.Invoke(() =>
             {
-                _state.CurrentMode = ViewMode.JsonArrayTree;
+                _state.EnterJsonArrayTree();
                 _viewManager.SwitchToJsonArrayTree(indexer);
             });
         }

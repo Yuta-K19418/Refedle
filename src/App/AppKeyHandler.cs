@@ -61,7 +61,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleQuit()
     {
-        var hasUnsavedChanges = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+        var hasUnsavedChanges = _state.IsDrillDownMode && _state.TryGetDrillDown(out var drillDown)
             ? drillDown.HasUnsavedChanges
             : _state.HasUnsavedChanges;
 
@@ -291,7 +291,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     internal bool HandleClearActions()
     {
-        var currentActionCount = _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+        var currentActionCount = _state.IsDrillDownMode && _state.TryGetDrillDown(out var drillDown)
             ? drillDown.ActionStack.Count
             : _state.ActionStack.Count;
 
@@ -312,9 +312,9 @@ internal sealed class AppKeyHandler : IDisposable
             return true;
         }
 
-        if (_state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } activeDrillDown)
+        if (_state.IsDrillDownMode && _state.TryGetDrillDown(out _))
         {
-            _state.DrillDown = activeDrillDown with { ActionStack = [], HasUnsavedChanges = true };
+            _state.ClearDrillDownActions();
             _viewManager.RefreshCurrentTableView();
             return true;
         }
@@ -330,7 +330,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleDrillDownBack()
     {
-        if (_state.CurrentMode != ViewMode.FocusedTable || _state.DrillDown is null)
+        if (!_state.IsDrillDownMode || !_state.TryGetDrillDown(out _))
         {
             return false;
         }

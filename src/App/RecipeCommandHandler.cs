@@ -79,7 +79,7 @@ internal sealed class RecipeCommandHandler(
     /// <see cref="BuildRecipe"/> so the two never drift apart.
     /// </summary>
     private DrillDownState? CaptureSavedDrillDownScope() =>
-        _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } scope ? scope : null;
+        _state.IsDrillDownMode && _state.TryGetDrillDown(out var scope) ? scope : null;
 
     /// <summary>
     /// Clears the unsaved-changes flag of the scope that was just saved: the DrillDown session when
@@ -94,9 +94,9 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        if (_state.DrillDown is { } current && ReferenceEquals(current, savedDrillDown))
+        if (_state.TryGetDrillDown(out var current) && ReferenceEquals(current, savedDrillDown))
         {
-            _state.DrillDown = current with { HasUnsavedChanges = false };
+            _state.MarkDrillDownSaved();
         }
     }
 
@@ -108,7 +108,7 @@ internal sealed class RecipeCommandHandler(
     /// with DrillDownKeyPath left unset.
     /// </summary>
     internal Recipe BuildRecipe() =>
-        _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+        _state.IsDrillDownMode && _state.TryGetDrillDown(out var drillDown)
             ? new Recipe
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),
