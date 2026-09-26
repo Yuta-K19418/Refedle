@@ -12,13 +12,18 @@ namespace Refedle.App.Cli.Commands.Update;
 /// <param name="binaryReplacer">The component that replaces the running binary with the archive content.</param>
 /// <param name="ridResolver">Resolves the release runtime identifier for the running process.</param>
 /// <param name="logger">The logger used for progress and error output.</param>
+/// <param name="statusReporter">Shows the current phase while updating; the indicator shown while downloading and installing.</param>
 internal sealed class UpdateCommand(
     string currentVersion,
     IReleaseClient releaseClient,
     IBinaryReplacer binaryReplacer,
     IRuntimeIdentifierResolver ridResolver,
-    IAppLogger logger)
+    IAppLogger logger,
+    IStatusReporter statusReporter)
 {
+    private readonly IStatusReporter _statusReporter =
+        statusReporter ?? throw new ArgumentNullException(nameof(statusReporter));
+
     private const string DevVersion = "0.0.0-dev";
     private const string ChecksumsFileName = "checksums.txt";
     private const int StreamBufferSize = 8192;
@@ -114,26 +119,13 @@ internal sealed class UpdateCommand(
         var tempDirectory = Directory.CreateTempSubdirectory("refedle-update-");
         try
         {
-            var checksumsPath = Path.Combine(tempDirectory.FullName, ChecksumsFileName);
-            var checksumsResult = await releaseClient.DownloadAssetAsync(
-                tagResult.Value, ChecksumsFileName, checksumsPath, cancellationToken).ConfigureAwait(false);
-            if (checksumsResult.IsFailure)
+            var updateResult = await _statusReporter.RunAsync(
+                "Downloading...",
+                setPhase => DownloadAndInstallAsync(
+                    tagResult.Value, archiveName, tempDirectory.FullName, setPhase, cancellationToken)).ConfigureAwait(false);
+            if (updateResult.IsFailure)
             {
-                return await FailAsync(checksumsResult.Error).ConfigureAwait(false);
-            }
-
-            var archivePath = Path.Combine(tempDirectory.FullName, archiveName);
-            var archiveResult = await releaseClient.DownloadAssetAsync(
-                tagResult.Value, archiveName, archivePath, cancellationToken).ConfigureAwait(false);
-            if (archiveResult.IsFailure)
-            {
-                return await FailAsync(archiveResult.Error).ConfigureAwait(false);
-            }
-
-            var installResult = await InstallAsync(checksumsPath, archivePath, archiveName, cancellationToken).ConfigureAwait(false);
-            if (installResult.IsFailure)
-            {
-                return await FailAsync(installResult.Error).ConfigureAwait(false);
+                return await FailAsync(updateResult.Error).ConfigureAwait(false);
             }
 
             await logger.WriteInfoAsync($"Updated successfully: {current} -> {latest}").ConfigureAwait(false);
@@ -145,9 +137,32 @@ internal sealed class UpdateCommand(
         }
     }
 
-    private async Task<Result> InstallAsync(string checksumsPath, string archivePath, string archiveName, CancellationToken cancellationToken)
+    private async ValueTask<Result> DownloadAndInstallAsync(
+        string tag, string archiveName, string tempDirectoryPath, Action<string> setPhase, CancellationToken cancellationToken)
     {
-        await logger.WriteInfoAsync("Verifying checksum...").ConfigureAwait(false);
+        var checksumsPath = Path.Combine(tempDirectoryPath, ChecksumsFileName);
+        var checksumsResult = await releaseClient.DownloadAssetAsync(
+            tag, ChecksumsFileName, checksumsPath, cancellationToken).ConfigureAwait(false);
+        if (checksumsResult.IsFailure)
+        {
+            return checksumsResult;
+        }
+
+        var archivePath = Path.Combine(tempDirectoryPath, archiveName);
+        var archiveResult = await releaseClient.DownloadAssetAsync(
+            tag, archiveName, archivePath, cancellationToken).ConfigureAwait(false);
+        if (archiveResult.IsFailure)
+        {
+            return archiveResult;
+        }
+
+        return await InstallAsync(checksumsPath, archivePath, archiveName, setPhase, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<Result> InstallAsync(
+        string checksumsPath, string archivePath, string archiveName, Action<string> setPhase, CancellationToken cancellationToken)
+    {
+        setPhase("Verifying checksum...");
         var verifyResult = await VerifyChecksumAsync(checksumsPath, archivePath, archiveName, cancellationToken).ConfigureAwait(false);
         if (verifyResult.IsFailure)
         {
@@ -160,6 +175,7 @@ internal sealed class UpdateCommand(
             return Results.Failure("Could not determine the path of the running binary.");
         }
 
+        setPhase("Replacing binary...");
         var replaceResult = await binaryReplacer.ReplaceAsync(archivePath, processPath, cancellationToken).ConfigureAwait(false);
         return replaceResult;
     }

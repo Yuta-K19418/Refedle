@@ -25,7 +25,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(new OperationCanceledException());
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -48,7 +48,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(new NotSupportedException("format pair not supported"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -71,7 +71,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(new InvalidOperationException("unexpected failure"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -94,7 +94,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -119,7 +119,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(result: ExitCode.Failure);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -143,7 +143,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(new InvalidOperationException("unexpected failure"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -167,7 +167,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -192,7 +192,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -218,7 +218,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -230,6 +230,49 @@ public sealed partial class RunnerTests
         Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml", "missing-target.csv", "broken-link.csv");
     }
 
+    [Fact]
+    public async Task RunAsync_WhenReplayingDeferredMessagesThrowsAfterSuccessfulBatch_DeletesTempFileAndNeverTouchesRealOutput()
+    {
+        // Arrange
+        var inputFile = CreateTestFile("input.csv", TestCsvContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new WarningFailingLogger();
+        var dispatcher = new TestFormatDispatcher(loggedWarning: "warning held while the spinner runs");
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Failure);
+        logger.Errors.Should().ContainSingle().Which.Should().Contain("warning sink unavailable");
+        File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
+        File.Exists(outputFile).Should().BeFalse();
+        Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml");
+    }
+
+    /// <summary>
+    /// Logger whose warning sink is broken, so replaying a held warning fails while errors still get recorded.
+    /// </summary>
+    private sealed class WarningFailingLogger : IAppLogger
+    {
+        private readonly List<string> _errors = [];
+
+        public IReadOnlyList<string> Errors => _errors.AsReadOnly();
+
+        public ValueTask WriteInfoAsync(string message) => ValueTask.CompletedTask;
+
+        public ValueTask WriteWarningAsync(string message) =>
+            throw new IOException("warning sink unavailable");
+
+        public ValueTask WriteErrorAsync(string message)
+        {
+            _errors.Add(message);
+            return ValueTask.CompletedTask;
+        }
+    }
+
     /// <summary>
     /// Stub dispatcher that simulates the real batch pipeline: writes partial content to the
     /// output path it receives, then throws the configured exception (or reports the
@@ -239,7 +282,8 @@ public sealed partial class RunnerTests
         Exception? exception = null,
         ExitCode result = ExitCode.Success,
         IReadOnlyList<CellIssue>? cellIssues = null,
-        bool hasMoreCellIssues = false) : IFormatDispatcher
+        bool hasMoreCellIssues = false,
+        string? loggedWarning = null) : IFormatDispatcher
     {
         public const string WrittenContent = "partial output written by the dispatcher";
 
@@ -258,6 +302,11 @@ public sealed partial class RunnerTests
         {
             ReceivedOutputFile = outputFile;
             await File.WriteAllTextAsync(outputFile, WrittenContent, ct);
+            if (loggedWarning is not null)
+            {
+                await logger.WriteWarningAsync(loggedWarning);
+            }
+
             if (exception is not null)
             {
                 throw exception;

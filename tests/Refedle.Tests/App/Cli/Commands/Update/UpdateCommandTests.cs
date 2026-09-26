@@ -22,7 +22,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success("v9.9.9"));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.0.0-dev", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.0.0-dev", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -46,7 +46,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success(latestTag));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand(currentVersion, releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand(currentVersion, releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -64,14 +64,14 @@ public sealed class UpdateCommandTests
     }
 
     [Fact]
-    public async Task RunAsync_WhenNewerVersionAvailable_RequestsAssetsInOrderAndWritesExactProgress()
+    public async Task RunAsync_WhenNewerVersionAvailable_RequestsAssetsInOrderAndWritesExpectedLogMessages()
     {
         // Arrange
         var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(_archiveBytes)}  {ArchiveName}\n");
         var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -90,8 +90,77 @@ public sealed class UpdateCommandTests
             "Latest version:  v0.3.0",
             string.Empty,
             "Downloading refedle v0.3.0...",
-            "Verifying checksum...",
             "Updated successfully: v0.2.0 -> v0.3.0");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenNewerVersionAvailable_ReportsDownloadingVerifyingReplacingPhases()
+    {
+        // Arrange
+        var checksums = Encoding.UTF8.GetBytes($"{Sha256Hex(_archiveBytes)}  {ArchiveName}\n");
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, _archiveBytes);
+        var replacer = new FakeBinaryReplacer(Results.Success());
+        var status = new TestStatusReporter();
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), new TestAppLogger(), status);
+
+        // Act
+        var exitCode = await command.RunAsync(CancellationToken.None);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        status.Phases.Should().Equal("Downloading...", "Verifying checksum...", "Replacing binary...");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenChecksumMismatches_StopsBeforeReplacingPhase()
+    {
+        // Arrange
+        var wrongChecksums = Encoding.UTF8.GetBytes($"{new string('a', 64)}  {ArchiveName}\n");
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), wrongChecksums, _archiveBytes);
+        var status = new TestStatusReporter();
+        var command = new UpdateCommand(
+            "0.2.0", releaseClient, new FakeBinaryReplacer(Results.Success()), RidStub(), new TestAppLogger(), status);
+
+        // Act
+        var exitCode = await command.RunAsync(CancellationToken.None);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Failure);
+        status.Phases.Should().Equal("Downloading...", "Verifying checksum...");
+    }
+
+    [Theory]
+    [InlineData("0.0.0-dev", "v9.9.9")]
+    [InlineData("0.3.0", "v0.3.0")]
+    public async Task RunAsync_WhenNothingToInstall_ShowsNoStatus(string currentVersion, string latestTag)
+    {
+        // Arrange
+        var releaseClient = new FakeReleaseClient(Results.Success(latestTag));
+        var status = new TestStatusReporter();
+        var command = new UpdateCommand(
+            currentVersion, releaseClient, new FakeBinaryReplacer(Results.Success()), RidStub(), new TestAppLogger(), status);
+
+        // Act
+        var exitCode = await command.RunAsync(CancellationToken.None);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        status.Phases.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Constructor_WithNullStatusReporter_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"));
+        var replacer = new FakeBinaryReplacer(Results.Success());
+        var logger = new TestAppLogger();
+
+        // Act
+        var act = () => new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().WithParameterName("statusReporter");
     }
 
     [Fact]
@@ -101,7 +170,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("not-a-version", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("not-a-version", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -121,7 +190,7 @@ public sealed class UpdateCommandTests
             Results.Failure<string>("Could not resolve the latest release tag (status: 500)."));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -140,7 +209,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success("nightly"));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -160,7 +229,7 @@ public sealed class UpdateCommandTests
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
         var rid = new StubRuntimeIdentifierResolver(Results.Failure<string>("Windows is not supported by 'refedle update'."));
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, rid, logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, rid, logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -181,7 +250,7 @@ public sealed class UpdateCommandTests
             checksumsFailure: Results.Failure("Could not download 'checksums.txt' (status: 404 NotFound)."));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -204,7 +273,7 @@ public sealed class UpdateCommandTests
             archiveFailure: Results.Failure("Could not download 'refedle-v0.3.0-linux-x64.tar.gz' (status: 404 NotFound)."));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -224,7 +293,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), wrongChecksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -243,7 +312,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new FakeReleaseClient(Results.Success("v0.3.0"), checksums, _archiveBytes);
         var replacer = new FakeBinaryReplacer(Results.Failure("The archive does not contain the 'refedle' binary."));
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -268,7 +337,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new ThrowingReleaseClient(CreateException(exceptionKind));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(CancellationToken.None);
@@ -288,7 +357,7 @@ public sealed class UpdateCommandTests
         var releaseClient = new ThrowingReleaseClient(new OperationCanceledException(cts.Token));
         var replacer = new FakeBinaryReplacer(Results.Success());
         var logger = new TestAppLogger();
-        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger);
+        var command = new UpdateCommand("0.2.0", releaseClient, replacer, RidStub(), logger, new TestStatusReporter());
 
         // Act
         var exitCode = await command.RunAsync(cts.Token);

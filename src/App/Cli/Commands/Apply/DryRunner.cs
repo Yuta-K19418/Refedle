@@ -1,6 +1,7 @@
 using System.Collections.Frozen;
 using System.Diagnostics;
 using Refedle.App.Cli.Parsing;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -20,16 +21,32 @@ internal static class DryRunner
     /// </summary>
     /// <param name="args">The validated CLI arguments.</param>
     /// <param name="logger">The app logger for logging messages.</param>
+    /// <param name="statusReporter">Shows a "Validating..." indicator while the plan is being resolved.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Exit code: <see cref="ExitCode.Success"/> on success, <see cref="ExitCode.Failure"/> on any failure.</returns>
-    public static async ValueTask<ExitCode> RunAsync(Arguments args, IAppLogger logger, CancellationToken ct = default)
+    public static async ValueTask<ExitCode> RunAsync(
+        Arguments args, IAppLogger logger, IStatusReporter statusReporter, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(args);
+        ArgumentNullException.ThrowIfNull(statusReporter);
 
         try
         {
-            var preparationResult = await ApplyPreparer.PrepareAsync(
-                args.InputFile, args.RecipeFile, args.OutputFile, logger, ct).ConfigureAwait(false);
+            // Messages are held while the spinner owns the terminal, then replayed in order.
+            var deferredLogger = new DeferredAppLogger();
+            Result<ApplyPreparation> preparationResult;
+            try
+            {
+                preparationResult = await statusReporter.RunAsync(
+                    "Validating...",
+                    _ => ApplyPreparer.PrepareAsync(
+                        args.InputFile, args.RecipeFile, args.OutputFile, deferredLogger, ct)).ConfigureAwait(false);
+            }
+            finally
+            {
+                await deferredLogger.FlushToAsync(logger).ConfigureAwait(false);
+            }
+
             if (preparationResult.IsFailure)
             {
                 return ExitCode.Failure;
