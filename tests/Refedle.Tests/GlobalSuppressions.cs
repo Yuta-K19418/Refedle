@@ -7,7 +7,7 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2025:Ensure tasks using 'IDisposable' instances complete before the instances are disposed",
     Scope = "type",
-    Target = "~T:Refedle.Tests.App.Schema.BackgroundSchemaRefinerTests",
+    Target = "~T:Refedle.Tests.App.Tui.Workers.Schema.BackgroundSchemaRefinerTests",
     Justification = "Each test awaits the refiner's returned continuation (or its publish TCS, which fires inside the continuation) before the using state is disposed; the scanner task completes before that continuation starts.")]
 
 // IndexTaskManagerTests
@@ -15,31 +15,31 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.IndexTaskManagerTests.Dispose_WithoutPriorStart_DoesNotThrow",
+    Target = "~M:Refedle.Tests.App.Tui.Workers.IndexTaskManagerTests.Dispose_WithoutPriorStart_DoesNotThrow",
     Justification = "manager is disposed via act() below; suppress false positive.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.IndexTaskManagerTests.CancelCurrent_AfterDisposal_ThrowsObjectDisposedException",
+    Target = "~M:Refedle.Tests.App.Tui.Workers.IndexTaskManagerTests.CancelCurrent_AfterDisposal_ThrowsObjectDisposedException",
     Justification = "manager is disposed via manager.Dispose() below; suppress false positive.")]
 [assembly: SuppressMessage(
     "Design",
     "CA1003:Use generic event handler instances",
     Scope = "member",
-    Target = "~E:Refedle.Tests.App.IndexTaskManagerTests.BlockingIndexer.FirstCheckpointReached",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexTaskManagerTests.BlockingIndexer.FirstCheckpointReached",
     Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
 [assembly: SuppressMessage(
     "Design",
     "CA1003:Use generic event handler instances",
     Scope = "member",
-    Target = "~E:Refedle.Tests.App.IndexTaskManagerTests.BlockingIndexer.ProgressChanged",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexTaskManagerTests.BlockingIndexer.ProgressChanged",
     Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
 [assembly: SuppressMessage(
     "Design",
     "CA1003:Use generic event handler instances",
     Scope = "member",
-    Target = "~E:Refedle.Tests.App.IndexTaskManagerTests.BlockingIndexer.BuildIndexCompleted",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexTaskManagerTests.BlockingIndexer.BuildIndexCompleted",
     Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
 
 // JsonLinesTableSourceTests
@@ -47,7 +47,7 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.Views.JsonLinesTableSourceTests.Dispose_DisposesRowByteCache",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.Views.JsonLinesTableSourceTests.Dispose_DisposesRowByteCache",
     Justification = "Ownership transferred to source")]
 
 // JsonArrayBatchSourceReaderTests
@@ -91,13 +91,13 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.Views.ColumnWidthStabilizingTableSourceTests.Dispose_DisposesInnerSourceWhenDisposable",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.Views.ColumnWidthStabilizingTableSourceTests.Dispose_DisposesInnerSourceWhenDisposable",
     Justification = "Ownership transferred to source, which is disposed by the single Dispose() call under test.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.Views.ColumnWidthStabilizingTableSourceTests.Dispose_CalledMultipleTimes_DisposesInnerSourceExactlyOnce",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.Views.ColumnWidthStabilizingTableSourceTests.Dispose_CalledMultipleTimes_DisposesInnerSourceExactlyOnce",
     Justification = "Ownership transferred to source, which is disposed by the two Dispose() calls under test.")]
 
 // LivePumpTestSession<T>
@@ -105,13 +105,13 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.LivePumpTestSession`1.InvokeAsync``1(System.Func{Terminal.Gui.App.IApplication,`0,System.Threading.Tasks.Task{``0}})",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.LivePumpTestSession`1.InvokeAsync``1(System.Func{Terminal.Gui.App.IApplication,`0,System.Threading.Tasks.Task{``0}})",
     Justification = "Converts any exception from the marshalled action into the TCS's result so the caller observes it via await, instead of it escaping on the loop thread.")]
 [assembly: SuppressMessage(
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.LivePumpTestSession`1.CancelAndObserveAsync(System.Threading.CancellationTokenSource,System.Threading.Tasks.Task)",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.LivePumpTestSession`1.CancelAndObserveAsync(System.Threading.CancellationTokenSource,System.Threading.Tasks.Task)",
     Justification = "The startup failure the caller is about to rethrow is what matters; this only prevents pumpTask's own fault from surfacing as an unobserved task exception.")]
 
 // FilePathBarTests — the ANSI driver's captured screen buffer is a multidimensional array.
@@ -119,11 +119,11 @@ using System.Diagnostics.CodeAnalysis;
     "Performance",
     "CA1814:Prefer jagged arrays over multidimensional arrays",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.Views.FilePathBarTests.ScreenContents(Terminal.Gui.Drivers.IDriver)",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.Views.FilePathBarTests.ScreenContents(Terminal.Gui.Drivers.IDriver)",
     Justification = "IDriver.Contents is a multidimensional array by framework contract.")]
 [assembly: SuppressMessage(
     "Performance",
     "CA1814:Prefer jagged arrays over multidimensional arrays",
     Scope = "member",
-    Target = "~M:Refedle.Tests.App.Views.FilePathBarTests.CellAttribute(Terminal.Gui.Drawing.Cell[0:,0:],System.Int32,System.Int32)",
+    Target = "~M:Refedle.Tests.App.Tui.Ui.Views.FilePathBarTests.CellAttribute(Terminal.Gui.Drawing.Cell[0:,0:],System.Int32,System.Int32)",
     Justification = "Reads from IDriver.Contents, which is a multidimensional array by framework contract.")]

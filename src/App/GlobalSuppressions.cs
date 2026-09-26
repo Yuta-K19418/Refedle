@@ -8,7 +8,7 @@ using System.Diagnostics.CodeAnalysis;
     "Usage",
     "MA0136:Raw String contains an implicit end of line character",
     Scope = "member",
-    Target = "~F:Refedle.App.Views.Dialogs.HelpDialog.HelpText",
+    Target = "~F:Refedle.App.Tui.Ui.Views.Dialogs.HelpDialog.HelpText",
     Justification = "Repository policy fixes C# source files to LF, so the UI text is deterministic.")]
 
 // Cli.HelpCommand
@@ -24,67 +24,67 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2213:Disposable fields should be disposed",
     Scope = "member",
-    Target = "~F:Refedle.App.ViewManager._breadcrumbBar",
+    Target = "~F:Refedle.App.Tui.Ui.ViewManager._breadcrumbBar",
     Justification = "BreadcrumbBar is added to the Window (_container) and is disposed automatically when the Window is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2213:Disposable fields should be disposed",
     Scope = "member",
-    Target = "~F:Refedle.App.ViewManager._contentContainer",
+    Target = "~F:Refedle.App.Tui.Ui.ViewManager._contentContainer",
     Justification = "ContentContainer is added to the Window (_container) and is disposed automatically when the Window is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToCsvTable(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToCsvTable(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToJsonLinesTree(Refedle.Engine.IO.IRowIndexer)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToJsonLinesTree(Refedle.Engine.IO.IRowIndexer)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToJsonArrayTree(Refedle.Engine.IO.IRowIndexer)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToJsonArrayTree(Refedle.Engine.IO.IRowIndexer)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToJsonObjectTree(System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.JsonObject.JsonObjectEntry})",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToJsonObjectTree(System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.JsonObject.JsonObjectEntry})",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToJsonLinesTableView(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToJsonLinesTableView(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.RefreshCurrentTableView",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.RefreshCurrentTableView",
     Justification = "Only CsvTable/JsonLinesTable refresh here; all other modes are a no-op via the default arm.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.ShowError(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.ShowError(System.String)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.SwitchToFocusedTable(Refedle.App.DrillDownState)",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.SwitchToFocusedTable(Refedle.App.Tui.DrillDownState)",
     Justification = "Owned by container via SwapView.")]
 [assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
-    Target = "~M:Refedle.App.ViewManager.ReturnFromDrillDown",
+    Target = "~M:Refedle.App.Tui.Ui.ViewManager.ReturnFromDrillDown",
     Justification = "Only tree ViewMode values are valid PreviousMode; the default arm throws for any other member.")]
 
 // MainWindow
@@ -92,19 +92,19 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.MainWindow.InitializeMenu",
+    Target = "~M:Refedle.App.Tui.Ui.MainWindow.InitializeMenu",
     Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0147:Avoid async void method for delegate",
     Scope = "member",
-    Target = "~M:Refedle.App.MainWindow.InitializeMenu",
+    Target = "~M:Refedle.App.Tui.Ui.MainWindow.InitializeMenu",
     Justification = "Terminal.Gui menu callbacks require Action, so asynchronous commands must use async void.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.MainWindow.InitializeStatusBar",
+    Target = "~M:Refedle.App.Tui.Ui.MainWindow.InitializeStatusBar",
     Justification = "Child views added to the Window will be disposed automatically when the Window is disposed.")]
 
 // AppKeyHandler
@@ -112,25 +112,25 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleHelp",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleHelp",
     Justification = "The dialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleActionMenuForTable(Refedle.App.Views.MorphTableView)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleActionMenuForTable(Refedle.App.Tui.Ui.Views.MorphTableView)",
     Justification = "The dialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleSingleDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleSingleDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "The dialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "The dialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 
 // RecipeCommandHandler
@@ -138,13 +138,13 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.RecipeCommandHandler.SaveAsync",
+    Target = "~M:Refedle.App.Tui.Ui.RecipeCommandHandler.SaveAsync",
     Justification = "The OpenDialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.RecipeCommandHandler.LoadAsync",
+    Target = "~M:Refedle.App.Tui.Ui.RecipeCommandHandler.LoadAsync",
     Justification = "The OpenDialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 
 // FileDialogHandler
@@ -152,31 +152,31 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.ShowAsync",
+    Target = "~M:Refedle.App.Tui.Ui.FileDialogHandler.ShowAsync",
     Justification = "The OpenDialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
 [assembly: SuppressMessage(
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.LoadJsonObjectAsync(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.FileDialogHandler.LoadJsonObjectAsync(System.String)",
     Justification = "UI top-level handler")]
 [assembly: SuppressMessage(
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.LoadCsvAsync(System.String,Refedle.Engine.IO.IRowIndexer)",
+    Target = "~M:Refedle.App.Tui.Ui.FileDialogHandler.LoadCsvAsync(System.String,Refedle.Engine.IO.IRowIndexer)",
     Justification = "UI top-level handler")]
 [assembly: SuppressMessage(
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.LoadJsonLinesAsync(Refedle.Engine.IO.IRowIndexer)",
+    Target = "~M:Refedle.App.Tui.Ui.FileDialogHandler.LoadJsonLinesAsync(Refedle.Engine.IO.IRowIndexer)",
     Justification = "UI top-level handler")]
 [assembly: SuppressMessage(
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.FileDialogHandler.LoadJsonArrayAsync(Refedle.Engine.IO.IRowIndexer)",
+    Target = "~M:Refedle.App.Tui.Ui.FileDialogHandler.LoadJsonArrayAsync(Refedle.Engine.IO.IRowIndexer)",
     Justification = "UI top-level handler")]
 
 // KeyPathBuilder
@@ -184,7 +184,7 @@ using System.Diagnostics.CodeAnalysis;
     "Performance",
     "CA1859:Use concrete types when possible for improved performance",
     Scope = "member",
-    Target = "~M:Refedle.App.KeyPathBuilder.Build(Terminal.Gui.Views.ITreeNode)",
+    Target = "~M:Refedle.App.Tui.Ui.KeyPathBuilder.Build(Terminal.Gui.Views.ITreeNode)",
     Justification = "IReadOnlyList<KeyPathSegment> is the KeyPath contract shared with FullAggregationDrillDownRequest; the concrete List<KeyPathSegment> used to build it is an implementation detail that should not leak out.")]
 
 // TuiApplication
@@ -192,7 +192,7 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.TuiApplication.Create",
+    Target = "~M:Refedle.App.Tui.Ui.TuiApplication.Create",
     Justification = "The created IApplication and MainWindow are returned to the caller, which is responsible for disposal.")]
 
 // Cli.JsonLinesRecordWriter
@@ -324,55 +324,55 @@ using System.Diagnostics.CodeAnalysis;
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.DeleteColumnDialog.#ctor(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.DeleteColumnDialog.#ctor(System.String)",
     Justification = "Child views are owned by the Dialog and disposed when the Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.FilterColumnDialog.#ctor(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.FilterColumnDialog.#ctor(System.String)",
     Justification = "Child views are owned by the Dialog and disposed when the Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.CastColumnDialog.#ctor(System.String,Refedle.Engine.Types.ColumnType,Refedle.Engine.Types.DataFormat)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.CastColumnDialog.#ctor(System.String,Refedle.Engine.Types.ColumnType,Refedle.Engine.Types.DataFormat)",
     Justification = "Child views are owned by the Dialog and disposed when the Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.RenameColumnDialog.#ctor(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.RenameColumnDialog.#ctor(System.String)",
     Justification = "Child views are owned by the Dialog and disposed when the Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.HelpDialog.#ctor",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.HelpDialog.#ctor",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.FormatTimestampDialog.#ctor(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.FormatTimestampDialog.#ctor(System.String)",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.FillColumnDialog.#ctor(System.String)",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.FillColumnDialog.#ctor(System.String)",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2213:Disposable fields should be disposed",
     Scope = "member",
-    Target = "~F:Refedle.App.Views.Dialogs.ActionMenuDialog._listView",
+    Target = "~F:Refedle.App.Tui.Ui.Views.Dialogs.ActionMenuDialog._listView",
     Justification = "Child views added to Dialog will be disposed automatically when the Dialog is disposed.")]
 [assembly: SuppressMessage(
     "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.Dialogs.ActionMenuDialog.#ctor(System.String[],System.Action{System.String})",
+    Target = "~M:Refedle.App.Tui.Ui.Views.Dialogs.ActionMenuDialog.#ctor(System.String[],System.Action{System.String})",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
 
 // Intentional synchronous UI and scan operations
@@ -386,7 +386,7 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.AppState.RenewCtsWithCancel",
+    Target = "~M:Refedle.App.Tui.AppState.RenewCtsWithCancel",
     Justification = "Cancellation must complete before the replaced token source is disposed.")]
 [assembly: SuppressMessage(
     "Design",
@@ -398,71 +398,71 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleHelp",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleHelp",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleActionMenuForTable(Refedle.App.Views.MorphTableView)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleActionMenuForTable(Refedle.App.Tui.Ui.Views.MorphTableView)",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleSingleDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleSingleDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
+    Target = "~M:Refedle.App.Tui.Ui.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Schema.Csv.IncrementalSchemaScanner.ReadRows(System.Int32,System.Int32)",
+    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadRows(System.Int32,System.Int32)",
     Justification = "The scanner base contract runs this batch reader synchronously on a background task.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
+    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
     Justification = "The scanner base contract runs this header reader synchronously on a background task.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleRenameColumn",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleRenameColumn",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleDeleteColumn",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleDeleteColumn",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleCastColumn",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleCastColumn",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFilterColumn",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleFilterColumn",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFillColumn",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleFillColumn",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.App.Views.ColumnActionHandler.HandleFormatTimestamp",
+    Target = "~M:Refedle.App.Tui.Ui.Views.ColumnActionHandler.HandleFormatTimestamp",
     Justification = "Terminal.Gui modal dialogs run synchronously from action handlers.")]

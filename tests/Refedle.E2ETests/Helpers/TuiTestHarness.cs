@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
-using Refedle.App;
+using Refedle.App.Tui.Ui;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 

@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Refedle.App;
+using Refedle.App.Tui.Ui;
 using Refedle.E2ETests.Helpers;
 using Terminal.Gui.Drivers;
 
