@@ -1,5 +1,7 @@
+using Refedle.App.Views;
 using Refedle.Engine.IO;
 using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -26,6 +28,7 @@ internal sealed class MainWindow : Window
     private Action<long, long>? _onProgressChanged;
     private Action? _onBuildIndexCompleted;
     private readonly IndexingProgressOverlay _indexingOverlay = new();
+    private readonly FilePathBar _filePathBar = new();
 
     public MainWindow(IApplication app, AppState state)
     {
@@ -40,8 +43,9 @@ internal sealed class MainWindow : Window
 
         _viewManager = new ViewManager(this, state, modeController, app.Invoke);
 
-        _fileDialogHandler = new FileDialogHandler(app, state, _viewManager, StartIndexing, StopCurrentIndexing,
-            path => new Schema.Csv.IncrementalSchemaScanner(path));
+        _fileDialogHandler = new FileDialogHandler(
+            app, state, _viewManager, StartIndexing, StopCurrentIndexing,
+            path => new Schema.Csv.IncrementalSchemaScanner(path), _filePathBar.SetFilePath);
         _recipeCommandHandler = new RecipeCommandHandler(app, state, _viewManager);
 
         InitializeMenu();
@@ -71,7 +75,12 @@ internal sealed class MainWindow : Window
         var fileMenuBarItem = new MenuBarItem("_File", [openMenuItem, saveRecipeMenuItem, loadRecipeMenuItem, exitMenuItem]);
         var menuBar = new MenuBar { Menus = [fileMenuBarItem] };
 
+        // Paint the path with the File item's own colors so the label and the path read as one bar.
+        _filePathBar.SetMenuAttribute(() => fileMenuBarItem.GetAttributeForRole(VisualRole.Normal));
+
         Add(menuBar);
+        // Added after the MenuBar so the path, left-aligned right after the "File" label, renders on top of the same row.
+        Add(_filePathBar);
     }
 
     private void InitializeStatusBar()
@@ -94,6 +103,7 @@ internal sealed class MainWindow : Window
         if (disposing)
         {
             _indexingOverlay.Dispose();
+            _filePathBar.Dispose();
             _keyHandler.Dispose();
             _indexTaskManager.Dispose();
             _state.Dispose();
