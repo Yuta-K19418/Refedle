@@ -45,7 +45,7 @@ public sealed partial class MainWindowTests
             Harness.SendKey(KeyCode.Home);
             Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
             Harness.SendKey(KeyCode.Delete);
-            Harness.SendText("save-recipe-csv-test.yaml");
+            Harness.SendPaste("save-recipe-csv-test.yaml");
             await Harness.WaitForContentsAsync("save-recipe-csv-test.yaml");
             Harness.SendKey(KeyCode.Enter);
             await Harness.WaitForContentsAsync("Recipe saved successfully");
@@ -114,7 +114,7 @@ public sealed partial class MainWindowTests
             Harness.SendKey(KeyCode.Home);
             Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
             Harness.SendKey(KeyCode.Delete);
-            Harness.SendText("save-recipe-jsonlinestree-test.yaml");
+            Harness.SendPaste("save-recipe-jsonlinestree-test.yaml");
             await Harness.WaitForContentsAsync("save-recipe-jsonlinestree-test.yaml");
             Harness.SendKey(KeyCode.Enter);
             await Harness.WaitForContentsAsync("Recipe saved successfully");
@@ -177,7 +177,7 @@ public sealed partial class MainWindowTests
             Harness.SendKey(KeyCode.Home);
             Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
             Harness.SendKey(KeyCode.Delete);
-            Harness.SendText("save-recipe-focusedtable-test.yaml");
+            Harness.SendPaste("save-recipe-focusedtable-test.yaml");
             await Harness.WaitForContentsAsync("save-recipe-focusedtable-test.yaml");
             Harness.SendKey(KeyCode.Enter);
             await Harness.WaitForContentsAsync("Recipe saved successfully");

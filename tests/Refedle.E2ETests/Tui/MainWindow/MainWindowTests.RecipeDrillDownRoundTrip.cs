@@ -44,7 +44,7 @@ public sealed partial class MainWindowTests
             Harness.SendKey(KeyCode.Home);
             Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
             Harness.SendKey(KeyCode.Delete);
-            Harness.SendText("recipe-roundtrip-single-drilldown-test.yaml");
+            Harness.SendPaste("recipe-roundtrip-single-drilldown-test.yaml");
             await Harness.WaitForContentsAsync("recipe-roundtrip-single-drilldown-test.yaml");
             Harness.SendKey(KeyCode.Enter);
             await Harness.WaitForContentsAsync("Recipe saved successfully");
@@ -120,7 +120,7 @@ public sealed partial class MainWindowTests
             Harness.SendKey(KeyCode.Home);
             Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
             Harness.SendKey(KeyCode.Delete);
-            Harness.SendText("recipe-roundtrip-full-aggregation-test.yaml");
+            Harness.SendPaste("recipe-roundtrip-full-aggregation-test.yaml");
             await Harness.WaitForContentsAsync("recipe-roundtrip-full-aggregation-test.yaml");
             Harness.SendKey(KeyCode.Enter);
             await Harness.WaitForContentsAsync("Recipe saved successfully");

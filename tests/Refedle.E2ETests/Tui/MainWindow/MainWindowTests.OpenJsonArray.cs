@@ -19,14 +19,16 @@ public sealed partial class MainWindowTests
         var inputFile = _testDirectory.CreateFile("input.json", content);
 
         // Act: drive the real 'o'-key flow. The path field is pre-filled with the dialog's
-        // current directory, so clear it (same pattern as the Save tests) before typing
+        // current directory, so clear it (same pattern as the Save tests) before entering
         // the absolute path; Enter then selects the listed file and closes the dialog.
         Harness.SendKey(KeyCode.O);
         await Harness.WaitForContentsAsync("Open File");
         Harness.SendKey(KeyCode.Home);
         Harness.SendKey(KeyCode.End | KeyCode.ShiftMask);
         Harness.SendKey(KeyCode.Delete);
-        Harness.SendText(inputFile);
+        // Pasted rather than typed: the dialog re-lists the directory on every path-field change,
+        // so entering an absolute path key by key is slow enough to hit the poll timeout.
+        Harness.SendPaste(inputFile);
         await Harness.WaitForContentsAsync("input.json");
         Harness.SendKey(KeyCode.Enter);
         var lines = await Harness.WaitForContentsAsync("[2]:", "Object: 2 properties");
