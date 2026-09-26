@@ -238,21 +238,20 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleClearActions_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_ReturnsFalse()
+    public void HandleClearActions_WhenErrorViewReplacedFocusedTableAndBaseActionStackEmpty_ReturnsFalse()
     {
-        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but the
-        // current view is the base table; clearing must consult the base stack, not the stale one
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // clearing must consult the (empty) base stack, not those actions
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
-        var staleDrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]);
-        // Stale session: an error view replaced FocusedTable without clearing the DrillDown state.
-        state.EnterFocusedTable(staleDrillDown);
+        state.EnterFocusedTable(drillDown);
         state.EnterPlaceholderMode();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -266,8 +265,7 @@ public sealed class AppKeyHandlerTests
 
         // Assert
         result.Should().BeFalse();
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
-        drillDown.ActionStack.Should().ContainSingle();
+        state.TryGetDrillDown(out _).Should().BeFalse();
     }
 
     // The confirmed-clear branches (MessageBox.Query "Yes") require a TUI event loop to

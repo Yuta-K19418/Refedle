@@ -104,22 +104,22 @@ public sealed partial class RecipeCommandHandlerTests
     }
 
     [Fact]
-    public void BuildRecipe_FromTableModeWithStaleDrillDown_UsesBaseActionStackAndOmitsDrillDownKeyPath()
+    public void BuildRecipe_AfterErrorViewReplacedFocusedTable_UsesBaseActionStackAndOmitsDrillDownKeyPath()
     {
-        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
-        // must be ignored when the current view is the base table, not FocusedTable
+        // Arrange — the DrillDown's scope must not be captured once an error view has replaced
+        // FocusedTable
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         var baseAction = new RenameColumnAction { OldName = "base", NewName = "renamed_base" };
         using var state = new AppState();
         state.StartNewFile("data.jsonl");
-        var staleDrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [new KeyPathSegment("stale", KeyPathSegmentKind.Key)],
             ActionStack: [new RenameColumnAction { OldName = "stale", NewName = "stale_renamed" }]);
-        state.EnterFocusedTable(staleDrillDown);
+        state.EnterFocusedTable(drillDown);
         state.EnterPlaceholderMode();
         state.AddMorphAction(baseAction);
         using var window = new Window();
@@ -425,9 +425,10 @@ public sealed partial class RecipeCommandHandlerTests
     }
 
     [Fact]
-    public async Task SaveAsync_FromFocusedTableWithFailedWrite_KeepsDrillDownUnsavedChangesFlag()
+    public async Task SaveAsync_FromFocusedTableWithFailedWrite_EndsDrillDownSession()
     {
-        // Arrange — the dialog path targets a missing directory, so the DrillDown save fails
+        // Arrange — the dialog path targets a missing directory, so the DrillDown save fails and
+        // the error view replaces FocusedTable, which ends the session
         var unreachableRecipeFile = Path.Combine(
             Path.GetTempPath(), $"refedle-missing-{Guid.NewGuid():N}", "recipe.yaml");
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
@@ -446,11 +447,11 @@ public sealed partial class RecipeCommandHandlerTests
 
         // Act
         await session.InvokeAsync((_, ctx) => ctx.Handler.SaveAsync());
-        var drillDownFlag = await session.InvokeAsync(
-            (_, ctx) => Task.FromResult(ctx.State.GetDrillDownOrNull()?.HasUnsavedChanges));
+        var drillDownAfter = await session.InvokeAsync(
+            (_, ctx) => Task.FromResult(ctx.State.GetDrillDownOrNull()));
 
         // Assert
-        drillDownFlag.Should().BeTrue();
+        drillDownAfter.Should().BeNull();
     }
 
     [Fact]

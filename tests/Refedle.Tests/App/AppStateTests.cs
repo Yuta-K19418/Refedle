@@ -54,11 +54,18 @@ public sealed class AppStateTests
         return state;
     }
 
-    private static (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<MorphAction>, bool, IReadOnlyList<JsonObjectEntry>?, DrillDownState?)
+    // The populated state after its DrillDown session ended: a tree mode with no session.
+    private static AppState CreatePopulatedTreeState()
+    {
+        var state = CreatePopulatedState();
+        state.ExitFocusedTable(ViewMode.JsonObjectTree);
+        return state;
+    }
+
+    private static (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<MorphAction>, bool, IReadOnlyList<JsonObjectEntry>?)
         CaptureExceptMode(AppState state) =>
         (state.CurrentFilePath, state.CurrentKeyPath, state.Schema, state.RowIndexer, state.Cts,
-            state.OnSchemaRefined, state.ActionStack, state.HasUnsavedChanges, state.JsonObjectEntries,
-            state.GetDrillDownOrNull());
+            state.OnSchemaRefined, state.ActionStack, state.HasUnsavedChanges, state.JsonObjectEntries);
 
     [Fact]
     public void AddMorphAction_SingleAction_AddsToStack()
@@ -593,7 +600,7 @@ public sealed class AppStateTests
     public void EnterJsonLinesTree_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using var state = CreatePopulatedTreeState();
         var before = CaptureExceptMode(state);
 
         // Act
@@ -608,7 +615,7 @@ public sealed class AppStateTests
     public void EnterJsonArrayTree_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using var state = CreatePopulatedTreeState();
         var before = CaptureExceptMode(state);
 
         // Act
@@ -623,7 +630,7 @@ public sealed class AppStateTests
     public void EnterJsonLinesTable_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using var state = CreatePopulatedTreeState();
         var before = CaptureExceptMode(state);
 
         // Act
@@ -669,7 +676,7 @@ public sealed class AppStateTests
     public void EnterPlaceholderMode_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using var state = CreatePopulatedTreeState();
         var before = CaptureExceptMode(state);
 
         // Act
@@ -681,18 +688,101 @@ public sealed class AppStateTests
     }
 
     [Fact]
-    public void EnterPlaceholderMode_WithDrillDownSession_KeepsTheSession()
+    public void EnterPlaceholderMode_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
         using var state = CreatePopulatedState();
-        state.TryGetDrillDown(out var sessionBefore).Should().BeTrue();
 
         // Act
         state.EnterPlaceholderMode();
 
         // Assert
-        state.TryGetDrillDown(out var sessionAfter).Should().BeTrue();
-        sessionAfter.Should().BeSameAs(sessionBefore);
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+    }
+
+    [Fact]
+    public void CompleteCsvLoad_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.CompleteCsvLoad(new AppStateTestRowIndexer("data.csv"), CreateSchema());
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.CsvTable);
+    }
+
+    [Fact]
+    public void EnterJsonObjectTree_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.EnterJsonObjectTree([new JsonObjectEntry("orders", "[]"u8.ToArray())]);
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.JsonObjectTree);
+    }
+
+    [Fact]
+    public void EnterJsonLinesTree_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.EnterJsonLinesTree();
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
+    }
+
+    [Fact]
+    public void EnterJsonArrayTree_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.EnterJsonArrayTree();
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.JsonArrayTree);
+    }
+
+    [Fact]
+    public void EnterJsonLinesTable_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.EnterJsonLinesTable();
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.JsonLinesTable);
+    }
+
+    [Fact]
+    public void CompleteJsonLinesSchemaScan_WithDrillDownSession_EndsTheSession()
+    {
+        // Arrange
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+
+        // Act
+        state.CompleteJsonLinesSchemaScan(CreateSchema());
+
+        // Assert
+        state.TryGetDrillDown(out _).Should().BeFalse();
+        state.CurrentMode.Should().Be(ViewMode.JsonLinesTable);
     }
 
     [Fact]
@@ -835,60 +925,18 @@ public sealed class AppStateTests
     }
 
     [Fact]
-    public void TryGetDrillDown_WhenPlaceholderModeFollowsFocusedTable_ReturnsTrueAndSession()
+    public void TryGetDrillDown_AfterPlaceholderModeReplacedFocusedTable_ReturnsFalse()
     {
         // Arrange
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        using var state = CreateStateWithDrillDown(drillDownAction);
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.EnterPlaceholderMode();
 
         // Act
         var found = state.TryGetDrillDown(out var drillDown);
 
         // Assert
-        found.Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
-        actual.ActionStack.Should().Equal(drillDownAction);
-    }
-
-    [Fact]
-    public void IsDrillDownMode_OnNewState_ReturnsFalse()
-    {
-        // Arrange
-        using var state = new AppState();
-
-        // Act
-        var result = state.IsDrillDownMode;
-
-        // Assert
-        result.Should().BeFalse();
-    }
-
-    [Fact]
-    public void IsDrillDownMode_AfterEnterFocusedTable_ReturnsTrue()
-    {
-        // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
-
-        // Act
-        var result = state.IsDrillDownMode;
-
-        // Assert
-        result.Should().BeTrue();
-    }
-
-    [Fact]
-    public void IsDrillDownMode_WhenPlaceholderModeFollowsFocusedTable_ReturnsFalse()
-    {
-        // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
-        state.EnterPlaceholderMode();
-
-        // Act
-        var result = state.IsDrillDownMode;
-
-        // Assert
-        result.Should().BeFalse();
+        found.Should().BeFalse();
+        drillDown.Should().BeNull();
     }
 
     [Fact]
@@ -939,21 +987,17 @@ public sealed class AppStateTests
     }
 
     [Fact]
-    public void AddDrillDownAction_WhenPlaceholderModeFollowsFocusedTable_AppendsToSession()
+    public void AddDrillDownAction_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
-        var existing = new RenameColumnAction { OldName = "x", NewName = "y" };
-        var added = new DeleteColumnAction { ColumnName = "c" };
-        using var state = CreateStateWithDrillDown(existing);
+        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.EnterPlaceholderMode();
 
         // Act
-        state.AddDrillDownAction(added);
+        state.AddDrillDownAction(new DeleteColumnAction { ColumnName = "c" });
 
         // Assert
-        state.TryGetDrillDown(out var drillDown).Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
-        actual.ActionStack.Should().Equal(existing, added);
+        state.TryGetDrillDown(out _).Should().BeFalse();
         state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
     }
 
@@ -1006,7 +1050,7 @@ public sealed class AppStateTests
     }
 
     [Fact]
-    public void ClearDrillDownActions_WhenPlaceholderModeFollowsFocusedTable_EmptiesSessionStack()
+    public void ClearDrillDownActions_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
         using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
@@ -1016,10 +1060,7 @@ public sealed class AppStateTests
         state.ClearDrillDownActions();
 
         // Assert
-        state.TryGetDrillDown(out var drillDown).Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
-        actual.ActionStack.Should().BeEmpty();
-        actual.HasUnsavedChanges.Should().BeTrue();
+        state.TryGetDrillDown(out _).Should().BeFalse();
         state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
     }
 
@@ -1076,7 +1117,7 @@ public sealed class AppStateTests
     }
 
     [Fact]
-    public void MarkDrillDownSaved_WhenPlaceholderModeFollowsFocusedTable_ClearsSessionUnsavedFlag()
+    public void MarkDrillDownSaved_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
         using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
@@ -1087,9 +1128,7 @@ public sealed class AppStateTests
         state.MarkDrillDownSaved();
 
         // Assert
-        state.TryGetDrillDown(out var drillDown).Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
-        actual.HasUnsavedChanges.Should().BeFalse();
+        state.TryGetDrillDown(out _).Should().BeFalse();
         state.CurrentMode.Should().Be(ViewMode.PlaceholderView);
     }
 

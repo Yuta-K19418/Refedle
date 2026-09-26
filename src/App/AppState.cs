@@ -91,31 +91,36 @@ internal sealed class AppState : IDisposable
     /// </summary>
     public long Revision => _revision;
 
-    /// <summary>
-    /// Gets the DrillDown session state. Kept private so callers ask <see cref="TryGetDrillDown"/>
-    /// instead of null-checking it. A session can outlive FocusedTable mode (an error view
-    /// replaces it without clearing it), so it is not tied to <see cref="CurrentMode"/>.
-    /// </summary>
-    private DrillDownState? DrillDown { get; set; }
+    // Non-null only while CurrentMode is FocusedTable; read it through TryGetDrillDown.
+    private DrillDownState? _drillDown;
 
     /// <summary>
-    /// Gets a value indicating whether the current view is FocusedTable. Says nothing about
-    /// whether a session exists; pair it with <see cref="TryGetDrillDown"/> when both matter.
-    /// </summary>
-    public bool IsDrillDownMode => CurrentMode == ViewMode.FocusedTable;
-
-    /// <summary>
-    /// Gets the DrillDown session if one exists, regardless of <see cref="CurrentMode"/>.
+    /// Gets the DrillDown session backing the FocusedTable view.
+    /// A session exists only while <see cref="CurrentMode"/> is FocusedTable: every change to
+    /// another mode (a load completing, a tree/table toggle, the error placeholder) discards it. Between <see cref="StartNewFile"/> and the
+    /// new file's first mode change the old mode can still read FocusedTable with no session.
     /// </summary>
     /// <param name="drillDown">The session when this returns <c>true</c>; otherwise <c>null</c>.</param>
-    /// <returns>
-    /// <c>true</c> when a session exists — including a stale one left over after an error view
-    /// replaced FocusedTable.
-    /// </returns>
+    /// <returns><c>true</c> when a session exists.</returns>
     internal bool TryGetDrillDown([NotNullWhen(true)] out DrillDownState? drillDown)
     {
-        drillDown = DrillDown;
+        drillDown = _drillDown;
         return drillDown is not null;
+    }
+
+    /// <summary>
+    /// Sets <see cref="CurrentMode"/>. Every mode change goes through here so that leaving
+    /// FocusedTable, for whatever mode, ends the DrillDown session.
+    /// </summary>
+    /// <param name="mode">The mode to enter.</param>
+    private void SetMode(ViewMode mode)
+    {
+        if (mode != ViewMode.FocusedTable)
+        {
+            _drillDown = null;
+        }
+
+        CurrentMode = mode;
     }
 
     /// <summary>
@@ -137,7 +142,7 @@ internal sealed class AppState : IDisposable
         // The fresh session starts clean: an empty stack cannot diverge from anything on disk.
         MarkRecipeSaved();
         RenewCtsWithCancel();
-        DrillDown = null;
+        _drillDown = null;
         JsonObjectEntries = null;
     }
 
@@ -174,7 +179,7 @@ internal sealed class AppState : IDisposable
     {
         Schema = schema;
         RowIndexer = indexer;
-        CurrentMode = ViewMode.CsvTable;
+        SetMode(ViewMode.CsvTable);
     }
 
     /// <summary>
@@ -184,7 +189,7 @@ internal sealed class AppState : IDisposable
     internal void EnterJsonObjectTree(IReadOnlyList<JsonObjectEntry> entries)
     {
         JsonObjectEntries = entries;
-        CurrentMode = ViewMode.JsonObjectTree;
+        SetMode(ViewMode.JsonObjectTree);
     }
 
     /// <summary>
@@ -193,7 +198,7 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void EnterJsonLinesTree()
     {
-        CurrentMode = ViewMode.JsonLinesTree;
+        SetMode(ViewMode.JsonLinesTree);
     }
 
     /// <summary>
@@ -202,7 +207,7 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void EnterJsonArrayTree()
     {
-        CurrentMode = ViewMode.JsonArrayTree;
+        SetMode(ViewMode.JsonArrayTree);
     }
 
     /// <summary>
@@ -210,7 +215,7 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void EnterJsonLinesTable()
     {
-        CurrentMode = ViewMode.JsonLinesTable;
+        SetMode(ViewMode.JsonLinesTable);
     }
 
     /// <summary>
@@ -221,7 +226,7 @@ internal sealed class AppState : IDisposable
     internal void CompleteJsonLinesSchemaScan(TableSchema schema)
     {
         Schema = schema;
-        CurrentMode = ViewMode.JsonLinesTable;
+        SetMode(ViewMode.JsonLinesTable);
     }
 
     /// <summary>
@@ -229,7 +234,7 @@ internal sealed class AppState : IDisposable
     /// </summary>
     internal void EnterPlaceholderMode()
     {
-        CurrentMode = ViewMode.PlaceholderView;
+        SetMode(ViewMode.PlaceholderView);
     }
 
     /// <summary>
@@ -238,8 +243,8 @@ internal sealed class AppState : IDisposable
     /// <param name="drillDown">The DrillDown session to display.</param>
     internal void EnterFocusedTable(DrillDownState drillDown)
     {
-        DrillDown = drillDown;
-        CurrentMode = ViewMode.FocusedTable;
+        _drillDown = drillDown;
+        SetMode(ViewMode.FocusedTable);
     }
 
     /// <summary>
@@ -249,23 +254,23 @@ internal sealed class AppState : IDisposable
     /// <param name="modeToRestore">The tree mode recorded as the DrillDown's previous mode.</param>
     internal void ExitFocusedTable(ViewMode modeToRestore)
     {
-        DrillDown = null;
-        CurrentMode = modeToRestore;
+        _drillDown = null;
+        SetMode(modeToRestore);
     }
 
     /// <summary>
     /// Appends a morph action to the DrillDown session's Action Stack and flags the session unsaved.
-    /// Does nothing when no session exists, regardless of <see cref="CurrentMode"/>.
+    /// Does nothing when no session exists.
     /// </summary>
     /// <param name="action">The action to append.</param>
     internal void AddDrillDownAction(MorphAction action)
     {
-        if (DrillDown is not { } drillDown)
+        if (_drillDown is not { } drillDown)
         {
             return;
         }
 
-        DrillDown = drillDown with
+        _drillDown = drillDown with
         {
             ActionStack = [.. drillDown.ActionStack, action],
             HasUnsavedChanges = true,
@@ -274,30 +279,30 @@ internal sealed class AppState : IDisposable
 
     /// <summary>
     /// Clears the DrillDown session's Action Stack and flags the session unsaved.
-    /// Does nothing when no session exists, regardless of <see cref="CurrentMode"/>.
+    /// Does nothing when no session exists.
     /// </summary>
     internal void ClearDrillDownActions()
     {
-        if (DrillDown is not { } drillDown)
+        if (_drillDown is not { } drillDown)
         {
             return;
         }
 
-        DrillDown = drillDown with { ActionStack = [], HasUnsavedChanges = true };
+        _drillDown = drillDown with { ActionStack = [], HasUnsavedChanges = true };
     }
 
     /// <summary>
     /// Clears the DrillDown session's unsaved-changes flag after its recipe was saved.
-    /// Does nothing when no session exists, regardless of <see cref="CurrentMode"/>.
+    /// Does nothing when no session exists.
     /// </summary>
     internal void MarkDrillDownSaved()
     {
-        if (DrillDown is not { } drillDown)
+        if (_drillDown is not { } drillDown)
         {
             return;
         }
 
-        DrillDown = drillDown with { HasUnsavedChanges = false };
+        _drillDown = drillDown with { HasUnsavedChanges = false };
     }
 
     /// <summary>

@@ -255,11 +255,10 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_QuitsWithoutConfirmation()
+    public void KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseActionStackEmpty_QuitsWithoutConfirmation()
     {
-        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
-        // carries actions, but the current view is the base table; quitting must consult the
-        // base stack, not the stale one
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // quitting must consult the (empty) base stack, not those actions
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
@@ -379,10 +378,10 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenBaseRootIsDirtyAndStaleDrillDownIsClean_ShowsQuitConfirmation()
+    public void KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseRootIsDirty_ShowsQuitConfirmation()
     {
-        // Arrange — base table with a dirty root stack and a clean stale DrillDown (an error view
-        // replaced FocusedTable without clearing it): quitting must consult the root flag
+        // Arrange — a dirty root stack after an error view replaced a clean FocusedTable:
+        // quitting must consult the root flag
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
@@ -463,11 +462,10 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithCKey_WhenBaseStackHasActions_ClearsOnlyBaseStack()
+    public void KeyDown_WithCKey_WhenErrorViewReplacedFocusedTableAndBaseStackHasActions_ClearsBaseStack()
     {
-        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
-        // carries actions, but the current view is the base table; confirming the clear must only
-        // clear the base stack
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // confirming the clear must clear the base stack and leave no DrillDown session behind
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
@@ -504,7 +502,6 @@ public sealed partial class MainWindowTests
         handled.Should().BeTrue();
         state.ActionStack.Should().BeEmpty();
         state.HasUnsavedChanges.Should().BeTrue();
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
-        drillDownAfter.ActionStack.Should().ContainSingle();
+        state.TryGetDrillDown(out _).Should().BeFalse();
     }
 }

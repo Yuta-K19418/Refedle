@@ -89,7 +89,7 @@ internal sealed class ViewManager : IDisposable
         AddTreeToggleHint(hints);
         AddMenuHint(hints);
 
-        var currentActionCount = _state.IsDrillDownMode && _state.TryGetDrillDown(out var drillDown)
+        var currentActionCount = _state.TryGetDrillDown(out var drillDown)
             ? drillDown.ActionStack.Count
             : _state.ActionStack.Count;
 
@@ -442,7 +442,7 @@ internal sealed class ViewManager : IDisposable
     /// <param name="action">The morph action to apply.</param>
     private void HandleMorphAction(MorphAction action)
     {
-        if (_state.IsDrillDownMode && _state.TryGetDrillDown(out _))
+        if (_state.TryGetDrillDown(out _))
         {
             _state.AddDrillDownAction(action);
             RefreshCurrentTableView();

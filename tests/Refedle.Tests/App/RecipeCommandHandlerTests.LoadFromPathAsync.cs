@@ -354,11 +354,10 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
     }
 
     [Fact]
-    public async Task LoadFromPathAsync_JsonLinesRecipeWithUnmatchedKeyPath_PreservesExistingDrillDownActionStackOnFailure()
+    public async Task LoadFromPathAsync_JsonLinesRecipeWithUnmatchedKeyPath_EndsExistingDrillDownSessionOnFailure()
     {
-        // Arrange — the scan finds no matching rows, so FullAggregationDrillDownAsync fails; the
-        // pre-existing DrillDown session (and its ActionStack) must be left untouched rather than
-        // overwritten before the transition is known to succeed.
+        // Arrange — the scan finds no matching rows, so FullAggregationDrillDownAsync fails and the
+        // error view replaces FocusedTable, which ends the pre-existing DrillDown session.
         File.WriteAllText(_jsonLinesFile, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
 
         var existingSchema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
@@ -388,12 +387,11 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
 
         // Act
         await session.InvokeAsync((_, ctx) => ctx.Handler.LoadFromPathAsync(_recipeFile).AsTask());
-        var (drillDown, actionStack) = await session.InvokeAsync((_, ctx) =>
-            Task.FromResult((ctx.State.GetDrillDownOrNull(), ctx.State.GetDrillDownOrNull()?.ActionStack.ToArray())));
+        var drillDown = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.GetDrillDownOrNull()));
+        var mode = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.CurrentMode));
 
-        // Assert — comparing the reference itself is safe (no dereference of its mutable fields);
-        // ActionStack is read on the worker thread above instead of through this reference.
-        drillDown.Should().BeSameAs(existingDrillDown);
-        actionStack.Should().Equal(existingAction);
+        // Assert
+        drillDown.Should().BeNull();
+        mode.Should().Be(ViewMode.PlaceholderView);
     }
 }

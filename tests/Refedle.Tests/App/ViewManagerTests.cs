@@ -1017,22 +1017,22 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public void HandleMorphAction_WithTableMode_AppendsToBaseActionStack_LeavesDrillDownActionStackUntouched()
+    public void HandleMorphAction_AfterErrorViewReplacedFocusedTable_AppendsToBaseActionStack()
     {
-        // Arrange — a stale DrillDown (an error view replaced FocusedTable without clearing it)
-        // must be untouched when the current view is the base table, not FocusedTable
+        // Arrange — an error view replaced FocusedTable, then the base table was shown again;
+        // the action must go to the base stack and no DrillDown session may remain
         var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
         using var app = CreateTestApp();
-        var staleDrillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        var staleDrillDown = new DrillDownState(
+        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
             ViewMode.JsonLinesTree,
             KeyPath: [],
-            ActionStack: [staleDrillDownAction]);
+            ActionStack: [drillDownAction]);
         using var state = new AppState();
         state.StartNewFile(filePath);
-        state.EnterFocusedTable(staleDrillDown);
+        state.EnterFocusedTable(drillDown);
         state.EnterPlaceholderMode();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -1051,8 +1051,7 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().Equal(action);
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
-        drillDownAfter.ActionStack.Should().Equal(staleDrillDownAction);
+        state.TryGetDrillDown(out _).Should().BeFalse();
     }
 
     [Fact]
