@@ -38,7 +38,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var act = async () => await DryRunner.RunAsync(args!, logger);
+        var act = async () => await DryRunner.RunAsync(args!, logger, new TestStatusReporter());
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -56,7 +56,7 @@ public sealed class DryRunnerTests : IDisposable
         await cts.CancelAsync();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, cts.Token);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter(), cts.Token);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -76,7 +76,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -106,7 +106,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the no-output path omits the Output format line and the empty Filters section
         exitCode.Should().Be(ExitCode.Success);
@@ -133,7 +133,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -153,7 +153,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -170,7 +170,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — no output-schema line may represent the deleted source column
         exitCode.Should().Be(ExitCode.Success);
@@ -189,7 +189,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the same wording the normal Runner path reports
         exitCode.Should().Be(ExitCode.Failure);
@@ -206,7 +206,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -223,7 +223,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the same wording the normal Runner path reports
         exitCode.Should().Be(ExitCode.Failure);
@@ -247,7 +247,7 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -264,11 +264,69 @@ public sealed class DryRunnerTests : IDisposable
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger);
+        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
         logger.Errors.Should().ContainSingle().Which.Should().Be("""Error resolving columns: DrillDown path key "missing" was not found.""");
+    }
+
+    [Fact]
+    public async Task RunAsync_OnSuccess_ReportsValidatingPhaseAndStillPrintsSummary()
+    {
+        // Arrange
+        var inputFile = CreateTestFile("input.csv", TestCsvContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        var logger = new TestAppLogger();
+        var status = new TestStatusReporter();
+
+        // Act
+        var exitCode = await DryRunner.RunAsync(args, logger, status);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        status.Phases.Should().Equal("Validating...");
+        logger.Infos.Should().StartWith("Dry run OK");
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenPreparationFails_ReportsValidatingPhaseAndStillLogsTheError()
+    {
+        // Arrange
+        var inputFile = CreateTestFile("input.csv", TestCsvContent);
+        var args = new Arguments
+        {
+            InputFile = inputFile,
+            RecipeFile = Path.Combine(_testDir, "missing.yaml"),
+            IsDryRun = true,
+        };
+        var logger = new TestAppLogger();
+        var status = new TestStatusReporter();
+
+        // Act
+        var exitCode = await DryRunner.RunAsync(args, logger, status);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Failure);
+        status.Phases.Should().Equal("Validating...");
+        logger.Errors.Should().ContainSingle().Which.Should().Contain("missing.yaml");
+    }
+
+    [Fact]
+    public async Task RunAsync_WithNullStatusReporter_ThrowsArgumentNullException()
+    {
+        // Arrange
+        var inputFile = CreateTestFile("input.csv", TestCsvContent);
+        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        var logger = new TestAppLogger();
+
+        // Act
+        var act = async () => await DryRunner.RunAsync(args, logger, null!);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
     }
 
     private string CreateTestFile(string fileName, string content)

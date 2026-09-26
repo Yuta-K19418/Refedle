@@ -28,12 +28,13 @@ internal static class ApplyRunner
 
         var parsedArgs = parseResult.Value;
         var logger = new ConsoleAppLogger();
+        var statusReporter = new SpectreStatusReporter();
         if (parsedArgs.IsDryRun)
         {
-            return await DryRunner.RunAsync(parsedArgs, logger, ct).ConfigureAwait(false);
+            return await DryRunner.RunAsync(parsedArgs, logger, statusReporter, ct).ConfigureAwait(false);
         }
 
         return await Runner.RunAsync(
-            parsedArgs, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), ct).ConfigureAwait(false);
+            parsedArgs, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), statusReporter, ct).ConfigureAwait(false);
     }
 }

@@ -19,7 +19,8 @@ internal static class UpdateRunner
             releaseClient,
             new ArchiveBinaryReplacer(),
             new RuntimeIdentifierResolver(),
-            new ConsoleAppLogger());
+            new ConsoleAppLogger(),
+            new SpectreStatusReporter());
         return await command.RunAsync(ct).ConfigureAwait(false);
     }
 }

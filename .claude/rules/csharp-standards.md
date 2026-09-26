@@ -120,6 +120,7 @@ paths:
 - Follow standard .NET Naming Guidelines
 - **Consistency with existing code**: if existing types follow a naming convention (e.g., a specific suffix or prefix), new types must follow the same pattern — flag any new class, interface, or member whose name breaks the established convention in its namespace or layer
 - **ValueTuple element names**: use **camelCase** (e.g., `(string key, string value)`, `(int count, bool found)`). Tuple elements are destructured into local variables, so camelCase aligns with the local variable naming convention
+- **Local functions**: use **lowerCamelCase** (e.g., `void setPhase(string phase)`). This is not enforced by `.editorconfig` (local functions are outside its `dotnet_naming_rule` symbol kinds), so it must be followed by convention
 
 ## ValueTuple
 - `ValueTuple` (`(...)`) is for returning multiple values from a method, or as a local variable for intermediate processing within a method
