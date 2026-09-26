@@ -71,14 +71,14 @@ to `VimKeyTranslator`.
 
 | Action | File |
 |--------|------|
-| **Create** | `src/App/Views/Dialogs/RenameColumnDialog.cs` |
-| **Create** | `src/App/Views/Dialogs/DeleteColumnDialog.cs` |
-| **Create** | `src/App/Views/Dialogs/CastColumnDialog.cs` |
-| **Modify** | `src/App/AppState.cs` |
-| **Modify** | `src/App/ViewManager.cs` |
-| **Modify** | `src/App/Views/CsvTableView.cs` |
-| **Modify** | `src/App/Views/JsonLinesTableView.cs` |
-| **Create** | `tests/Refedle.Tests/App/AppStateTests.cs` |
+| **Create** | `src/App/Tui/Ui/Views/Dialogs/RenameColumnDialog.cs` |
+| **Create** | `src/App/Tui/Ui/Views/Dialogs/DeleteColumnDialog.cs` |
+| **Create** | `src/App/Tui/Ui/Views/Dialogs/CastColumnDialog.cs` |
+| **Modify** | `src/App/Tui/AppState.cs` |
+| **Modify** | `src/App/Tui/Ui/ViewManager.cs` |
+| **Modify** | `src/App/Tui/Ui/Views/CsvTableView.cs` |
+| **Modify** | `src/App/Tui/Ui/Views/JsonLinesTableView.cs` |
+| **Create** | `tests/Refedle.Tests/App/Tui/AppStateTests.cs` |
 
 No changes to `FileLoader`, `MainWindow`, `LazyTransformer`, or any Engine class.
 
@@ -94,7 +94,7 @@ is the standard Terminal.Gui v2 pattern for modal dialogs.
 
 #### 5.1.1 `RenameColumnDialog`
 
-**File:** `src/App/Views/Dialogs/RenameColumnDialog.cs`
+**File:** `src/App/Tui/Ui/Views/Dialogs/RenameColumnDialog.cs`
 
 ```
 RenameColumnDialog(currentName: string)
@@ -118,7 +118,7 @@ Properties:
 
 #### 5.1.2 `DeleteColumnDialog`
 
-**File:** `src/App/Views/Dialogs/DeleteColumnDialog.cs`
+**File:** `src/App/Tui/Ui/Views/Dialogs/DeleteColumnDialog.cs`
 
 ```
 DeleteColumnDialog(columnName: string)
@@ -135,7 +135,7 @@ Properties:
 
 #### 5.1.3 `CastColumnDialog`
 
-**File:** `src/App/Views/Dialogs/CastColumnDialog.cs`
+**File:** `src/App/Tui/Ui/Views/Dialogs/CastColumnDialog.cs`
 
 ```
 CastColumnDialog(columnName: string, currentType: ColumnType)
@@ -167,7 +167,7 @@ Properties:
 
 ### 5.2 `AppState` — `AddMorphAction`
 
-**File:** `src/App/AppState.cs`
+**File:** `src/App/Tui/AppState.cs`
 
 Add one method:
 
@@ -186,7 +186,7 @@ internal void AddMorphAction(MorphAction action)
 
 ### 5.3 `ViewManager` — `RefreshCurrentTableView`
 
-**File:** `src/App/ViewManager.cs`
+**File:** `src/App/Tui/Ui/ViewManager.cs`
 
 Add one internal method and update both `SwitchToCsvTable` and
 `SwitchToJsonLinesTableView` to wire up the morph callback.
@@ -239,7 +239,7 @@ callback to `JsonLinesTableView`'s constructor.
 
 ### 5.4 `CsvTableView` — column morph keys
 
-**File:** `src/App/Views/CsvTableView.cs`
+**File:** `src/App/Tui/Ui/Views/CsvTableView.cs`
 
 Add `OnMorphAction` property and morph key handling:
 
@@ -302,7 +302,7 @@ cannot be resolved from the source. This is a known limitation of the MVP.
 
 ### 5.5 `JsonLinesTableView` — column morph keys
 
-**File:** `src/App/Views/JsonLinesTableView.cs`
+**File:** `src/App/Tui/Ui/Views/JsonLinesTableView.cs`
 
 Add `onMorphAction` as a second constructor parameter (nullable, default `null`):
 
@@ -364,7 +364,7 @@ Step 2 — cursor on column "age", press Shift+D
 
 ### Unit Tests
 
-**New file:** `tests/Refedle.Tests/App/AppStateTests.cs`
+**New file:** `tests/Refedle.Tests/App/Tui/AppStateTests.cs`
 
 | Test | Validates |
 |------|-----------|

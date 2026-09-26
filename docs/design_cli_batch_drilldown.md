@@ -145,7 +145,7 @@ Another effect, unforeseen at design time: a zero-byte input file now fails with
 |---|---|
 | `src/App/FormatDetector.cs` | Rename `Detect` → `DetectInputFile`; add new `DetectOutputFile` (extension-only) |
 | `src/App/Cli/Commands/Apply/Runner.cs` | Delete private `DetectFileFormat`; call `FormatDetector.DetectInputFile(args.InputFile)` / `FormatDetector.DetectOutputFile(args.OutputFile)`, handling `Result<DataFormat>` failure explicitly |
-| `src/App/AppKeyHandler.cs`, `FileDialogHandler.cs`, `RecipeCommandHandler.cs`, `ViewManager.cs` | Rename `FormatDetector.Detect(...)` call sites to `FormatDetector.DetectInputFile(...)` |
+| `src/App/Tui/Ui/AppKeyHandler.cs`, `FileDialogHandler.cs`, `RecipeCommandHandler.cs`, `ViewManager.cs` | Rename `FormatDetector.Detect(...)` call sites to `FormatDetector.DetectInputFile(...)` |
 
 **Unit Tests**
 

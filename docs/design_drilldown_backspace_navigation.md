@@ -16,7 +16,7 @@ is currently no way back to the tree view that triggered it short of reopening t
 
 ## 1. Existing Infrastructure (Reused)
 
-- `AppState.CurrentMode` / `ViewMode` — `src/App/AppState.cs`, `src/App/ViewMode.cs`. DrillDown
+- `AppState.CurrentMode` / `ViewMode` — `src/App/Tui/AppState.cs`, `src/App/Tui/ViewMode.cs`. DrillDown
   entry points already read `_state.CurrentMode` immediately before overwriting it with
   `ViewMode.FocusedTable` (`ModeController.DrillDown`, `ViewManager.FullAggregationDrillDownAsync`).
 - `AppState.RowIndexer` — already persisted across mode switches (this is what lets `t` toggle
@@ -299,28 +299,28 @@ to a tree node, storing it here would have no consumer).
 ## 8. Files Touched
 
 **Modified:**
-- `src/App/AppState.cs` — add `JsonObjectEntries` (`IReadOnlyList<JsonObjectEntry>?`)
-- `src/App/DrillDownState.cs` — add `PreviousMode`
-- `src/App/ModeController.cs` — capture `PreviousMode` in `DrillDown` and
+- `src/App/Tui/AppState.cs` — add `JsonObjectEntries` (`IReadOnlyList<JsonObjectEntry>?`)
+- `src/App/Tui/DrillDownState.cs` — add `PreviousMode`
+- `src/App/Tui/Ui/ModeController.cs` — capture `PreviousMode` in `DrillDown` and
   `FullAggregationDrillDownAsync`
-- `src/App/ViewManager.cs` — add `ReturnFromDrillDown()`, `Backspace` status bar hint,
+- `src/App/Tui/Ui/ViewManager.cs` — add `ReturnFromDrillDown()`, `Backspace` status bar hint,
   `SwitchToJsonObjectTree` parameter type → `IReadOnlyList<JsonObjectEntry>`
-- `src/App/AppKeyHandler.cs` — add `HandleDrillDownBack()`, wire `Backspace` into
+- `src/App/Tui/Ui/AppKeyHandler.cs` — add `HandleDrillDownBack()`, wire `Backspace` into
   `OnGlobalKeyDown` and `IsGlobalShortcut`
-- `src/App/FileDialogHandler.cs` — reset/populate `JsonObjectEntries`
-- `src/App/Views/Dialogs/HelpDialog.cs` — add `Backspace` line to help text
-- `src/App/Views/JsonObjectTreeView.cs` — parameter type → `IReadOnlyList<JsonObjectEntry>`
+- `src/App/Tui/Ui/FileDialogHandler.cs` — reset/populate `JsonObjectEntries`
+- `src/App/Tui/Ui/Views/Dialogs/HelpDialog.cs` — add `Backspace` line to help text
+- `src/App/Tui/Ui/Views/JsonObjectTreeView.cs` — parameter type → `IReadOnlyList<JsonObjectEntry>`
 - `src/Engine/IO/JsonObject/TopLevelScanner.cs` — element type swapped throughout, not just the
   `Scan` return type: `List<(string key, JsonRawBytes value)> result` → `List<JsonObjectEntry>`,
   threaded through `ProcessToken`/`RecordEntry`, and both tuple-literal construction sites
   (`result.Add((key, mem))`, `result[idx] = (key, mem)`) → `new JsonObjectEntry(key, mem)`
-- `tests/Refedle.Tests/App/ModeControllerTests.cs`
-- `tests/Refedle.Tests/App/ViewManagerTests.cs`
-- `tests/Refedle.Tests/App/AppKeyHandlerTests.cs`
-- `tests/Refedle.Tests/App/AppStateTests.cs`
-- `tests/Refedle.Tests/App/FileDialogHandlerTests.cs`
-- `tests/Refedle.Tests/App/Views/Dialogs/HelpDialogTests.cs`
-- `tests/Refedle.Tests/App/Views/JsonObjectTreeViewTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/ModeControllerTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/ViewManagerTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/AppKeyHandlerTests.cs`
+- `tests/Refedle.Tests/App/Tui/AppStateTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/FileDialogHandlerTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/Views/Dialogs/HelpDialogTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/Views/JsonObjectTreeViewTests.cs`
 - `tests/Refedle.Tests/Engine/IO/JsonObject/TopLevelScannerTests.cs`
 - `tests/Refedle.Tests/Engine/IO/JsonObject/TopLevelScannerTests.Scan.cs`
 

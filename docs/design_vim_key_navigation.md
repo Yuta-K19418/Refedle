@@ -48,7 +48,7 @@ The `gg` double-key sequence requires stateful detection that is shared across a
 To avoid duplicating this logic and to make it unit-testable, extract a `VimKeyTranslator` class.
 
 ```
-src/App/Views/VimKeyTranslator.cs
+src/App/Tui/Ui/Views/VimKeyTranslator.cs
 ```
 
 **Responsibilities:**
@@ -144,7 +144,7 @@ sealed-friendly but overridable class in Terminal.Gui v2, create a dedicated sub
 the vim key logic.
 
 ```
-src/App/Views/CsvTableView.cs
+src/App/Tui/Ui/Views/CsvTableView.cs
 ```
 
 ```csharp
@@ -255,12 +255,12 @@ protected override bool OnKeyDown(Key key)
 
 | File | Change |
 |------|--------|
-| `src/App/Views/VimKeyTranslator.cs` | **New** — shared key-to-action translator with `gg` state machine |
-| `src/App/Views/VimAction.cs` | **New** — `VimAction` enum |
-| `src/App/Views/CsvTableView.cs` | **New** — `TableView` subclass for CSV with vim keys |
-| `src/App/Views/JsonLinesTableView.cs` | **Modified** — add `VimKeyTranslator` and dispatch in `OnKeyDown` |
-| `src/App/Views/JsonLinesTreeView.cs` | **Modified** — add `VimKeyTranslator` and dispatch in `OnKeyDown` |
-| `src/App/MainWindow.cs` | **Modified** — use `CsvTableView` instead of plain `TableView` |
+| `src/App/Tui/Ui/Views/VimKeyTranslator.cs` | **New** — shared key-to-action translator with `gg` state machine |
+| `src/App/Tui/Ui/Views/VimAction.cs` | **New** — `VimAction` enum |
+| `src/App/Tui/Ui/Views/CsvTableView.cs` | **New** — `TableView` subclass for CSV with vim keys |
+| `src/App/Tui/Ui/Views/JsonLinesTableView.cs` | **Modified** — add `VimKeyTranslator` and dispatch in `OnKeyDown` |
+| `src/App/Tui/Ui/Views/JsonLinesTreeView.cs` | **Modified** — add `VimKeyTranslator` and dispatch in `OnKeyDown` |
+| `src/App/Tui/Ui/MainWindow.cs` | **Modified** — use `CsvTableView` instead of plain `TableView` |
 | `tests/.../Views/VimKeyTranslatorTests.cs` | **New** — unit tests for all key translation logic |
 
 ---

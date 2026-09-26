@@ -129,7 +129,7 @@ For numeric/Timestamp operators applied to `Text` columns: fall back to `Equals`
 
 ### Interface
 
-**File**: `src/App/Views/IFilterRowIndexer.cs`
+**File**: `src/App/Tui/Ui/Views/IFilterRowIndexer.cs`
 
 ```csharp
 internal interface IFilterRowIndexer
@@ -158,8 +158,8 @@ internal interface IFilterRowIndexer
 
 | Class | File | IO classes used |
 |---|---|---|
-| `CsvFilterRowIndexer` | `src/App/Views/CsvFilterRowIndexer.cs` | `DataRowIndexer`, `DataRowReader` |
-| `JsonLinesFilterRowIndexer` | `src/App/Views/JsonLinesFilterRowIndexer.cs` | `JsonLines.RowIndexer`, `JsonLines.RowReader`, `CellExtractor` |
+| `CsvFilterRowIndexer` | `src/App/Tui/Ui/Views/CsvFilterRowIndexer.cs` | `DataRowIndexer`, `DataRowReader` |
+| `JsonLinesFilterRowIndexer` | `src/App/Tui/Ui/Views/JsonLinesFilterRowIndexer.cs` | `JsonLines.RowIndexer`, `JsonLines.RowReader`, `CellExtractor` |
 
 Both implementations follow the same algorithm:
 
@@ -180,7 +180,7 @@ While `BuildIndexAsync` is running, `Shift+G` jumps to the last **currently conf
 
 ## TUI Dialog: `FilterColumnDialog`
 
-**File**: `src/App/Views/Dialogs/FilterColumnDialog.cs`
+**File**: `src/App/Tui/Ui/Views/Dialogs/FilterColumnDialog.cs`
 
 ### Layout
 
@@ -251,14 +251,14 @@ In practice, `BuildIndex` completes well within user reaction time for files up 
 | `src/Engine/Models/Actions/MorphAction.cs` | Add `[JsonDerivedType(typeof(FilterAction), "filter")]` |
 | `src/Engine/Models/Actions/FilterOperator.cs` | New enum |
 | `src/Engine/Models/Actions/FilterAction.cs` | New sealed record |
-| `src/App/Views/IFilterRowIndexer.cs` | New interface |
-| `src/App/Views/CsvFilterRowIndexer.cs` | New class — uses `DataRowIndexer` + `DataRowReader` |
-| `src/App/Views/JsonLinesFilterRowIndexer.cs` | New class — uses `JsonLines.RowIndexer` + `JsonLines.RowReader` |
-| `src/App/Views/LazyTransformer.cs` | Add `FilterSpec`, `IFilterRowIndexer?`, `EvaluateFilter`, update `Rows` and indexer |
-| `src/App/Views/Dialogs/FilterColumnDialog.cs` | New dialog |
-| `src/App/Views/CsvTableView.cs` | Add `Shift+F` → `HandleFilterColumn()` with BuildIndex guard |
-| `src/App/Views/JsonLinesTableView.cs` | Add `Shift+F` → `HandleFilterColumn()` with BuildIndex guard |
-| `tests/Refedle.Tests/App/Views/LazyTransformerTests.cs` | Add filter test cases |
+| `src/App/Tui/Ui/Views/IFilterRowIndexer.cs` | New interface |
+| `src/App/Tui/Ui/Views/CsvFilterRowIndexer.cs` | New class — uses `DataRowIndexer` + `DataRowReader` |
+| `src/App/Tui/Ui/Views/JsonLinesFilterRowIndexer.cs` | New class — uses `JsonLines.RowIndexer` + `JsonLines.RowReader` |
+| `src/App/Tui/Ui/Views/LazyTransformer.cs` | Add `FilterSpec`, `IFilterRowIndexer?`, `EvaluateFilter`, update `Rows` and indexer |
+| `src/App/Tui/Ui/Views/Dialogs/FilterColumnDialog.cs` | New dialog |
+| `src/App/Tui/Ui/Views/CsvTableView.cs` | Add `Shift+F` → `HandleFilterColumn()` with BuildIndex guard |
+| `src/App/Tui/Ui/Views/JsonLinesTableView.cs` | Add `Shift+F` → `HandleFilterColumn()` with BuildIndex guard |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/LazyTransformerTests.cs` | Add filter test cases |
 | `tests/Refedle.Tests/Engine/Models/Actions/FilterActionTests.cs` | New test file |
 
 ---

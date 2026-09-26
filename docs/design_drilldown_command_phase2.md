@@ -309,16 +309,16 @@ known — and carries its own bytes. `FocusedTableSource` reads `_rows[row].Hash
 | File | Change |
 |------|--------|
 | `src/Engine/IO/DrillDown/DrillDownSchemaExtractor.cs` | `BuildSchema` delegates to new `SchemaScanner` static helpers instead of owning them; `ScanObject`/`RegisterKeyIfNew`/`IncrementObservationCounts`/`MergeColumnType` move out |
-| `src/App/DrillDownState.cs` | Replace `ChildRawValues / Format / RecordPosition` with `IReadOnlyList<FocusedTableRow> Rows` |
-| `src/App/Views/FocusedTableSource.cs` | Refactor: accept `DrillDownState` with new `Rows`; replace `FormatHashColumn` with `_rows[row].HashValue` |
-| `src/App/DrillDownRequest.cs` | Split the single record into an abstract `DrillDownRequest` base plus `SingleDrillDownRequest` and `FullAggregationDrillDownRequest` |
-| `src/App/Views/JsonObjectTreeNode.cs` | Add `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonArrayTreeNode.cs` | Add `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonValueTreeNode.cs` | Add `public string? KeyName { get; init; }` and `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonTreeNodeHelper.cs` | Add `ITreeNode? parentNode` parameter to `CreateChildNode`, `CreateNestedObjectNode`, `CreateNestedArrayNode` |
-| `src/App/ModeController.cs` | Update `DrillDown()` to build rows inline; add `FullAggregationDrillDownAsync()` returning `Result<DrillDownState>` |
-| `src/App/ViewManager.cs` | Add `FullAggregationDrillDownAsync()`; assign `_state.DrillDown` / `_state.CurrentMode` inside `_uiThreadInvoke` |
-| `src/App/AppKeyHandler.cs` | Single "DrillDown" option for all formats; add `BuildKeyPath`; dispatch Phase 1 vs Phase 2 by format |
+| `src/App/Tui/DrillDownState.cs` | Replace `ChildRawValues / Format / RecordPosition` with `IReadOnlyList<FocusedTableRow> Rows` |
+| `src/App/Tui/Ui/Views/FocusedTableSource.cs` | Refactor: accept `DrillDownState` with new `Rows`; replace `FormatHashColumn` with `_rows[row].HashValue` |
+| `src/App/Tui/DrillDownRequest.cs` | Split the single record into an abstract `DrillDownRequest` base plus `SingleDrillDownRequest` and `FullAggregationDrillDownRequest` |
+| `src/App/Tui/Ui/Views/JsonObjectTreeNode.cs` | Add `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonArrayTreeNode.cs` | Add `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonValueTreeNode.cs` | Add `public string? KeyName { get; init; }` and `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonTreeNodeHelper.cs` | Add `ITreeNode? parentNode` parameter to `CreateChildNode`, `CreateNestedObjectNode`, `CreateNestedArrayNode` |
+| `src/App/Tui/Ui/ModeController.cs` | Update `DrillDown()` to build rows inline; add `FullAggregationDrillDownAsync()` returning `Result<DrillDownState>` |
+| `src/App/Tui/Ui/ViewManager.cs` | Add `FullAggregationDrillDownAsync()`; assign `_state.DrillDown` / `_state.CurrentMode` inside `_uiThreadInvoke` |
+| `src/App/Tui/Ui/AppKeyHandler.cs` | Single "DrillDown" option for all formats; add `BuildKeyPath`; dispatch Phase 1 vs Phase 2 by format |
 | `tests/.../FocusedTableSourceTests.cs` | Update for new constructor shape |
 | `tests/.../FullAggregationScannerTests.cs` | New: scanner unit tests |
 
@@ -347,7 +347,7 @@ synthetic object constructed by `FullAggregationScanner` (see Section 3.7).
 
 ### 3.2 DrillDownState (modified)
 
-**File:** `src/App/DrillDownState.cs`
+**File:** `src/App/Tui/DrillDownState.cs`
 
 Replace the three-field constructor with:
 
@@ -362,7 +362,7 @@ final `#` string, making them redundant.
 
 ### 3.3 FocusedTableSource (refactored)
 
-**File:** `src/App/Views/FocusedTableSource.cs`
+**File:** `src/App/Tui/Ui/Views/FocusedTableSource.cs`
 
 Constructor accepts `DrillDownState` (unchanged call site).
 Internal state changes:
@@ -386,7 +386,7 @@ this[row, n] → JsonObjectCellExtractor.ExtractCell(
 
 ### 3.4 DrillDownRequest (modified)
 
-**File:** `src/App/DrillDownRequest.cs`
+**File:** `src/App/Tui/DrillDownRequest.cs`
 
 Replace the single `DrillDownRequest` with a base type and two dedicated subtypes,
 aligned with the already-split method signatures in `ViewManager` and `ModeController`.
@@ -412,8 +412,8 @@ internal sealed record FullAggregationDrillDownRequest(
 
 ### 3.5 JsonObjectTreeNode / JsonArrayTreeNode / JsonValueTreeNode (modified)
 
-**Files:** `src/App/Views/JsonObjectTreeNode.cs`, `src/App/Views/JsonArrayTreeNode.cs`,
-`src/App/Views/JsonValueTreeNode.cs`
+**Files:** `src/App/Tui/Ui/Views/JsonObjectTreeNode.cs`, `src/App/Tui/Ui/Views/JsonArrayTreeNode.cs`,
+`src/App/Tui/Ui/Views/JsonValueTreeNode.cs`
 
 Add `ParentNode` to `JsonObjectTreeNode` and `JsonArrayTreeNode`:
 
@@ -774,7 +774,7 @@ private static string LastKeySegment(IReadOnlyList<string> keyPath)
 
 ### 3.8 ModeController (modified)
 
-**File:** `src/App/ModeController.cs`
+**File:** `src/App/Tui/Ui/ModeController.cs`
 
 #### Update `DrillDown()` — Phase 1 row creation
 
@@ -842,7 +842,7 @@ UI thread can append to over time. Deferred to a future phase (see Scope).
 
 ### 3.9 ViewManager (modified)
 
-**File:** `src/App/ViewManager.cs`
+**File:** `src/App/Tui/Ui/ViewManager.cs`
 
 All mutations of `_state.DrillDown` and `_state.CurrentMode` are performed inside
 `_uiThreadInvoke` to eliminate cross-thread writes.
@@ -874,7 +874,7 @@ internal async ValueTask FullAggregationDrillDownAsync(FullAggregationDrillDownR
 
 ### 3.10 AppKeyHandler (modified)
 
-**File:** `src/App/AppKeyHandler.cs` — `HandleActionMenu()` tree-view branch
+**File:** `src/App/Tui/Ui/AppKeyHandler.cs` — `HandleActionMenu()` tree-view branch
 
 ```
 if currentView is MorphTreeView tv:
@@ -1030,16 +1030,16 @@ Verify that `DrillDown()` still produces correct `DrillDownState.Rows`:
 | `src/Engine/IO/DrillDown/SchemaScanner.cs` | Create | Stateless static helpers (`ScanObject`, `RegisterKeyIfNew`, `IncrementObservationCounts`, `BuildTableSchema`) shared by `DrillDownSchemaExtractor` and `FullAggregationScanner` |
 | `src/Engine/IO/DrillDown/FullAggregationScanner.cs` | Create | Full file scan: traverse KeyPath; collect rows for all leaf types; build union schema |
 | `src/Engine/IO/DrillDown/DrillDownSchemaExtractor.cs` | Modify | `BuildSchema` delegates to `SchemaScanner`; `ScanObject`/`RegisterKeyIfNew`/`IncrementObservationCounts`/`MergeColumnType` move out |
-| `src/App/DrillDownState.cs` | Modify | Replace `ChildRawValues / Format / RecordPosition` with `IReadOnlyList<FocusedTableRow> Rows` |
-| `src/App/Views/FocusedTableSource.cs` | Modify | Accept new `DrillDownState`; replace `FormatHashColumn` with `_rows[row].HashValue` |
-| `src/App/DrillDownRequest.cs` | Modify | Split the single record into an abstract `DrillDownRequest` base plus `SingleDrillDownRequest` and `FullAggregationDrillDownRequest` |
-| `src/App/Views/JsonObjectTreeNode.cs` | Modify | Add `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonArrayTreeNode.cs` | Modify | Add `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonValueTreeNode.cs` | Modify | Add `public string? KeyName { get; init; }` and `public ITreeNode? ParentNode { get; init; }` |
-| `src/App/Views/JsonTreeNodeHelper.cs` | Modify | Add `ITreeNode? parentNode` parameter to `CreateChildNode`, `CreateNestedObjectNode`, `CreateNestedArrayNode`; pass through to node constructors |
-| `src/App/ModeController.cs` | Modify | Update `DrillDown()` to build rows inline; add `FullAggregationDrillDownAsync()` returning `Result<DrillDownState>` |
-| `src/App/ViewManager.cs` | Modify | Add `FullAggregationDrillDownAsync()`; assign state inside `_uiThreadInvoke` |
-| `src/App/AppKeyHandler.cs` | Modify | Single "DrillDown" option; add `BuildKeyPath`; dispatch Phase 1 (JSON Object) vs Phase 2 (JSON Lines/Array) |
+| `src/App/Tui/DrillDownState.cs` | Modify | Replace `ChildRawValues / Format / RecordPosition` with `IReadOnlyList<FocusedTableRow> Rows` |
+| `src/App/Tui/Ui/Views/FocusedTableSource.cs` | Modify | Accept new `DrillDownState`; replace `FormatHashColumn` with `_rows[row].HashValue` |
+| `src/App/Tui/DrillDownRequest.cs` | Modify | Split the single record into an abstract `DrillDownRequest` base plus `SingleDrillDownRequest` and `FullAggregationDrillDownRequest` |
+| `src/App/Tui/Ui/Views/JsonObjectTreeNode.cs` | Modify | Add `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonArrayTreeNode.cs` | Modify | Add `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonValueTreeNode.cs` | Modify | Add `public string? KeyName { get; init; }` and `public ITreeNode? ParentNode { get; init; }` |
+| `src/App/Tui/Ui/Views/JsonTreeNodeHelper.cs` | Modify | Add `ITreeNode? parentNode` parameter to `CreateChildNode`, `CreateNestedObjectNode`, `CreateNestedArrayNode`; pass through to node constructors |
+| `src/App/Tui/Ui/ModeController.cs` | Modify | Update `DrillDown()` to build rows inline; add `FullAggregationDrillDownAsync()` returning `Result<DrillDownState>` |
+| `src/App/Tui/Ui/ViewManager.cs` | Modify | Add `FullAggregationDrillDownAsync()`; assign state inside `_uiThreadInvoke` |
+| `src/App/Tui/Ui/AppKeyHandler.cs` | Modify | Single "DrillDown" option; add `BuildKeyPath`; dispatch Phase 1 (JSON Object) vs Phase 2 (JSON Lines/Array) |
 | `tests/.../FocusedTableSourceTests.cs` | Modify | Update for new `DrillDownState` shape |
 | `tests/.../FullAggregationScannerTests.cs` | Create | Scanner unit tests |
 

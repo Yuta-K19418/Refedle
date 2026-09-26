@@ -149,9 +149,9 @@ FocusedTableView  (new, App)  →  Terminal.Gui TableView
 |-----------|-------|------|----------------|
 | `JsonByteExtractor` | Engine | `src/Engine/IO/Json/JsonByteExtractor.cs` | Shared Engine-layer utility: extract raw bytes of a nested JSON value by depth-tracking |
 | `DrillDownSchemaExtractor` | Engine | `src/Engine/IO/DrillDown/DrillDownSchemaExtractor.cs` | Parse selected array node bytes → schema + ordered child value list |
-| `DrillDownRequest` | App | `src/App/DrillDownRequest.cs` | Data bag: format, key name, record position, raw node bytes |
-| `FocusedTableSource` | App | `src/App/Views/FocusedTableSource.cs` | `ITableSource` backed by pre-materialized child value bytes; format-aware `#` column |
-| `FocusedTableView` | App | `src/App/Views/FocusedTableView.cs` | `MorphTableView` subclass for FocusedTable |
+| `DrillDownRequest` | App | `src/App/Tui/DrillDownRequest.cs` | Data bag: format, key name, record position, raw node bytes |
+| `FocusedTableSource` | App | `src/App/Tui/Ui/Views/FocusedTableSource.cs` | `ITableSource` backed by pre-materialized child value bytes; format-aware `#` column |
+| `FocusedTableView` | App | `src/App/Tui/Ui/Views/FocusedTableView.cs` | `MorphTableView` subclass for FocusedTable |
 
 > **Note:** `DrillDownCellExtractor` is **not** a new class. Cell extraction reuses
 > `JsonObjectCellExtractor` (see S-1 fix in Section 2.3).
@@ -161,18 +161,18 @@ FocusedTableView  (new, App)  →  Terminal.Gui TableView
 | File | Change |
 |------|--------|
 | `src/Engine/IO/JsonLines/CellExtractor.cs` | Move to `src/Engine/IO/Json/JsonObjectCellExtractor.cs`; update namespace to `Refedle.Engine.IO.Json`; keep identical logic |
-| `src/App/ViewMode.cs` | Add `FocusedTable` |
-| `src/App/ViewManager.cs` | Add `DrillDownAsync()` and `SwitchToFocusedTable()` (with `OnSchemaRefined = null` cleanup); update `RefreshStatusBarHints` to exclude `FocusedTable` mode and include `MorphTreeView` |
-| `src/App/ModeController.cs` | Add `DrillDownAsync()` |
-| `src/App/AppKeyHandler.cs` | Extend `HandleActionMenu()` for `MorphTreeView` |
-| `src/App/AppState.cs` | Add `DrillDownChildValueBytes`, `DrillDownSchema`, `DrillDownFormat`, `DrillDownRecordPosition` |
-| `src/App/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Add `KeyName` and `RecordPosition` properties; propagate `RecordPosition` in `LoadChildren`; call `JsonByteExtractor.ExtractNestedBytes` via `JsonTreeNodeHelper` |
-| `src/App/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Add `KeyName`, `RecordPosition`, and `RawJson` properties; propagate `RecordPosition` in `LoadChildren` |
-| `src/App/Views/JsonTreeNodes/JsonTreeNodeHelper.cs` | Accept `recordPosition` parameter; set `KeyName` and `RecordPosition` on nested nodes; delegate byte slicing to `JsonByteExtractor.ExtractNestedBytes` instead of the current private `ExtractNestedBytes` |
-| `src/App/Views/JsonObjectTreeView.cs` | Set `KeyName = key` on `JsonArrayTreeNode` / `JsonObjectTreeNode` created in `CreateKeyNode` (Phase 1 consistency; required for Phase 2 breadcrumb) |
-| `src/App/Views/JsonRangeTreeNodes/JsonLinesRangeTreeNode.cs` | Set `RecordPosition` (1-based line number) on root nodes created in `CreateLineNode` |
-| `src/App/Views/JsonRangeTreeNodes/JsonArrayRangeTreeNode.cs` | Set `RecordPosition` (0-based element index) on root nodes created in `CreateElementNode` |
-| `src/App/Schema/JsonLines/...` (callers of `CellExtractor`) | Update `using` to reference `JsonObjectCellExtractor` in new namespace |
+| `src/App/Tui/ViewMode.cs` | Add `FocusedTable` |
+| `src/App/Tui/Ui/ViewManager.cs` | Add `DrillDownAsync()` and `SwitchToFocusedTable()` (with `OnSchemaRefined = null` cleanup); update `RefreshStatusBarHints` to exclude `FocusedTable` mode and include `MorphTreeView` |
+| `src/App/Tui/Ui/ModeController.cs` | Add `DrillDownAsync()` |
+| `src/App/Tui/Ui/AppKeyHandler.cs` | Extend `HandleActionMenu()` for `MorphTreeView` |
+| `src/App/Tui/AppState.cs` | Add `DrillDownChildValueBytes`, `DrillDownSchema`, `DrillDownFormat`, `DrillDownRecordPosition` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Add `KeyName` and `RecordPosition` properties; propagate `RecordPosition` in `LoadChildren`; call `JsonByteExtractor.ExtractNestedBytes` via `JsonTreeNodeHelper` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Add `KeyName`, `RecordPosition`, and `RawJson` properties; propagate `RecordPosition` in `LoadChildren` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonTreeNodeHelper.cs` | Accept `recordPosition` parameter; set `KeyName` and `RecordPosition` on nested nodes; delegate byte slicing to `JsonByteExtractor.ExtractNestedBytes` instead of the current private `ExtractNestedBytes` |
+| `src/App/Tui/Ui/Views/JsonObjectTreeView.cs` | Set `KeyName = key` on `JsonArrayTreeNode` / `JsonObjectTreeNode` created in `CreateKeyNode` (Phase 1 consistency; required for Phase 2 breadcrumb) |
+| `src/App/Tui/Ui/Views/JsonRangeTreeNodes/JsonLinesRangeTreeNode.cs` | Set `RecordPosition` (1-based line number) on root nodes created in `CreateLineNode` |
+| `src/App/Tui/Ui/Views/JsonRangeTreeNodes/JsonArrayRangeTreeNode.cs` | Set `RecordPosition` (0-based element index) on root nodes created in `CreateElementNode` |
+| `src/App/Tui/Workers/Schema/JsonLines/...` (callers of `CellExtractor`) | Update `using` to reference `JsonObjectCellExtractor` in new namespace |
 
 ### 2.4 Reused Components
 
@@ -189,8 +189,8 @@ FocusedTableView  (new, App)  →  Terminal.Gui TableView
 
 ### 3.1 DrillDownRequest
 
-**File:** `src/App/DrillDownRequest.cs`
-**Namespace:** `Refedle.App`
+**File:** `src/App/Tui/DrillDownRequest.cs`
+**Namespace:** `Refedle.App.Tui`
 **Estimated size:** ~10 lines
 
 Primary constructor form per project standards (no validation logic required):
@@ -393,8 +393,8 @@ public static class DrillDownSchemaExtractor
 
 ### 3.6 FocusedTableSource
 
-**File:** `src/App/Views/FocusedTableSource.cs`
-**Namespace:** `Refedle.App.Views`
+**File:** `src/App/Tui/Ui/Views/FocusedTableSource.cs`
+**Namespace:** `Refedle.App.Tui.Ui.Views`
 **Estimated size:** ~90 lines
 
 `ITableSource` backed by pre-materialized child object bytes; renders the `#` column using
@@ -462,8 +462,8 @@ this[row, col]:
 
 ### 3.7 FocusedTableView
 
-**File:** `src/App/Views/FocusedTableView.cs`
-**Namespace:** `Refedle.App.Views`
+**File:** `src/App/Tui/Ui/Views/FocusedTableView.cs`
+**Namespace:** `Refedle.App.Tui.Ui.Views`
 **Estimated size:** ~5 lines
 
 Empty `MorphTableView` subclass, following the same pattern as `JsonLinesTableView`.
@@ -683,20 +683,20 @@ if ((GetCurrentView() is MorphTableView && _state.CurrentMode != ViewMode.Focuse
 | `src/Engine/IO/Json/JsonByteExtractor.cs` | Create | Shared Engine utility: `ExtractNestedBytes` (no layer dependency) |
 | `src/Engine/IO/Json/JsonObjectCellExtractor.cs` | Move + rename from `src/Engine/IO/JsonLines/CellExtractor.cs` | Format-agnostic object cell extraction; namespace updated to `Refedle.Engine.IO.Json` |
 | `src/Engine/IO/DrillDown/DrillDownSchemaExtractor.cs` | Create | Schema + child bytes from in-memory node |
-| `src/App/DrillDownRequest.cs` | Create | DrillDown context data bag (primary constructor record) |
-| `src/App/Views/FocusedTableSource.cs` | Create | `ITableSource` for FocusedTable; format-aware `#` column; bounds checking |
-| `src/App/Views/FocusedTableView.cs` | Create | `MorphTableView` subclass |
-| `src/App/ViewMode.cs` | Modify | Add `FocusedTable` |
-| `src/App/ViewManager.cs` | Modify | Add `DrillDownAsync()` and `SwitchToFocusedTable()` (with `OnSchemaRefined = null` cleanup); update `RefreshStatusBarHints` to exclude `FocusedTable` mode and include `MorphTreeView` |
-| `src/App/ModeController.cs` | Modify | Add `DrillDownAsync()` |
-| `src/App/AppKeyHandler.cs` | Modify | Extend `HandleActionMenu()` for `MorphTreeView` (full branching per Section 3.8) |
-| `src/App/AppState.cs` | Modify | Add `DrillDownChildValueBytes`, `DrillDownSchema`, `DrillDownFormat`, `DrillDownRecordPosition` |
-| `src/App/Views/JsonObjectTreeView.cs` | Modify | Set `KeyName` on nodes created in `CreateKeyNode` |
-| `src/App/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Modify | Add `KeyName` and `RecordPosition`; propagate in `LoadChildren` |
-| `src/App/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Modify | Add `KeyName`, `RecordPosition`, `RawJson`; propagate in `LoadChildren` |
-| `src/App/Views/JsonTreeNodes/JsonTreeNodeHelper.cs` | Modify | Accept `recordPosition`; set `KeyName`/`RecordPosition`; delegate to `JsonByteExtractor.ExtractNestedBytes` |
-| `src/App/Views/JsonRangeTreeNodes/JsonLinesRangeTreeNode.cs` | Modify | Set `RecordPosition` (1-based, checked cast) on root nodes in `CreateLineNode` |
-| `src/App/Views/JsonRangeTreeNodes/JsonArrayRangeTreeNode.cs` | Modify | Set `RecordPosition` (0-based, checked cast) on root nodes in `CreateElementNode` |
+| `src/App/Tui/DrillDownRequest.cs` | Create | DrillDown context data bag (primary constructor record) |
+| `src/App/Tui/Ui/Views/FocusedTableSource.cs` | Create | `ITableSource` for FocusedTable; format-aware `#` column; bounds checking |
+| `src/App/Tui/Ui/Views/FocusedTableView.cs` | Create | `MorphTableView` subclass |
+| `src/App/Tui/ViewMode.cs` | Modify | Add `FocusedTable` |
+| `src/App/Tui/Ui/ViewManager.cs` | Modify | Add `DrillDownAsync()` and `SwitchToFocusedTable()` (with `OnSchemaRefined = null` cleanup); update `RefreshStatusBarHints` to exclude `FocusedTable` mode and include `MorphTreeView` |
+| `src/App/Tui/Ui/ModeController.cs` | Modify | Add `DrillDownAsync()` |
+| `src/App/Tui/Ui/AppKeyHandler.cs` | Modify | Extend `HandleActionMenu()` for `MorphTreeView` (full branching per Section 3.8) |
+| `src/App/Tui/AppState.cs` | Modify | Add `DrillDownChildValueBytes`, `DrillDownSchema`, `DrillDownFormat`, `DrillDownRecordPosition` |
+| `src/App/Tui/Ui/Views/JsonObjectTreeView.cs` | Modify | Set `KeyName` on nodes created in `CreateKeyNode` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Modify | Add `KeyName` and `RecordPosition`; propagate in `LoadChildren` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Modify | Add `KeyName`, `RecordPosition`, `RawJson`; propagate in `LoadChildren` |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonTreeNodeHelper.cs` | Modify | Accept `recordPosition`; set `KeyName`/`RecordPosition`; delegate to `JsonByteExtractor.ExtractNestedBytes` |
+| `src/App/Tui/Ui/Views/JsonRangeTreeNodes/JsonLinesRangeTreeNode.cs` | Modify | Set `RecordPosition` (1-based, checked cast) on root nodes in `CreateLineNode` |
+| `src/App/Tui/Ui/Views/JsonRangeTreeNodes/JsonArrayRangeTreeNode.cs` | Modify | Set `RecordPosition` (0-based, checked cast) on root nodes in `CreateElementNode` |
 | Callers of `CellExtractor` in `JsonLines` sources | Modify | Update `using` / class name to `JsonObjectCellExtractor` in `Refedle.Engine.IO.Json` |
 | `tests/.../JsonObjectCellExtractorTests.cs` | Rename from `CellExtractorTests.cs` | Cell extractor unit tests (rename in-place; tests unchanged) |
 | `tests/.../DrillDownSchemaExtractorTests.cs` | Create | Schema extractor unit tests |

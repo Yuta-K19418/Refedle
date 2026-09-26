@@ -59,7 +59,7 @@ while remaining readable in narrow TUI column widths.
 
 ### New File
 
-#### `src/App/Views/ColumnTypeLabel.cs`
+#### `src/App/Tui/Ui/Views/ColumnTypeLabel.cs`
 
 A small internal static helper that converts a `ColumnType` enum value to its display label.
 
@@ -86,7 +86,7 @@ The fallback arm (`_`) throws `ArgumentOutOfRangeException` to catch unhandled e
 
 ### Modified Files
 
-#### `src/App/Views/VirtualTableSource.cs`
+#### `src/App/Tui/Ui/Views/VirtualTableSource.cs`
 
 **Current** (line 20):
 ```csharp
@@ -102,7 +102,7 @@ No other changes required. `VirtualTableSource` does not use column names for da
 
 ---
 
-#### `src/App/Views/JsonLinesTableSource.cs`
+#### `src/App/Tui/Ui/Views/JsonLinesTableSource.cs`
 
 **`_columnNames`** (display, shown in table header) — include type label.
 

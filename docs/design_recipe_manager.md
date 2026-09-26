@@ -261,7 +261,7 @@ Ctrl+S  "Save Recipe"  → HandleSaveRecipeAsync()
 | `src/Engine/IRecipeManager.cs` | New: public interface |
 | `src/Engine/RecipeManager.cs` | New: public sealed class |
 | `src/Engine/RecipeYamlSerializer.cs` | New: internal sealed class |
-| `src/App/MainWindow.cs` | Add `_recipeManager`, File menu items, `Ctrl+S` shortcut |
+| `src/App/Tui/Ui/MainWindow.cs` | Add `_recipeManager`, File menu items, `Ctrl+S` shortcut |
 | `tests/Refedle.Tests/Engine/RecipeYamlSerializerTests.cs` | New: unit tests for serializer |
 | `tests/Refedle.Tests/Engine/RecipeManagerTests.cs` | New: unit tests for file I/O |
 

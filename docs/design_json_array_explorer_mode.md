@@ -216,7 +216,7 @@ public sealed class ElementByteCache(
 
 ### 3.3 App: `JsonArrayRangeTreeNode`
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 **Responsibility**: Represents a 1,000-item range within a large JSON Array (used only when
 `TotalRows > 1,000`). On first `Children` access (lazy), reads element bytes from
@@ -285,7 +285,7 @@ internal sealed class JsonArrayRangeTreeNode : TreeNode
 
 ### 3.4 App: `MorphTreeView`
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 **Responsibility**: Abstract base class for all format-specific tree views. Provides
 Vim-key navigation (h/j/k/l/g/G/Ctrl+d/Ctrl+u), `'t'`-key table-mode toggle,
@@ -355,7 +355,7 @@ internal abstract class MorphTreeView : TreeView
 
 ### 3.5 App: `JsonArrayTreeView`
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 **Responsibility**: `MorphTreeView` subclass. Creates `ElementByteCache` and populates the
 tree root directly — without a wrapper node. For arrays of ≤ 1,000 items, element nodes are
@@ -420,22 +420,22 @@ internal sealed class JsonArrayTreeView : MorphTreeView
 |------|-------|---------|
 | `src/Engine/IO/JsonArray/ElementReader.cs` | Engine | MmapService + rolling-buffer element byte reader |
 | `src/Engine/IO/JsonArray/ElementByteCache.cs` | Engine | Sliding window LRU cache for element bytes |
-| `src/App/Views/MorphTreeView.cs` | App | Abstract base: Vim-key navigation + Enter toggle |
-| `src/App/Views/JsonArrayRangeTreeNode.cs` | App | 1,000-item range node; lazy-loads child element nodes on first expansion |
-| `src/App/Views/JsonArrayTreeView.cs` | App | `MorphTreeView` subclass; orchestrates cache + range/element nodes |
+| `src/App/Tui/Ui/Views/MorphTreeView.cs` | App | Abstract base: Vim-key navigation + Enter toggle |
+| `src/App/Tui/Ui/Views/JsonArrayRangeTreeNode.cs` | App | 1,000-item range node; lazy-loads child element nodes on first expansion |
+| `src/App/Tui/Ui/Views/JsonArrayTreeView.cs` | App | `MorphTreeView` subclass; orchestrates cache + range/element nodes |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/ElementReaderTests.cs` | Tests | Unit tests for `ElementReader` |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/ElementByteCacheTests.cs` | Tests | Unit tests for `ElementByteCache` |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/ElementByteCacheBenchmarks.cs` | Tests | BenchmarkDotNet perf tests for `ElementByteCache` hot path |
-| `tests/Refedle.Tests/App/Views/JsonArrayRangeTreeNodeTests.cs` | Tests | Unit tests for range-node tree-building logic |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/JsonArrayRangeTreeNodeTests.cs` | Tests | Unit tests for range-node tree-building logic |
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/App/Views/JsonLinesTreeView.cs` | Change base class from `TreeView` to `MorphTreeView`; pass `onTableModeToggle` to `base(...)`; remove `_vimKeys`, `_onTableModeToggle`, `OnKeyDown`, `HandleNonVimKey`, `ConsumeAction`, `OnAccepted` (all moved to base) |
-| `src/App/ViewMode.cs` | Add `JsonArrayTree` and `JsonArrayTable` enum values |
-| `src/App/ViewManager.cs` | Implement `SwitchToJsonArrayTree(IRowIndexer)` and `ToggleJsonArrayModeAsync()`; add `private long _jsonArrayTotalRows` field for status bar display |
-| `src/App/MainWindow.cs` (or `FileDialogHandler`) | After JSON Array indexing completes, call `SwitchToJsonArrayTree` |
+| `src/App/Tui/Ui/Views/JsonLinesTreeView.cs` | Change base class from `TreeView` to `MorphTreeView`; pass `onTableModeToggle` to `base(...)`; remove `_vimKeys`, `_onTableModeToggle`, `OnKeyDown`, `HandleNonVimKey`, `ConsumeAction`, `OnAccepted` (all moved to base) |
+| `src/App/Tui/ViewMode.cs` | Add `JsonArrayTree` and `JsonArrayTable` enum values |
+| `src/App/Tui/Ui/ViewManager.cs` | Implement `SwitchToJsonArrayTree(IRowIndexer)` and `ToggleJsonArrayModeAsync()`; add `private long _jsonArrayTotalRows` field for status bar display |
+| `src/App/Tui/Ui/MainWindow.cs` (or `FileDialogHandler`) | After JSON Array indexing completes, call `SwitchToJsonArrayTree` |
 
 ---
 

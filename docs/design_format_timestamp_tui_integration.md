@@ -37,7 +37,7 @@ distinct and does not conflict.
 
 ### `FormatTimestampDialog`
 
-**File**: `src/App/Views/Dialogs/FormatTimestampDialog.cs`
+**File**: `src/App/Tui/Ui/Views/Dialogs/FormatTimestampDialog.cs`
 
 Modal dialog that collects a `TargetFormat` string from the user.
 
@@ -75,17 +75,17 @@ Interaction behaviour:
 
 | File | Purpose |
 |------|---------|
-| `src/App/Views/Dialogs/FormatTimestampDialog.cs` | New dialog |
-| `tests/Refedle.Tests/App/Views/Dialogs/FormatTimestampDialogTests.cs` | Dialog unit tests |
+| `src/App/Tui/Ui/Views/Dialogs/FormatTimestampDialog.cs` | New dialog |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/Dialogs/FormatTimestampDialogTests.cs` | Dialog unit tests |
 
 ### Modified
 
 | File | Change |
 |------|--------|
-| `src/App/Views/CsvTableView.cs` | Add `Shift+T` dispatch + `HandleFormatTimestamp()` |
-| `src/App/Views/JsonLinesTableView.cs` | Add `Shift+T` dispatch + `HandleFormatTimestamp()` |
-| `src/App/Views/LazyTransformer.cs` | Handle `FormatTimestampAction` in `BuildTransformedSchema`; propagate `TargetFormat` to `FormatCellValue` |
-| `tests/Refedle.Tests/App/Views/LazyTransformerTests.cs` | Tests for `FormatTimestampAction` rendering |
+| `src/App/Tui/Ui/Views/CsvTableView.cs` | Add `Shift+T` dispatch + `HandleFormatTimestamp()` |
+| `src/App/Tui/Ui/Views/JsonLinesTableView.cs` | Add `Shift+T` dispatch + `HandleFormatTimestamp()` |
+| `src/App/Tui/Ui/Views/LazyTransformer.cs` | Handle `FormatTimestampAction` in `BuildTransformedSchema`; propagate `TargetFormat` to `FormatCellValue` |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/LazyTransformerTests.cs` | Tests for `FormatTimestampAction` rendering |
 
 ---
 

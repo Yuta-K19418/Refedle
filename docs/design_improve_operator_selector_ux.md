@@ -26,8 +26,8 @@ The operator selector and value input in the Filter Column dialog need several U
 
 | File | Change |
 |------|--------|
-| `src/App/Views/AutoSelectOptionSelector.cs` | **New** — `AutoSelectOptionSelector<TEnum>` class with auto-select and Vim key support. |
-| `src/App/Views/Dialogs/FilterColumnDialog.cs` | Replace `OptionSelector` with `AutoSelectOptionSelector`, update layout to use `Pos.Bottom`, and handle `Accepting` for focus transition. |
+| `src/App/Tui/Ui/Views/AutoSelectOptionSelector.cs` | **New** — `AutoSelectOptionSelector<TEnum>` class with auto-select and Vim key support. |
+| `src/App/Tui/Ui/Views/Dialogs/FilterColumnDialog.cs` | Replace `OptionSelector` with `AutoSelectOptionSelector`, update layout to use `Pos.Bottom`, and handle `Accepting` for focus transition. |
 
 ## Implementation Notes
 

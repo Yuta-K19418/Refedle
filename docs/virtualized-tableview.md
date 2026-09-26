@@ -48,7 +48,7 @@ CSV File
 This class is the core of the virtualized solution. It implements the `Terminal.Gui.Views.ITableSource` interface, which `TableView` uses to request data for display.
 
 ```csharp
-namespace Refedle.App.Views;
+namespace Refedle.App.Tui.Ui.Views;
 
 internal sealed class VirtualTableSource : ITableSource
 {
@@ -190,7 +190,7 @@ All standard keyboard navigation is handled automatically by the `Terminal.Gui.T
 
 #### Unit Tests
 
-1.  **`tests/Refedle.Tests/App/Views/VirtualTableSourceTests.cs`**:
+1.  **`tests/Refedle.Tests/App/Tui/Ui/Views/VirtualTableSourceTests.cs`**:
     - Test constructor and property initialization (`Rows`, `Columns`, `ColumnNames`).
     - Test `this[row, col]` indexer with valid and out-of-range inputs.
     - Mock `CsvDataRowCache` to verify that `VirtualTableSource` correctly retrieves data and handles ragged rows.

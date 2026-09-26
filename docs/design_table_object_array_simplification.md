@@ -7,7 +7,7 @@
 `JsonObjectCellExtractor.ExtractCell` is a shared Engine primitive, not a Table-Mode-only
 helper. Confirmed callers beyond Table Mode's `JsonLinesTableSource`:
 
-- `src/App/Views/FocusedTableSource.cs` — DrillDown's table view.
+- `src/App/Tui/Ui/Views/FocusedTableSource.cs` — DrillDown's table view.
 - `src/App/Cli/FilterEvaluator.cs` — CLI filter evaluation.
 - `src/Engine/IO/JsonLines/FilterRowIndexer.cs` — background filter-row indexing, shared by
   Table Mode and DrillDown.
@@ -37,9 +37,9 @@ to compute one and not the other.
 Once both counts are in scope, the natural choice is to reuse the wording Tree View already
 uses, rather than invent a second, Table-Mode-specific phrasing:
 
-- **Objects**: `JsonObjectTreeNode.FormatDisplayText` (`src/App/Views/JsonTreeNodes/JsonObjectTreeNode.cs:111-158`)
+- **Objects**: `JsonObjectTreeNode.FormatDisplayText` (`src/App/Tui/Ui/Views/JsonTreeNodes/JsonObjectTreeNode.cs:111-158`)
   renders `{Object: N properties}`.
-- **Arrays**: `JsonArrayTreeNode.FormatDisplayText` (`src/App/Views/JsonTreeNodes/JsonArrayTreeNode.cs:108-155`)
+- **Arrays**: `JsonArrayTreeNode.FormatDisplayText` (`src/App/Tui/Ui/Views/JsonTreeNodes/JsonArrayTreeNode.cs:108-155`)
   renders `[Array: N items]`.
 
 Table Mode will render the identical strings. This gives the app one consistent
@@ -79,8 +79,8 @@ extending it to objects introduces no new cost *class*, only parity between the 
 |---|---|
 | `src/Engine/IO/Json/JsonByteExtractor.cs` | Add `CountObjectProperties` and `CountArrayElements` (depth-tracking counters), plus `FormatObjectPreview` and `FormatArrayPreview` thin wrappers that produce the shared `{Object: N properties}` / `[Array: N items]` strings (see section 3). |
 | `src/Engine/IO/Json/JsonObjectCellExtractor.cs` | Change `FormatValue` to take `ref Utf8JsonReader` instead of `(JsonTokenType, ReadOnlySpan<byte>)`, so it can drive the reader forward to count. `StartObject`/`StartArray` branches delegate to the new `JsonByteExtractor` formatters. |
-| `src/App/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Refactor `FormatDisplayText` to call `JsonByteExtractor.FormatObjectPreview` instead of its inline counting loop. Output text is unchanged. |
-| `src/App/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Refactor `FormatDisplayText` to call `JsonByteExtractor.FormatArrayPreview` instead of its inline counting loop. Output text is unchanged. |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonObjectTreeNode.cs` | Refactor `FormatDisplayText` to call `JsonByteExtractor.FormatObjectPreview` instead of its inline counting loop. Output text is unchanged. |
+| `src/App/Tui/Ui/Views/JsonTreeNodes/JsonArrayTreeNode.cs` | Refactor `FormatDisplayText` to call `JsonByteExtractor.FormatArrayPreview` instead of its inline counting loop. Output text is unchanged. |
 | `tests/Refedle.Tests/Engine/IO/Json/JsonObjectCellExtractorTests.cs` | Update `ExtractCell_NestedObject_ReturnsCollapsedPreview` and `ExtractCell_Array_ReturnsCollapsedPreview` to expect the new format; add cases for an empty object, an empty array, and a container with nested children (to verify the depth-tracking count doesn't over/under-count). |
 | `tests/Refedle.Tests/Engine/IO/Json/JsonByteExtractorTests.cs` | Add tests for `CountObjectProperties`, `CountArrayElements`, `FormatObjectPreview`, and `FormatArrayPreview`. |
 | `tests/Refedle.Tests/Engine/IO/DrillDown/FullAggregationScannerTests.cs` | Update the two `JsonObjectCellExtractor.ExtractCell(...)` assertions (currently expecting `"{...}"` / `"[...]"` around lines 364-365) to the new format — this test calls the shared primitive directly and will regress otherwise. |

@@ -138,7 +138,7 @@ case FilterAction filter:
 
 ## `FilterColumnDialog` Changes
 
-**File**: `src/App/Views/Dialogs/FilterColumnDialog.cs`
+**File**: `src/App/Tui/Ui/Views/Dialogs/FilterColumnDialog.cs`
 
 ```csharp
 internal ComparisonType? SelectedComparisonType { get; private set; }   // new
@@ -198,7 +198,7 @@ Both selectors stay independently free-choice — no dynamic filtering of operat
 
 ## `ColumnActionHandler` Changes
 
-**File**: `src/App/Views/ColumnActionHandler.cs`
+**File**: `src/App/Tui/Ui/Views/ColumnActionHandler.cs`
 
 ```csharp
 var action = FilterAction.Create(rawName, dialog.SelectedOperator.Value, dialog.SelectedComparisonType.Value, dialog.Value);
@@ -276,13 +276,13 @@ Both A and B would need to resolve the column's *effective* type at that point i
 | `src/Engine/Models/Actions/FilterAction.cs` | Add `ComparisonType` field; switch to explicit constructor; add `Validate` |
 | `src/Engine/Recipes/MorphActionParser.cs` | Parse + validate `comparisonType` in `ParseFilterAction` |
 | `src/Engine/Recipes/RecipeYamlSerializer.cs` | Emit `comparisonType` |
-| `src/App/Views/Dialogs/FilterColumnDialog.cs` | Add `ComparisonType` selector, error label, confirm-time validation |
-| `src/App/Views/ColumnActionHandler.cs` | Update `FilterAction` construction call site |
+| `src/App/Tui/Ui/Views/Dialogs/FilterColumnDialog.cs` | Add `ComparisonType` selector, error label, confirm-time validation |
+| `src/App/Tui/Ui/Views/ColumnActionHandler.cs` | Update `FilterAction` construction call site |
 | `tests/Refedle.Tests/Engine/Models/Actions/FilterActionTests.cs` | `Validate`/`Create` test cases |
 | `tests/Refedle.Tests/Engine/Recipes/MorphActionParserTests.cs` | Parse success/failure cases for `comparisonType` |
 | `tests/Refedle.Tests/Engine/Recipes/RecipeYamlSerializerTests.cs` | Round-trip includes `comparisonType` |
-| `tests/Refedle.Tests/App/Views/Dialogs/FilterColumnDialogTests.cs` | Confirm-time validation, error label behavior |
-| `tests/Refedle.Tests/App/Views/ColumnActionHandlerTests.cs` | Updated construction call site |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/Dialogs/FilterColumnDialogTests.cs` | Confirm-time validation, error label behavior |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/ColumnActionHandlerTests.cs` | Updated construction call site |
 
 ## Notable Test Cases
 

@@ -94,7 +94,7 @@ other tree views. No new Engine types are required.
 
 ### 3.1 App: `JsonObjectTreeView`
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 **Responsibility**: `MorphTreeView` subclass for JSON Object files. Receives pre-scanned
 key-value pairs and adds one root-level node per key via `AddObject`. Constructor is
@@ -298,20 +298,20 @@ internal void StopCurrentIndexing()
 
 | File | Layer | Purpose |
 |------|-------|---------|
-| `src/App/Views/JsonObjectTreeView.cs` | App | `MorphTreeView` subclass; one root-level node per key |
-| `tests/Refedle.Tests/App/Views/JsonObjectTreeViewTests.cs` | Tests | Unit tests for `JsonObjectTreeView.Create` and `CreateKeyNode` |
+| `src/App/Tui/Ui/Views/JsonObjectTreeView.cs` | App | `MorphTreeView` subclass; one root-level node per key |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/JsonObjectTreeViewTests.cs` | Tests | Unit tests for `JsonObjectTreeView.Create` and `CreateKeyNode` |
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
 | `src/App/FormatDetector.cs` | Content-based `.json` detection; EOF guard for whitespace-only files |
-| `src/App/ViewMode.cs` | Add `JsonObjectTree` |
-| `src/App/ViewManager.cs` | Add `SwitchToJsonObjectTree` |
-| `src/App/FileDialogHandler.cs` | Add `stopIndexing: Action` constructor param; add `JsonObject` early-return branch |
-| `src/App/IndexTaskManager.cs` | Add `CancelCurrent()`; update `Dispose()` to set `_cts = null` |
-| `src/App/MainWindow.cs` | Add `StopCurrentIndexing()`; pass it to `FileDialogHandler` |
-| `tests/Refedle.Tests/App/FileDialogHandlerTests.cs` | Update constructor call sites for new `stopIndexing` parameter |
+| `src/App/Tui/ViewMode.cs` | Add `JsonObjectTree` |
+| `src/App/Tui/Ui/ViewManager.cs` | Add `SwitchToJsonObjectTree` |
+| `src/App/Tui/Ui/FileDialogHandler.cs` | Add `stopIndexing: Action` constructor param; add `JsonObject` early-return branch |
+| `src/App/Tui/Workers/IndexTaskManager.cs` | Add `CancelCurrent()`; update `Dispose()` to set `_cts = null` |
+| `src/App/Tui/Ui/MainWindow.cs` | Add `StopCurrentIndexing()`; pass it to `FileDialogHandler` |
+| `tests/Refedle.Tests/App/Tui/Ui/FileDialogHandlerTests.cs` | Update constructor call sites for new `stopIndexing` parameter |
 
 **Not modified**: `AppState.cs`, `RowIndexerFactory.cs` — scan results are ephemeral and
 passed directly from `FileDialogHandler` to `ViewManager`; no persistent state storage needed.

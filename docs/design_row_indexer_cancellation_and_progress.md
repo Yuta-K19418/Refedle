@@ -543,8 +543,8 @@ private void UpdateIndexingProgress(long bytesRead, long fileSize)
 | `src/Engine/IO/JsonLines/RowIndexer.cs` | Add `CancellationToken` to `BuildIndex`; add `FileSize`, `BytesRead`, three events; update `ProcessBuffer` |
 | `src/Engine/IO/Csv/DataRowIndexer.cs` | Add `CancellationToken` to `BuildIndex`; add `FileSize`, `BytesRead`, three events; update `ProcessBuffer` |
 | `src/App/FileLoader.cs` | Add `_buildIndexCts` / `_buildIndexTask`; cancel previous task on new load (both JSON Lines and CSV); await `FirstCheckpointReached` for JSON Lines |
-| `src/App/Views/JsonLinesTreeView.cs` | Make `LoadInitialRootNodes` synchronous |
-| `src/App/MainWindow.cs` | Subscribe to `ProgressChanged` / `BuildIndexCompleted` for both indexers; show/dismiss progress bar |
+| `src/App/Tui/Ui/Views/JsonLinesTreeView.cs` | Make `LoadInitialRootNodes` synchronous |
+| `src/App/Tui/Ui/MainWindow.cs` | Subscribe to `ProgressChanged` / `BuildIndexCompleted` for both indexers; show/dismiss progress bar |
 
 ---
 

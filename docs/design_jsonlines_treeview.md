@@ -90,7 +90,7 @@ public interface ITreeNode
 }
 ```
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 Custom node types inheriting from `TreeNode`:
 
@@ -222,7 +222,7 @@ public sealed class JsonLineByteCache(RowIndexer indexer, int cacheSize = 200)
 
 ### 3.4 Class: `JsonLinesTreeView`
 
-**Namespace**: `Refedle.App.Views`
+**Namespace**: `Refedle.App.Tui.Ui.Views`
 
 **Responsibilities**:
 - Use non-generic `TreeView` (works with `ITreeNode`)
@@ -312,15 +312,15 @@ All operations are designed to be called from the UI thread.
 |------|-------|---------|
 | `src/Engine/IO/JsonLines/JsonLineReader.cs` | Engine | Read raw JSON line bytes from file using RowIndexer offsets |
 | `src/Engine/IO/JsonLines/JsonLineByteCache.cs` | Engine | Sliding window cache for raw line bytes (`ReadOnlyMemory<byte>`) |
-| `src/App/Views/JsonTreeNodes.cs` | App | JsonObjectTreeNode, JsonArrayTreeNode, JsonValueTreeNode (inherit TreeNode) |
-| `src/App/Views/JsonLinesTreeView.cs` | App | Non-generic TreeView wrapper, creates TreeNodes from cached bytes |
+| `src/App/Tui/Ui/Views/JsonTreeNodes.cs` | App | JsonObjectTreeNode, JsonArrayTreeNode, JsonValueTreeNode (inherit TreeNode) |
+| `src/App/Tui/Ui/Views/JsonLinesTreeView.cs` | App | Non-generic TreeView wrapper, creates TreeNodes from cached bytes |
 
 ### Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/App/MainWindow.cs` | Add `.jsonl` to OpenDialog, add `LoadJsonLinesFileAsync()`, add `SwitchToTreeView()` |
-| `src/App/ViewMode.cs` | Add `JsonLinesTree` enum value |
+| `src/App/Tui/Ui/MainWindow.cs` | Add `.jsonl` to OpenDialog, add `LoadJsonLinesFileAsync()`, add `SwitchToTreeView()` |
+| `src/App/Tui/ViewMode.cs` | Add `JsonLinesTree` enum value |
 
 ---
 
@@ -338,7 +338,7 @@ All operations are designed to be called from the UI thread.
 |------|------------------|
 | `src/Engine/IO/JsonLines/RowIndexer.cs` | Byte offset indexing (already implemented) |
 | `src/Engine/IO/CsvDataRowCache.cs` | Sliding window cache pattern |
-| `src/App/MainWindow.cs` | View switching pattern |
+| `src/App/Tui/Ui/MainWindow.cs` | View switching pattern |
 
 ---
 

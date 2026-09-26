@@ -35,7 +35,7 @@ Displays the current location in the JSON hierarchy as a breadcrumb bar at the t
 - `KeyPathSegment` / `KeyPathSegmentKind` — `src/Engine/IO/DrillDown/KeyPathSegment.cs`. Tags a
   segment as `Key` (object property) or `Index` (array element), avoiding ambiguity with literal
   keys such as `"[0]"`.
-- `AppKeyHandler.BuildKeyPath(ITreeNode)` — `src/App/AppKeyHandler.cs:314`. Walks the
+- `AppKeyHandler.BuildKeyPath(ITreeNode)` — `src/App/Tui/Ui/AppKeyHandler.cs:314`. Walks the
   `ParentNode` chain of a selected tree node up to the root, producing an ordered
   `IReadOnlyList<KeyPathSegment>`. Currently only called when DrillDown is triggered
   (`HandleFullAggregationDrillDown`).
@@ -43,8 +43,8 @@ Displays the current location in the JSON hierarchy as a breadcrumb bar at the t
 
 ## 2. Gaps
 
-- `AppState` (`src/App/AppState.cs`) has no field for "the path currently on screen."
-- `DrillDownState` (`src/App/DrillDownState.cs`) holds only `Rows`/`Schema` — no KeyPath.
+- `AppState` (`src/App/Tui/AppState.cs`) has no field for "the path currently on screen."
+- `DrillDownState` (`src/App/Tui/DrillDownState.cs`) holds only `Rows`/`Schema` — no KeyPath.
 - No tree view wires `TreeView.SelectionChanged`; cursor movement (both vim keys via
   `AdjustSelection` and native arrow keys) is not observed anywhere today.
 - `MainWindow` only ever adds a `MenuBar` (row 0) and `StatusBar` (bottom); every
@@ -69,7 +69,7 @@ Only meaningful while `CurrentMode` is a Tree mode or `FocusedTable`. Updated in
 
 ### 3.2 Extracting `KeyPathBuilder`
 
-`AppKeyHandler.BuildKeyPath` moves to a new static class `src/App/KeyPathBuilder.cs`
+`AppKeyHandler.BuildKeyPath` moves to a new static class `src/App/Tui/Ui/KeyPathBuilder.cs`
 (`KeyPathBuilder.Build(ITreeNode node)`), with `AppKeyHandler` updated to call it.
 
 Reason: the new call site for KeyPath-building is not `ViewManager` but the tree view `Create`
@@ -88,7 +88,7 @@ than add a second unrelated caller to it. Existing tests in `AppKeyHandlerTests.
 
 ### 3.3 Live updates in Tree modes
 
-`MorphTreeView` (`src/App/Views/MorphTreeView.cs`) gains a constructor parameter
+`MorphTreeView` (`src/App/Tui/Ui/Views/MorphTreeView.cs`) gains a constructor parameter
 `Action<ITreeNode?> onSelectionChanged`, wired once in the constructor:
 
 ```csharp
@@ -108,7 +108,7 @@ onSelectionChanged: node => onPathChanged(node is null ? [] : KeyPathBuilder.Bui
 ```
 
 `JsonLinesTreeView` and `JsonArrayTreeView` do not extend `MorphTreeView` directly — both extend
-`RangeTreeViewBase` (`src/App/Views/RangeTreeViewBase.cs`), which itself extends `MorphTreeView`
+`RangeTreeViewBase` (`src/App/Tui/Ui/Views/RangeTreeViewBase.cs`), which itself extends `MorphTreeView`
 and currently forwards only `onTableModeToggle` to `base(...)`. `RangeTreeViewBase`'s constructor
 must also accept `onSelectionChanged` and forward it to `base(...)` for the parameter to reach
 `MorphTreeView` from these two view types. `JsonObjectTreeView` extends `MorphTreeView` directly,
@@ -147,7 +147,7 @@ when converting Tree → Table"). See 3.5 for why the two DrillDown variants nee
 
 ### 3.5 Rendering: `BreadcrumbBar` + index-collapsing rule
 
-New `src/App/Views/BreadcrumbBar.cs`, a small `View` (single row, `Y=1` — see 3.6 for exact
+New `src/App/Tui/Ui/Views/BreadcrumbBar.cs`, a small `View` (single row, `Y=1` — see 3.6 for exact
 placement) that renders a formatted path string. Display-only, no click handling (see Scope):
 
 ```csharp
@@ -312,22 +312,22 @@ empty path as `"root"` alone; a non-empty path renders as just its segments (e.g
 ## 5. Files Touched
 
 **New:**
-- `src/App/KeyPathBuilder.cs`
+- `src/App/Tui/Ui/KeyPathBuilder.cs`
 - `src/App/KeyPathFormatter.cs`
-- `src/App/Views/BreadcrumbBar.cs`
-- `tests/Refedle.Tests/App/KeyPathBuilderTests.cs`
+- `src/App/Tui/Ui/Views/BreadcrumbBar.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/KeyPathBuilderTests.cs`
 - `tests/Refedle.Tests/App/KeyPathFormatterTests.cs`
-- `tests/Refedle.Tests/App/Views/BreadcrumbBarTests.cs`
+- `tests/Refedle.Tests/App/Tui/Ui/Views/BreadcrumbBarTests.cs`
 
 **Modified:**
-- `src/App/AppState.cs` — add `CurrentKeyPath`
-- `src/App/AppKeyHandler.cs` — remove `BuildKeyPath`, call `KeyPathBuilder.Build` instead
-- `src/App/DrillDownRequest.cs` — add `KeyPath` to `SingleDrillDownRequest`
-- `src/App/ViewManager.cs` — `ContentContainer` + `BreadcrumbBar` wiring, `UpdateBreadcrumb`,
+- `src/App/Tui/AppState.cs` — add `CurrentKeyPath`
+- `src/App/Tui/Ui/AppKeyHandler.cs` — remove `BuildKeyPath`, call `KeyPathBuilder.Build` instead
+- `src/App/Tui/DrillDownRequest.cs` — add `KeyPath` to `SingleDrillDownRequest`
+- `src/App/Tui/Ui/ViewManager.cs` — `ContentContainer` + `BreadcrumbBar` wiring, `UpdateBreadcrumb`,
   simplified `SwitchTo*` layout code
-- `src/App/Views/MorphTreeView.cs` — `onSelectionChanged` constructor parameter
-- `src/App/Views/RangeTreeViewBase.cs` — forward `onSelectionChanged` to `base(...)` so it
+- `src/App/Tui/Ui/Views/MorphTreeView.cs` — `onSelectionChanged` constructor parameter
+- `src/App/Tui/Ui/Views/RangeTreeViewBase.cs` — forward `onSelectionChanged` to `base(...)` so it
   reaches `MorphTreeView` from `JsonLinesTreeView`/`JsonArrayTreeView`
-- `src/App/Views/JsonLinesTreeView.cs`, `JsonArrayTreeView.cs`, `JsonObjectTreeView.cs` —
+- `src/App/Tui/Ui/Views/JsonLinesTreeView.cs`, `JsonArrayTreeView.cs`, `JsonObjectTreeView.cs` —
   `onPathChanged` parameter threaded through `Create`
-- `tests/Refedle.Tests/App/AppKeyHandlerTests.cs` — remove moved `BuildKeyPath` tests
+- `tests/Refedle.Tests/App/Tui/Ui/AppKeyHandlerTests.cs` — remove moved `BuildKeyPath` tests

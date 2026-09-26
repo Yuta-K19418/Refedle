@@ -185,8 +185,8 @@ must keep passing unmodified, proving the refactor didn't change behavior.
 
 | File | Change |
 |---|---|
-| `src/App/Views/LazyTransformerBase.cs` (new) | Abstract base class holding shared schema-transformation logic |
-| `src/App/Views/LazyTransformer.cs` | Refactored to inherit `LazyTransformerBase`; keeps only filter-row-indexer-backed row/column resolution |
+| `src/App/Tui/Ui/Views/LazyTransformerBase.cs` (new) | Abstract base class holding shared schema-transformation logic |
+| `src/App/Tui/Ui/Views/LazyTransformer.cs` | Refactored to inherit `LazyTransformerBase`; keeps only filter-row-indexer-backed row/column resolution |
 
 ### Phase 2: Add `FocusedTableTransformer`
 
@@ -350,8 +350,8 @@ internal sealed class FocusedTableSource : ITableSource
 
 | File | Change |
 |---|---|
-| `src/App/Views/FocusedTableTransformer.cs` (new) | `LazyTransformerBase` subclass for DrillDown results; synchronous filter, `"#"` passthrough |
-| `src/App/Views/FocusedTableSource.cs` | Adds type-labeled `ColumnNames` and `internal RawColumnNames`, matching `VirtualTableSource`/`JsonLinesTableSource` |
+| `src/App/Tui/Ui/Views/FocusedTableTransformer.cs` (new) | `LazyTransformerBase` subclass for DrillDown results; synchronous filter, `"#"` passthrough |
+| `src/App/Tui/Ui/Views/FocusedTableSource.cs` | Adds type-labeled `ColumnNames` and `internal RawColumnNames`, matching `VirtualTableSource`/`JsonLinesTableSource` |
 
 **Update existing E2E assertions for type labels:** the `ColumnNames`
 labeling change means `FocusedTableView` headers now render as
@@ -506,7 +506,7 @@ internal async ValueTask FullAggregationDrillDownAsync(FullAggregationDrillDownR
 
 | File | Change |
 |---|---|
-| `src/App/ViewManager.cs` | `SwitchToFocusedTable` wires `OnMorphAction`/`GetRawColumnName`; `RefreshCurrentTableView` gains a `FocusedTable` case; `DrillDown`/`FullAggregationDrillDownAsync` clear `ActionStack` on success |
+| `src/App/Tui/Ui/ViewManager.cs` | `SwitchToFocusedTable` wires `OnMorphAction`/`GetRawColumnName`; `RefreshCurrentTableView` gains a `FocusedTable` case; `DrillDown`/`FullAggregationDrillDownAsync` clear `ActionStack` on success |
 
 ### Phase 4: E2E tests
 

@@ -53,7 +53,7 @@ CSV File Load (LoadCsvFileAsync)
 
 ### IncrementalSchemaScanner Class
 
-**Location**: `src/App/Schema/IncrementalSchemaScanner.cs`
+**Location**: `src/App/Tui/Workers/Schema/IncrementalSchemaScanner.cs`
 
 **Responsibilities**:
 - Read the first 200 rows and perform initial schema inference.
@@ -62,7 +62,7 @@ CSV File Load (LoadCsvFileAsync)
 
 **Class Structure**:
 ```csharp
-namespace Refedle.App.Schema;
+namespace Refedle.App.Tui.Workers.Schema;
 
 internal sealed class IncrementalSchemaScanner
 {
@@ -78,7 +78,7 @@ internal sealed class IncrementalSchemaScanner
 
 ### MainWindow Integration
 
-**File**: `src/App/MainWindow.cs`
+**File**: `src/App/Tui/Ui/MainWindow.cs`
 
 The `LoadCsvFileAsync` method orchestrates the scanning process.
 

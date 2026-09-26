@@ -53,16 +53,16 @@ File → RowIndexer (existing) → RowByteCache (existing)
 | Component | Layer | File | Responsibility |
 |---|---|---|---|
 | `CellExtractor` | Engine | `src/Engine/IO/JsonLines/CellExtractor.cs` | Extract cell value from raw JSON bytes by column name |
-| `JsonLinesTableSource` | App | `src/App/Views/JsonLinesTableSource.cs` | `ITableSource` impl bridging cache + schema + extractor |
-| `IncrementalSchemaScanner` | App | `src/App/Schema/JsonLines/IncrementalSchemaScanner.cs` | Orchestrate initial + background schema scan |
+| `JsonLinesTableSource` | App | `src/App/Tui/Ui/Views/JsonLinesTableSource.cs` | `ITableSource` impl bridging cache + schema + extractor |
+| `IncrementalSchemaScanner` | App | `src/App/Tui/Workers/Schema/JsonLines/IncrementalSchemaScanner.cs` | Orchestrate initial + background schema scan |
 
 ### 2.3 Modified Files (4 files)
 
 | File | Change |
 |---|---|
-| `src/App/ViewMode.cs` | Add `JsonLinesTable` enum value |
-| `src/App/MainWindow.cs` | Store `JsonLinesIndexer` in `AppState`; add `SwitchToJsonLinesTableView`; add `t` key toggle |
-| `src/App/AppState.cs` | Add `JsonLinesIndexer` and `JsonLinesSchemaScanner` properties |
+| `src/App/Tui/ViewMode.cs` | Add `JsonLinesTable` enum value |
+| `src/App/Tui/Ui/MainWindow.cs` | Store `JsonLinesIndexer` in `AppState`; add `SwitchToJsonLinesTableView`; add `t` key toggle |
+| `src/App/Tui/AppState.cs` | Add `JsonLinesIndexer` and `JsonLinesSchemaScanner` properties |
 | `src/App/Schema/IncrementalSchemaScanner.cs` | Move to `src/App/Schema/Csv/IncrementalSchemaScanner.cs` (namespace → `Refedle.App.Schema.Csv`) |
 
 ### 2.4 Reused Existing Components
@@ -75,8 +75,8 @@ File → RowIndexer (existing) → RowByteCache (existing)
 | `RowReader` | `src/Engine/IO/JsonLines/RowReader.cs` | Sequential line reading for schema scan |
 | `TableSchema` / `ColumnSchema` | `src/Engine/Models/` | Schema output types |
 | `Result<T>` / `Results` | `src/Engine/Result.cs`, `Results.cs` | Error handling |
-| `VirtualTableSource` (CSV) | `src/App/Views/VirtualTableSource.cs` | Reference pattern for `ITableSource` |
-| `IncrementalSchemaScanner` (CSV) | `src/App/Schema/Csv/IncrementalSchemaScanner.cs` | Reference pattern for incremental scanning |
+| `VirtualTableSource` (CSV) | `src/App/Tui/Ui/Views/VirtualTableSource.cs` | Reference pattern for `ITableSource` |
+| `IncrementalSchemaScanner` (CSV) | `src/App/Tui/Workers/Schema/Csv/IncrementalSchemaScanner.cs` | Reference pattern for incremental scanning |
 
 ---
 
@@ -132,8 +132,8 @@ public static string ExtractCell(
 
 ### 3.2 JsonLinesTableSource
 
-**File:** `src/App/Views/JsonLinesTableSource.cs`
-**Namespace:** `Refedle.App.Views`
+**File:** `src/App/Tui/Ui/Views/JsonLinesTableSource.cs`
+**Namespace:** `Refedle.App.Tui.Ui.Views`
 **Estimated size:** ~80 lines
 
 Implements `Terminal.Gui.Views.ITableSource`, following the same pattern as `VirtualTableSource`
@@ -185,12 +185,12 @@ this[row, col]:
 
 ### 3.3 IncrementalSchemaScanner (JSON Lines)
 
-**File:** `src/App/Schema/JsonLines/IncrementalSchemaScanner.cs`
-**Namespace:** `Refedle.App.Schema.JsonLines`
+**File:** `src/App/Tui/Workers/Schema/JsonLines/IncrementalSchemaScanner.cs`
+**Namespace:** `Refedle.App.Tui.Workers.Schema.JsonLines`
 **Estimated size:** ~100 lines
 
 Orchestrates initial and background schema scanning, following the same pattern as
-`IncrementalSchemaScanner` in `Refedle.App.Schema.Csv`.
+`IncrementalSchemaScanner` in `Refedle.App.Tui.Workers.Schema.Csv`.
 
 #### API
 
@@ -435,15 +435,15 @@ After initial scan:
 | File | Action | Purpose |
 |---|---|---|
 | `src/Engine/IO/JsonLines/CellExtractor.cs` | **Create** | Cell value extraction from raw JSON bytes |
-| `src/App/Views/JsonLinesTableSource.cs` | **Create** | `ITableSource` implementation for JSON Lines |
-| `src/App/Schema/JsonLines/IncrementalSchemaScanner.cs` | **Create** | Incremental schema scanning orchestration |
+| `src/App/Tui/Ui/Views/JsonLinesTableSource.cs` | **Create** | `ITableSource` implementation for JSON Lines |
+| `src/App/Tui/Workers/Schema/JsonLines/IncrementalSchemaScanner.cs` | **Create** | Incremental schema scanning orchestration |
 | `src/App/Schema/Csv/IncrementalSchemaScanner.cs` | Move (rename namespace) | Existing CSV schema scanner; namespace → `Refedle.App.Schema.Csv` |
-| `src/App/ViewMode.cs` | Modify | Add `JsonLinesTable` enum value |
-| `src/App/MainWindow.cs` | Modify | Store `JsonLinesIndexer` in `AppState`; add `SwitchToJsonLinesTableView`; add `t` key toggle |
-| `src/App/AppState.cs` | Modify | Add `JsonLinesIndexer` and `JsonLinesSchemaScanner` properties |
+| `src/App/Tui/ViewMode.cs` | Modify | Add `JsonLinesTable` enum value |
+| `src/App/Tui/Ui/MainWindow.cs` | Modify | Store `JsonLinesIndexer` in `AppState`; add `SwitchToJsonLinesTableView`; add `t` key toggle |
+| `src/App/Tui/AppState.cs` | Modify | Add `JsonLinesIndexer` and `JsonLinesSchemaScanner` properties |
 | `tests/Refedle.Tests/Engine/IO/JsonLines/CellExtractorTests.cs` | **Create** | Cell extraction tests |
-| `tests/Refedle.Tests/App/Views/JsonLinesTableSourceTests.cs` | **Create** | Table source tests |
-| `tests/Refedle.Tests/App/Schema/JsonLines/IncrementalSchemaScannerTests.cs` | **Create** | Schema scanner tests |
+| `tests/Refedle.Tests/App/Tui/Ui/Views/JsonLinesTableSourceTests.cs` | **Create** | Table source tests |
+| `tests/Refedle.Tests/App/Tui/Workers/Schema/JsonLines/IncrementalSchemaScannerTests.cs` | **Create** | Schema scanner tests |
 | `docs/design_jsonlines_table_mode.md` | **Create** | This document |
 
 ---

@@ -14,24 +14,24 @@
 
 | File | Purpose |
 |------|---------|
-| `src/App/TuiStartupOptions.cs` | Record holding optional startup arguments for TUI mode |
-| `src/App/TuiArgumentParser.cs` | Parses `--file` / `--recipe` from `args[]` in TUI mode |
-| `tests/Refedle.Tests/App/TuiArgumentParserTests.cs` | Unit tests for `TuiArgumentParser` |
+| `src/App/Tui/Ui/TuiStartupOptions.cs` | Record holding optional startup arguments for TUI mode |
+| `src/App/Tui/Ui/TuiArgumentParser.cs` | Parses `--file` / `--recipe` from `args[]` in TUI mode |
+| `tests/Refedle.Tests/App/Tui/Ui/TuiArgumentParserTests.cs` | Unit tests for `TuiArgumentParser` |
 
 ### Modified Files
 
 | File | Change |
 |------|--------|
 | `src/App/Program.cs` | Parse TUI args; validate paths; call `ScheduleStartupLoad()` |
-| `src/App/MainWindow.cs` | Add `ScheduleStartupLoad(TuiStartupOptions)` method |
-| `src/App/RecipeCommandHandler.cs` | Add `LoadFromPathAsync(string path)` (dialog-free overload) |
+| `src/App/Tui/Ui/MainWindow.cs` | Add `ScheduleStartupLoad(TuiStartupOptions)` method |
+| `src/App/Tui/Ui/RecipeCommandHandler.cs` | Add `LoadFromPathAsync(string path)` (dialog-free overload) |
 
 ## Design Details
 
 ### `TuiStartupOptions` Record
 
 ```csharp
-namespace Refedle.App;
+namespace Refedle.App.Tui.Ui;
 
 internal sealed record TuiStartupOptions(string? InputFile = null, string? RecipeFile = null)
 {
