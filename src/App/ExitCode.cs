@@ -1,4 +1,4 @@
-namespace Refedle.App.Cli;
+namespace Refedle.App;
 
 /// <summary>
 /// Defines the exit codes for the application.

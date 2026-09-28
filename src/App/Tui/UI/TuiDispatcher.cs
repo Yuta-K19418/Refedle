@@ -1,5 +1,3 @@
-using Refedle.App.Cli;
-
 namespace Refedle.App.Tui.UI;
 
 /// <summary>
