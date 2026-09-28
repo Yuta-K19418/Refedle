@@ -217,10 +217,11 @@ public sealed class AppKeyHandlerTests
         // clearing from FocusedTable must consult the DrillDown's stack, not the base one
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        state.DrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -237,21 +238,21 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleClearActions_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_ReturnsFalse()
+    public void HandleClearActions_WhenErrorViewReplacedFocusedTableAndBaseActionStackEmpty_ReturnsFalse()
     {
-        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but the
-        // current view is the base table; clearing must consult the base stack, not the stale one
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // clearing must consult the (empty) base stack, not those actions
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                schema,
-                ViewMode.JsonLinesTree,
-                KeyPath: [],
-                ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
-        };
+        using var state = new AppState();
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]);
+        state.EnterFocusedTable(drillDown);
+        state.EnterPlaceholderMode();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -264,8 +265,7 @@ public sealed class AppKeyHandlerTests
 
         // Assert
         result.Should().BeFalse();
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
-        drillDown.ActionStack.Should().ContainSingle();
+        state.TryGetDrillDown(out _).Should().BeFalse();
     }
 
     // The confirmed-clear branches (MessageBox.Query "Yes") require a TUI event loop to
@@ -278,14 +278,12 @@ public sealed class AppKeyHandlerTests
         using var app = CreateTestApp();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("id", "1"u8.ToArray())];
         var schema = new TableSchema { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            CurrentFilePath = "test.json",
-            CurrentMode = ViewMode.FocusedTable,
-            JsonObjectEntries = entries,
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []),
-        };
+        using var state = new AppState();
+        state.StartNewFile("test.json");
+        state.EnterJsonObjectTree(entries);
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -300,7 +298,7 @@ public sealed class AppKeyHandlerTests
         // Assert
         handled.Should().BeTrue();
         state.CurrentMode.Should().Be(ViewMode.JsonObjectTree);
-        state.DrillDown.Should().BeNull();
+        state.GetDrillDownOrNull().Should().BeNull();
     }
 
     [Fact]
@@ -308,7 +306,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange
         using var app = CreateTestApp();
-        using var state = new AppState { CurrentMode = ViewMode.FileSelection };
+        using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -333,7 +331,8 @@ public sealed class AppKeyHandlerTests
         try
         {
             using var app = CreateTestApp();
-            using var state = new AppState { CurrentFilePath = filePath };
+            using var state = new AppState();
+            state.StartNewFile(filePath);
             using var window = new Window();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             using var viewManager = new ViewManager(window, state, modeController, action => action());
@@ -372,7 +371,8 @@ public sealed class AppKeyHandlerTests
         try
         {
             using var app = CreateTestApp();
-            using var state = new AppState { CurrentFilePath = filePath };
+            using var state = new AppState();
+            state.StartNewFile(filePath);
             using var window = new Window();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             using var viewManager = new ViewManager(window, state, modeController, action => action());

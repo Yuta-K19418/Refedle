@@ -353,12 +353,13 @@ public sealed class FileDialogHandlerTests : IDisposable
                 SourceFormat = DataFormat.JsonObject,
                 Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
             };
-            state.DrillDown = new DrillDownState(
+            var drillDown = new DrillDownState(
                 [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
                 schema,
                 ViewMode.JsonObjectTree,
                 KeyPath: [],
                 ActionStack: []);
+            state.EnterFocusedTable(drillDown);
 
             var handler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
             return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
@@ -366,7 +367,7 @@ public sealed class FileDialogHandlerTests : IDisposable
 
         // Act
         await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_jsonObjectFile));
-        var drillDown = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.DrillDown));
+        var drillDown = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.GetDrillDownOrNull()));
 
         // Assert
         drillDown.Should().BeNull();
@@ -426,10 +427,8 @@ public sealed class FileDialogHandlerTests : IDisposable
         IRowIndexer? capturedIndexer = null;
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var state = new AppState
-            {
-                JsonObjectEntries = [new JsonObjectEntry("stale", JsonRawBytes.Empty)],
-            };
+            var state = new AppState();
+            state.EnterJsonObjectTree([new JsonObjectEntry("stale", JsonRawBytes.Empty)]);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
             var viewManager = new ViewManager(window, state, modeController, app.Invoke);
             var handler = new FileDialogHandler(app, state, viewManager, indexer =>
@@ -491,10 +490,8 @@ public sealed class FileDialogHandlerTests : IDisposable
             var indexerStartCount = 0;
             await using var session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var state = new AppState
-                {
-                    OnSchemaRefined = schema => callbackSchema = schema
-                };
+                var state = new AppState();
+                state.SetSchemaRefinedCallback(schema => callbackSchema = schema);
                 var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
                 var viewManager = new ViewManager(window, state, modeController, app.Invoke);
                 var handler = new FileDialogHandler(
@@ -519,7 +516,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 ctx.State.RenewCtsWithCancel();
-                ctx.State.Schema = replacementSchema;
+                ctx.State.ApplyRefinedSchema(replacementSchema);
                 return Task.CompletedTask;
             });
             scanner.Release();
@@ -553,10 +550,8 @@ public sealed class FileDialogHandlerTests : IDisposable
             var indexerStartCount = 0;
             await using var session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var state = new AppState
-                {
-                    OnSchemaRefined = schema => callbackSchema = schema
-                };
+                var state = new AppState();
+                state.SetSchemaRefinedCallback(schema => callbackSchema = schema);
                 var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
                 var viewManager = new ViewManager(window, state, modeController, app.Invoke);
                 var handler = new FileDialogHandler(
@@ -581,7 +576,7 @@ public sealed class FileDialogHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 ctx.State.RenewCtsWithCancel();
-                ctx.State.Schema = replacementSchema;
+                ctx.State.ApplyRefinedSchema(replacementSchema);
                 return Task.CompletedTask;
             });
             scanner.Release();

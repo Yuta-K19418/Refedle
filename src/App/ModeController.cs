@@ -28,7 +28,7 @@ internal sealed class ModeController(
     {
         if (_state.CurrentMode == ViewMode.JsonLinesTable)
         {
-            _state.CurrentMode = ViewMode.JsonLinesTree;
+            _state.EnterJsonLinesTree();
             return Results.Success();
         }
 
@@ -45,7 +45,7 @@ internal sealed class ModeController(
         // Subsequent switch: reuse cached schema
         if (_state.Schema is not null)
         {
-            _state.CurrentMode = ViewMode.JsonLinesTable;
+            _state.EnterJsonLinesTable();
             return Results.Success();
         }
 
@@ -72,8 +72,7 @@ internal sealed class ModeController(
                 return Results.Success();
             }
 
-            _state.Schema = schema;
-            _state.CurrentMode = ViewMode.JsonLinesTable;
+            _state.CompleteJsonLinesSchemaScan(schema);
 
             _ = BackgroundSchemaRefiner.StartAsync(_state, scanner, schema, _uiThreadInvoke, scanToken);
 
@@ -125,8 +124,7 @@ internal sealed class ModeController(
             rows[i] = new FocusedTableRow(children[i], string.Create(CultureInfo.InvariantCulture, $"[{i}]"));
         }
 
-        _state.DrillDown = new DrillDownState(rows, result.Value.schema, _state.CurrentMode, request.KeyPath, ActionStack: request.InitialActionStack);
-        _state.CurrentMode = ViewMode.FocusedTable;
+        _state.EnterFocusedTable(new DrillDownState(rows, result.Value.schema, _state.CurrentMode, request.KeyPath, ActionStack: request.InitialActionStack));
 
         return Results.Success();
     }

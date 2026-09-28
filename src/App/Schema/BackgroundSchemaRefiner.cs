@@ -62,7 +62,7 @@ internal static class BackgroundSchemaRefiner
                     return;
                 }
 
-                state.Schema = refinedSchema;
+                state.ApplyRefinedSchema(refinedSchema);
                 state.OnSchemaRefined?.Invoke(refinedSchema);
             });
         }
