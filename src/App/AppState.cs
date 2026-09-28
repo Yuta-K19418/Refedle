@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
@@ -9,51 +10,53 @@ namespace Refedle.App;
 
 /// <summary>
 /// Represents the application's global state.
+/// Properties are read-only outside this class; every mutation goes through an instance method
+/// named after the session event it applies, so related properties change together.
 /// </summary>
 internal sealed class AppState : IDisposable
 {
     private bool _disposed;
 
     /// <summary>
-    /// Gets or sets the current file path being processed.
+    /// Gets the current file path being processed.
     /// </summary>
-    public string CurrentFilePath { get; set; } = string.Empty;
+    public string CurrentFilePath { get; private set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the current view mode.
+    /// Gets the current view mode.
     /// </summary>
-    public ViewMode CurrentMode { get; set; } = ViewMode.FileSelection;
+    public ViewMode CurrentMode { get; private set; } = ViewMode.FileSelection;
 
     /// <summary>
-    /// Gets or sets the KeyPath of the location currently on screen.
+    /// Gets the KeyPath of the location currently on screen.
     /// Only meaningful while <see cref="CurrentMode"/> is a Tree mode or FocusedTable — updated
     /// on tree cursor movement and when DrillDown is triggered.
     /// </summary>
-    public IReadOnlyList<KeyPathSegment> CurrentKeyPath { get; set; } = [];
+    public IReadOnlyList<KeyPathSegment> CurrentKeyPath { get; private set; } = [];
 
     /// <summary>
-    /// Gets or sets the table schema for the loaded file.
+    /// Gets the table schema for the loaded file.
     /// Null if no file is loaded or schema has not been detected.
     /// </summary>
-    public TableSchema? Schema { get; set; }
+    public TableSchema? Schema { get; private set; }
 
     /// <summary>
-    /// Gets or sets the row indexer for the current file.
+    /// Gets the row indexer for the current file.
     /// Stored on load so it can be reused when switching modes.
     /// </summary>
-    public IRowIndexer? RowIndexer { get; set; }
+    public IRowIndexer? RowIndexer { get; private set; }
 
     /// <summary>
-    /// Gets or sets the cancellation token source for the background schema scanner.
+    /// Gets the cancellation token source for the background schema scanner.
     /// </summary>
     public CancellationTokenSource Cts { get; private set; } = new();
 
     /// <summary>
-    /// Gets or sets the callback invoked when the background schema scan completes.
+    /// Gets the callback invoked when the background schema scan completes.
     /// Set by <c>ViewManager</c> when creating a table source that supports schema updates;
     /// invoked after background refinement finishes.
     /// </summary>
-    public Action<TableSchema>? OnSchemaRefined { get; set; }
+    public Action<TableSchema>? OnSchemaRefined { get; private set; }
 
     private IReadOnlyList<MorphAction> _actionStack = [];
 
@@ -88,17 +91,247 @@ internal sealed class AppState : IDisposable
     /// </summary>
     public long Revision => _revision;
 
-    /// <summary>
-    /// Gets or sets the DrillDown session state.
-    /// Null when not in FocusedTable mode.
-    /// </summary>
-    public DrillDownState? DrillDown { get; set; }
+    // Non-null only while CurrentMode is FocusedTable; read it through TryGetDrillDown.
+    private DrillDownState? _drillDown;
 
     /// <summary>
-    /// Gets or sets the cached top-level entries for JSON Object tree reconstruction.
+    /// Gets the DrillDown session backing the FocusedTable view.
+    /// A session exists only while <see cref="CurrentMode"/> is FocusedTable: every change to
+    /// another mode (a load completing, a tree/table toggle, the error placeholder) discards it. Between <see cref="StartNewFile"/> and the
+    /// new file's first mode change the old mode can still read FocusedTable with no session.
+    /// </summary>
+    /// <param name="drillDown">The session when this returns <c>true</c>; otherwise <c>null</c>.</param>
+    /// <returns><c>true</c> when a session exists.</returns>
+    internal bool TryGetDrillDown([NotNullWhen(true)] out DrillDownState? drillDown)
+    {
+        drillDown = _drillDown;
+        return drillDown is not null;
+    }
+
+    /// <summary>
+    /// Sets <see cref="CurrentMode"/>. Every mode change goes through here so that leaving
+    /// FocusedTable, for whatever mode, ends the DrillDown session.
+    /// </summary>
+    /// <param name="mode">The mode to enter.</param>
+    private void SetMode(ViewMode mode)
+    {
+        if (mode != ViewMode.FocusedTable)
+        {
+            _drillDown = null;
+        }
+
+        CurrentMode = mode;
+    }
+
+    /// <summary>
+    /// Gets the cached top-level entries for JSON Object tree reconstruction.
     /// Set once at file load for <see cref="DataFormat.JsonObject"/> files; null for all other formats.
     /// </summary>
-    public IReadOnlyList<JsonObjectEntry>? JsonObjectEntries { get; set; }
+    public IReadOnlyList<JsonObjectEntry>? JsonObjectEntries { get; private set; }
+
+    /// <summary>
+    /// Starts a session for a newly selected file: installs the new file path, resets the
+    /// previous session's transforms, unsaved-changes flag, background scans, DrillDown session,
+    /// and cached JSON Object entries.
+    /// </summary>
+    /// <param name="path">The path of the newly selected file.</param>
+    internal void StartNewFile(string path)
+    {
+        CurrentFilePath = path;
+        ClearMorphActions();
+        // The fresh session starts clean: an empty stack cannot diverge from anything on disk.
+        MarkRecipeSaved();
+        RenewCtsWithCancel();
+        _drillDown = null;
+        JsonObjectEntries = null;
+    }
+
+    /// <summary>
+    /// Begins loading an indexer-backed tree file (JSON Lines / JSON Array): stores the new
+    /// indexer and discards the previous file's table state.
+    /// </summary>
+    /// <param name="indexer">The row indexer created for the new file.</param>
+    internal void BeginIndexedTreeLoad(IRowIndexer indexer)
+    {
+        RowIndexer = indexer;
+        Schema = null;
+        OnSchemaRefined = null;
+    }
+
+    /// <summary>
+    /// Begins loading a JSON Object file: JSON Object has no rows, so the indexer and the
+    /// previous file's table state are discarded.
+    /// </summary>
+    internal void BeginJsonObjectLoad()
+    {
+        RowIndexer = null;
+        Schema = null;
+        OnSchemaRefined = null;
+    }
+
+    /// <summary>
+    /// Completes a CSV load with the initial scan results: publishes the schema and indexer and
+    /// enters the CSV table mode.
+    /// </summary>
+    /// <param name="indexer">The CSV row indexer for the loaded file.</param>
+    /// <param name="schema">The schema produced by the initial scan.</param>
+    internal void CompleteCsvLoad(IRowIndexer indexer, TableSchema schema)
+    {
+        Schema = schema;
+        RowIndexer = indexer;
+        SetMode(ViewMode.CsvTable);
+    }
+
+    /// <summary>
+    /// Completes a JSON Object load with the scanned top-level entries and enters its tree mode.
+    /// </summary>
+    /// <param name="entries">The key-value pairs returned by <see cref="Engine.IO.JsonObject.TopLevelScanner.Scan"/>.</param>
+    internal void EnterJsonObjectTree(IReadOnlyList<JsonObjectEntry> entries)
+    {
+        JsonObjectEntries = entries;
+        SetMode(ViewMode.JsonObjectTree);
+    }
+
+    /// <summary>
+    /// Enters the JSON Lines tree mode — after the first checkpoint of a load, on a
+    /// Tree/Table toggle back to the tree, or when returning from a DrillDown.
+    /// </summary>
+    internal void EnterJsonLinesTree()
+    {
+        SetMode(ViewMode.JsonLinesTree);
+    }
+
+    /// <summary>
+    /// Enters the JSON Array tree mode — after the first checkpoint of a load or when returning
+    /// from a DrillDown.
+    /// </summary>
+    internal void EnterJsonArrayTree()
+    {
+        SetMode(ViewMode.JsonArrayTree);
+    }
+
+    /// <summary>
+    /// Enters the JSON Lines table mode from its tree mode when the schema is already cached.
+    /// </summary>
+    internal void EnterJsonLinesTable()
+    {
+        SetMode(ViewMode.JsonLinesTable);
+    }
+
+    /// <summary>
+    /// Completes the initial schema scan on the first Tree→Table toggle: publishes the scanned
+    /// schema and enters the JSON Lines table mode.
+    /// </summary>
+    /// <param name="schema">The schema produced by the initial scan.</param>
+    internal void CompleteJsonLinesSchemaScan(TableSchema schema)
+    {
+        Schema = schema;
+        SetMode(ViewMode.JsonLinesTable);
+    }
+
+    /// <summary>
+    /// Enters the placeholder mode used for error reporting; other session state is kept intact.
+    /// </summary>
+    internal void EnterPlaceholderMode()
+    {
+        SetMode(ViewMode.PlaceholderView);
+    }
+
+    /// <summary>
+    /// Enters FocusedTable mode with the given DrillDown session as its backing state.
+    /// </summary>
+    /// <param name="drillDown">The DrillDown session to display.</param>
+    internal void EnterFocusedTable(DrillDownState drillDown)
+    {
+        _drillDown = drillDown;
+        SetMode(ViewMode.FocusedTable);
+    }
+
+    /// <summary>
+    /// Leaves FocusedTable mode: clears the DrillDown session and restores the mode the session
+    /// was entered from.
+    /// </summary>
+    /// <param name="modeToRestore">The tree mode recorded as the DrillDown's previous mode.</param>
+    internal void ExitFocusedTable(ViewMode modeToRestore)
+    {
+        _drillDown = null;
+        SetMode(modeToRestore);
+    }
+
+    /// <summary>
+    /// Appends a morph action to the DrillDown session's Action Stack and flags the session unsaved.
+    /// Does nothing when no session exists.
+    /// </summary>
+    /// <param name="action">The action to append.</param>
+    internal void AddDrillDownAction(MorphAction action)
+    {
+        if (_drillDown is not { } drillDown)
+        {
+            return;
+        }
+
+        _drillDown = drillDown with
+        {
+            ActionStack = [.. drillDown.ActionStack, action],
+            HasUnsavedChanges = true,
+        };
+    }
+
+    /// <summary>
+    /// Clears the DrillDown session's Action Stack and flags the session unsaved.
+    /// Does nothing when no session exists.
+    /// </summary>
+    internal void ClearDrillDownActions()
+    {
+        if (_drillDown is not { } drillDown)
+        {
+            return;
+        }
+
+        _drillDown = drillDown with { ActionStack = [], HasUnsavedChanges = true };
+    }
+
+    /// <summary>
+    /// Clears the DrillDown session's unsaved-changes flag after its recipe was saved.
+    /// Does nothing when no session exists.
+    /// </summary>
+    internal void MarkDrillDownSaved()
+    {
+        if (_drillDown is not { } drillDown)
+        {
+            return;
+        }
+
+        _drillDown = drillDown with { HasUnsavedChanges = false };
+    }
+
+    /// <summary>
+    /// Publishes a schema refined by the background scan while the session is still current.
+    /// </summary>
+    /// <param name="schema">The refined schema.</param>
+    internal void ApplyRefinedSchema(TableSchema schema)
+    {
+        Schema = schema;
+    }
+
+    /// <summary>
+    /// Registers the callback that receives refined schemas, or clears it by passing <c>null</c>
+    /// when the current view cannot consume schema updates.
+    /// </summary>
+    /// <param name="callback">The callback, or <c>null</c> to clear it.</param>
+    internal void SetSchemaRefinedCallback(Action<TableSchema>? callback)
+    {
+        OnSchemaRefined = callback;
+    }
+
+    /// <summary>
+    /// Stores the on-screen location reported by breadcrumb updates; an empty path clears it.
+    /// </summary>
+    /// <param name="path">The ordered path segments from root to the current location.</param>
+    internal void SetCurrentKeyPath(IReadOnlyList<KeyPathSegment> path)
+    {
+        CurrentKeyPath = path;
+    }
 
     /// <summary>
     /// Renews the cancellation token source by cancelling the current one and creating a new one.

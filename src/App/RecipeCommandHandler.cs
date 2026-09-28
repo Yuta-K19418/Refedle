@@ -79,12 +79,13 @@ internal sealed class RecipeCommandHandler(
     /// <see cref="BuildRecipe"/> so the two never drift apart.
     /// </summary>
     private DrillDownState? CaptureSavedDrillDownScope() =>
-        _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } scope ? scope : null;
+        _state.TryGetDrillDown(out var scope) ? scope : null;
 
     /// <summary>
     /// Clears the unsaved-changes flag of the scope that was just saved: the DrillDown session when
     /// the recipe captured it, the root Action Stack otherwise. The reference check (DrillDown) and
-    /// the revision check (root) keep edits made during the async write from being marked saved.
+    /// the revision check (root) keep edits made during the async write from being marked saved;
+    /// a session that ended meanwhile (e.g. an error view replaced it) is not marked.
     /// </summary>
     private void MarkScopeSaved(DrillDownState? savedDrillDown, long savedRevision)
     {
@@ -94,21 +95,20 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        if (_state.DrillDown is { } current && ReferenceEquals(current, savedDrillDown))
+        if (_state.TryGetDrillDown(out var current) && ReferenceEquals(current, savedDrillDown))
         {
-            _state.DrillDown = current with { HasUnsavedChanges = false };
+            _state.MarkDrillDownSaved();
         }
     }
 
     /// <summary>
     /// Builds the Recipe to save under the Save Scope rule: a FocusedTable view with an active
     /// DrillDown captures only that DrillDown's scope (KeyPath + ActionStack), never the base
-    /// table's AppState.ActionStack. Any other mode — including a stale AppState.DrillDown left
-    /// over from navigating back without clearing it — captures the base table's ActionStack,
-    /// with DrillDownKeyPath left unset.
+    /// table's AppState.ActionStack. Any other mode — including the error view that replaced a
+    /// FocusedTable — captures the base table's ActionStack, with DrillDownKeyPath left unset.
     /// </summary>
     internal Recipe BuildRecipe() =>
-        _state.CurrentMode == ViewMode.FocusedTable && _state.DrillDown is { } drillDown
+        _state.TryGetDrillDown(out var drillDown)
             ? new Recipe
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),

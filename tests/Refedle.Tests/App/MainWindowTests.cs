@@ -235,10 +235,11 @@ public sealed partial class MainWindowTests
         // quitting from FocusedTable must consult the DrillDown's stack, not the base one
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        state.DrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        state.EnterFocusedTable(drillDown);
         using var mainWindow = new MainWindow(app, state);
         // No dialog auto-dismiss wired: if the wrong stack were consulted, this would hang.
         app.StopAfterFirstIteration = true;
@@ -254,21 +255,21 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenBaseActionStackEmptyAndStaleDrillDownHasActions_QuitsWithoutConfirmation()
+    public void KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseActionStackEmpty_QuitsWithoutConfirmation()
     {
-        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but the
-        // current view is the base table; quitting must consult the base stack, not the stale one
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // quitting must consult the (empty) base stack, not those actions
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                schema,
-                ViewMode.JsonLinesTree,
-                KeyPath: [],
-                ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]),
-        };
+        using var state = new AppState();
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]);
+        state.EnterFocusedTable(drillDown);
+        state.EnterPlaceholderMode();
         using var mainWindow = new MainWindow(app, state);
         // No dialog auto-dismiss wired: if the wrong stack were consulted, this would hang.
         app.StopAfterFirstIteration = true;
@@ -314,15 +315,16 @@ public sealed partial class MainWindowTests
         // root flag
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
-        state.DrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
             HasUnsavedChanges: false);
+        state.EnterFocusedTable(drillDown);
         using var mainWindow = new MainWindow(app, state);
         // No dialog auto-dismiss wired: if the wrong flag were consulted, this would hang.
         app.StopAfterFirstIteration = true;
@@ -344,14 +346,15 @@ public sealed partial class MainWindowTests
         // applied then cleared): the flag, not the stack count, must drive the confirmation
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
-        state.DrillDown = new DrillDownState(
+        using var state = new AppState();
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [],
             HasUnsavedChanges: true);
+        state.EnterFocusedTable(drillDown);
         using var mainWindow = new MainWindow(app, state);
         // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
         // Without the dirty check no modal is ever opened.
@@ -375,21 +378,23 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenBaseRootIsDirtyAndStaleDrillDownIsClean_ShowsQuitConfirmation()
+    public void KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseRootIsDirty_ShowsQuitConfirmation()
     {
-        // Arrange — base table with a dirty root stack and a clean stale DrillDown (left over from
-        // Backspace navigation): quitting must consult the root flag
+        // Arrange — a dirty root stack after an error view replaced a clean FocusedTable:
+        // quitting must consult the root flag
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        state.DrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }],
             HasUnsavedChanges: false);
+        state.EnterFocusedTable(drillDown);
+        state.EnterPlaceholderMode();
         using var mainWindow = new MainWindow(app, state);
         // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
         // Without the dirty check no modal is ever opened.
@@ -419,14 +424,15 @@ public sealed partial class MainWindowTests
         // ActionStack, leaving the base table's ActionStack untouched
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState { CurrentMode = ViewMode.FocusedTable };
+        using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
-        state.DrillDown = new DrillDownState(
+        var drillDown = new DrillDownState(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
+        state.EnterFocusedTable(drillDown);
         using var mainWindow = new MainWindow(app, state);
         // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
         // then confirm (Enter). Self-unsubscribes so it fires only once — resending on every
@@ -450,27 +456,27 @@ public sealed partial class MainWindowTests
         // Assert
         handled.Should().BeTrue();
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
-        drillDown.ActionStack.Should().BeEmpty();
-        drillDown.HasUnsavedChanges.Should().BeTrue();
+        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        drillDownAfter.ActionStack.Should().BeEmpty();
+        drillDownAfter.HasUnsavedChanges.Should().BeTrue();
     }
 
     [Fact]
-    public void KeyDown_WithCKey_WhenBaseStackHasActions_ClearsOnlyBaseStack()
+    public void KeyDown_WithCKey_WhenErrorViewReplacedFocusedTableAndBaseStackHasActions_ClearsBaseStack()
     {
-        // Arrange — a stale DrillDown (left over from Backspace navigation) carries actions, but
-        // the current view is the base table; confirming the clear must only clear the base stack
+        // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
+        // confirming the clear must clear the base stack and leave no DrillDown session behind
         using var app = CreateTestApp();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState
-        {
-            DrillDown = new DrillDownState(
-                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-                schema,
-                ViewMode.JsonLinesTree,
-                KeyPath: [],
-                ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]),
-        };
+        using var state = new AppState();
+        var drillDown = new DrillDownState(
+            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+            schema,
+            ViewMode.JsonLinesTree,
+            KeyPath: [],
+            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
+        state.EnterFocusedTable(drillDown);
+        state.EnterPlaceholderMode();
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
         using var mainWindow = new MainWindow(app, state);
         // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
@@ -496,7 +502,6 @@ public sealed partial class MainWindowTests
         handled.Should().BeTrue();
         state.ActionStack.Should().BeEmpty();
         state.HasUnsavedChanges.Should().BeTrue();
-        var drillDown = state.DrillDown.Should().BeOfType<DrillDownState>().Which;
-        drillDown.ActionStack.Should().ContainSingle();
+        state.TryGetDrillDown(out _).Should().BeFalse();
     }
 }
