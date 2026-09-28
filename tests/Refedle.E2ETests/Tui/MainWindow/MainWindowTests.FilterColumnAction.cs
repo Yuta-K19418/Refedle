@@ -34,11 +34,12 @@ public sealed partial class MainWindowTests
         // longer than a short fixed delay would allow; wait for it to fully land before submitting.
         await Harness.WaitForContentsAsync("Value: Alice");
         Harness.SendKey(KeyCode.Enter);
-        // "Charlie" disappearing (rather than some new text appearing) is the observable effect
-        // of the filter, so poll for its absence instead of a fixed delay.
+        // Absence alone can hold for a dialog frame or a half-redrawn frame, so also require the
+        // expected filtered row to be present before handing the frame to the assertions below.
         var lines = await Harness.WaitForConditionAsync(
-            l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal)),
-            "\"Charlie\" filtered out");
+            l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal) && !line.Contains("Filter Column", StringComparison.Ordinal))
+                && l.Any(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal)),
+            "filtered table rendered with the \"Alice\" row and without \"Charlie\"");
 
         // Assert
         lines.Should().Contain(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal));
@@ -80,12 +81,12 @@ public sealed partial class MainWindowTests
         // longer than a short fixed delay would allow; wait for it to fully land before submitting.
         await Harness.WaitForContentsAsync("Value: Alice");
         Harness.SendKey(KeyCode.Enter);
-        // The dialog hides the table while open, so also require it to be absent, or the
-        // predicate can succeed before the submitted Enter takes effect and hand a dialog frame
-        // to the assertions below.
+        // Absence alone can hold for a dialog frame or a half-redrawn frame, so also require the
+        // expected filtered row to be present before handing the frame to the assertions below.
         var lines = await Harness.WaitForConditionAsync(
-            l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal) && !line.Contains("Filter Column", StringComparison.Ordinal)),
-            "dialog closed and \"Charlie\" filtered out");
+            l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal) && !line.Contains("Filter Column", StringComparison.Ordinal))
+                && l.Any(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal)),
+            "filtered table rendered with the \"Alice\" row and without \"Charlie\"");
 
         // Assert
         lines.Should().Contain(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal));
