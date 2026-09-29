@@ -1,4 +1,5 @@
 using System.Globalization;
+using Refedle.App.Tui.Workers;
 using Refedle.App.Tui.Workers.Schema;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
@@ -140,16 +141,15 @@ internal sealed class ModeController(
         ArgumentNullException.ThrowIfNull(request);
 
         // The caller may be off the UI thread (recipe replay), so _state is read on the UI thread
-        // and captured by value before Task.Run.
+        // and captured by value before the background scan.
         var captured = new TaskCompletionSource<(string filePath, CancellationToken ct, ViewMode previousMode)>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         _uiThreadInvoke(() =>
             captured.SetResult((_state.CurrentFilePath, _state.Cts.Token, _state.CurrentMode)));
         var (filePath, ct, previousMode) = await captured.Task.ConfigureAwait(false);
 
-        var result = await Task.Run(
-            () => FullAggregationScanner.Scan(filePath, request.Format, request.KeyPath, ct),
-            ct).ConfigureAwait(false);
+        var result = await FullAggregationScanRunner.RunAsync(filePath, request.Format, request.KeyPath, ct)
+            .ConfigureAwait(false);
 
         if (result.IsFailure)
         {

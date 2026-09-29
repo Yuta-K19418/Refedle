@@ -21,6 +21,7 @@ The TUI code is split by the thread it runs on. Layers depend in **one direction
 - `Tui/UI` → `Tui/Workers`: OK
 - `Tui/Workers` → `Tui/UI`: NG
 - `Tui/UI` ↔ `Cli`, `Tui/Workers` ↔ `Cli`: NG in both directions
+- `UI` must not call `Task.Run` directly; offload background work through a `Tui/Workers` method instead (e.g. `FullAggregationScanRunner`, `FilterIndexingRunner`)
 
 Shared types may only be referenced from the layers that use them, never the other way around:
 - `Tui` shared (`AppState`, `ViewMode`, `DrillDownState`, `DrillDownRequest`) can be referenced from `Tui/UI` and `Tui/Workers`, and may itself reference `App` shared. It must not reference `Tui/UI`, `Tui/Workers`, or `Cli`.

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using Refedle.App.Tui.UI.Views;
+using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
@@ -283,7 +284,7 @@ internal sealed class ViewManager : IDisposable
 
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = Task.Run(() => filterIndexer.BuildIndexAsync(_state.Cts.Token), _state.Cts.Token);
+            _ = FilterIndexingRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 
@@ -400,7 +401,7 @@ internal sealed class ViewManager : IDisposable
 
         if (tableSource is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = Task.Run(() => filterIndexer.BuildIndexAsync(_state.Cts.Token), _state.Cts.Token);
+            _ = FilterIndexingRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 

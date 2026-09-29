@@ -104,8 +104,7 @@ internal sealed class FileDialogHandler(
         var ct = _state.Cts.Token;
         try
         {
-            var entries = await Task.Run(
-                () => Engine.IO.JsonObject.TopLevelScanner.Scan(path, ct), ct).ConfigureAwait(false);
+            var entries = await JsonObjectScanRunner.RunAsync(path, ct).ConfigureAwait(false);
             _app.Invoke(() =>
             {
                 _state.EnterJsonObjectTree(entries);
