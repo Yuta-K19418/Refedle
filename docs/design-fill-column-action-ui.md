@@ -10,20 +10,20 @@ the existing Rename / Delete / Cast / Filter actions.
 
 ### New
 
-- `src/App/Views/Dialogs/FillColumnDialog.cs` — modal dialog that accepts the fill value
+- `src/App/Tui/UI/Views/Dialogs/FillColumnDialog.cs` — modal dialog that accepts the fill value
 
 ### Modified
 
 | File | Change |
 |------|--------|
-| `src/App/Views/CsvTableView.cs` | Add `Shift+L` key handler → `HandleFillColumn()` |
-| `src/App/Views/JsonLinesTableView.cs` | Add `Shift+L` key handler → `HandleFillColumn()` |
+| `src/App/Tui/UI/Views/CsvTableView.cs` | Add `Shift+L` key handler → `HandleFillColumn()` |
+| `src/App/Tui/UI/Views/JsonLinesTableView.cs` | Add `Shift+L` key handler → `HandleFillColumn()` |
 
 ### Tests
 
 | File | Tests added |
 |------|-------------|
-| `tests/.../App/Views/Dialogs/FillColumnDialogTests.cs` | NEW — see test plan below |
+| `tests/.../App/Tui/UI/Views/Dialogs/FillColumnDialogTests.cs` | NEW — see test plan below |
 
 ## Key Binding
 
@@ -36,7 +36,7 @@ the existing Rename / Delete / Cast / Filter actions.
 
 ## Implementation Logic
 
-### FillColumnDialog (`src/App/Views/Dialogs/FillColumnDialog.cs`)
+### FillColumnDialog (`src/App/Tui/UI/Views/Dialogs/FillColumnDialog.cs`)
 
 ```
 Title: "Fill Column"

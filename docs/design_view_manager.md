@@ -190,10 +190,10 @@ CurrentMode == JsonLinesTree   →
 
 ### 4.2 `ViewManager`
 
-**File:** `src/App/ViewManager.cs`
+**File:** `src/App/Tui/UI/ViewManager.cs`
 
 ```csharp
-namespace Refedle.App;
+namespace Refedle.App.Tui.UI;
 
 internal sealed class ViewManager : IDisposable
 {
@@ -287,11 +287,11 @@ Target size: ≤ 120 lines.
 | Action | File |
 |---|---|
 | **Create** | `src/App/FileLoader.cs` |
-| **Create** | `src/App/ViewManager.cs` |
-| **Modify** | `src/App/MainWindow.cs` (extract to `FileLoader`/`ViewManager`, delegate calls) |
-| **No change** | `src/App/AppState.cs` |
-| **No change** | `src/App/ViewMode.cs` |
-| **No change** | `src/App/Views/` (all existing views unchanged) |
+| **Create** | `src/App/Tui/UI/ViewManager.cs` |
+| **Modify** | `src/App/Tui/UI/MainWindow.cs` (extract to `FileLoader`/`ViewManager`, delegate calls) |
+| **No change** | `src/App/Tui/AppState.cs` |
+| **No change** | `src/App/Tui/ViewMode.cs` |
+| **No change** | `src/App/Tui/UI/Views/` (all existing views unchanged) |
 | **No change** | `src/Engine/` (all engine classes unchanged) |
 
 ---
@@ -355,7 +355,7 @@ built-in handler.
 | `ToggleJsonLinesMode_TableToTree_RestoresTree` | Switching back sets mode to `JsonLinesTree` |
 | `LoadUnsupportedFormat_SetsLastError` | Unsupported extension sets `_state.LastError`, mode unchanged |
 
-**New file:** `tests/Refedle.Tests/App/ViewManagerTests.cs`
+**New file:** `tests/Refedle.Tests/App/Tui/UI/ViewManagerTests.cs`
 
 Because Terminal.Gui views cannot be instantiated headlessly, `ViewManager`
 tests are limited to integration/manual verification. Unit test focus is on

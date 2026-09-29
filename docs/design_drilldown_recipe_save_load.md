@@ -120,12 +120,12 @@ a later phase.
 
 | File | Change |
 |---|---|
-| `src/App/DrillDownState.cs` | Add `ActionStack` member (default `[]`) |
-| `src/App/AppState.cs` | Private setter on `ActionStack`; add `SetActionStack` |
-| `src/App/ViewManager.cs` | `HandleMorphAction`/`AddContextualHints` branch explicitly; drop `ClearMorphActions()` calls in `DrillDown()`/`FullAggregationDrillDownAsync()` |
-| `src/App/AppKeyHandler.cs` | `HandleQuit`/`HandleClearActions` branch explicitly |
-| `src/App/FileDialogHandler.cs` | Use `ClearMorphActions()` instead of direct assignment |
-| `src/App/RecipeCommandHandler.cs` | Use `SetActionStack(...)` instead of direct assignment |
+| `src/App/Tui/DrillDownState.cs` | Add `ActionStack` member (default `[]`) |
+| `src/App/Tui/AppState.cs` | Private setter on `ActionStack`; add `SetActionStack` |
+| `src/App/Tui/UI/ViewManager.cs` | `HandleMorphAction`/`AddContextualHints` branch explicitly; drop `ClearMorphActions()` calls in `DrillDown()`/`FullAggregationDrillDownAsync()` |
+| `src/App/Tui/UI/AppKeyHandler.cs` | `HandleQuit`/`HandleClearActions` branch explicitly |
+| `src/App/Tui/UI/FileDialogHandler.cs` | Use `ClearMorphActions()` instead of direct assignment |
+| `src/App/Tui/UI/RecipeCommandHandler.cs` | Use `SetActionStack(...)` instead of direct assignment |
 
 ### Phase 2: `drillDownKeyPath` YAML format
 

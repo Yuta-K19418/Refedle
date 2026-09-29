@@ -132,7 +132,7 @@ internal enum ViewMode
 ### 4. Program.cs Entry Point
 
 ```csharp
-using Refedle.App;
+using Refedle.App.Tui.UI;
 
 var result = TuiApplication.Create();
 using var app = result.app;
@@ -200,16 +200,16 @@ app.Run(mainWindow);
 - `src/App/Program.cs` - Replace placeholder
 
 **Created:**
-- `src/App/TuiApplication.cs`
-- `src/App/MainWindow.cs`
-- `src/App/AppState.cs`
-- `src/App/ViewMode.cs`
-- `src/App/Views/FileSelectionView.cs`
-- `src/App/Views/PlaceholderView.cs`
+- `src/App/Tui/UI/TuiApplication.cs`
+- `src/App/Tui/UI/MainWindow.cs`
+- `src/App/Tui/AppState.cs`
+- `src/App/Tui/ViewMode.cs`
+- `src/App/Tui/UI/Views/FileSelectionView.cs`
+- `src/App/Tui/UI/Views/PlaceholderView.cs`
 
 **Not Yet Created (Future Work):**
-- `tests/Refedle.Tests/App/TuiApplicationTests.cs`
-- `tests/Refedle.Tests/App/AppStateTests.cs`
+- `tests/Refedle.Tests/App/Tui/UI/TuiApplicationTests.cs`
+- `tests/Refedle.Tests/App/Tui/AppStateTests.cs`
 
 **Reference Files:**
 - `src/Engine/Models/TableSchema.cs` - Model pattern reference
