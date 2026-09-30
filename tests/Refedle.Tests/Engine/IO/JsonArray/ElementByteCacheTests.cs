@@ -107,14 +107,16 @@ public sealed class ElementByteCacheTests : IDisposable
         Encoding.UTF8.GetString(result.Span).Should().Be("{\"id\":10,\"name\":\"Jack\"}");
     }
 
-    [Fact]
-    public void GetRow_NegativeIndex_ReturnsEmpty()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(long.MinValue)]
+    public void GetRow_NegativeIndex_ReturnsEmpty(long invalidIndex)
     {
         // Arrange
         using var cache = new ElementByteCache(_indexer);
 
         // Act
-        var result = cache.GetRow(-1);
+        var result = cache.GetRow(invalidIndex);
 
         // Assert
         result.IsEmpty.Should().BeTrue();

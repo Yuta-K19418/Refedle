@@ -76,8 +76,10 @@ public sealed class DataRowCacheTests : IDisposable
         ToStringArray(row3).Should().Equal(["val3", "val4"]);
     }
 
-    [Fact]
-    public void GetRow_WithInvalidNegativeIndex_ReturnsEmptyArray()
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(long.MinValue)]
+    public void GetRow_WithInvalidNegativeIndex_ReturnsEmptyArray(long invalidIndex)
     {
         // Arrange
         var csvContent = "col1,col2\nval1,val2";
@@ -87,7 +89,7 @@ public sealed class DataRowCacheTests : IDisposable
         using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
 
         // Act
-        var row = cache.GetRow(-1);
+        var row = cache.GetRow(invalidIndex);
 
         // Assert
         row.Should().BeEmpty();

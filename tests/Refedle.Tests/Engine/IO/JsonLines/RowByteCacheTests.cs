@@ -96,8 +96,7 @@ public sealed partial class RowByteCacheTests : IDisposable
     {
         // Arrange
         using var cache = new RowByteCache(_indexer, capacity: 3, prefetchWindow: 20);
-        var totalLines = _indexer.TotalRows;
-        var lastLineIndex = (int)totalLines - 1;
+        var lastLineIndex = _indexer.TotalRows - 1;
         var expectedLastLine = "{\"id\":10,\"name\":\"Jack\"}"u8.ToArray();
 
         // Act
@@ -130,7 +129,8 @@ public sealed partial class RowByteCacheTests : IDisposable
     [Theory]
     [InlineData(-1)]
     [InlineData(int.MinValue)]
-    public void GetRow_NegativeIndex_ReturnsEmpty(int invalidIndex)
+    [InlineData(long.MinValue)]
+    public void GetRow_NegativeIndex_ReturnsEmpty(long invalidIndex)
     {
         // Arrange
         using var cache = new RowByteCache(_indexer, capacity: 200, prefetchWindow: 20);

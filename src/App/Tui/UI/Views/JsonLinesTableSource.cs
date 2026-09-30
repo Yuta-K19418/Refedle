@@ -35,7 +35,7 @@ internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
     }
 
     /// <inheritdoc/>
-    public int Rows => _cache.TotalRows;
+    public int Rows => (int)_cache.TotalRows;
 
     /// <inheritdoc/>
     public int Columns => _schema.ColumnCount;
