@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Refedle.App;
+using Refedle.App.Tui.UI;
 using Terminal.Gui.Drivers;
 
 namespace Refedle.E2ETests.Tui.MainWindow;

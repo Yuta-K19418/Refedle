@@ -1,5 +1,5 @@
-using Refedle.App;
 using Refedle.App.Cli;
+using Refedle.App.Tui.UI;
 
 if (CliCommandMatcher.TryMatch(args, out var cliCommand))
 {

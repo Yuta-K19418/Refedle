@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Refedle.App.Cli;
+using Refedle.App;
 using Refedle.App.Cli.Commands.Help;
 
 namespace Refedle.Tests.App.Cli.Commands.Help;

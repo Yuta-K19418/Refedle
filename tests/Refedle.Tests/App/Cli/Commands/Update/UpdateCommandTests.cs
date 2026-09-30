@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using AwesomeAssertions;
-using Refedle.App.Cli;
+using Refedle.App;
 using Refedle.App.Cli.Commands.Update;
 using Refedle.Engine;
 

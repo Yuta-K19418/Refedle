@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using AwesomeAssertions;
+using Refedle.App;
 using Refedle.App.Cli;
 
 namespace Refedle.Tests.App.Cli;

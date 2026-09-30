@@ -269,8 +269,8 @@ Prefetch(requestedRow):
 | File | Change |
 |------|--------|
 | `src/Engine/IO/JsonLines/RowByteCache.cs` | `GetLineBytes` → `GetRow` |
-| `src/App/Views/JsonLinesTableSource.cs` | update call site |
-| `src/App/Views/JsonLinesTreeView.cs` | update call site |
+| `src/App/Tui/UI/Views/JsonLinesTableSource.cs` | update call site |
+| `src/App/Tui/UI/Views/JsonLinesTreeView.cs` | update call site |
 | `tests/` | update all test call sites |
 
 ### Step 1: Skeleton

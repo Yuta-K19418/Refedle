@@ -54,9 +54,9 @@ Clear command directly accessible without navigating a menu.
 
 | File | Change |
 |------|--------|
-| `src/App/AppState.cs` | Add `ClearMorphActions()` method |
-| `src/App/AppKeyHandler.cs` | Handle `c` key in `OnGlobalKeyDown`; add `HandleClearActions()` |
-| `src/App/Views/Dialogs/HelpDialog.cs` | Document `c` key in help text |
+| `src/App/Tui/AppState.cs` | Add `ClearMorphActions()` method |
+| `src/App/Tui/UI/AppKeyHandler.cs` | Handle `c` key in `OnGlobalKeyDown`; add `HandleClearActions()` |
+| `src/App/Tui/UI/Views/Dialogs/HelpDialog.cs` | Document `c` key in help text |
 
 ## Out of Scope
 

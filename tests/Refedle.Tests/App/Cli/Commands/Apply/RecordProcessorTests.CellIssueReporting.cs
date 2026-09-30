@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Refedle.App.Cli;
+using Refedle.App;
 using Refedle.App.Cli.Commands.Apply;
 using Refedle.App.Cli.IO;
 using Refedle.Engine;

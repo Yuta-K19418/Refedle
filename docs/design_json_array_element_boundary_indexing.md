@@ -291,7 +291,7 @@ finally:
 | File | Action | Purpose |
 |------|--------|---------|
 | `src/Engine/IO/JsonArray/RowIndexer.cs` | Create | Core streaming indexer |
-| `src/App/RowIndexerFactory.cs` | Modify | Add `DataFormat.JsonArray` case |
+| `src/App/Tui/Workers/RowIndexerFactory.cs` | Modify | Add `DataFormat.JsonArray` case |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/RowIndexerTests.cs` | Create | Shared fixtures |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/RowIndexerTests.BuildIndex.cs` | Create | `BuildIndex` correctness tests |
 | `tests/Refedle.Tests/Engine/IO/JsonArray/RowIndexerTests.GetCheckPoint.cs` | Create | `GetCheckPoint` correctness + concurrency tests |
