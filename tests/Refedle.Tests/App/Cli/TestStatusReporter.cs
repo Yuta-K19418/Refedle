@@ -1,9 +1,11 @@
+using Refedle.App.Cli;
+
 namespace Refedle.Tests.App.Cli;
 
 /// <summary>
 /// Displays nothing and records the phase names the code under test reports.
 /// </summary>
-internal sealed class TestStatusReporter : Refedle.App.Cli.IStatusReporter
+internal sealed class TestStatusReporter : IStatusReporter
 {
     private readonly List<string> _phases = [];
 
