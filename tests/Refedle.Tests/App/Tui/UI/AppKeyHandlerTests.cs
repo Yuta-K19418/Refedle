@@ -166,7 +166,7 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleActionMenu_WhenSelectedColumnIsNegative_ReturnsFalse()
+    public void HandleActionMenu_WhenTableValueIsNull_ReturnsFalse()
     {
         // Arrange
         using var app = CreateTestApp();
