@@ -7,47 +7,56 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class ColumnWidthStabilizingTableSourceTests
 {
-    private sealed class FakeTableSource(string[] columnNames, IReadOnlyList<IReadOnlyList<object>> rows) : ITableSource
+    private sealed class FakeTableSource(string[] columnNames, IReadOnlyList<IReadOnlyList<object>> rows) : IExtendedTableSource
     {
         public int Rows => rows.Count;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
+        public string[] RawColumnNames => columnNames;
         public object this[int row, int col] => rows[row][col];
     }
 
-    private sealed class MutableFakeTableSource(string[] columnNames, IReadOnlyList<IReadOnlyList<object>> rows) : ITableSource
+    private sealed class MutableFakeTableSource(
+        string[] columnNames,
+        string[] rawColumnNames,
+        IReadOnlyList<IReadOnlyList<object>> rows) : IExtendedTableSource
     {
         private string[] _columnNames = columnNames;
+        private string[] _rawColumnNames = rawColumnNames;
         private IReadOnlyList<IReadOnlyList<object>> _rows = rows;
 
         public int Rows => _rows.Count;
         public int Columns => _columnNames.Length;
         public string[] ColumnNames => _columnNames;
+        public string[] RawColumnNames => _rawColumnNames;
         public object this[int row, int col] => _rows[row][col];
 
-        public void Replace(string[] newColumnNames, IReadOnlyList<IReadOnlyList<object>> newRows)
+        public void Replace(string[] newColumnNames, string[] newRawColumnNames, IReadOnlyList<IReadOnlyList<object>> newRows)
         {
             _columnNames = newColumnNames;
+            _rawColumnNames = newRawColumnNames;
             _rows = newRows;
         }
     }
 
-    private sealed class DisposableFakeTableSource : ITableSource, IDisposable
+    private sealed class DisposableFakeTableSource : IExtendedTableSource, IDisposable
     {
         public bool IsDisposed { get; private set; }
         public int Rows => 0;
         public int Columns => 0;
         public string[] ColumnNames => [];
+        public string[] RawColumnNames => [];
         public object this[int row, int col] => throw new NotImplementedException();
         public void Dispose() => IsDisposed = true;
     }
 
-    private sealed class CountingDisposableFakeTableSource : ITableSource, IDisposable
+    private sealed class CountingDisposableFakeTableSource : IExtendedTableSource, IDisposable
     {
         public int DisposeCount { get; private set; }
         public int Rows => 0;
         public int Columns => 0;
         public string[] ColumnNames => [];
+        public string[] RawColumnNames => [];
         public object this[int row, int col] => throw new NotImplementedException();
         public void Dispose() => DisposeCount++;
     }
@@ -236,10 +245,10 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Indexer_WhenInnerSourceAddsColumn_TracksNewColumnWithoutThrowing()
     {
         // Arrange
-        var inner = new MutableFakeTableSource(["first"], [["a"]]);
+        var inner = new MutableFakeTableSource(["first"], ["first"], [["a"]]);
         var style = new TableStyle();
         using var source = new ColumnWidthStabilizingTableSource(inner, style);
-        inner.Replace(["first", "second"], [["a", "expanded"]]);
+        inner.Replace(["first", "second"], ["first", "second"], [["a", "expanded"]]);
 
         // Act
         var act = () => _ = source[0, 1];
@@ -247,6 +256,22 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         // Assert
         act.Should().NotThrow();
         style.ColumnStyles[1].MinWidth.Should().Be("expanded".Length);
+    }
+
+    [Fact]
+    public void RawColumnNames_WhenInnerSourceGrows_ReturnsCurrentDistinctRawNames()
+    {
+        // Arrange
+        var inner = new MutableFakeTableSource(["first (text)"], ["first"], [["a"]]);
+        var style = new TableStyle();
+        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        inner.Replace(["first (text)", "second (number)"], ["first", "second"], [["a", "2"]]);
+
+        // Act
+        var rawColumnNames = source.RawColumnNames;
+
+        // Assert
+        rawColumnNames.Should().Equal("first", "second");
     }
 
     [Fact]

@@ -1,7 +1,6 @@
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
@@ -9,7 +8,7 @@ namespace Refedle.App.Tui.UI.Views;
 /// Provides virtual table data source for Terminal.Gui's TableView.
 /// Delegates to DataRowCache for efficient row retrieval.
 /// </summary>
-internal sealed class VirtualTableSource : ITableSource, IDisposable
+internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
 {
     private readonly DataRowCache _cache;
     private readonly TableSchema _schema;
@@ -28,7 +27,8 @@ internal sealed class VirtualTableSource : ITableSource, IDisposable
     public int Rows => _cache.TotalRows;
     public int Columns => _schema.ColumnCount;
     public string[] ColumnNames => _columnNames;
-    internal string[] RawColumnNames => _rawColumnNames;
+    /// <inheritdoc/>
+    public string[] RawColumnNames => _rawColumnNames;
 
     public object this[int row, int col]
     {

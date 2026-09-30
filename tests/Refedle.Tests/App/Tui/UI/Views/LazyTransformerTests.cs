@@ -4,7 +4,6 @@ using Refedle.Engine.Filtering;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -14,11 +13,12 @@ public sealed class LazyTransformerTests
     // Test double
     // -------------------------------------------------------------------------
 
-    private sealed class FakeTableSource(string[][] data, string[] columnNames) : ITableSource
+    private sealed class FakeTableSource(string[][] data, string[] columnNames) : IExtendedTableSource
     {
         public int Rows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
+        public string[] RawColumnNames => columnNames;
         public object this[int row, int col] => data[row][col];
     }
 
@@ -35,12 +35,13 @@ public sealed class LazyTransformerTests
     }
 
     private sealed class DisposableFakeTableSource(string[][] data, string[] columnNames)
-        : ITableSource, IDisposable
+        : IExtendedTableSource, IDisposable
     {
         public bool IsDisposed { get; private set; }
         public int Rows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
+        public string[] RawColumnNames => columnNames;
         public object this[int row, int col] => data[row][col];
         public void Dispose() => IsDisposed = true;
     }

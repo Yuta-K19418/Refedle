@@ -3,7 +3,6 @@ using Refedle.Engine.Filtering;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
@@ -23,7 +22,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     private readonly IReadOnlyList<int>? _matchedRowIndices;
 
     private FocusedTableTransformer(
-        ITableSource source,
+        IExtendedTableSource source,
         IReadOnlyList<int>? matchedRowIndices,
         string[] columnNames,
         string[] rawColumnNames,
@@ -51,7 +50,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     /// <param name="originalSchema">The DrillDown schema before any actions are applied (no <c>"#"</c> entry).</param>
     /// <param name="actions">The ordered list of transformation actions to apply.</param>
     public static FocusedTableTransformer Create(
-        ITableSource source,
+        IExtendedTableSource source,
         TableSchema originalSchema,
         IReadOnlyList<MorphAction> actions
     )
@@ -90,7 +89,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     /// AND semantics across all specs, matching <see cref="IFilterRowIndexer"/> (Csv/JsonLines).
     /// </summary>
     private static List<int> ResolveMatchedRows(
-        ITableSource source,
+        IExtendedTableSource source,
         IReadOnlyList<FilterSpec> filterSpecs
     )
     {

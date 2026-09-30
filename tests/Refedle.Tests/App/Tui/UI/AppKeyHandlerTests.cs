@@ -1,3 +1,4 @@
+using System.Drawing;
 using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
@@ -115,7 +116,7 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleActionMenu_WhenGetRawColumnNameIsNull_ReturnsFalse()
+    public void HandleActionMenu_WhenTableIsNotExtendedTableSource_ReturnsFalse()
     {
         // Arrange
         using var app = CreateTestApp();
@@ -123,7 +124,13 @@ public sealed class AppKeyHandlerTests
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
-        using var view = new TestTableView { Table = new TestTableSource() };
+        using var view = new TestTableView
+        {
+            Table = new NonExtendedTableSource(),
+            OnMorphAction = _ => { },
+            // A cursor-only selection on column 0 — SetSelection alone does not populate Value
+            Value = new TableSelection(new Point(0, 0)),
+        };
         window.Add(view);
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -145,11 +152,7 @@ public sealed class AppKeyHandlerTests
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
-        using var view = new TestTableView
-        {
-            Table = new TestTableSource(),
-            GetRawColumnName = _ => "test"
-        };
+        using var view = new TestTableView { Table = new TestTableSource() };
         window.Add(view);
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -174,7 +177,6 @@ public sealed class AppKeyHandlerTests
         using var view = new TestTableView
         {
             Table = new TestTableSource(),
-            GetRawColumnName = _ => "test",
             OnMorphAction = _ => { }
         };
         view.Value = null;
@@ -431,11 +433,12 @@ public sealed class AppKeyHandlerTests
     /// <summary>
     /// Simple TableSource implementation for testing.
     /// </summary>
-    private sealed class TestTableSource : ITableSource
+    private sealed class TestTableSource : IExtendedTableSource
     {
         public int Rows => 10;
         public int Columns => 3;
         public string[] ColumnNames => ["Col1", "Col2", "Col3"];
+        public string[] RawColumnNames => ["Raw1", "Raw2", "Raw3"];
 
         public object this[int row, int col]
         {
@@ -448,5 +451,21 @@ public sealed class AppKeyHandlerTests
         public static void RemoveColumn(int _) { }
         public static void RemoveRow(int _) { }
         public static void Clear() { }
+    }
+
+    /// <summary>
+    /// Bare <see cref="ITableSource"/> without the extended contract, for the guard test.
+    /// </summary>
+    private sealed class NonExtendedTableSource : ITableSource
+    {
+        public int Rows => 10;
+        public int Columns => 3;
+        public string[] ColumnNames => ["Col1", "Col2", "Col3"];
+
+        public object this[int row, int col]
+        {
+            get => $"R{row}C{col}";
+            set { }
+        }
     }
 }

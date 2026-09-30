@@ -3,14 +3,13 @@ using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
-/// ITableSource backed by pre-materialized <see cref="FocusedTableRow"/> rows.
+/// <see cref="IExtendedTableSource"/> backed by pre-materialized <see cref="FocusedTableRow"/> rows.
 /// </summary>
-internal sealed class FocusedTableSource : ITableSource
+internal sealed class FocusedTableSource : IExtendedTableSource
 {
     private readonly IReadOnlyList<FocusedTableRow> _rows;
     private readonly TableSchema _schema;
@@ -42,7 +41,7 @@ internal sealed class FocusedTableSource : ITableSource
     /// Use these when constructing <see cref="MorphAction"/>s so that action
     /// <c>ColumnName</c> values match the DrillDown schema names.
     /// </summary>
-    internal string[] RawColumnNames => _rawColumnNames;
+    public string[] RawColumnNames => _rawColumnNames;
 
     /// <inheritdoc/>
     public object this[int row, int col]

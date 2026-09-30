@@ -2,7 +2,6 @@ using System.Text;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
@@ -10,7 +9,7 @@ namespace Refedle.App.Tui.UI.Views;
 /// Provides virtual table data source for Terminal.Gui's TableView for JSON Lines files.
 /// Delegates to RowByteCache for line retrieval and JsonObjectCellExtractor for cell value parsing.
 /// </summary>
-internal sealed class JsonLinesTableSource : ITableSource, IDisposable
+internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
 {
     private readonly RowByteCache _cache;
     private volatile TableSchema _schema;
@@ -44,7 +43,8 @@ internal sealed class JsonLinesTableSource : ITableSource, IDisposable
     /// <inheritdoc/>
     public string[] ColumnNames => _columnNames;
 
-    internal string[] RawColumnNames => _rawColumnNames;
+    /// <inheritdoc/>
+    public string[] RawColumnNames => _rawColumnNames;
 
     /// <inheritdoc/>
     public object this[int row, int col]

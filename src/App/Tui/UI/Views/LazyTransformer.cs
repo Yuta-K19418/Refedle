@@ -3,12 +3,11 @@ using Refedle.Engine.Filtering;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
-/// Wraps an <see cref="ITableSource"/> and applies an ordered Action Stack of
+/// Wraps an <see cref="IExtendedTableSource"/> and applies an ordered Action Stack of
 /// <see cref="MorphAction"/>s lazily — only to the cells currently requested by the TableView.
 /// When one or more <see cref="FilterAction"/>s are present, uses an
 /// <see cref="IFilterRowIndexer"/> (provided via a factory in <see cref="Create"/>)
@@ -20,7 +19,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
     private readonly IFilterRowIndexer? _filterRowIndexer;
 
     private LazyTransformer(
-        ITableSource source,
+        IExtendedTableSource source,
         IFilterRowIndexer? filterRowIndexer,
         string[] columnNames,
         string[] rawColumnNames,
@@ -56,7 +55,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
     /// on a background task after construction.
     /// </param>
     public static LazyTransformer Create(
-        ITableSource source,
+        IExtendedTableSource source,
         TableSchema originalSchema,
         IReadOnlyList<MorphAction> actions,
         Func<IReadOnlyList<FilterSpec>, IFilterRowIndexer>? filterRowIndexerFactory = null

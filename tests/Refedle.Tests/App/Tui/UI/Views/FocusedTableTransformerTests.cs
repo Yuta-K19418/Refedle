@@ -3,7 +3,6 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -14,11 +13,12 @@ public sealed class FocusedTableTransformerTests
     // data columns start at index 1.
     // -------------------------------------------------------------------------
 
-    private sealed class FakeFocusedSource(string[][] data, string[] columnNames) : ITableSource
+    private sealed class FakeFocusedSource(string[][] data, string[] columnNames) : IExtendedTableSource
     {
         public int Rows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
+        public string[] RawColumnNames => columnNames;
         public object this[int row, int col] => data[row][col];
     }
 

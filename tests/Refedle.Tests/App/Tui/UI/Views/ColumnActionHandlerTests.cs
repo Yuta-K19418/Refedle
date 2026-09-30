@@ -1,9 +1,10 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
+using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
-using Terminal.Gui.Views;
+using Terminal.Gui.Input;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -35,11 +36,10 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         using var app = CreateTestApp();
-        var table = new TableSource();
+        var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         var actionCalled = false;
         var handler = new ColumnActionHandler(
             app, table, 0,
-            _ => "test",
             _ => actionCalled = true,
             DataFormat.Csv);
 
@@ -67,10 +67,9 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         using var app = CreateTestApp();
-        var table = new TableSource();
+        var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         var handler = new ColumnActionHandler(
             app, table, 0,
-            _ => "test",
             _ => { },
             format);
         app.StopAfterFirstIteration = true;
@@ -82,11 +81,32 @@ public sealed class ColumnActionHandlerTests
         exception.Should().BeNull();
     }
 
-    private sealed class TableSource : ITableSource
+    [Fact]
+    public void ExecuteAction_WhenFillConfirmed_UsesRawColumnNameInMorphAction()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        var table = new TableSource(["amount (number)"], ["amount"]);
+        MorphAction? capturedAction = null;
+        var handler = new ColumnActionHandler(
+            app, table, 0,
+            action => capturedAction = action,
+            DataFormat.Csv);
+        app.Iteration += (_, _) => app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+
+        // Act
+        handler.ExecuteAction("Fill");
+
+        // Assert
+        capturedAction.Should().BeOfType<FillColumnAction>().Which.ColumnName.Should().Be("amount");
+    }
+
+    private sealed class TableSource(string[] columnNames, string[] rawColumnNames) : IExtendedTableSource
     {
         public int Rows => 10;
-        public int Columns => 3;
-        public string[] ColumnNames => ["Col1", "Col2", "Col3"];
+        public int Columns => columnNames.Length;
+        public string[] ColumnNames => columnNames;
+        public string[] RawColumnNames => rawColumnNames;
 
         public object this[int row, int col]
         {

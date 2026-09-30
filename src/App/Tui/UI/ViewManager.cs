@@ -248,7 +248,7 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        ITableSource rawSource = new Views.VirtualTableSource(indexer, schema);
+        IExtendedTableSource rawSource = new Views.VirtualTableSource(indexer, schema);
         var source = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
                 rawSource,
@@ -262,20 +262,12 @@ internal sealed class ViewManager : IDisposable
             )
             : rawSource;
 
-        Func<int, string> getRawColumnName = source switch
-        {
-            Views.LazyTransformer lt => i => lt.RawColumnNames[i],
-            Views.VirtualTableSource vts => i => vts.RawColumnNames[i],
-            _ => throw new UnreachableException(),
-        };
-
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.CsvTableView
         {
             Table = new Views.ColumnWidthStabilizingTableSource(source, style),
             Style = style,
             OnMorphAction = HandleMorphAction,
-            GetRawColumnName = getRawColumnName,
         };
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
@@ -365,8 +357,8 @@ internal sealed class ViewManager : IDisposable
         var source = new Views.JsonLinesTableSource(cache, schema);
         _state.SetSchemaRefinedCallback(source.UpdateSchema);
 
-        var tableSource = _state.ActionStack.Count > 0
-            ? (ITableSource)Views.LazyTransformer.Create(
+        IExtendedTableSource tableSource = _state.ActionStack.Count > 0
+            ? Views.LazyTransformer.Create(
                 source,
                 schema,
                 _state.ActionStack,
@@ -379,20 +371,12 @@ internal sealed class ViewManager : IDisposable
             )
             : source;
 
-        Func<int, string> getRawColumnName = tableSource switch
-        {
-            Views.LazyTransformer lt => i => lt.RawColumnNames[i],
-            Views.JsonLinesTableSource jts => i => jts.RawColumnNames[i],
-            _ => throw new UnreachableException(),
-        };
-
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.JsonLinesTableView
         {
             Table = new Views.ColumnWidthStabilizingTableSource(tableSource, style),
             Style = style,
             OnMorphAction = HandleMorphAction,
-            GetRawColumnName = getRawColumnName,
         };
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
@@ -607,17 +591,10 @@ internal sealed class ViewManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        ITableSource rawSource = new Views.FocusedTableSource(drillDown);
+        IExtendedTableSource rawSource = new Views.FocusedTableSource(drillDown);
         var source = drillDown.ActionStack.Count > 0
             ? Views.FocusedTableTransformer.Create(rawSource, drillDown.Schema, drillDown.ActionStack)
             : rawSource;
-
-        Func<int, string> getRawColumnName = source switch
-        {
-            Views.FocusedTableTransformer ft => i => ft.RawColumnNames[i],
-            Views.FocusedTableSource fts => i => fts.RawColumnNames[i],
-            _ => throw new UnreachableException(),
-        };
 
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.FocusedTableView
@@ -625,7 +602,6 @@ internal sealed class ViewManager : IDisposable
             Table = new Views.ColumnWidthStabilizingTableSource(source, style),
             Style = style,
             OnMorphAction = HandleMorphAction,
-            GetRawColumnName = getRawColumnName,
         };
         _state.SetSchemaRefinedCallback(null);
         view.SetSelection(0, 0, false);
