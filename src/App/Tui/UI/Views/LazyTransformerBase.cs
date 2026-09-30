@@ -5,12 +5,11 @@ using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
-/// Base class for lazy table transformers that wrap an <see cref="ITableSource"/> and
+/// Base class for lazy table transformers that wrap an <see cref="IExtendedTableSource"/> and
 /// apply an ordered Action Stack of <see cref="MorphAction"/>s lazily — only to the
 /// cells currently requested by the TableView.
 /// Owns the transformed column schema and shared cell formatting; derived classes
@@ -21,21 +20,21 @@ namespace Refedle.App.Tui.UI.Views;
 /// <see cref="BuildTransformedSchema"/> and pass the results to the primary constructor.
 /// </summary>
 internal abstract class LazyTransformerBase(
-    ITableSource source,
+    IExtendedTableSource source,
     string[] columnNames,
     string[] rawColumnNames,
     IReadOnlyList<ColumnType> columnTypes,
     IReadOnlyList<int> sourceColumnIndices,
     IReadOnlyList<string?> fillValues,
     IReadOnlyList<string?> formatStrings
-) : ITableSource, IDisposable
+) : IExtendedTableSource, IDisposable
 {
     private bool _disposed;
 
     /// <summary>
     /// Gets the wrapped data source providing raw cell values.
     /// </summary>
-    protected ITableSource Source { get; } = source;
+    protected IExtendedTableSource Source { get; } = source;
 
     /// <inheritdoc/>
     public string[] ColumnNames { get; } = columnNames;
@@ -45,7 +44,7 @@ internal abstract class LazyTransformerBase(
     /// Use these when constructing <see cref="MorphAction"/>s so that action
     /// <c>ColumnName</c> values match the schema names used inside <see cref="BuildTransformedSchema"/>.
     /// </summary>
-    internal string[] RawColumnNames { get; } = rawColumnNames;
+    public string[] RawColumnNames { get; } = rawColumnNames;
 
     /// <inheritdoc/>
     public int Columns => ColumnNames.Length;

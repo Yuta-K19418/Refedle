@@ -873,11 +873,10 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert — callbacks are wired even with no actions, so Morph works from the first DrillDown
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        view.Table.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which.Inner.Should().BeOfType<FocusedTableSource>();
+        var decorated = view.Table.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which;
+        decorated.Inner.Should().BeOfType<FocusedTableSource>();
         view.OnMorphAction.Should().NotBeNull();
-        view.GetRawColumnName.Should().NotBeNull();
-        var rawName = view.GetRawColumnName?.Invoke(1);
-        rawName.Should().Be("name");
+        decorated.RawColumnNames[1].Should().Be("name");
     }
 
     [Fact]

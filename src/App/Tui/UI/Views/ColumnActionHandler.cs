@@ -12,9 +12,8 @@ namespace Refedle.App.Tui.UI.Views;
 /// </summary>
 internal sealed class ColumnActionHandler(
     IApplication app,
-    ITableSource table,
+    IExtendedTableSource table,
     int selectedColumn,
-    Func<int, string> getRawColumnName,
     Action<MorphAction> onMorphAction,
     DataFormat format,
     Func<bool>? isRowIndexComplete = null)
@@ -47,7 +46,7 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleRenameColumn()
     {
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new RenameColumnDialog(rawName);
         app.Run(dialog);
 
@@ -63,7 +62,7 @@ internal sealed class ColumnActionHandler(
     private bool HandleDeleteColumn()
     {
         var displayName = table.ColumnNames[selectedColumn];
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new DeleteColumnDialog(displayName);
         app.Run(dialog);
 
@@ -79,7 +78,7 @@ internal sealed class ColumnActionHandler(
     private bool HandleCastColumn()
     {
         var displayName = table.ColumnNames[selectedColumn];
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new CastColumnDialog(displayName, ColumnType.Text, format);
         app.Run(dialog);
 
@@ -103,7 +102,7 @@ internal sealed class ColumnActionHandler(
         }
 
         var displayName = table.ColumnNames[selectedColumn];
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new FilterColumnDialog(displayName);
         app.Run(dialog);
 
@@ -128,7 +127,7 @@ internal sealed class ColumnActionHandler(
     private bool HandleFillColumn()
     {
         var displayName = table.ColumnNames[selectedColumn];
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new FillColumnDialog(displayName);
         app.Run(dialog);
 
@@ -144,7 +143,7 @@ internal sealed class ColumnActionHandler(
     private bool HandleFormatTimestamp()
     {
         var displayName = table.ColumnNames[selectedColumn];
-        var rawName = getRawColumnName(selectedColumn);
+        var rawName = table.RawColumnNames[selectedColumn];
         using var dialog = new FormatTimestampDialog(displayName);
         app.Run(dialog);
 

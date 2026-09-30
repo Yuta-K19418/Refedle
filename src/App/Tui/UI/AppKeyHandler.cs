@@ -172,7 +172,7 @@ internal sealed class AppKeyHandler : IDisposable
 
     private bool HandleActionMenuForTable(MorphTableView mt)
     {
-        if (mt.Table is null || mt.GetRawColumnName is null
+        if (mt.Table is not IExtendedTableSource table
             || mt.OnMorphAction is null || mt.Value is null)
         {
             return false;
@@ -186,8 +186,8 @@ internal sealed class AppKeyHandler : IDisposable
         }
 
         var handler = new ColumnActionHandler(
-            _app, mt.Table, mt.Value.SelectedCell.X,
-            mt.GetRawColumnName, mt.OnMorphAction, format.Value, mt.IsRowIndexComplete);
+            _app, table, mt.Value.SelectedCell.X,
+            mt.OnMorphAction, format.Value, mt.IsRowIndexComplete);
 
         var dialog = new ActionMenuDialog(ColumnActionHandler.GetAvailableActions(), handler.ExecuteAction);
         _app.Run(dialog);

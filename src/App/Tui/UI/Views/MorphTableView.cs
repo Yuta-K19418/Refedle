@@ -25,12 +25,6 @@ internal abstract class MorphTableView : TableView
     /// </summary>
     internal Func<bool>? IsRowIndexComplete { get; init; }
 
-    /// <summary>
-    /// Resolves a column index to the raw (un-labeled) column name for action creation.
-    /// When <see langword="null"/>, morphing is disabled (same guard as <see cref="OnMorphAction"/>).
-    /// </summary>
-    internal Func<int, string>? GetRawColumnName { get; init; }
-
     /// <inheritdoc/>
     protected override bool OnKeyDown(Key key)
     {

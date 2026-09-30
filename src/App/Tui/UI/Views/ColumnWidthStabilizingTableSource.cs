@@ -5,7 +5,7 @@ using Terminal.Gui.Views;
 namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
-/// Decorates an <see cref="ITableSource"/> to track the maximum cell width ever observed per
+/// Decorates an <see cref="IExtendedTableSource"/> to track the maximum cell width ever observed per
 /// column and pins it as the column's <see cref="ColumnStyle.MinWidth"/>.
 /// </summary>
 /// <remarks>
@@ -20,16 +20,16 @@ namespace Refedle.App.Tui.UI.Views;
 /// under <see cref="_lock"/> rather than sized once up front.
 /// </para>
 /// </remarks>
-internal sealed class ColumnWidthStabilizingTableSource : ITableSource, IDisposable
+internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, IDisposable
 {
-    private readonly ITableSource _inner;
+    private readonly IExtendedTableSource _inner;
     private readonly TableStyle _style;
     private readonly Lock _lock = new();
     private readonly List<int> _maxObservedWidths = [];
     private readonly List<ColumnStyle> _columnStyles = [];
     private bool _disposed;
 
-    internal ColumnWidthStabilizingTableSource(ITableSource inner, TableStyle style)
+    internal ColumnWidthStabilizingTableSource(IExtendedTableSource inner, TableStyle style)
     {
         ArgumentNullException.ThrowIfNull(inner);
         ArgumentNullException.ThrowIfNull(style);
@@ -44,11 +44,17 @@ internal sealed class ColumnWidthStabilizingTableSource : ITableSource, IDisposa
     }
 
     /// <summary>The decorated source, exposed so callers can recover the underlying source type.</summary>
-    internal ITableSource Inner => _inner;
+    internal IExtendedTableSource Inner => _inner;
 
     public int Rows => _inner.Rows;
     public int Columns => _inner.Columns;
     public string[] ColumnNames => _inner.ColumnNames;
+
+    /// <summary>
+    /// Delegates to the inner source on every call so the current values (which can grow
+    /// after construction) are returned, per the <see cref="IExtendedTableSource"/> contract.
+    /// </summary>
+    public string[] RawColumnNames => _inner.RawColumnNames;
 
     public object this[int row, int col]
     {
