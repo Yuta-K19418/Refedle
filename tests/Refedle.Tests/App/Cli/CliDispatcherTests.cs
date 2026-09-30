@@ -28,9 +28,11 @@ public sealed class CliDispatcherTests : IDisposable
     public async Task RunAsync_WithHelpCommand_ReturnsSuccess()
     {
         // Arrange
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Help, [], CancellationToken.None);
+        var exitCode = await CliDispatcher.RunAsync(CliCommand.Help, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -40,9 +42,11 @@ public sealed class CliDispatcherTests : IDisposable
     public async Task RunAsync_WithVersionCommand_ReturnsSuccess()
     {
         // Arrange
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Version, [], CancellationToken.None);
+        var exitCode = await CliDispatcher.RunAsync(CliCommand.Version, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -58,9 +62,11 @@ public sealed class CliDispatcherTests : IDisposable
         var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
         var outputFile = Path.Combine(_testDir, "output.csv");
         string[] args = ["apply", "--input", inputFile, "--recipe", recipeFile, "--output", outputFile];
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, CancellationToken.None);
+        var exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -75,9 +81,11 @@ public sealed class CliDispatcherTests : IDisposable
     {
         // Arrange — the matcher never yields CliCommand.Apply without a leading "apply" token;
         // reaching the dispatcher that way is a programming error, not a user-input condition.
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
 
         // Act
-        var act = async () => await CliDispatcher.RunAsync(CliCommand.Apply, args, CancellationToken.None);
+        var act = async () => await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
 
         // Assert
         var thrown = await act.Should().ThrowExactlyAsync<ArgumentException>();
@@ -89,9 +97,11 @@ public sealed class CliDispatcherTests : IDisposable
     {
         // Arrange — a value outside the declared CliCommand members, reachable only via a cast.
         var command = (CliCommand)int.MaxValue;
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
 
         // Act
-        var act = async () => await CliDispatcher.RunAsync(command, [], CancellationToken.None);
+        var act = async () => await CliDispatcher.RunAsync(command, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<UnreachableException>();

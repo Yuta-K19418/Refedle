@@ -24,6 +24,7 @@ internal static class Runner
     /// <param name="logger">The app logger for logging messages.</param>
     /// <param name="dispatcher">The format dispatcher that runs the batch pipeline.</param>
     /// <param name="tempOutputPathProvider">Mints temp paths for the atomic output write.</param>
+    /// <param name="statusReporter">Shows the current phase while running; the indicator shown while preparing and converting.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <returns>Exit code: <see cref="ExitCode.Success"/> on success, <see cref="ExitCode.Failure"/> on any failure.</returns>
     public static async ValueTask<ExitCode> RunAsync(
@@ -31,9 +32,11 @@ internal static class Runner
         IAppLogger logger,
         IFormatDispatcher dispatcher,
         ITempOutputPathProvider tempOutputPathProvider,
+        IStatusReporter statusReporter,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(args);
+        ArgumentNullException.ThrowIfNull(statusReporter);
 
         // The parser already rejects a missing --output for a normal run; this guards direct
         // RunAsync callers against the null that is only valid for a dry run.
@@ -43,50 +46,37 @@ internal static class Runner
             return ExitCode.Failure;
         }
 
-        // Null until PrepareAsync succeeds: a preparation failure means no temp path was ever computed.
-        string? tempOutputFile = null;
+        var deferredLogger = new DeferredAppLogger();
+        string outputFile = args.OutputFile;
+
+        (BatchRunResult batchRunResult, string publishPath, string tempOutputFile)? appliedResult = null;
         try
         {
-            var preparationResult = await ApplyPreparer.PrepareAsync(
-                args.InputFile, args.RecipeFile, args.OutputFile, logger, ct).ConfigureAwait(false);
-            if (preparationResult.IsFailure)
+            try
+            {
+                appliedResult = await statusReporter.RunAsync<(BatchRunResult batchRunResult, string publishPath, string tempOutputFile)?>(
+                    "Preparing...",
+                    setPhase => ApplyAsync(
+                        args, outputFile, deferredLogger, dispatcher, tempOutputPathProvider, setPhase, ct)).ConfigureAwait(false);
+            }
+            finally
+            {
+                // Messages are held while the spinner owns the terminal, then replayed in order.
+                await deferredLogger.FlushToAsync(logger).ConfigureAwait(false);
+            }
+
+            if (appliedResult is null)
             {
                 return ExitCode.Failure;
             }
 
-            var preparation = preparationResult.Value;
-            if (preparation.OutputFormat is not DataFormat outputFormat)
+            var (batchRunResult, publishPath, tempOutputFile) = appliedResult.Value;
+            if (batchRunResult.ExitCode is ExitCode.Success)
             {
-                // Unreachable: an output file is given on this path, so PrepareAsync resolved its format.
-                throw new UnreachableException("Output format was not resolved for the write path.");
+                await PublishAsync(batchRunResult, publishPath, tempOutputFile, logger).ConfigureAwait(false);
             }
 
-            // File.Move replaces a destination symlink itself instead of following it, so
-            // resolve the final target first to keep publishing through the link. LinkTarget
-            // detects broken links without following them; null means a fresh output path,
-            // which ResolveLinkTarget cannot resolve (it throws on a missing path).
-            var outputInfo = new FileInfo(args.OutputFile);
-            var publishPath = outputInfo.LinkTarget is null
-                ? args.OutputFile
-                : outputInfo.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? args.OutputFile;
-
-            // The publish path is only ever touched by the rename below; the batch itself
-            // writes to the temp path. Unconditional overwrite matches FileMode.Create semantics.
-            tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
-            var runResult = await dispatcher.DispatchAsync(
-                preparation.InputFormat, outputFormat, args.InputFile, tempOutputFile,
-                preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
-            if (runResult.ExitCode is ExitCode.Success)
-            {
-                File.Move(tempOutputFile, publishPath, overwrite: true);
-
-                // Reported only on success: a failed run discards its output and already
-                // reports its own error, so cell-level detail would only add noise.
-                await CellIssueReporter.ReportAsync(
-                    runResult.CellIssues, runResult.HasMoreCellIssues, logger).ConfigureAwait(false);
-            }
-
-            return runResult.ExitCode;
+            return batchRunResult.ExitCode;
         }
         catch (OperationCanceledException)
         {
@@ -105,18 +95,123 @@ internal static class Runner
         }
         finally
         {
-            if (tempOutputFile is not null && File.Exists(tempOutputFile))
+            // Covers a throw between dispatch and publish (e.g. replaying deferred messages); no-op once moved.
+            if (appliedResult is not null)
             {
-                // Best-effort cleanup: on success this is a no-op (already moved away).
-                try
-                {
-                    File.Delete(tempOutputFile);
-                }
-                catch (Exception)
-                {
-                    // Swallowed intentionally: cleanup must not mask the already-decided exit code.
-                }
+                TryDeleteTempFile(appliedResult.Value.tempOutputFile);
             }
+        }
+    }
+
+    private static async ValueTask PublishAsync(
+        BatchRunResult batchRunResult,
+        string publishPath,
+        string tempOutputFile,
+        IAppLogger logger)
+    {
+        try
+        {
+            File.Move(tempOutputFile, publishPath, overwrite: true);
+
+            // Reported only on success: a failed run discards its output and already
+            // reports its own error, so cell-level detail would only add noise.
+            await CellIssueReporter.ReportAsync(
+                batchRunResult.CellIssues, batchRunResult.HasMoreCellIssues, logger).ConfigureAwait(false);
+        }
+        finally
+        {
+            // No-op once the move succeeded; removes the temp file if the move itself failed.
+            TryDeleteTempFile(tempOutputFile);
+        }
+    }
+
+    // Returns null when preparation failed (already reported through the logger).
+    private static async ValueTask<(BatchRunResult batchRunResult, string publishPath, string tempOutputFile)?> ApplyAsync(
+        Arguments args,
+        string outputFile,
+        IAppLogger logger,
+        IFormatDispatcher dispatcher,
+        ITempOutputPathProvider tempOutputPathProvider,
+        Action<string> setPhase,
+        CancellationToken ct)
+    {
+        var preparationResult = await ApplyPreparer.PrepareAsync(
+            args.InputFile, args.RecipeFile, outputFile, logger, ct).ConfigureAwait(false);
+        if (preparationResult.IsFailure)
+        {
+            return null;
+        }
+
+        var preparation = preparationResult.Value;
+        if (preparation.OutputFormat is not DataFormat outputFormat)
+        {
+            // Unreachable: an output file is given on this path, so PrepareAsync resolved its format.
+            throw new UnreachableException("Output format was not resolved for the write path.");
+        }
+
+        // File.Move replaces a destination symlink itself instead of following it, so
+        // resolve the final target first to keep publishing through the link. LinkTarget
+        // detects broken links without following them; null means a fresh output path,
+        // which ResolveLinkTarget cannot resolve (it throws on a missing path).
+        var outputInfo = new FileInfo(outputFile);
+        var publishPath = outputInfo.LinkTarget is null
+            ? outputFile
+            : outputInfo.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? outputFile;
+
+        // The publish path is only ever touched by the rename after the batch; the batch itself
+        // writes to the temp path. Unconditional overwrite matches FileMode.Create semantics.
+        var tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
+
+        return await RunBatchAsync(
+            preparation, outputFormat, publishPath, tempOutputFile, args, dispatcher, logger, setPhase, ct).ConfigureAwait(false);
+    }
+
+    private static async ValueTask<(BatchRunResult batchRunResult, string publishPath, string tempOutputFile)> RunBatchAsync(
+        ApplyPreparation preparation,
+        DataFormat outputFormat,
+        string publishPath,
+        string tempOutputFile,
+        Arguments args,
+        IFormatDispatcher dispatcher,
+        IAppLogger logger,
+        Action<string> setPhase,
+        CancellationToken ct)
+    {
+        setPhase("Converting...");
+        var keepTempFile = false;
+        try
+        {
+            var batchRunResult = await dispatcher.DispatchAsync(
+                preparation.InputFormat, outputFormat, args.InputFile, tempOutputFile,
+                preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
+
+            // Only a successful batch hands its temp file on to be published.
+            keepTempFile = batchRunResult.ExitCode is ExitCode.Success;
+            return (batchRunResult, publishPath, tempOutputFile);
+        }
+        finally
+        {
+            if (!keepTempFile)
+            {
+                TryDeleteTempFile(tempOutputFile);
+            }
+        }
+    }
+
+    private static void TryDeleteTempFile(string tempOutputFile)
+    {
+        if (!File.Exists(tempOutputFile))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(tempOutputFile);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // Swallowed intentionally: cleanup must not mask the already-decided exit code.
         }
     }
 }

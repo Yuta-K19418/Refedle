@@ -276,7 +276,7 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.Cli.Commands.Apply.Runner.RunAsync(Refedle.App.Cli.Parsing.Arguments,Refedle.App.Cli.IAppLogger,Refedle.App.Cli.Commands.Apply.IFormatDispatcher,Refedle.App.Cli.Commands.Apply.ITempOutputPathProvider,System.Threading.CancellationToken)",
+    Target = "~M:Refedle.App.Cli.Commands.Apply.Runner.RunAsync(Refedle.App.Cli.Parsing.Arguments,Refedle.App.Cli.IAppLogger,Refedle.App.Cli.Commands.Apply.IFormatDispatcher,Refedle.App.Cli.Commands.Apply.ITempOutputPathProvider,Refedle.App.Cli.IStatusReporter,System.Threading.CancellationToken)",
     Justification = "Top-level CLI handler reports any unexpected exception as an error exit code.")]
 
 // Cli.DryRunner
@@ -284,7 +284,7 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.Cli.Commands.Apply.DryRunner.RunAsync(Refedle.App.Cli.Parsing.Arguments,Refedle.App.Cli.IAppLogger,System.Threading.CancellationToken)",
+    Target = "~M:Refedle.App.Cli.Commands.Apply.DryRunner.RunAsync(Refedle.App.Cli.Parsing.Arguments,Refedle.App.Cli.IAppLogger,Refedle.App.Cli.IStatusReporter,System.Threading.CancellationToken)",
     Justification = "Top-level CLI handler reports any unexpected exception as an error exit code.")]
 
 // Cli.IO.Factories

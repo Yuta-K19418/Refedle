@@ -23,7 +23,7 @@ public sealed partial class RunnerTests
             cellIssues: [new CellIssue(3, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert — the output is published and the issues are reported after it.
         exitCode.Should().Be(ExitCode.Success);
@@ -47,7 +47,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -70,7 +70,7 @@ public sealed partial class RunnerTests
         var dispatcher = new TestFormatDispatcher(cellIssues: issues, hasMoreCellIssues: true);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert — header, the capped entries in row order, then the closing indicator.
         exitCode.Should().Be(ExitCode.Success);
@@ -97,7 +97,7 @@ public sealed partial class RunnerTests
             cellIssues: [new CellIssue(3, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -120,7 +120,7 @@ public sealed partial class RunnerTests
             cellIssues: [new CellIssue(1, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -146,7 +146,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -176,7 +176,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -205,7 +205,7 @@ public sealed partial class RunnerTests
         var logger = new TestAppLogger();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider());
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
