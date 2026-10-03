@@ -89,7 +89,7 @@ public sealed class LinkedListExtensionsTests
     {
         // Arrange
         var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<int, LinkedListNode<CacheEntry<int>>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
         var node1 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 1, Value = 10 });
         list.AddLast(node1);
         cache[1] = node1;
@@ -111,7 +111,7 @@ public sealed class LinkedListExtensionsTests
     {
         // Arrange
         var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<int, LinkedListNode<CacheEntry<int>>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
 
         var node1 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 1, Value = 10 });
         var node2 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 2, Value = 20 });
@@ -138,11 +138,32 @@ public sealed class LinkedListExtensionsTests
     }
 
     [Fact]
+    public void ReuseTail_WithRowIndexBeyondIntMaxValue_PreservesLongKeyAndRowIndex()
+    {
+        // Arrange - 2_147_483_648 (int.MaxValue + 1) must not narrow anywhere
+        // in the node-reuse path.
+        var list = new LinkedList<CacheEntry<int>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        list.AddNew(cache, rowIndex: 1, rowValue: 10);
+        var rowIndex = 2_147_483_648L;
+
+        // Act
+        list.ReuseTail(cache, rowIndex, rowValue: 20, emptyValue: -1);
+
+        // Assert
+        cache.ContainsKey(1).Should().BeFalse();
+        cache.ContainsKey(rowIndex).Should().BeTrue();
+        list.First.Should().NotBeNull();
+        list.First.Value.RowIndex.Should().Be(rowIndex);
+        list.First.Value.Value.Should().Be(20);
+    }
+
+    [Fact]
     public void AddNew_WithEmptyList_AddsNodeToFrontAndUpdatesDictionary()
     {
         // Arrange
         var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<int, LinkedListNode<CacheEntry<int>>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
 
         // Act
         list.AddNew(cache, rowIndex: 1, rowValue: 10);
@@ -161,7 +182,7 @@ public sealed class LinkedListExtensionsTests
     {
         // Arrange
         var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<int, LinkedListNode<CacheEntry<int>>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
         list.AddNew(cache, rowIndex: 1, rowValue: 10);
 
         // Act
@@ -173,5 +194,24 @@ public sealed class LinkedListExtensionsTests
         list.First.Value.RowIndex.Should().Be(2);
         list.Last.Should().NotBeNull();
         list.Last.Value.RowIndex.Should().Be(1);
+    }
+
+    [Fact]
+    public void AddNew_WithRowIndexBeyondIntMaxValue_PreservesLongKeyAndRowIndex()
+    {
+        // Arrange - 2_147_483_648 (int.MaxValue + 1) must stay a long in both
+        // the dictionary key and the cached entry.
+        var list = new LinkedList<CacheEntry<int>>();
+        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        var rowIndex = 2_147_483_648L;
+
+        // Act
+        list.AddNew(cache, rowIndex, rowValue: 10);
+
+        // Assert
+        cache.ContainsKey(rowIndex).Should().BeTrue();
+        list.First.Should().NotBeNull();
+        list.First.Value.RowIndex.Should().Be(rowIndex);
+        list.First.Value.Value.Should().Be(10);
     }
 }

@@ -49,6 +49,26 @@ public sealed class SlidingWindowLruCacheTests
         }
     }
 
+    // Long-row variant to exercise row indices beyond int.MaxValue; the row value
+    // is the row index itself, so it must be a long to represent such rows.
+    private sealed class LongRowCache(
+        MockIndexer indexer,
+        int capacity = 10,
+        int prefetchWindow = 4)
+        : SlidingWindowLruCache<long>(indexer, capacity, prefetchWindow)
+    {
+        protected override long EmptyValue => -1L;
+
+        protected override IEnumerable<long> LoadRows(
+            long byteOffset,
+            int rowOffsetToSkip,
+            int rowsToFetch)
+        {
+            var startRow = byteOffset / 10 + rowOffsetToSkip;
+            return Enumerable.Range(0, rowsToFetch).Select(i => startRow + i);
+        }
+    }
+
     [Fact]
     public void GetRow_OnCacheMiss_LoadsPrefetchWindow()
     {
@@ -215,7 +235,8 @@ public sealed class SlidingWindowLruCacheTests
     [Theory]
     [InlineData(-1)]
     [InlineData(int.MinValue)]
-    public void GetRow_NegativeIndex_ReturnsDefaultValue(int negativeIndex)
+    [InlineData(long.MinValue)]
+    public void GetRow_NegativeIndex_ReturnsDefaultValue(long negativeIndex)
     {
         // Arrange
         var indexer = new MockIndexer(100);
@@ -226,6 +247,67 @@ public sealed class SlidingWindowLruCacheTests
 
         // Assert
         result.Should().Be(-1);
+    }
+
+    [Fact]
+    public void TotalRows_WhenCountExceedsIntMaxValue_ReturnsExactCount()
+    {
+        // Arrange
+        var indexer = new MockIndexer(3_000_000_000);
+        var cache = new LongRowCache(indexer);
+
+        // Act
+        var totalRows = cache.TotalRows;
+
+        // Assert
+        totalRows.Should().Be(3_000_000_000L);
+    }
+
+    [Fact]
+    public void GetRow_IndexExceedingIntMaxValue_ReturnsCorrectRow()
+    {
+        // Arrange
+        var indexer = new MockIndexer(3_000_000_000);
+        var cache = new LongRowCache(indexer);
+
+        // Act
+        var result = cache.GetRow(2_500_000_000);
+
+        // Assert
+        result.Should().Be(2_500_000_000L);
+    }
+
+    [Fact]
+    public void GetRow_LastRowExceedsIntMaxValue_ReturnsCorrectRow()
+    {
+        // Arrange
+        var indexer = new MockIndexer(3_000_000_000);
+        var cache = new LongRowCache(indexer);
+
+        // Act
+        var result = cache.GetRow(2_999_999_999);
+
+        // Assert
+        result.Should().Be(2_999_999_999L);
+    }
+
+    [Fact]
+    public void GetRow_IndicesWithSameIntRepresentation_ReturnsDistinctCachedRows()
+    {
+        // Arrange - 4_294_967_297 (2^32 + 1) truncates to 1 as int; the two rows
+        // must remain distinct LRU entries keyed by their full long index.
+        var indexer = new MockIndexer(4_294_967_298);
+        var cache = new LongRowCache(indexer, capacity: 10, prefetchWindow: 1);
+
+        // Act
+        var first = cache.GetRow(1);
+        var second = cache.GetRow(4_294_967_297);
+        var reloadedFirst = cache.GetRow(1);
+
+        // Assert
+        first.Should().Be(1L);
+        second.Should().Be(4_294_967_297L);
+        reloadedFirst.Should().Be(1L);
     }
 
     [Fact]

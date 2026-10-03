@@ -24,7 +24,7 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
         _cache = new DataRowCache(indexer, _schema.ColumnCount);
     }
 
-    public int Rows => _cache.TotalRows;
+    public int Rows => (int)_cache.TotalRows;
     public int Columns => _schema.ColumnCount;
     public string[] ColumnNames => _columnNames;
     /// <inheritdoc/>

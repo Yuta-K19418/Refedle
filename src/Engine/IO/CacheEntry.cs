@@ -8,7 +8,7 @@ namespace Refedle.Engine.IO;
 /// <typeparam name="TRow">The type of row data.</typeparam>
 internal struct CacheEntry<TRow>
 {
-    internal int RowIndex;
+    internal long RowIndex;
     internal TRow Value;
 
     /// <summary>

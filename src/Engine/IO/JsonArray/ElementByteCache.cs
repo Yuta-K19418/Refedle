@@ -14,7 +14,7 @@ public sealed class ElementByteCache(
     private bool _disposed;
 
     /// <inheritdoc/>
-    public override JsonRawBytes GetRow(int index)
+    public override JsonRawBytes GetRow(long index)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return base.GetRow(index);

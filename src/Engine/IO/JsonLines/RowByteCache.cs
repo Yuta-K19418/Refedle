@@ -17,7 +17,7 @@ public sealed class RowByteCache(
     protected override JsonRawBytes EmptyValue => JsonRawBytes.Empty;
 
     /// <inheritdoc/>
-    public override JsonRawBytes GetRow(int index)
+    public override JsonRawBytes GetRow(long index)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return base.GetRow(index);

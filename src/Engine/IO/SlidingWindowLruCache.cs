@@ -16,7 +16,7 @@ public abstract class SlidingWindowLruCache<TRow>
     private const int DefaultCapacity = 200;
     private const int DefaultPrefetchWindow = 20;
 
-    private readonly Dictionary<int, LinkedListNode<CacheEntry<TRow>>> _cache;
+    private readonly Dictionary<long, LinkedListNode<CacheEntry<TRow>>> _cache;
     private readonly LinkedList<CacheEntry<TRow>> _lruList;
     private readonly int _capacity;
     private readonly int _prefetchWindow;
@@ -37,21 +37,21 @@ public abstract class SlidingWindowLruCache<TRow>
         _indexer = indexer;
         _capacity = capacity;
         _prefetchWindow = prefetchWindow;
-        _cache = new Dictionary<int, LinkedListNode<CacheEntry<TRow>>>(capacity);
+        _cache = new Dictionary<long, LinkedListNode<CacheEntry<TRow>>>(capacity);
         _lruList = new LinkedList<CacheEntry<TRow>>();
     }
 
     /// <summary>
     /// Gets the total number of rows in the data source.
     /// </summary>
-    public int TotalRows => (int)_indexer.TotalRows;
+    public long TotalRows => _indexer.TotalRows;
 
     /// <summary>
     /// Gets the row at the specified index.
     /// </summary>
     /// <param name="index">The zero-based row index.</param>
     /// <returns>The row data at the specified index, or empty value if out of range.</returns>
-    public virtual TRow GetRow(int index)
+    public virtual TRow GetRow(long index)
     {
         if (index < 0 || index >= TotalRows)
         {
@@ -75,7 +75,7 @@ public abstract class SlidingWindowLruCache<TRow>
     /// The requested row is loaded first to prevent self-eviction.
     /// </summary>
     /// <param name="requestedRow">The row that was requested.</param>
-    private void Prefetch(int requestedRow)
+    private void Prefetch(long requestedRow)
     {
         var halfWindow = _prefetchWindow / 2;
         var maxStart = TotalRows - _prefetchWindow;
@@ -88,7 +88,8 @@ public abstract class SlidingWindowLruCache<TRow>
             return;
         }
 
-        var rows = LoadRows(byteOffset, rowOffsetToSkip, windowEnd - windowStart + 1);
+        // Window length never exceeds the int-sized prefetch window.
+        var rows = LoadRows(byteOffset, rowOffsetToSkip, (int)(windowEnd - windowStart + 1));
         var rowsArray = rows.ToArray();
 
         var requestedIndex = requestedRow - windowStart;
@@ -106,11 +107,11 @@ public abstract class SlidingWindowLruCache<TRow>
 
         if (requestedIndex >= 0 && requestedIndex < rowsArray.Length)
         {
-            AddOrUpdateCache(requestedRow, rowsArray[requestedIndex]);
+            AddOrUpdateCache(requestedRow, rowsArray[(int)requestedIndex]);
         }
     }
 
-    private void AddOrUpdateCache(int rowIndex, TRow rowValue)
+    private void AddOrUpdateCache(long rowIndex, TRow rowValue)
     {
         if (_cache.TryGetValue(rowIndex, out var node))
         {

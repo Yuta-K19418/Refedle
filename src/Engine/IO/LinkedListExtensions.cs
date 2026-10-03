@@ -26,8 +26,8 @@ internal static class LinkedListExtensions
     /// </summary>
     public static void ReuseTail<TRow>(
         this LinkedList<CacheEntry<TRow>> list,
-        Dictionary<int, LinkedListNode<CacheEntry<TRow>>> cache,
-        int rowIndex,
+        Dictionary<long, LinkedListNode<CacheEntry<TRow>>> cache,
+        long rowIndex,
         TRow rowValue,
         TRow emptyValue
     )
@@ -54,8 +54,8 @@ internal static class LinkedListExtensions
     /// </summary>
     public static void AddNew<TRow>(
         this LinkedList<CacheEntry<TRow>> list,
-        Dictionary<int, LinkedListNode<CacheEntry<TRow>>> cache,
-        int rowIndex,
+        Dictionary<long, LinkedListNode<CacheEntry<TRow>>> cache,
+        long rowIndex,
         TRow rowValue
     )
     {

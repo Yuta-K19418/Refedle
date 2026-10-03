@@ -18,7 +18,7 @@ public sealed class DataRowCache(
     protected override CsvDataRow EmptyValue => [];
 
     /// <inheritdoc/>
-    public override CsvDataRow GetRow(int index)
+    public override CsvDataRow GetRow(long index)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         return base.GetRow(index);
