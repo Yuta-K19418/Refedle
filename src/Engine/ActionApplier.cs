@@ -33,7 +33,7 @@ public static class ActionApplier
 
         // Build working columns copy for tracking state changes
         var workingColumns = columnNames
-            .Select((name, index) => (Name: name, ColumnIndex: index, OutputName: name))
+            .Select(static (name, index) => (Name: name, ColumnIndex: index, OutputName: name))
             .ToList();
         var nameToWorkingIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var i = 0; i < workingColumns.Count; i++)
@@ -162,7 +162,7 @@ public static class ActionApplier
     )
     {
         List<BatchOutputColumn> outputColumns = [];
-        foreach (var kvp in nameToWorkingIndex.OrderBy(kvp => kvp.Value))
+        foreach (var kvp in nameToWorkingIndex.OrderBy(static kvp => kvp.Value))
         {
             var (name, _, outputName) = workingColumns[kvp.Value];
             var transform = transformsByWorkingIndex.GetValueOrDefault(kvp.Value);

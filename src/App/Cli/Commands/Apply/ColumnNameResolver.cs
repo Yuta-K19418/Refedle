@@ -60,7 +60,7 @@ internal static class ColumnNameResolver
         }
 
         return Results.Success<IReadOnlyList<string>>(
-            [.. extractResult.Value.schema.Columns.Select(c => c.Name)]);
+            [.. extractResult.Value.schema.Columns.Select(static c => c.Name)]);
     }
 
     // Full Aggregation DrillDown (JSON Array and JSON Lines): streams
@@ -80,7 +80,7 @@ internal static class ColumnNameResolver
         }
 
         return Results.Success<IReadOnlyList<string>>(
-            [.. scanResult.Value.Columns.Select(c => c.Name)]);
+            [.. scanResult.Value.Columns.Select(static c => c.Name)]);
     }
 
     private static List<string> ResolveJsonLinesColumnNames(string inputFile, CancellationToken ct)

@@ -22,9 +22,9 @@ internal sealed class FocusedTableSource : IExtendedTableSource
         ArgumentNullException.ThrowIfNull(drillDown);
         _rows = drillDown.Rows;
         _schema = drillDown.Schema;
-        _columnNames = ["#", .. drillDown.Schema.Columns.Select(c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
-        _rawColumnNames = ["#", .. drillDown.Schema.Columns.Select(c => c.Name)];
-        _columnNamesUtf8 = [.. drillDown.Schema.Columns.Select(c => Encoding.UTF8.GetBytes(c.Name))];
+        _columnNames = ["#", .. drillDown.Schema.Columns.Select(static c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
+        _rawColumnNames = ["#", .. drillDown.Schema.Columns.Select(static c => c.Name)];
+        _columnNamesUtf8 = [.. drillDown.Schema.Columns.Select(static c => Encoding.UTF8.GetBytes(c.Name))];
     }
 
     /// <inheritdoc/>

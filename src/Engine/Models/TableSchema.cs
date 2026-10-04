@@ -42,7 +42,7 @@ public sealed record TableSchema
             field = value;
 
             // Initialize cache in init block for thread-safety and performance
-            _columnCache = value.ToDictionary(c => c.Name, StringComparer.Ordinal);
+            _columnCache = value.ToDictionary(static c => c.Name, StringComparer.Ordinal);
         }
     }
 

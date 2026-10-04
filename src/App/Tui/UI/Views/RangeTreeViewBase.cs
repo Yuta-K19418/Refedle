@@ -33,13 +33,13 @@ internal abstract class RangeTreeViewBase : MorphTreeView
         _completedHandler = () => AddNodesBatch(isFinal: true);
         TreeBuilder = new DelegateTreeBuilder<ITreeNode>(
             // canExpand = branch/leaf (shows expand/collapse icon); IsExpanded = current expansion state (open/closed).
-            canExpand: node =>
+            canExpand: static node =>
                 // Type-based check only — never access Children here.
                 // RangeTreeNodeBase: always expandable by design as it contains ≥ 1 element.
                 // JsonObjectTreeNode/JsonArrayTreeNode: accessing Children would trigger an
                 // immediate JSON parse of the element, bypassing lazy loading.
                 node is RangeTreeNodeBase or JsonObjectTreeNode or JsonArrayTreeNode,
-            childGetter: node =>
+            childGetter: static node =>
             {
                 if (node is RangeTreeNodeBase r)
                 {

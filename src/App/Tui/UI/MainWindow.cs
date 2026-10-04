@@ -35,7 +35,7 @@ internal sealed class MainWindow : Window
     {
         _app = app;
         _state = state;
-        var modeController = new ModeController(state, app.Invoke, path => new Workers.Schema.JsonLines.IncrementalSchemaScanner(path));
+        var modeController = new ModeController(state, app.Invoke, static path => new Workers.Schema.JsonLines.IncrementalSchemaScanner(path));
 
         X = 0;
         Y = 0;
@@ -46,7 +46,7 @@ internal sealed class MainWindow : Window
 
         _fileDialogHandler = new FileDialogHandler(
             app, state, _viewManager, StartIndexing, StopCurrentIndexing,
-            path => new Workers.Schema.Csv.IncrementalSchemaScanner(path), _filePathBar.SetFilePath);
+            static path => new Workers.Schema.Csv.IncrementalSchemaScanner(path), _filePathBar.SetFilePath);
         _recipeCommandHandler = new RecipeCommandHandler(app, state, _viewManager);
 
         InitializeMenu();
