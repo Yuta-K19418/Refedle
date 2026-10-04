@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO.Pipes;
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers.Schema.Csv;
 using Refedle.Engine.Types;
@@ -157,23 +159,116 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     }
 
     [Fact]
-    public async Task Dispose_CancelsBackgroundScanAsync()
+    public async Task StartBackgroundScanAsync_CancelledWhileReadingRows_ReturnsCurrentSchema()
     {
         // Arrange
-        var csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6\nvalue7,value8,value9";
-        File.WriteAllText(_tempFilePath, csvContent);
+        // The row after the initial 200 puts text into the numeric Id column, so a scan
+        // that ignored cancellation would return a refined schema instead of currentSchema.
+        var initialRows = string.Concat(Enumerable.Repeat("1,a\n", 200));
+        var csvContent = "Id,Name\n" + initialRows + "text,b\n";
+        await File.WriteAllTextAsync(_tempFilePath, csvContent);
+        var fileScanner = new IncrementalSchemaScanner(_tempFilePath);
+        var currentSchema = await fileScanner.InitialScanAsync();
 
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        // The pipe read blocks until the writer opens and supplies rows, so the token is
+        // cancelled while the scan is waiting for its remaining rows.
+        await using var pipe = await CreateScanPipeAsync();
+        var pipeScanner = new IncrementalSchemaScanner(pipe.PipePath);
+        using var cts = new CancellationTokenSource();
+        var backgroundTask = pipeScanner.StartBackgroundScanAsync(currentSchema, cts.Token);
+        var writer = await pipe.WriterTask.WaitAsync(_waitTimeout);
 
         // Act
-        using var cts = new CancellationTokenSource();
-        var backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
         cts.Cancel();
+        await using (writer)
+        {
+            await writer.WriteAsync(csvContent);
+        }
+
+        var finalSchema = await backgroundTask.WaitAsync(_waitTimeout);
 
         // Assert
-        // WhenAny observes completion without rethrowing if the task ended in the Canceled state.
-        await Task.WhenAny(backgroundTask).WaitAsync(_waitTimeout);
-        backgroundTask.IsCompleted.Should().BeTrue();
+        finalSchema.Should().BeSameAs(currentSchema);
+    }
+
+    /// <summary>
+    /// Creates a pipe the background scan reads from: a named pipe on Windows, a FIFO on
+    /// Unix. The Windows server stream is created synchronously here, before the scan
+    /// starts, so the scan's open cannot lose the race with it. The writer task's open
+    /// blocks until the scan opens the read side, so both branches run it on the thread
+    /// pool; awaiting it means the scan is reading.
+    /// </summary>
+    private static async Task<ScanPipe> CreateScanPipeAsync()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            var pipeName = "refedle-scan-" + Guid.NewGuid().ToString("N");
+            return new ScanPipe(@"\\.\pipe\" + pipeName, fifoPath: null, pipeName);
+        }
+
+        var tempDirectory = Path.GetTempPath();
+        var fifoName = "refedle-scan-" + Guid.NewGuid().ToString("N") + ".csv";
+        var fifoPath = Path.Combine(tempDirectory, fifoName);
+        using var fifoProcess = Process.Start("mkfifo", fifoPath);
+        await fifoProcess.WaitForExitAsync().WaitAsync(_waitTimeout);
+        fifoProcess.ExitCode.Should().Be(0);
+        return new ScanPipe(fifoPath, fifoPath, pipeName: null);
+    }
+
+    /// <summary>
+    /// The pipe the background scan reads from, with a writer task that completes once
+    /// the scan opens the read side. Disposing runs even when the test fails partway;
+    /// it deletes the FIFO file on Unix and disposes the Windows server stream, which the
+    /// test's writer disposal has normally already closed.
+    /// </summary>
+    private sealed class ScanPipe(string pipePath, string? fifoPath, string? pipeName) : IAsyncDisposable
+    {
+        private readonly NamedPipeServerStream? _serverStream = pipeName is null
+            ? null
+            : new NamedPipeServerStream(
+                pipeName,
+                PipeDirection.Out,
+                1,
+                PipeTransmissionMode.Byte,
+                PipeOptions.CurrentUserOnly | PipeOptions.Asynchronous);
+
+        private Task<StreamWriter>? _writerTask;
+        private StreamWriter? _namedPipeWriter;
+
+        public string PipePath { get; } = pipePath;
+
+        public Task<StreamWriter> WriterTask => _writerTask ??= StartWriter();
+
+        private Task<StreamWriter> StartWriter()
+        {
+            return _serverStream is not null
+                ? ConnectWriterAsync(_serverStream)
+                : Task.Run(() => new StreamWriter(PipePath));
+        }
+
+        private async Task<StreamWriter> ConnectWriterAsync(NamedPipeServerStream serverStream)
+        {
+            await serverStream.WaitForConnectionAsync();
+            _namedPipeWriter = new StreamWriter(serverStream);
+            return _namedPipeWriter;
+        }
+
+        public async ValueTask DisposeAsync()
+        {
+            if (fifoPath is not null)
+            {
+                File.Delete(fifoPath);
+            }
+
+            if (_namedPipeWriter is not null)
+            {
+                await _namedPipeWriter.DisposeAsync();
+            }
+
+            if (_serverStream is not null)
+            {
+                await _serverStream.DisposeAsync();
+            }
+        }
     }
 }
