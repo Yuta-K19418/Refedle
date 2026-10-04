@@ -9,11 +9,11 @@ public sealed class ColumnWidthStabilizingTableSourceTests
 {
     private sealed class FakeTableSource(string[] columnNames, IReadOnlyList<IReadOnlyList<object>> rows) : IExtendedTableSource
     {
-        public int Rows => rows.Count;
+        public long TotalRows => rows.Count;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
         public string[] RawColumnNames => columnNames;
-        public object this[int row, int col] => rows[row][col];
+        public object this[long row, int col] => rows[(int)row][col];
     }
 
     private sealed class MutableFakeTableSource(
@@ -25,11 +25,11 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         private string[] _rawColumnNames = rawColumnNames;
         private IReadOnlyList<IReadOnlyList<object>> _rows = rows;
 
-        public int Rows => _rows.Count;
+        public long TotalRows => _rows.Count;
         public int Columns => _columnNames.Length;
         public string[] ColumnNames => _columnNames;
         public string[] RawColumnNames => _rawColumnNames;
-        public object this[int row, int col] => _rows[row][col];
+        public object this[long row, int col] => _rows[(int)row][col];
 
         public void Replace(string[] newColumnNames, string[] newRawColumnNames, IReadOnlyList<IReadOnlyList<object>> newRows)
         {
@@ -42,22 +42,22 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     private sealed class DisposableFakeTableSource : IExtendedTableSource, IDisposable
     {
         public bool IsDisposed { get; private set; }
-        public int Rows => 0;
+        public long TotalRows => 0;
         public int Columns => 0;
         public string[] ColumnNames => [];
         public string[] RawColumnNames => [];
-        public object this[int row, int col] => throw new NotImplementedException();
+        public object this[long row, int col] => throw new NotImplementedException();
         public void Dispose() => IsDisposed = true;
     }
 
     private sealed class CountingDisposableFakeTableSource : IExtendedTableSource, IDisposable
     {
         public int DisposeCount { get; private set; }
-        public int Rows => 0;
+        public long TotalRows => 0;
         public int Columns => 0;
         public string[] ColumnNames => [];
         public string[] RawColumnNames => [];
-        public object this[int row, int col] => throw new NotImplementedException();
+        public object this[long row, int col] => throw new NotImplementedException();
         public void Dispose() => DisposeCount++;
     }
 
@@ -284,7 +284,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         using var source = new ColumnWidthStabilizingTableSource(inner, style);
 
         // Act
-        var rowCount = source.Rows;
+        var rowCount = source.TotalRows;
         var columnCount = source.Columns;
         var columnNames = source.ColumnNames;
 

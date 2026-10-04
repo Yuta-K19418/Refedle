@@ -168,8 +168,14 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 var view = ctx.ViewManager.GetCurrentView();
-                var isTransformer = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } };
-                var columns = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                var isTransformer = view is FocusedTableView
+                {
+                    Table: PagedTableSource { Inner: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } }
+                };
+                var columns = view is FocusedTableView
+                {
+                    Table: PagedTableSource { Inner: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                }
                     ? decoratedTable.ColumnNames.ToArray()
                     : null;
                 var drillDown = ctx.State.GetDrillDownOrNull();
@@ -218,8 +224,14 @@ public sealed partial class RecipeCommandHandlerTests : IDisposable
             await session.InvokeAsync((_, ctx) =>
             {
                 var view = ctx.ViewManager.GetCurrentView();
-                var isTransformer = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } };
-                var columns = view is FocusedTableView { Table: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                var isTransformer = view is FocusedTableView
+                {
+                    Table: PagedTableSource { Inner: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } }
+                };
+                var columns = view is FocusedTableView
+                {
+                    Table: PagedTableSource { Inner: ColumnWidthStabilizingTableSource { Inner: FocusedTableTransformer } decoratedTable }
+                }
                     ? decoratedTable.ColumnNames.ToArray()
                     : null;
                 var drillDown = ctx.State.GetDrillDownOrNull();

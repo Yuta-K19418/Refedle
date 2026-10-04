@@ -7,7 +7,7 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
-public sealed class MorphTableViewTests
+public sealed partial class MorphTableViewTests
 {
     private sealed class ConcreteMorphTableView : MorphTableView
     {

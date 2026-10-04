@@ -116,7 +116,7 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleActionMenu_WhenTableIsNotExtendedTableSource_ReturnsFalse()
+    public void HandleActionMenu_WhenTableIsNotPagedTableSource_ReturnsFalse()
     {
         // Arrange
         using var app = CreateTestApp();
@@ -152,7 +152,7 @@ public sealed class AppKeyHandlerTests
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using var viewManager = new ViewManager(window, state, modeController, action => action());
-        using var view = new TestTableView { Table = new TestTableSource() };
+        using var view = new TestTableView { Table = new PagedTableSource(new TestTableSource()) };
         window.Add(view);
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
@@ -176,7 +176,7 @@ public sealed class AppKeyHandlerTests
         using var viewManager = new ViewManager(window, state, modeController, action => action());
         using var view = new TestTableView
         {
-            Table = new TestTableSource(),
+            Table = new PagedTableSource(new TestTableSource()),
             OnMorphAction = _ => { }
         };
         view.Value = null;
@@ -425,26 +425,18 @@ public sealed class AppKeyHandlerTests
     /// <summary>
     /// Testable concrete implementation of MorphTableView.
     /// </summary>
-    private sealed class TestTableView : MorphTableView
-    {
-        public new ITableSource? Table { get; set; }
-    }
+    private sealed class TestTableView : MorphTableView;
 
     /// <summary>
     /// Simple TableSource implementation for testing.
     /// </summary>
     private sealed class TestTableSource : IExtendedTableSource
     {
-        public int Rows => 10;
+        public long TotalRows => 10;
         public int Columns => 3;
         public string[] ColumnNames => ["Col1", "Col2", "Col3"];
         public string[] RawColumnNames => ["Raw1", "Raw2", "Raw3"];
-
-        public object this[int row, int col]
-        {
-            get => $"R{row}C{col}";
-            set { }
-        }
+        public object this[long row, int col] => $"R{row}C{col}";
 
         public static void AddColumn(string _) { }
         public static void AddRow() { }

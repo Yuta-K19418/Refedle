@@ -77,10 +77,10 @@ internal abstract class LazyTransformerBase(
     protected bool IsDisposed => _disposed;
 
     /// <inheritdoc/>
-    public abstract int Rows { get; }
+    public abstract long TotalRows { get; }
 
     /// <inheritdoc/>
-    public abstract object this[int row, int col] { get; }
+    public abstract object this[long row, int col] { get; }
 
     /// <summary>
     /// Applies the action stack sequentially to build the output column names, types,

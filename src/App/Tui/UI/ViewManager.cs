@@ -265,7 +265,7 @@ internal sealed class ViewManager : IDisposable
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.CsvTableView
         {
-            Table = new Views.ColumnWidthStabilizingTableSource(source, style),
+            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
         };
@@ -374,7 +374,7 @@ internal sealed class ViewManager : IDisposable
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.JsonLinesTableView
         {
-            Table = new Views.ColumnWidthStabilizingTableSource(tableSource, style),
+            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(tableSource, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
         };
@@ -599,7 +599,7 @@ internal sealed class ViewManager : IDisposable
         var style = new TableStyle { AlwaysShowHeaders = true };
         var view = new Views.FocusedTableView
         {
-            Table = new Views.ColumnWidthStabilizingTableSource(source, style),
+            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
         };

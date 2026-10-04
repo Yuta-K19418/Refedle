@@ -15,11 +15,11 @@ public sealed class FocusedTableTransformerTests
 
     private sealed class FakeFocusedSource(string[][] data, string[] columnNames) : IExtendedTableSource
     {
-        public int Rows => data.Length;
+        public long TotalRows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
         public string[] RawColumnNames => columnNames;
-        public object this[int row, int col] => data[row][col];
+        public object this[long row, int col] => data[(int)row][col];
     }
 
     private static TableSchema MakeSchema(params (string name, ColumnType type)[] cols) =>
@@ -244,7 +244,7 @@ public sealed class FocusedTableTransformerTests
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
 
         // Assert
-        transformer.Rows.Should().Be(1);
+        transformer.TotalRows.Should().Be(1);
         transformer[0, 0].Should().Be("[1]");
         transformer[0, 1].Should().Be("B");
         transformer[0, 2].Should().Be("2");
@@ -273,7 +273,7 @@ public sealed class FocusedTableTransformerTests
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
 
         // Assert
-        transformer.Rows.Should().Be(1);
+        transformer.TotalRows.Should().Be(1);
         transformer[0, 0].Should().Be("[2]");
         transformer[0, 1].Should().Be("B");
         transformer[0, 2].Should().Be("3");
@@ -301,7 +301,7 @@ public sealed class FocusedTableTransformerTests
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
 
         // Assert
-        transformer.Rows.Should().Be(1);
+        transformer.TotalRows.Should().Be(1);
         transformer[0, 1].Should().Be("B");
     }
 

@@ -103,16 +103,11 @@ public sealed class ColumnActionHandlerTests
 
     private sealed class TableSource(string[] columnNames, string[] rawColumnNames) : IExtendedTableSource
     {
-        public int Rows => 10;
+        public long TotalRows => 10;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
         public string[] RawColumnNames => rawColumnNames;
-
-        public object this[int row, int col]
-        {
-            get => $"R{row}C{col}";
-            set { }
-        }
+        public object this[long row, int col] => $"R{row}C{col}";
 
         public static void AddColumn(string _) { }
         public static void AddRow() { }

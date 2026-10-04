@@ -47,7 +47,7 @@ public sealed class FocusedTableSourceTests
         var source = new FocusedTableSource(CreateState());
 
         // Act
-        var rows = source.Rows;
+        var rows = source.TotalRows;
 
         // Assert
         rows.Should().Be(2);

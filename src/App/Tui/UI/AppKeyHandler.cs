@@ -172,7 +172,7 @@ internal sealed class AppKeyHandler : IDisposable
 
     private bool HandleActionMenuForTable(MorphTableView mt)
     {
-        if (mt.Table is not IExtendedTableSource table
+        if (mt.Table is not PagedTableSource paged
             || mt.OnMorphAction is null || mt.Value is null)
         {
             return false;
@@ -186,7 +186,7 @@ internal sealed class AppKeyHandler : IDisposable
         }
 
         var handler = new ColumnActionHandler(
-            _app, table, mt.Value.SelectedCell.X,
+            _app, paged.Inner, mt.Value.SelectedCell.X,
             mt.OnMorphAction, format.Value, mt.IsRowIndexComplete);
 
         var dialog = new ActionMenuDialog(ColumnActionHandler.GetAvailableActions(), handler.ExecuteAction);

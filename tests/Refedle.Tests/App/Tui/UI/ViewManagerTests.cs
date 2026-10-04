@@ -873,7 +873,8 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert — callbacks are wired even with no actions, so Morph works from the first DrillDown
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var decorated = view.Table.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which;
+        var decorated = view.Table.Should().BeOfType<PagedTableSource>().Which
+            .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which;
         decorated.Inner.Should().BeOfType<FocusedTableSource>();
         view.OnMorphAction.Should().NotBeNull();
         decorated.RawColumnNames[1].Should().Be("name");
@@ -906,8 +907,83 @@ public sealed class ViewManagerTests : IDisposable
 
         // Assert
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        view.Table.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which.Inner.Should().BeOfType<FocusedTableTransformer>();
+        view.Table.Should().BeOfType<PagedTableSource>().Which
+            .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which.Inner.Should().BeOfType<FocusedTableTransformer>();
         view.Table.ColumnNames.Should().Contain("label (text)");
+    }
+
+    private static DrillDownState CreateNumberedDrillDown(int rowCount)
+    {
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        var rows = Enumerable.Range(0, rowCount)
+            .Select(index => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"Alice{index}\"}}"), $"[{index}]"))
+            .ToArray();
+        return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
+    }
+
+    private static void AssertAtFirstPageAndRow(FocusedTableView view)
+    {
+        var paged = view.Table.Should().BeOfType<PagedTableSource>().Which;
+        paged.CurrentPageNumber.Should().Be(1);
+        paged.WindowStart.Should().Be(0);
+        view.Value.Should().NotBeNull().And.Subject.As<TableSelection>().SelectedCell.Y.Should().Be(0);
+        view.RowOffset.Should().Be(0);
+    }
+
+    [Fact]
+    public void HandleMorphAction_WithFilterAfterMovingAwayFromFirstRow_ReturnsToFirstPageAndRow()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        var drillDown = CreateNumberedDrillDown(rowCount: 12);
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
+        using var window = new Window();
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        viewManager.SwitchToFocusedTable(drillDown);
+        var viewBeforeFilter = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        viewBeforeFilter.SetSelection(0, 5, false);
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+
+        // Act
+        viewBeforeFilter.OnMorphAction?.Invoke(filter);
+
+        // Assert
+        var viewAfterFilter = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        viewAfterFilter.Should().NotBeSameAs(viewBeforeFilter);
+        AssertAtFirstPageAndRow(viewAfterFilter);
+    }
+
+    [Fact]
+    public void RefreshCurrentTableView_AfterClearingFilterFromMovedSelection_ReturnsToFirstPageAndRow()
+    {
+        // Arrange
+        using var app = CreateTestApp();
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        var baseDrillDown = CreateNumberedDrillDown(rowCount: 12);
+        var drillDown = baseDrillDown with { ActionStack = [filter] };
+        using var state = new AppState();
+        state.EnterFocusedTable(drillDown);
+        using var window = new Window();
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        viewManager.SwitchToFocusedTable(drillDown);
+        var viewBeforeClear = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        viewBeforeClear.SetSelection(0, 5, false);
+        state.ClearDrillDownActions();
+
+        // Act
+        viewManager.RefreshCurrentTableView();
+
+        // Assert
+        var viewAfterClear = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        viewAfterClear.Should().NotBeSameAs(viewBeforeClear);
+        AssertAtFirstPageAndRow(viewAfterClear);
     }
 
     [Fact]

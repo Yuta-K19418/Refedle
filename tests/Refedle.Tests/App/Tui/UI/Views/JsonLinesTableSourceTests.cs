@@ -294,7 +294,7 @@ public sealed class JsonLinesTableSourceTests : IDisposable
         using var source = new JsonLinesTableSource(cache, schema);
 
         // Act
-        var rows = source.Rows;
+        var rows = source.TotalRows;
 
         // Assert
         rows.Should().Be(2); // Two lines written in test setup

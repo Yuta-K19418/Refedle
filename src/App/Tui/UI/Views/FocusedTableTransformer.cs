@@ -94,7 +94,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     )
     {
         List<int> matched = [];
-        for (var row = 0; row < source.Rows; row++)
+        for (var row = 0; row < source.TotalRows; row++)
         {
             var isMatch = true;
             foreach (var spec in filterSpecs)
@@ -120,17 +120,17 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     }
 
     /// <inheritdoc/>
-    public override int Rows =>
-        _matchedRowIndices is not null ? _matchedRowIndices.Count : Source.Rows;
+    public override long TotalRows =>
+        _matchedRowIndices is not null ? _matchedRowIndices.Count : Source.TotalRows;
 
     /// <inheritdoc/>
-    public override object this[int row, int col]
+    public override object this[long row, int col]
     {
         get
         {
             ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-            if (row < 0 || row >= Rows)
+            if (row < 0 || row >= TotalRows)
             {
                 throw new ArgumentOutOfRangeException(nameof(row));
             }
@@ -140,7 +140,8 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
-            var sourceRow = _matchedRowIndices is not null ? _matchedRowIndices[row] : row;
+            // Matched-row indices live in a list bounded by TotalRows, so the cast is safe.
+            var sourceRow = _matchedRowIndices is not null ? _matchedRowIndices[(int)row] : row;
 
             if (col == 0)
             {
