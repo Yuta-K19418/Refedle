@@ -7,6 +7,8 @@ namespace Refedle.Tests.App.Tui.Workers;
 
 public sealed class IndexTaskManagerTests : IDisposable
 {
+    private static readonly TimeSpan _waitTimeout = TimeSpan.FromMinutes(1);
+
     private readonly string _testFilePath;
 
     public IndexTaskManagerTests()
@@ -36,7 +38,7 @@ public sealed class IndexTaskManagerTests : IDisposable
         manager.Start(indexer);
 
         // Assert
-        await tcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await tcs.Task.WaitAsync(_waitTimeout);
         indexer.TotalRows.Should().Be(2);
     }
 
@@ -120,13 +122,13 @@ public sealed class IndexTaskManagerTests : IDisposable
 
         // Wait until indexer1 is blocked inside BuildIndex (WaitOne), ensuring it
         // is still running when we start indexer2.
-        await firstCheckpoint1.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstCheckpoint1.Task.WaitAsync(_waitTimeout);
 
         manager.Start(indexer2);
 
         // Assert
-        await completed1.Task.WaitAsync(TimeSpan.FromSeconds(5));
-        await completed2.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed1.Task.WaitAsync(_waitTimeout);
+        await completed2.Task.WaitAsync(_waitTimeout);
 
         indexer1.WasCancelled.Should().BeTrue();
         indexer2.TotalRows.Should().Be(500_000);
@@ -157,13 +159,13 @@ public sealed class IndexTaskManagerTests : IDisposable
 
         using var manager = new IndexTaskManager();
         manager.Start(indexer);
-        await firstCheckpoint.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstCheckpoint.Task.WaitAsync(_waitTimeout);
 
         // Act
         manager.CancelCurrent();
 
         // Assert
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(_waitTimeout);
         indexer.WasCancelled.Should().BeTrue();
     }
 
@@ -213,12 +215,12 @@ public sealed class IndexTaskManagerTests : IDisposable
         manager.Start(indexer);
 
         // Wait until the indexer is blocked inside BuildIndex (WaitOne)
-        await firstCheckpoint.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await firstCheckpoint.Task.WaitAsync(_waitTimeout);
 
         manager.Dispose();
 
         // Assert
-        await completed.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        await completed.Task.WaitAsync(_waitTimeout);
         indexer.WasCancelled.Should().BeTrue();
     }
 

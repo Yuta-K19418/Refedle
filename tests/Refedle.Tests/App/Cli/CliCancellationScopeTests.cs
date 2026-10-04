@@ -6,6 +6,8 @@ namespace Refedle.Tests.App.Cli;
 
 public sealed class CliCancellationScopeTests
 {
+    private static readonly TimeSpan _waitTimeout = TimeSpan.FromMinutes(1);
+
     [Fact]
     public void Create_WhenOuterTokenIsCancelled_CancelsScopeToken()
     {
@@ -72,11 +74,11 @@ public sealed class CliCancellationScopeTests
         // and keeps the raise in flight on a worker thread while the scope's own handler has
         // not been entered yet.
         var source = new TestCancelKeyPressSource();
-        using var handlerEntered = new ManualResetEventSlim(false);
+        var handlerEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var releaseHandler = new ManualResetEventSlim(false);
         source.CancelKeyPress += (_, _) =>
         {
-            handlerEntered.Set();
+            handlerEntered.SetResult();
             releaseHandler.Wait();
         };
         using var scope = CliCancellationScope.Create(source, CancellationToken.None);
@@ -85,7 +87,7 @@ public sealed class CliCancellationScopeTests
         var raiseTask = Task.Run(source.Raise);
         try
         {
-            handlerEntered.Wait(TimeSpan.FromSeconds(5)).Should().BeTrue();
+            await handlerEntered.Task.WaitAsync(_waitTimeout);
 
             // Act — Dispose while the raise is in flight, then let the paused handler resume.
             scope.Dispose();
@@ -99,7 +101,7 @@ public sealed class CliCancellationScopeTests
         finally
         {
             // On every failure path, release the worker and observe its outcome before the
-            // using declarations dispose the ManualResetEventSlim instances it still uses.
+            // using declarations dispose the ManualResetEventSlim it still uses.
             releaseHandler.Set();
             await raiseTask;
         }

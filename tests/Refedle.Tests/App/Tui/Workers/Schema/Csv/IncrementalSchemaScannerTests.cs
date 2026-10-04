@@ -6,6 +6,8 @@ namespace Refedle.Tests.App.Tui.Workers.Schema.Csv;
 
 public sealed class IncrementalSchemaScannerTests : IDisposable
 {
+    private static readonly TimeSpan _waitTimeout = TimeSpan.FromMinutes(1);
+
     private readonly string _tempFilePath;
 
     public IncrementalSchemaScannerTests()
@@ -170,8 +172,8 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
         cts.Cancel();
 
         // Assert
-        // Wait deterministically for the cancellation to propagate (up to 5 seconds)
-        await Task.WhenAny(backgroundTask, Task.Delay(TimeSpan.FromSeconds(5)));
+        // WhenAny observes completion without rethrowing if the task ended in the Canceled state.
+        await Task.WhenAny(backgroundTask).WaitAsync(_waitTimeout);
         backgroundTask.IsCompleted.Should().BeTrue();
     }
 }

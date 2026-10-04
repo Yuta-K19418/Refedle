@@ -354,11 +354,16 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         var style = new TableStyle();
         using var source = new ColumnWidthStabilizingTableSource(inner, style);
         using var barrier = new Barrier(rows.Count);
-        var accesses = Enumerable.Range(0, rows.Count).Select(i => Task.Run(() =>
-        {
-            barrier.SignalAndWait();
-            _ = source[i, 0];
-        }));
+        // LongRunning gives each blocked task its own thread instead of draining the thread pool.
+        var accesses = Enumerable.Range(0, rows.Count).Select(i => Task.Factory.StartNew(
+            () =>
+            {
+                barrier.SignalAndWait();
+                _ = source[i, 0];
+            },
+            CancellationToken.None,
+            TaskCreationOptions.LongRunning,
+            TaskScheduler.Default));
 
         // Act
         await Task.WhenAll(accesses);
