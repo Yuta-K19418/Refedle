@@ -129,7 +129,7 @@ internal sealed class ViewManager : IDisposable
     private static void PopulateShortcuts(StatusBar statusBar, List<string> hints)
     {
         // Populate shortcuts with Key.Empty to suppress key indicator
-        var shortcuts = hints.Select(hint => new Shortcut { Key = Key.Empty, HelpText = hint }).ToList();
+        var shortcuts = hints.Select(static hint => new Shortcut { Key = Key.Empty, HelpText = hint }).ToList();
         foreach (var shortcut in shortcuts)
         {
             statusBar.Add(shortcut);
@@ -365,7 +365,7 @@ internal sealed class ViewManager : IDisposable
                 filterSpecs => new Refedle.Engine.IO.JsonLines.FilterRowIndexer(
                     indexer,
                     indexer.FilePath,
-                    [.. schema.Columns.Select(c => Encoding.UTF8.GetBytes(c.Name))],
+                    [.. schema.Columns.Select(static c => Encoding.UTF8.GetBytes(c.Name))],
                     filterSpecs
                 )
             )

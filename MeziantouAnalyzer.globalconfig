@@ -13,6 +13,28 @@ dotnet_diagnostic.MA0001.severity = warning
 dotnet_diagnostic.MA0002.severity = warning
 # MA0004: Require an explicit ConfigureAwait(true/false) on every awaited task.
 dotnet_diagnostic.MA0004.severity = warning
+# MA0228: The event id of an EventSource must be greater than zero
+dotnet_diagnostic.MA0228.severity = warning
+# MA0229: The event id of an EventSource is already used by another event
+dotnet_diagnostic.MA0229.severity = warning
+# MA0230: The event name of an EventSource is already used by another event
+dotnet_diagnostic.MA0230.severity = warning
+# MA0231: An EventSource event method must not be static
+dotnet_diagnostic.MA0231.severity = warning
+# MA0232: An EventSource event method must not be an explicit interface implementation
+dotnet_diagnostic.MA0232.severity = warning
+# MA0233: An abstract EventSource must not declare event methods
+dotnet_diagnostic.MA0233.severity = warning
+# MA0234: The event id written by an EventSource event method must match its [Event] attribute
+dotnet_diagnostic.MA0234.severity = warning
+# MA0235: The payload written by an EventSource event method must match its parameters
+dotnet_diagnostic.MA0235.severity = warning
+# MA0236: The payload written by an EventSource event method must use the order of its parameters
+dotnet_diagnostic.MA0236.severity = warning
+# MA0237: An EventSource event method writing a related activity id must declare it as its first parameter
+dotnet_diagnostic.MA0237.severity = warning
+# MA0238: The parameter type of an EventSource event method is not supported
+dotnet_diagnostic.MA0238.severity = warning
 
 # Enabled style rules
 # MA0007: Add a trailing comma after the last value in multi-line initializers.
@@ -249,6 +271,28 @@ dotnet_diagnostic.MA0203.severity = warning
 dotnet_diagnostic.MA0206.severity = warning
 # MA0213: Simplify negated boolean expressions.
 dotnet_diagnostic.MA0213.severity = warning
+# MA0216: Remove unnecessary closed modifier
+dotnet_diagnostic.MA0216.severity = warning
+# MA0217: Use a static lambda
+dotnet_diagnostic.MA0217.severity = warning
+# MA0220: The configured regular expression is not valid
+dotnet_diagnostic.MA0220.severity = warning
+# MA0221: TryGetValue method should use [MaybeNullWhen(false)] on the value parameter
+dotnet_diagnostic.MA0221.severity = warning
+# MA0222: JsonSourceGenerationOptions should set RespectNullableAnnotations
+dotnet_diagnostic.MA0222.severity = warning
+# MA0223: JsonSourceGenerationOptions should set RespectRequiredConstructorParameters
+dotnet_diagnostic.MA0223.severity = warning
+# MA0224: JsonSerializerOptions should set RespectNullableAnnotations
+dotnet_diagnostic.MA0224.severity = warning
+# MA0225: JsonSerializerOptions should set RespectRequiredConstructorParameters
+dotnet_diagnostic.MA0225.severity = warning
+# MA0226: EventSource class should be sealed
+dotnet_diagnostic.MA0226.severity = warning
+# MA0240: Do not use banned syntax
+dotnet_diagnostic.MA0240.severity = warning
+# MA0241: The banned syntax entry is not valid
+dotnet_diagnostic.MA0241.severity = warning
 
 # Enabled performance rules
 # MA0008: Add StructLayoutAttribute to structs.
@@ -311,3 +355,11 @@ dotnet_diagnostic.MA0185.severity = warning
 dotnet_diagnostic.MA0209.severity = warning
 # MA0210: Explicitly select in overloads.
 dotnet_diagnostic.MA0210.severity = warning
+# MA0215: Return the task instead of awaiting it
+dotnet_diagnostic.MA0215.severity = warning
+# MA0227: Avoid using 'Enumerable.Contains' on a set
+dotnet_diagnostic.MA0227.severity = warning
+# MA0239: Use 'typeof' instead of 'GetType()' when the type is sealed
+dotnet_diagnostic.MA0239.severity = warning
+# MA0242: Use a value factory to compute the value only when the key is not in the ConcurrentDictionary
+dotnet_diagnostic.MA0242.severity = warning

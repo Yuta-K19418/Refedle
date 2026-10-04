@@ -93,13 +93,13 @@ internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
     }
 
     private static string[] BuildColumnNames(TableSchema schema) =>
-        [.. schema.Columns.Select(c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
+        [.. schema.Columns.Select(static c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
 
     private static string[] BuildRawColumnNames(TableSchema schema) =>
-        [.. schema.Columns.Select(c => c.Name)];
+        [.. schema.Columns.Select(static c => c.Name)];
 
     private static byte[][] BuildColumnNamesUtf8(TableSchema schema) =>
-        [.. schema.Columns.Select(c => Encoding.UTF8.GetBytes(c.Name))];
+        [.. schema.Columns.Select(static c => Encoding.UTF8.GetBytes(c.Name))];
 
     public void Dispose()
     {

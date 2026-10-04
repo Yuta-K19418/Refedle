@@ -19,8 +19,8 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
     public VirtualTableSource(IRowIndexer indexer, TableSchema schema)
     {
         _schema = schema;
-        _columnNames = [.. _schema.Columns.Select(c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
-        _rawColumnNames = [.. _schema.Columns.Select(c => c.Name)];
+        _columnNames = [.. _schema.Columns.Select(static c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
+        _rawColumnNames = [.. _schema.Columns.Select(static c => c.Name)];
         _cache = new DataRowCache(indexer, _schema.ColumnCount);
     }
 

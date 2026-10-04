@@ -45,7 +45,7 @@ internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
         _keyPath = keyPath;
 
         _columnNameUtf8Bytes = [.. outputSchema.Columns
-            .Select(c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
+            .Select(static c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
 
         _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
         for (var i = 0; i < inputColumnNames.Count; i++)

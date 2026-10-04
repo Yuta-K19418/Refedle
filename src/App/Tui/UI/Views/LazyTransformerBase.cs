@@ -101,14 +101,14 @@ internal abstract class LazyTransformerBase(
     ) BuildTransformedSchema(TableSchema originalSchema, IReadOnlyList<MorphAction> actions)
     {
         var working = originalSchema
-            .Columns.Select(c => new WorkingColumn(
+            .Columns.Select(static c => new WorkingColumn(
                 SourceIndex: c.ColumnIndex,
                 Name: c.Name,
                 Type: c.Type
             ))
             .ToList();
 
-        var nameToIndex = working.Select((w, i) => (w.Name, i)).ToDictionary(t => t.Name, t => t.i, StringComparer.Ordinal);
+        var nameToIndex = working.Select(static (w, i) => (w.Name, i)).ToDictionary(static t => t.Name, static t => t.i, StringComparer.Ordinal);
         List<FilterSpec> filterSpecs = [];
 
         foreach (var action in actions)
@@ -125,13 +125,13 @@ internal abstract class LazyTransformerBase(
 
         return (
             remaining
-                .ConvertAll(workingColumn => $"{workingColumn.Name} ({ColumnTypeLabel.ToLabel(workingColumn.Type)})")
+                .ConvertAll(static workingColumn => $"{workingColumn.Name} ({ColumnTypeLabel.ToLabel(workingColumn.Type)})")
                 .ToArray(),
-            remaining.ConvertAll(workingColumn => workingColumn.Name).ToArray(),
-            remaining.ConvertAll(workingColumn => workingColumn.Type),
-            remaining.ConvertAll(workingColumn => workingColumn.SourceIndex),
-            remaining.ConvertAll(workingColumn => workingColumn.FillValue),
-            remaining.ConvertAll(workingColumn => workingColumn.FormatString),
+            remaining.ConvertAll(static workingColumn => workingColumn.Name).ToArray(),
+            remaining.ConvertAll(static workingColumn => workingColumn.Type),
+            remaining.ConvertAll(static workingColumn => workingColumn.SourceIndex),
+            remaining.ConvertAll(static workingColumn => workingColumn.FillValue),
+            remaining.ConvertAll(static workingColumn => workingColumn.FormatString),
             filterSpecs
         );
     }

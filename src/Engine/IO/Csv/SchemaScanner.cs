@@ -36,7 +36,7 @@ public static class SchemaScanner
         // Header-only CSV: infer Text/nullable schema from column names only
         if (rows.Count == 0)
         {
-            var headerOnlyColumns = columnNames.Select((name, idx) => new ColumnSchema
+            var headerOnlyColumns = columnNames.Select(static (name, idx) => new ColumnSchema
             {
                 Name = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{idx + 1}") : name,
                 Type = ColumnType.Text,

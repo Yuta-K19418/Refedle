@@ -233,7 +233,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        if (children.Any(c => c is not JsonObjectTreeNode))
+        if (children.Any(static c => c is not JsonObjectTreeNode))
         {
             return false;
         }
