@@ -95,17 +95,17 @@ internal sealed class LazyTransformer : LazyTransformerBase
     /// on a background task. The caller is responsible for waiting for index
     /// build completion before displaying row counts.
     /// </remarks>
-    public override int Rows =>
-        _filterRowIndexer is not null ? _filterRowIndexer.TotalMatchedRows : Source.Rows;
+    public override long TotalRows =>
+        _filterRowIndexer is not null ? _filterRowIndexer.TotalMatchedRows : Source.TotalRows;
 
     /// <inheritdoc/>
-    public override object this[int row, int col]
+    public override object this[long row, int col]
     {
         get
         {
             ObjectDisposedException.ThrowIf(IsDisposed, this);
 
-            if (row < 0 || row >= Rows)
+            if (row < 0 || row >= TotalRows)
             {
                 throw new ArgumentOutOfRangeException(nameof(row));
             }
@@ -115,8 +115,9 @@ internal sealed class LazyTransformer : LazyTransformerBase
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
+            // The filtered row space is indexed by IFilterRowIndexer, which is int-based.
             var sourceRow = _filterRowIndexer is not null
-                ? _filterRowIndexer.GetSourceRow(row)
+                ? _filterRowIndexer.GetSourceRow((int)row)
                 : row;
 
             if (sourceRow < 0)

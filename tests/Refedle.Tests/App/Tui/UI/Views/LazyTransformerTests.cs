@@ -15,11 +15,11 @@ public sealed class LazyTransformerTests
 
     private sealed class FakeTableSource(string[][] data, string[] columnNames) : IExtendedTableSource
     {
-        public int Rows => data.Length;
+        public long TotalRows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
         public string[] RawColumnNames => columnNames;
-        public object this[int row, int col] => data[row][col];
+        public object this[long row, int col] => data[(int)row][col];
     }
 
     /// <summary>
@@ -38,11 +38,11 @@ public sealed class LazyTransformerTests
         : IExtendedTableSource, IDisposable
     {
         public bool IsDisposed { get; private set; }
-        public int Rows => data.Length;
+        public long TotalRows => data.Length;
         public int Columns => columnNames.Length;
         public string[] ColumnNames => columnNames;
         public string[] RawColumnNames => columnNames;
-        public object this[int row, int col] => data[row][col];
+        public object this[long row, int col] => data[(int)row][col];
         public void Dispose() => IsDisposed = true;
     }
 
@@ -530,7 +530,7 @@ public sealed class LazyTransformerTests
         using var transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var rows = transformer.Rows;
+        var rows = transformer.TotalRows;
 
         // Assert
         rows.Should().Be(5);
@@ -611,7 +611,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
 
         // Assert
-        transformer.Rows.Should().Be(2);
+        transformer.TotalRows.Should().Be(2);
         transformer[0, 0].Should().Be("Alice");
         transformer[1, 0].Should().Be("Alice");
     }
@@ -639,7 +639,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
 
         // Assert
-        transformer.Rows.Should().Be(2);
+        transformer.TotalRows.Should().Be(2);
         transformer[0, 0].Should().Be("apple");
         transformer[1, 0].Should().Be("apricot");
     }
@@ -672,7 +672,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, [0]);
 
         // Assert
-        transformer.Rows.Should().Be(1);
+        transformer.TotalRows.Should().Be(1);
         transformer[0, 0].Should().Be("Alice");
         transformer[0, 1].Should().Be("30");
     }
@@ -698,7 +698,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert
-        transformer.Rows.Should().Be(0);
+        transformer.TotalRows.Should().Be(0);
     }
 
     // -------------------------------------------------------------------------
@@ -727,7 +727,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, [0]);
 
         // Assert
-        transformer.Rows.Should().Be(1);
+        transformer.TotalRows.Should().Be(1);
         transformer[0, 0].Should().Be("Alice");
     }
 
@@ -755,7 +755,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert — both rows retained because the filter was silently skipped
-        transformer.Rows.Should().Be(2);
+        transformer.TotalRows.Should().Be(2);
     }
 
     // -------------------------------------------------------------------------
@@ -785,7 +785,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, [1, 2]);
 
         // Assert
-        transformer.Rows.Should().Be(2);
+        transformer.TotalRows.Should().Be(2);
         transformer[0, 0].Should().Be("50");
         transformer[1, 0].Should().Be("30");
     }
@@ -811,7 +811,7 @@ public sealed class LazyTransformerTests
         using var transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert — all rows excluded because numeric operators are unsupported on Text columns
-        transformer.Rows.Should().Be(0);
+        transformer.TotalRows.Should().Be(0);
     }
 
     // -------------------------------------------------------------------------

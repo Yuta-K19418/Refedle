@@ -24,19 +24,19 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
         _cache = new DataRowCache(indexer, _schema.ColumnCount);
     }
 
-    public int Rows => (int)_cache.TotalRows;
+    public long TotalRows => _cache.TotalRows;
     public int Columns => _schema.ColumnCount;
     public string[] ColumnNames => _columnNames;
     /// <inheritdoc/>
     public string[] RawColumnNames => _rawColumnNames;
 
-    public object this[int row, int col]
+    public object this[long row, int col]
     {
         get
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            if (row < 0 || row >= Rows)
+            if (row < 0 || row >= TotalRows)
             {
                 throw new ArgumentOutOfRangeException(nameof(row));
             }

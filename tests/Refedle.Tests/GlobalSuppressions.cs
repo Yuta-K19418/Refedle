@@ -100,6 +100,20 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.Tests.App.Tui.UI.Views.ColumnWidthStabilizingTableSourceTests.Dispose_CalledMultipleTimes_DisposesInnerSourceExactlyOnce",
     Justification = "Ownership transferred to source, which is disposed by the two Dispose() calls under test.")]
 
+// PagedTableSourceTests
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Tui.UI.Views.PagedTableSourceTests.Dispose_DisposesInnerSource",
+    Justification = "Ownership transferred to the paging layer, which is disposed by the single Dispose() call under test.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.Tests.App.Tui.UI.Views.PagedTableSourceTests.Dispose_CalledTwice_DisposesInnerSourceOnce",
+    Justification = "Ownership transferred to the paging layer, which is disposed by the two Dispose() calls under test.")]
+
 // LivePumpTestSession<T>
 [assembly: SuppressMessage(
     "Design",

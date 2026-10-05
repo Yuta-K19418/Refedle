@@ -28,7 +28,7 @@ internal sealed class FocusedTableSource : IExtendedTableSource
     }
 
     /// <inheritdoc/>
-    public int Rows => _rows.Count;
+    public long TotalRows => _rows.Count;
 
     /// <inheritdoc/>
     public int Columns => _schema.ColumnCount + 1;
@@ -44,14 +44,17 @@ internal sealed class FocusedTableSource : IExtendedTableSource
     public string[] RawColumnNames => _rawColumnNames;
 
     /// <inheritdoc/>
-    public object this[int row, int col]
+    public object this[long row, int col]
     {
         get
         {
-            if (row < 0 || row >= Rows)
+            if (row < 0 || row >= TotalRows)
             {
                 throw new ArgumentOutOfRangeException(nameof(row));
             }
+
+            // Row count is a List count, so it always fits int after the bounds check.
+            var rowIndex = (int)row;
 
             if (col < 0 || col >= Columns)
             {
@@ -60,10 +63,10 @@ internal sealed class FocusedTableSource : IExtendedTableSource
 
             if (col == 0)
             {
-                return _rows[row].HashValue;
+                return _rows[rowIndex].HashValue;
             }
 
-            return JsonObjectCellExtractor.ExtractCell(_rows[row].Bytes.Span, _columnNamesUtf8[col - 1]);
+            return JsonObjectCellExtractor.ExtractCell(_rows[rowIndex].Bytes.Span, _columnNamesUtf8[col - 1]);
         }
     }
 }

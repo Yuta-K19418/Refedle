@@ -46,7 +46,7 @@ internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, 
     /// <summary>The decorated source, exposed so callers can recover the underlying source type.</summary>
     internal IExtendedTableSource Inner => _inner;
 
-    public int Rows => _inner.Rows;
+    public long TotalRows => _inner.TotalRows;
     public int Columns => _inner.Columns;
     public string[] ColumnNames => _inner.ColumnNames;
 
@@ -56,7 +56,7 @@ internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, 
     /// </summary>
     public string[] RawColumnNames => _inner.RawColumnNames;
 
-    public object this[int row, int col]
+    public object this[long row, int col]
     {
         get
         {
