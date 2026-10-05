@@ -196,4 +196,26 @@ public sealed class DataRowReaderTests : IDisposable
         // Assert
         act.Should().Throw<ObjectDisposedException>();
     }
+
+    [Fact]
+    public void ReadRows_WithQuotedCell_ReturnsValueWithoutQuotes()
+    {
+        // Arrange
+        // Header: col1,col2
+        var headerLine = "col1,col2";
+        // Data: "say ""hi""",val2
+        var dataLine = "\"say \"\"hi\"\"\",val2";
+        string[] lines = [headerLine, dataLine];
+        var csvContent = string.Join("\n", lines);
+        File.WriteAllText(_testFilePath, csvContent);
+        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+
+        // Act
+        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 1);
+
+        // Assert
+        // Expected: say "hi", val2
+        ToStringArray(rows[0]).Should().Equal(["say \"hi\"", "val2"]);
+    }
 }

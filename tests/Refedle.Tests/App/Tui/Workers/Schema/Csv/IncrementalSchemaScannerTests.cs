@@ -176,4 +176,26 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
         await Task.WhenAny(backgroundTask).WaitAsync(_waitTimeout);
         backgroundTask.IsCompleted.Should().BeTrue();
     }
+
+    [Fact]
+    public async Task InitialScanAsync_WithQuotedHeaderAndQuotedNumber_ReadsWithoutQuotes()
+    {
+        // Arrange
+        // Header: "say ""hi""",Count
+        var headerLine = "\"say \"\"hi\"\"\",Count";
+        // Data: value1,"12"
+        var dataLine = "value1,\"12\"";
+        string[] lines = [headerLine, dataLine];
+        var csvContent = string.Join("\n", lines);
+        await File.WriteAllTextAsync(_tempFilePath, csvContent);
+        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+
+        // Act
+        var schema = await scanner.InitialScanAsync();
+
+        // Assert
+        // Expected: column 1 name is say "hi", column 2 type is WholeNumber
+        schema.Columns[0].Name.Should().Be("say \"hi\"");
+        schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
+    }
 }

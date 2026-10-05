@@ -89,4 +89,24 @@ public sealed class ColumnNameScannerTests : IDisposable
         // Assert
         act.Should().Throw<InvalidOperationException>().WithMessage("*'Column2'*");
     }
+
+    [Fact]
+    public void ScanColumnNames_WithQuotedHeaderCell_ReturnsNameWithoutQuotes()
+    {
+        // Arrange
+        // Header: "say ""hi""",other
+        var headerLine = "\"say \"\"hi\"\"\",other";
+        // Data: v1,v2
+        var dataLine = "v1,v2";
+        string[] lines = [headerLine, dataLine];
+        var csvContent = string.Join("\n", lines);
+        File.WriteAllText(_testFilePath, csvContent);
+
+        // Act
+        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+
+        // Assert
+        // Expected: say "hi", other
+        names.Should().Equal(["say \"hi\"", "other"]);
+    }
 }

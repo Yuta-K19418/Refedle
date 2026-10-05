@@ -1,9 +1,9 @@
 using AwesomeAssertions;
-using nietras.SeparatedValues;
 using Refedle.App.Cli.IO;
 using Refedle.App.Cli.IO.Csv;
 using Refedle.Engine;
 using Refedle.Engine.Filtering;
+using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models.Actions;
 
 namespace Refedle.Tests.App.Cli.IO.Csv;
@@ -23,7 +23,7 @@ public sealed class CsvRecordReaderTests
         try
         {
             await File.WriteAllTextAsync(filePath, $"value,filler\n{input},x\n");
-            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var sepReader = await CsvSep.FromFileAsync(filePath);
             var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
             using var recordReader = new CsvRecordReader(sepReader, outputSchema);
             await recordReader.MoveNextAsync(default);
@@ -50,7 +50,7 @@ public sealed class CsvRecordReaderTests
         try
         {
             await File.WriteAllTextAsync(filePath, "value\nhello\n");
-            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var sepReader = await CsvSep.FromFileAsync(filePath);
             var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
             var recordReader = new CsvRecordReader(sepReader, outputSchema);
             recordReader.Dispose();
@@ -79,7 +79,7 @@ public sealed class CsvRecordReaderTests
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var sepReader = await CsvSep.FromFileAsync(filePath);
             using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(5, FilterOperator.Equals, "hello"));
             await recordReader.MoveNextAsync(default);
 
@@ -103,7 +103,7 @@ public sealed class CsvRecordReaderTests
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var sepReader = await CsvSep.FromFileAsync(filePath);
             using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "hello"));
             await recordReader.MoveNextAsync(default);
 
@@ -127,7 +127,7 @@ public sealed class CsvRecordReaderTests
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await Sep.New(',').Reader().FromFileAsync(filePath);
+            var sepReader = await CsvSep.FromFileAsync(filePath);
             using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "world"));
             await recordReader.MoveNextAsync(default);
 
