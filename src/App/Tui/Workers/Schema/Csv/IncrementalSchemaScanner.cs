@@ -1,5 +1,4 @@
 using System.Globalization;
-using nietras.SeparatedValues;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 
@@ -77,7 +76,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     {
         var rows = new List<CsvDataRow>(count);
 
-        using var reader = Sep.New(',').Reader().FromFile(FilePath);
+        using var reader = CsvSep.FromFile(FilePath);
 
         // Skip to start row (0-based, where 0 means first data row after header)
         var currentRow = 0;
@@ -115,7 +114,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
     private string[] ReadColumnNames()
     {
-        using var reader = Sep.New(',').Reader().FromFile(FilePath);
+        using var reader = CsvSep.FromFile(FilePath);
 
         // Header column names are automatically available
         var header = reader.Header;

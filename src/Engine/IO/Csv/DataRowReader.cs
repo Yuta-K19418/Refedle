@@ -52,7 +52,7 @@ public sealed class DataRowReader : IDisposable
             _fileStream.Seek(byteOffset, SeekOrigin.Begin);
 
             using var streamReader = new StreamReader(_fileStream, Encoding.UTF8, leaveOpen: true);
-            using var reader = Sep.New(',').Reader(static o => o with { HasHeader = false }).From(streamReader);
+            using var reader = CsvSep.From(streamReader, hasHeader: false);
 
             SkipRows(reader, rowsToSkip);
             ReadRowsInto(reader, rowsToRead, rows);

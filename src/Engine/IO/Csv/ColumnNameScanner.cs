@@ -1,5 +1,4 @@
 using System.Globalization;
-using nietras.SeparatedValues;
 
 namespace Refedle.Engine.IO.Csv;
 
@@ -29,7 +28,7 @@ public static class ColumnNameScanner
     {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        using var reader = Sep.New(',').Reader().FromFile(filePath);
+        using var reader = CsvSep.FromFile(filePath);
         var header = reader.Header;
 
         var seen = new HashSet<string>(StringComparer.Ordinal);
