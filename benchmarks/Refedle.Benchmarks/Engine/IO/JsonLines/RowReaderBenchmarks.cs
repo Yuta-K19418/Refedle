@@ -32,8 +32,8 @@ public class RowReaderBenchmarks : IDisposable
     /// </summary>
     public RowReaderBenchmarks()
     {
-        _shortLinesFilePath = Path.GetTempFileName();
-        _longLinesFilePath = Path.GetTempFileName();
+        _shortLinesFilePath = Path.Combine(Path.GetTempPath(), $"rowreader_benchmark_short_{Guid.NewGuid()}.jsonl");
+        _longLinesFilePath = Path.Combine(Path.GetTempPath(), $"rowreader_benchmark_long_{Guid.NewGuid()}.jsonl");
 
         // Roughly 80 bytes per line
         var shortLines = new StringBuilder();
