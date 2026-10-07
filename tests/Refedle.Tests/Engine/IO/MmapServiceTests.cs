@@ -15,6 +15,51 @@ public sealed class MmapServiceTests : IDisposable
         File.WriteAllText(_testFilePath, TestContent);
     }
 
+    public static IEnumerable<object[]> SkipUtf8BomCases()
+    {
+        // Full UTF-8 BOM (EF BB BF) followed by content → body starts at 3.
+        yield return [(byte[])[0xEF, 0xBB, 0xBF, (byte)'{'], 3L];
+        // Full UTF-8 BOM with nothing after it → body starts at 3 (EOF right after the BOM).
+        yield return [(byte[])[0xEF, 0xBB, 0xBF], 3L];
+        // No BOM — ordinary content of 3+ bytes → 0.
+        yield return [Encoding.ASCII.GetBytes("abc"), 0L];
+        // Near-miss — first two BOM bytes but the third differs (BE vs BF) → 0.
+        yield return [(byte[])[0xEF, 0xBB, 0xBE], 0L];
+        // File shorter than 3 bytes → 0.
+        yield return [Encoding.ASCII.GetBytes("ab"), 0L];
+        // Single BOM-prefix byte → 0.
+        yield return [(byte[])[0xEF], 0L];
+    }
+
+    [Theory]
+    [MemberData(nameof(SkipUtf8BomCases))]
+    public void SkipUtf8Bom_VariousHeaders_ReturnsExpectedBodyOffset(byte[] header, long expected)
+    {
+        // Arrange
+        File.WriteAllBytes(_testFilePath, header);
+        using var mmap = MmapService.Open(_testFilePath).Value;
+
+        // Act
+        var bodyOffset = mmap.SkipUtf8Bom();
+
+        // Assert
+        bodyOffset.Should().Be(expected);
+    }
+
+    [Fact]
+    public void SkipUtf8Bom_AfterDispose_ThrowsObjectDisposedException()
+    {
+        // Arrange
+        var mmap = MmapService.Open(_testFilePath).Value;
+        mmap.Dispose();
+
+        // Act
+        var act = () => mmap.SkipUtf8Bom();
+
+        // Assert
+        act.Should().Throw<ObjectDisposedException>();
+    }
+
     [Fact]
     public void Open_ValidFile_ReturnsSuccess()
     {

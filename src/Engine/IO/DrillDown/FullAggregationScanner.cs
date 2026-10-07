@@ -84,7 +84,7 @@ public static class FullAggregationScanner
         var buffer = ArrayPool<byte>.Shared.Rent(FileChunkReader.BufferSize);
         try
         {
-            var fileOffset = FileChunkReader.SkipUtf8Bom(mmap);
+            var fileOffset = mmap.SkipUtf8Bom();
             var recordPosition = 1L;
             var remainingLen = 0;
 

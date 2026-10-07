@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.MemoryMappedFiles;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.Engine.IO;
 
@@ -144,6 +145,25 @@ public sealed class MmapService : IDisposable
 
         var viewOffset = (ulong)(offset + _accessor.PointerOffset);
         _accessor.SafeMemoryMappedViewHandle.ReadSpan(viewOffset, destination);
+    }
+
+    /// <summary>
+    /// Returns the offset at which the file body starts: <c>3</c> when the file begins with a
+    /// UTF-8 BOM, otherwise <c>0</c>.
+    /// </summary>
+    /// <exception cref="ObjectDisposedException">The service has been disposed.</exception>
+    public long SkipUtf8Bom()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        if (_length < Utf8BomUtility.Length)
+        {
+            return 0;
+        }
+
+        Span<byte> header = stackalloc byte[Utf8BomUtility.Length];
+        Read(0, header);
+        return Utf8BomUtility.StartsWithUtf8Bom(header) ? Utf8BomUtility.Length : 0;
     }
 
     /// <summary>
