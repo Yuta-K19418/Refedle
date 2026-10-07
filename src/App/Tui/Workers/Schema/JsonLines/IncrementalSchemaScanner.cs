@@ -6,7 +6,7 @@ namespace Refedle.App.Tui.Workers.Schema.JsonLines;
 /// <summary>
 /// Performs incremental schema inference for JSON Lines files.
 /// - Initial scan: first 200 lines
-/// - Background scan: remaining lines in batches of 1000
+/// - Background scan: remaining lines after the initial scan, read in a single pass
 /// - Thread-safe schema updates via Copy-on-Write
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
@@ -47,21 +47,18 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     {
         return BackgroundSchemaScan.Execute<JsonRawBytes>(
             currentSchema,
-            InitialScanCount,
-            BackgroundBatchSize,
-            ReadBackgroundBatch,
+            ReadRemainingLines,
             static (schema, line) => SchemaScanner.RefineSchema(schema, line.Span),
             cancellationToken
         );
     }
 
-    private IReadOnlyList<JsonRawBytes> ReadBackgroundBatch(int linesToSkip, int linesToRead)
+    private IEnumerable<JsonRawBytes> ReadRemainingLines()
     {
         using var reader = new RowReader(FilePath);
-        return reader.ReadLines(
-            byteOffset: 0,
-            linesToSkip: linesToSkip,
-            linesToRead: linesToRead
-        );
+        foreach (var line in reader.EnumerateLines(linesToSkip: InitialScanCount))
+        {
+            yield return line;
+        }
     }
 }

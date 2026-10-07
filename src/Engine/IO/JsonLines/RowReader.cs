@@ -50,18 +50,7 @@ public sealed class RowReader : IDisposable
 
         List<JsonRawBytes> result = [];
         result.EnsureCapacity(linesToRead);
-        var currentOffset = byteOffset;
-
-        // Skip UTF-8 BOM if present at the beginning of the file
-        if (currentOffset == 0 && _mmap.Length >= 3)
-        {
-            Span<byte> bomHeader = stackalloc byte[3];
-            _mmap.Read(0, bomHeader);
-            if (HasUtf8Bom(bomHeader))
-            {
-                currentOffset = 3;
-            }
-        }
+        var currentOffset = SkipBomIfAtStart(byteOffset);
 
         var skipResult = SkipLines(currentOffset, linesToSkip);
         if (!skipResult.reachedTarget)
@@ -72,6 +61,55 @@ public sealed class RowReader : IDisposable
 
         ReadRequestedLines(skipResult.offset, linesToRead, result);
         return result;
+    }
+
+    /// <summary>
+    /// Lazily enumerates raw JSON line bytes from the start of the file in a single forward pass.
+    /// </summary>
+    /// <param name="linesToSkip">Number of lines to skip from the start of the file.</param>
+    /// <returns>A deferred sequence of raw JSON line bytes; the reader must stay undisposed while it is enumerated.</returns>
+    /// <exception cref="ObjectDisposedException">The reader has been disposed.</exception>
+    /// <exception cref="NotSupportedException">The JSON line exceeds the supported size limit.</exception>
+    public IEnumerable<JsonRawBytes> EnumerateLines(int linesToSkip)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        var currentOffset = SkipBomIfAtStart(0);
+        var skipResult = SkipLines(currentOffset, linesToSkip);
+        if (!skipResult.reachedTarget)
+        {
+            yield break;
+        }
+
+        currentOffset = skipResult.offset;
+        while (true)
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            if (!TryReadNextLine(currentOffset, out var nextLine))
+            {
+                yield break;
+            }
+
+            currentOffset = nextLine.nextOffset;
+            yield return nextLine.line;
+        }
+    }
+
+    private long SkipBomIfAtStart(long byteOffset)
+    {
+        // Skip UTF-8 BOM if present at the beginning of the file
+        if (byteOffset == 0 && _mmap.Length >= 3)
+        {
+            Span<byte> bomHeader = stackalloc byte[3];
+            _mmap.Read(0, bomHeader);
+            if (HasUtf8Bom(bomHeader))
+            {
+                return 3;
+            }
+        }
+
+        return byteOffset;
     }
 
     private (bool reachedTarget, long offset) SkipLines(long startOffset, int linesToSkip)
@@ -115,15 +153,31 @@ public sealed class RowReader : IDisposable
     {
         var currentOffset = startOffset;
         var linesRead = 0;
-        var incompleteLineBytes = 0L;
 
         while (linesRead < linesToRead)
+        {
+            if (!TryReadNextLine(currentOffset, out var nextLine))
+            {
+                return;
+            }
+
+            result.Add(nextLine.line);
+            currentOffset = nextLine.nextOffset;
+            linesRead++;
+        }
+    }
+
+    private bool TryReadNextLine(long currentOffset, out (JsonRawBytes line, long nextOffset) nextLine)
+    {
+        var incompleteLineBytes = 0L;
+
+        while (true)
         {
             var (lineCompleted, bytesConsumed) = FindNextLineLength(currentOffset + incompleteLineBytes);
             if (bytesConsumed <= 0)
             {
-                HandleIncompleteLineAtEof(currentOffset, incompleteLineBytes, result);
-                return;
+                // Reached EOF: a trailing line without a newline is the last line
+                return TryReadIncompleteLineAtEof(currentOffset, incompleteLineBytes, out nextLine);
             }
 
             if (!lineCompleted)
@@ -149,16 +203,13 @@ public sealed class RowReader : IDisposable
 
                 var lineBytes = new byte[trimmedSpan.Length];
                 trimmedSpan.CopyTo(lineBytes);
-                result.Add(lineBytes.AsMemory());
+                nextLine = (lineBytes.AsMemory(), currentOffset + totalLineBytes);
+                return true;
             }
             finally
             {
                 ArrayPool<byte>.Shared.Return(lineBuffer);
             }
-
-            currentOffset += totalLineBytes;
-            incompleteLineBytes = 0;
-            linesRead++;
         }
     }
 
@@ -182,11 +233,15 @@ public sealed class RowReader : IDisposable
         return span;
     }
 
-    private void HandleIncompleteLineAtEof(long offset, long incompleteLineBytes, List<JsonRawBytes> result)
+    private bool TryReadIncompleteLineAtEof(
+        long offset,
+        long incompleteLineBytes,
+        out (JsonRawBytes line, long nextOffset) nextLine)
     {
+        nextLine = default;
         if (incompleteLineBytes <= 0)
         {
-            return;
+            return false;
         }
 
         // Lines exceeding ~2 GB are not currently supported; revisit if demand arises.
@@ -201,10 +256,11 @@ public sealed class RowReader : IDisposable
         var lastTrimmedSpan = TrimNewline(lastLineBytes.AsSpan());
         if (lastTrimmedSpan.Length <= 0)
         {
-            return;
+            return false;
         }
 
-        result.Add(lastLineBytes.AsMemory(0, lastTrimmedSpan.Length));
+        nextLine = (lastLineBytes.AsMemory(0, lastTrimmedSpan.Length), offset + incompleteLineBytes);
+        return true;
     }
 
     private (bool lineCompleted, int bytesConsumed) FindNextLineLength(long startOffset)

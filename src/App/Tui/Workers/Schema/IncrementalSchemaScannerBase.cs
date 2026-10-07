@@ -5,13 +5,12 @@ namespace Refedle.App.Tui.Workers.Schema;
 /// <summary>
 /// Base class for incremental schema scanners that perform initial scan and background refinement.
 /// - Initial scan: reads initial rows/lines in a single pass; awaited by the caller before displaying the table
-/// - Background scan: continues refinement on remaining data in batches
+/// - Background scan: refines the schema with the remaining data in a single pass
 /// - Thread-safe schema updates via Copy-on-Write pattern
 /// </summary>
 internal abstract class IncrementalSchemaScannerBase(string filePath) : ISchemaScanner
 {
     protected const int InitialScanCount = 200;
-    protected const int BackgroundBatchSize = 1000;
 
     /// <summary>
     /// Gets the path of the file being scanned.
