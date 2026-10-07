@@ -380,6 +380,10 @@ dotnet_diagnostic.CA2007.severity = none
 # Benchmark files
 [benchmarks/**/*.cs]
 
+# CA1515: Consider making public types internal
+# BenchmarkDotNet requires benchmark classes to be public, so we disable this rule for benchmark projects.
+dotnet_diagnostic.CA1515.severity = none
+
 # CA1707: Identifiers should not contain underscores
 # Benchmark names are part of the command-line filter surface.
 dotnet_diagnostic.CA1707.severity = none
