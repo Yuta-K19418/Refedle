@@ -73,3 +73,9 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "type",
     Target = "~T:Refedle.Benchmarks.App.Tui.Workers.Schema.JsonLines.IncrementalSchemaScannerBenchmarks",
     Justification = "BenchmarkDotNet generates a derived type in a separate assembly.")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1515:Consider making public types internal",
+    Scope = "type",
+    Target = "~T:Refedle.Benchmarks.App.Tui.Workers.Schema.IncrementalSchemaScannerBenchmarksBase",
+    Justification = "BenchmarkDotNet generates a derived type in a separate assembly.")]
