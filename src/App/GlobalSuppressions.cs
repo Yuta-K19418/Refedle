@@ -428,6 +428,12 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
+    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadRemainingRows",
+    Justification = "The scanner base contract runs this row reader synchronously on a background task.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
     Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
     Justification = "The scanner base contract runs this header reader synchronously on a background task.")]
 [assembly: SuppressMessage(

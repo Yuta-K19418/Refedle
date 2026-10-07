@@ -6,7 +6,7 @@ namespace Refedle.App.Tui.Workers.Schema.JsonLines;
 /// <summary>
 /// Performs incremental schema inference for JSON Lines files.
 /// - Initial scan: first 200 lines
-/// - Background scan: remaining lines in batches of 1000
+/// - Background scan: remaining lines after the initial scan, read in a single pass
 /// - Thread-safe schema updates via Copy-on-Write
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
@@ -45,40 +45,20 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         TableSchema currentSchema,
         CancellationToken cancellationToken)
     {
-        var lineIndex = InitialScanCount;
-        var refinedSchema = currentSchema;
+        return BackgroundSchemaScan.Execute<JsonRawBytes>(
+            currentSchema,
+            ReadRemainingLines,
+            static (schema, line) => SchemaScanner.RefineSchema(schema, line.Span),
+            cancellationToken
+        );
+    }
 
-        while (!cancellationToken.IsCancellationRequested)
+    private IEnumerable<JsonRawBytes> ReadRemainingLines()
+    {
+        using var reader = new RowReader(FilePath);
+        foreach (var line in reader.EnumerateLines(linesToSkip: InitialScanCount))
         {
-            using var reader = new RowReader(FilePath);
-            var lines = reader.ReadLines(
-                byteOffset: 0,
-                linesToSkip: lineIndex,
-                linesToRead: BackgroundBatchSize
-            );
-
-            if (lines.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var line in lines)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                var refineResult = SchemaScanner.RefineSchema(refinedSchema, line.Span);
-                if (refineResult.IsSuccess)
-                {
-                    refinedSchema = refineResult.Value;
-                }
-            }
-
-            lineIndex += lines.Count;
+            yield return line;
         }
-
-        return refinedSchema;
     }
 }

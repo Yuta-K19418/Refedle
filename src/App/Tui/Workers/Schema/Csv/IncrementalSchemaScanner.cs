@@ -1,4 +1,5 @@
 using System.Globalization;
+using nietras.SeparatedValues;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 
@@ -7,7 +8,7 @@ namespace Refedle.App.Tui.Workers.Schema.Csv;
 /// <summary>
 /// Performs incremental schema inference for CSV files.
 /// - Initial scan: first 200 rows
-/// - Background scan: remaining rows in batches of 1000
+/// - Background scan: remaining rows after the initial scan, read in a single pass
 /// - Thread-safe schema updates via Copy-on-Write
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
@@ -41,35 +42,34 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         TableSchema currentSchema,
         CancellationToken cancellationToken)
     {
-        var rowIndex = InitialScanCount;
-        var refinedSchema = currentSchema;
+        return BackgroundSchemaScan.Execute<CsvDataRow>(
+            currentSchema,
+            ReadRemainingRows,
+            SchemaScanner.RefineSchema,
+            cancellationToken
+        );
+    }
 
-        while (!cancellationToken.IsCancellationRequested)
+    private IEnumerable<CsvDataRow> ReadRemainingRows()
+    {
+        using var reader = CsvSep.FromFile(FilePath);
+
+        // Skip the rows consumed by the initial scan
+        long skippedRows = 0;
+        while (skippedRows < InitialScanCount && reader.MoveNext())
         {
-            var rows = ReadRows(rowIndex, BackgroundBatchSize);
-            if (rows.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var row in rows)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                var refineResult = SchemaScanner.RefineSchema(refinedSchema, row);
-                if (refineResult.IsSuccess)
-                {
-                    refinedSchema = refineResult.Value;
-                }
-            }
-
-            rowIndex += rows.Count;
+            skippedRows++;
         }
 
-        return refinedSchema;
+        if (skippedRows < InitialScanCount)
+        {
+            yield break;
+        }
+
+        while (reader.MoveNext())
+        {
+            yield return CopyColumns(reader.Current);
+        }
     }
 
     private List<CsvDataRow> ReadRows(int startRow, int count)
@@ -89,27 +89,33 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         var readCount = 0;
         while (readCount < count && reader.MoveNext())
         {
-            var record = reader.Current;
-            var columns = new ReadOnlyMemory<char>[record.ColCount];
-
-            for (var i = 0; i < record.ColCount; i++)
-            {
-                var columnSpan = record[i].Span;
-                if (columnSpan.Length > 0)
-                {
-                    // Copy span to memory (necessary for CsvDataRow which expects ReadOnlyMemory<char>)
-                    columns[i] = columnSpan.ToArray().AsMemory();
-                    continue;
-                }
-
-                columns[i] = ReadOnlyMemory<char>.Empty;
-            }
+            var columns = CopyColumns(reader.Current);
 
             rows.Add(columns);
             readCount++;
         }
 
         return rows;
+    }
+
+    private static ReadOnlyMemory<char>[] CopyColumns(SepReader.Row record)
+    {
+        var columns = new ReadOnlyMemory<char>[record.ColCount];
+
+        for (var i = 0; i < record.ColCount; i++)
+        {
+            var columnSpan = record[i].Span;
+            if (columnSpan.Length > 0)
+            {
+                // Copy span to memory (necessary for CsvDataRow which expects ReadOnlyMemory<char>)
+                columns[i] = columnSpan.ToArray().AsMemory();
+                continue;
+            }
+
+            columns[i] = ReadOnlyMemory<char>.Empty;
+        }
+
+        return columns;
     }
 
     private string[] ReadColumnNames()

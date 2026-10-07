@@ -4,7 +4,7 @@ using Refedle.Engine.IO.JsonLines;
 
 namespace Refedle.Tests.Engine.IO.JsonLines;
 
-public sealed class RowReaderTests : IDisposable
+public sealed partial class RowReaderTests : IDisposable
 {
     private readonly string _testFilePath;
     private bool _disposed;

@@ -6,8 +6,6 @@ namespace Refedle.Tests.App.Tui.Workers.Schema.Csv;
 
 public sealed class IncrementalSchemaScannerTests : IDisposable
 {
-    private static readonly TimeSpan _waitTimeout = TimeSpan.FromMinutes(1);
-
     private readonly string _tempFilePath;
 
     public IncrementalSchemaScannerTests()
@@ -157,24 +155,22 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     }
 
     [Fact]
-    public async Task Dispose_CancelsBackgroundScanAsync()
+    public async Task StartBackgroundScanAsync_WithAlreadyCancelledToken_ReturnsCanceledTask()
     {
         // Arrange
-        var csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6\nvalue7,value8,value9";
-        File.WriteAllText(_tempFilePath, csvContent);
-
+        var csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6";
+        await File.WriteAllTextAsync(_tempFilePath, csvContent);
         var scanner = new IncrementalSchemaScanner(_tempFilePath);
         var schema = await scanner.InitialScanAsync();
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
 
         // Act
-        using var cts = new CancellationTokenSource();
         var backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
-        cts.Cancel();
+        await Task.WhenAny(backgroundTask);
 
         // Assert
-        // WhenAny observes completion without rethrowing if the task ended in the Canceled state.
-        await Task.WhenAny(backgroundTask).WaitAsync(_waitTimeout);
-        backgroundTask.IsCompleted.Should().BeTrue();
+        backgroundTask.IsCanceled.Should().BeTrue();
     }
 
     [Fact]
