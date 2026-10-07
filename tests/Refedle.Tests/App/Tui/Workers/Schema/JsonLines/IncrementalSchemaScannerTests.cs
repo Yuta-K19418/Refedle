@@ -74,24 +74,21 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     }
 
     [Fact]
-    public async Task StartBackgroundScanAsync_Cancelled_ReturnsCurrentSchemaWithoutException()
+    public async Task StartBackgroundScanAsync_WithAlreadyCancelledToken_ReturnsCanceledTask()
     {
         // Arrange
         await File.WriteAllLinesAsync(_tempFilePath, ["{\"id\":1}"]);
         var scanner = new IncrementalSchemaScanner(_tempFilePath);
         var schema = await scanner.InitialScanAsync();
         using var cts = new CancellationTokenSource();
-        cts.Cancel();
+        await cts.CancelAsync();
 
         // Act
         var backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
-        // ContinueWith ensures we do not propagate the cancellation exception
-        await backgroundTask.ContinueWith(_ => { }, TaskScheduler.Default);
+        await Task.WhenAny(backgroundTask);
 
         // Assert
-        (backgroundTask.IsCompleted || backgroundTask.IsCanceled)
-            .Should()
-            .BeTrue();
+        backgroundTask.IsCanceled.Should().BeTrue();
     }
 
     [Fact]
