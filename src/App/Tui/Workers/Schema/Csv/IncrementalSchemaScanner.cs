@@ -41,35 +41,14 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         TableSchema currentSchema,
         CancellationToken cancellationToken)
     {
-        var rowIndex = InitialScanCount;
-        var refinedSchema = currentSchema;
-
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            var rows = ReadRows(rowIndex, BackgroundBatchSize);
-            if (rows.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var row in rows)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                var refineResult = SchemaScanner.RefineSchema(refinedSchema, row);
-                if (refineResult.IsSuccess)
-                {
-                    refinedSchema = refineResult.Value;
-                }
-            }
-
-            rowIndex += rows.Count;
-        }
-
-        return refinedSchema;
+        return BackgroundSchemaScan.Execute<CsvDataRow>(
+            currentSchema,
+            InitialScanCount,
+            BackgroundBatchSize,
+            ReadRows,
+            SchemaScanner.RefineSchema,
+            cancellationToken
+        );
     }
 
     private List<CsvDataRow> ReadRows(int startRow, int count)

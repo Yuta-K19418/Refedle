@@ -45,40 +45,23 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         TableSchema currentSchema,
         CancellationToken cancellationToken)
     {
-        var lineIndex = InitialScanCount;
-        var refinedSchema = currentSchema;
+        return BackgroundSchemaScan.Execute<JsonRawBytes>(
+            currentSchema,
+            InitialScanCount,
+            BackgroundBatchSize,
+            ReadBackgroundBatch,
+            static (schema, line) => SchemaScanner.RefineSchema(schema, line.Span),
+            cancellationToken
+        );
+    }
 
-        while (!cancellationToken.IsCancellationRequested)
-        {
-            using var reader = new RowReader(FilePath);
-            var lines = reader.ReadLines(
-                byteOffset: 0,
-                linesToSkip: lineIndex,
-                linesToRead: BackgroundBatchSize
-            );
-
-            if (lines.Count == 0)
-            {
-                break;
-            }
-
-            foreach (var line in lines)
-            {
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-
-                var refineResult = SchemaScanner.RefineSchema(refinedSchema, line.Span);
-                if (refineResult.IsSuccess)
-                {
-                    refinedSchema = refineResult.Value;
-                }
-            }
-
-            lineIndex += lines.Count;
-        }
-
-        return refinedSchema;
+    private IReadOnlyList<JsonRawBytes> ReadBackgroundBatch(int linesToSkip, int linesToRead)
+    {
+        using var reader = new RowReader(FilePath);
+        return reader.ReadLines(
+            byteOffset: 0,
+            linesToSkip: linesToSkip,
+            linesToRead: linesToRead
+        );
     }
 }
