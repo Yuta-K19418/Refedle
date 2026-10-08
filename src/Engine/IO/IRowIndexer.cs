@@ -16,7 +16,7 @@ public interface IRowIndexer
     event Action? FirstCheckpointReached;
 
     /// <summary>
-    /// Raised on every checkpoint boundary.
+    /// Raised as indexing progresses. Notifications are throttled by progress rather than raised on every checkpoint.
     /// </summary>
     event Action<long, long>? ProgressChanged;
 
