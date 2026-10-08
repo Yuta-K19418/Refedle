@@ -118,6 +118,23 @@ public sealed class MmapServiceTests : IDisposable
         Encoding.UTF8.GetString(buffer).Should().Be(TestContent);
     }
 
+    [Theory]
+    [InlineData(1, 5, "ello,")]
+    [InlineData(7, 8, "Refedle!")]
+    [InlineData(14, 1, "!")]
+    public void Read_ValidNonZeroRange_CopiesRequestedBytes(int offset, int length, string expected)
+    {
+        // Arrange
+        using var service = MmapService.Open(_testFilePath).Value;
+        Span<byte> buffer = stackalloc byte[length];
+
+        // Act
+        service.Read(offset, buffer);
+
+        // Assert
+        Encoding.UTF8.GetString(buffer).Should().Be(expected);
+    }
+
     [Fact]
     public void Read_ZeroLength_DoesNotThrow()
     {

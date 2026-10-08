@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Globalization;
 using System.IO.MemoryMappedFiles;
 
@@ -10,7 +9,6 @@ namespace Refedle.Engine.IO;
 /// <remarks>
 /// This service uses <see cref="MemoryMappedFile"/> to enable efficient random access
 /// to large files without loading the entire file into memory.
-/// Uses <see cref="ArrayPool{T}"/> for temporary buffer management to reduce allocations.
 /// </remarks>
 public sealed class MmapService : IDisposable
 {
@@ -127,7 +125,6 @@ public sealed class MmapService : IDisposable
     /// <exception cref="ArgumentOutOfRangeException">
     /// The offset is negative, or the range exceeds the file bounds.
     /// </exception>
-    /// <exception cref="IOException">Failed to read the expected number of bytes.</exception>
     public void Read(long offset, Span<byte> destination)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -145,21 +142,8 @@ public sealed class MmapService : IDisposable
                 string.Create(CultureInfo.InvariantCulture, $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}"));
         }
 
-        var buffer = ArrayPool<byte>.Shared.Rent(destination.Length);
-        try
-        {
-            var bytesRead = _accessor.ReadArray(offset, buffer, 0, destination.Length);
-            if (bytesRead != destination.Length)
-            {
-                throw new IOException(string.Create(CultureInfo.InvariantCulture, $"Expected to read {destination.Length} bytes but read {bytesRead}"));
-            }
-
-            buffer.AsSpan(0, destination.Length).CopyTo(destination);
-        }
-        finally
-        {
-            ArrayPool<byte>.Shared.Return(buffer);
-        }
+        var viewOffset = (ulong)(offset + _accessor.PointerOffset);
+        _accessor.SafeMemoryMappedViewHandle.ReadSpan(viewOffset, destination);
     }
 
     /// <summary>
@@ -194,10 +178,6 @@ public sealed class MmapService : IDisposable
         {
             Read(offset, destination);
             return (true, string.Empty);
-        }
-        catch (IOException ex)
-        {
-            return (false, $"Read failed: {ex.Message}");
         }
         catch (ObjectDisposedException ex)
         {
