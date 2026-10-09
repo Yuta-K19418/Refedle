@@ -177,11 +177,9 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
         var lineLength = MeasureLine(lineStartOffset);
         ThrowIfLineTooLong(lineLength);
 
-        if (_buffer.Length < lineLength)
-        {
-            ArrayPool<byte>.Shared.Return(_buffer);
-            _buffer = ArrayPool<byte>.Shared.Rent((int)lineLength);
-        }
+        // The buffer is full without a newline and the file continues, so the line is always longer than the buffer
+        ArrayPool<byte>.Shared.Return(_buffer);
+        _buffer = ArrayPool<byte>.Shared.Rent((int)lineLength);
 
         mmap.Read(lineStartOffset, _buffer.AsSpan(0, (int)lineLength));
         _head = 0;
