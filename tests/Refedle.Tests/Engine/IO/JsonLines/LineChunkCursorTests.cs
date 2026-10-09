@@ -54,7 +54,56 @@ public sealed class LineChunkCursorTests : IDisposable
         return [new string('a', 65_535), new string('b', 100), new string('c', 100)];
     }
 
+    private static string[] BuildManyShortLines()
+    {
+        // About 300 KB in total, so the lines span several 64 KB chunks
+        return [.. Enumerable.Range(0, 20_000).Select(i => $"{{\"i\":{i}}}")];
+    }
+
+    private static int SkipLines(LineChunkCursor cursor, int count)
+    {
+        var skippedCount = 0;
+        while (skippedCount < count && cursor.TrySkipLine())
+        {
+            skippedCount++;
+        }
+
+        return skippedCount;
+    }
+
     // TrySkipLine
+
+    [Fact]
+    public void TrySkipLine_WithShortLinesSpanningMultipleChunks_NextReadReturnsFollowingLine()
+    {
+        // Arrange
+        var lines = BuildManyShortLines();
+        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+
+        // Act
+        var skippedCount = SkipLines(cursor, 15_000);
+        var remainingLines = ReadRemainingLines(cursor);
+
+        // Assert
+        skippedCount.Should().Be(15_000);
+        remainingLines.Should().Equal(lines.Skip(15_000));
+    }
+
+    [Fact]
+    public void TrySkipLine_WithShortLinesSpanningMultipleChunks_ReturnsFalseAfterSkippingEveryLine()
+    {
+        // Arrange
+        var lines = BuildManyShortLines();
+        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+
+        // Act
+        var skippedCount = SkipLines(cursor, lines.Length + 1);
+
+        // Assert
+        skippedCount.Should().Be(lines.Length);
+    }
 
     [Fact]
     public void TrySkipLine_AtEndOfFile_ReturnsFalse()
@@ -186,6 +235,61 @@ public sealed class LineChunkCursorTests : IDisposable
     }
 
     // TryReadLine
+
+    [Fact]
+    public void TryReadLine_WithShortLinesSpanningMultipleChunks_ReturnsEveryLineIntact()
+    {
+        // Arrange
+        var expectedLines = BuildManyShortLines();
+        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+
+        // Act
+        var lines = ReadRemainingLines(cursor);
+
+        // Assert
+        lines.Should().Equal(expectedLines);
+    }
+
+    // A 3-byte character starting at 65,534 / 65,535 is split across the 64 KB chunk boundary; at 65,536 it is not
+    [Theory]
+    [InlineData(65_533)]
+    [InlineData(65_534)]
+    [InlineData(65_535)]
+    [InlineData(65_536)]
+    public void TryReadLine_WithMultiByteCharacterAtChunkBoundary_ReturnsEveryLineIntact(int asciiPrefixLength)
+    {
+        // Arrange
+        string[] expectedLines =
+        [
+            new string('a', asciiPrefixLength) + "あいう",
+            "日本語のテキスト",
+            "{\"k\":\"値\"}",
+        ];
+        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+
+        // Act
+        var lines = ReadRemainingLines(cursor);
+
+        // Assert
+        lines.Should().Equal(expectedLines);
+    }
+
+    [Fact]
+    public void TryReadLine_WithManyJapaneseLinesSpanningMultipleChunks_ReturnsEveryLineIntact()
+    {
+        // Arrange
+        string[] expectedLines = [.. Enumerable.Range(0, 5_000).Select(i => $"{{\"名前\":\"テスト{i}\"}}")];
+        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+
+        // Act
+        var lines = ReadRemainingLines(cursor);
+
+        // Assert
+        lines.Should().Equal(expectedLines);
+    }
 
     [Fact]
     public void TryReadLine_AtEndOfFile_ReturnsFalse()
