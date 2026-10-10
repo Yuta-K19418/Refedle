@@ -97,7 +97,7 @@ public sealed class RowReader : IDisposable
         // Skip UTF-8 BOM if present at the beginning of the file
         if (byteOffset == 0)
         {
-            return _mmap.SkipUtf8Bom();
+            return _mmap.GetOffsetAfterUtf8Bom();
         }
 
         return byteOffset;

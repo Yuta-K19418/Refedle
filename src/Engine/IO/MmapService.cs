@@ -152,7 +152,7 @@ public sealed class MmapService : IDisposable
     /// UTF-8 BOM, otherwise <c>0</c>.
     /// </summary>
     /// <exception cref="ObjectDisposedException">The service has been disposed.</exception>
-    public long SkipUtf8Bom()
+    public long GetOffsetAfterUtf8Bom()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
