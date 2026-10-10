@@ -45,12 +45,16 @@ namespace Refedle.Engine.IO;
 /// </remarks>
 public abstract class RowIndexerBase : IRowIndexer
 {
+    private const long NotificationStepDivisor = 100;
+
     /// <summary>
     /// Tracks if the first checkpoint has been reached.
     /// </summary>
     private bool _firstCheckpointReached;
 
     private volatile bool _isIndexingCompleted;
+
+    private long _lastNotifiedBytesRead;
 
     /// <inheritdoc />
     public long FileSize { get; protected set; }
@@ -95,12 +99,24 @@ public abstract class RowIndexerBase : IRowIndexer
     }
 
     /// <summary>
-    /// Helper method to invoke the ProgressChanged event.
+    /// Helper method to invoke the ProgressChanged event, throttled by progress.
     /// </summary>
+    /// <remarks>
+    /// The event is raised only once the bytes read have advanced by a fixed fraction of the file size
+    /// since the last notification, so the subscriber is not flooded on very large files.
+    /// </remarks>
     /// <param name="bytesRead">Bytes read so far.</param>
     /// <param name="fileSize">Total file size.</param>
     protected void OnProgressChanged(long bytesRead, long fileSize)
     {
+        var lastNotifiedBytesRead = Interlocked.Read(ref _lastNotifiedBytesRead);
+        var notificationStep = fileSize / NotificationStepDivisor;
+        if (bytesRead - lastNotifiedBytesRead < notificationStep)
+        {
+            return;
+        }
+
+        Interlocked.Exchange(ref _lastNotifiedBytesRead, bytesRead);
         ProgressChanged?.Invoke(bytesRead, fileSize);
     }
 

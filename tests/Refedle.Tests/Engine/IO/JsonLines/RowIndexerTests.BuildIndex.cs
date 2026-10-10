@@ -289,7 +289,7 @@ public sealed partial class RowIndexerTests
     }
 
     [Fact]
-    public void BuildIndex_RaisesProgressChanged_OnEachCheckpoint()
+    public void BuildIndex_WithMultipleCheckpoints_RaisesProgressChangedAtLeastOnce()
     {
         // Arrange
         var lines = Enumerable.Range(0, 2_500).Select(i => $"{{\"id\": {i}}}");
@@ -302,7 +302,7 @@ public sealed partial class RowIndexerTests
         indexer.BuildIndex();
 
         // Assert
-        progressCount.Should().Be(2);
+        progressCount.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -385,7 +385,7 @@ public sealed partial class RowIndexerTests
     public void BytesRead_IncreasesMonotonically_DuringBuildIndex()
     {
         // Arrange
-        var lines = Enumerable.Range(0, 2_000).Select(i => $"{{\"id\": {i}}}");
+        var lines = Enumerable.Range(0, 300_000).Select(i => $"{{\"id\": {i}}}");
         File.WriteAllLines(_testFilePath, lines);
         var indexer = new RowIndexer(_testFilePath);
         List<long> progressEvents = [];
@@ -395,8 +395,8 @@ public sealed partial class RowIndexerTests
         indexer.BuildIndex();
 
         // Assert
-        progressEvents.Should().HaveCount(2);
-        progressEvents[1].Should().BeGreaterThanOrEqualTo(progressEvents[0]);
+        progressEvents.Should().HaveCountGreaterThanOrEqualTo(2);
+        progressEvents.Should().BeInAscendingOrder();
         indexer.BytesRead.Should().BeGreaterThan(0);
     }
 

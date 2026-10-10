@@ -309,7 +309,7 @@ public sealed partial class DataRowIndexerTests
     }
 
     [Fact]
-    public void BuildIndex_RaisesProgressChanged_OnEachCheckpoint()
+    public void BuildIndex_WithMultipleCheckpoints_RaisesProgressChangedAtLeastOnce()
     {
         // Arrange
         var lines = Enumerable.Range(1, 2_500).Select(i => $"value{i:D4},data{i:D4}").Prepend("col1,col2");
@@ -322,7 +322,7 @@ public sealed partial class DataRowIndexerTests
         indexer.BuildIndex();
 
         // Assert
-        progressCount.Should().Be(2);
+        progressCount.Should().BeGreaterThan(0);
     }
 
     [Fact]
@@ -406,7 +406,7 @@ public sealed partial class DataRowIndexerTests
     public void BytesRead_IncreasesMonotonically_DuringBuildIndex()
     {
         // Arrange
-        var lines = Enumerable.Range(1, 2_000).Select(i => $"value{i:D4},data{i:D4}").Prepend("col1,col2");
+        var lines = Enumerable.Range(1, 200_000).Select(i => $"value{i:D6},data{i:D6}").Prepend("col1,col2");
         File.WriteAllLines(_testFilePath, lines);
         var indexer = new DataRowIndexer(_testFilePath);
         List<long> progressEvents = [];
@@ -416,8 +416,8 @@ public sealed partial class DataRowIndexerTests
         indexer.BuildIndex();
 
         // Assert
-        progressEvents.Should().HaveCount(2);
-        progressEvents[1].Should().BeGreaterThanOrEqualTo(progressEvents[0]);
+        progressEvents.Should().HaveCountGreaterThanOrEqualTo(2);
+        progressEvents.Should().BeInAscendingOrder();
         indexer.BytesRead.Should().BeGreaterThan(0);
     }
 
