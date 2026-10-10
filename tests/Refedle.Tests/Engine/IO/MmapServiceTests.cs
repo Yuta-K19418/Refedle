@@ -15,7 +15,7 @@ public sealed class MmapServiceTests : IDisposable
         File.WriteAllText(_testFilePath, TestContent);
     }
 
-    public static IEnumerable<object[]> SkipUtf8BomCases()
+    public static IEnumerable<object[]> GetOffsetAfterUtf8BomCases()
     {
         // Full UTF-8 BOM (EF BB BF) followed by content → body starts at 3.
         yield return [(byte[])[0xEF, 0xBB, 0xBF, (byte)'{'], 3L];
@@ -32,29 +32,29 @@ public sealed class MmapServiceTests : IDisposable
     }
 
     [Theory]
-    [MemberData(nameof(SkipUtf8BomCases))]
-    public void SkipUtf8Bom_VariousHeaders_ReturnsExpectedBodyOffset(byte[] header, long expected)
+    [MemberData(nameof(GetOffsetAfterUtf8BomCases))]
+    public void GetOffsetAfterUtf8Bom_VariousHeaders_ReturnsExpectedBodyOffset(byte[] header, long expected)
     {
         // Arrange
         File.WriteAllBytes(_testFilePath, header);
         using var mmap = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var bodyOffset = mmap.SkipUtf8Bom();
+        var bodyOffset = mmap.GetOffsetAfterUtf8Bom();
 
         // Assert
         bodyOffset.Should().Be(expected);
     }
 
     [Fact]
-    public void SkipUtf8Bom_AfterDispose_ThrowsObjectDisposedException()
+    public void GetOffsetAfterUtf8Bom_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
         var mmap = MmapService.Open(_testFilePath).Value;
         mmap.Dispose();
 
         // Act
-        var act = () => mmap.SkipUtf8Bom();
+        var act = () => mmap.GetOffsetAfterUtf8Bom();
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
