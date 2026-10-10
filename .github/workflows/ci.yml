@@ -55,7 +55,7 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Test with coverage
-      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage --blame-hang-timeout 2m --blame-hang-dump-type none
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
