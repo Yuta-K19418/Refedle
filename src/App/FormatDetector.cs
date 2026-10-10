@@ -1,5 +1,6 @@
 using Refedle.Engine;
 using Refedle.Engine.Types;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.App;
 
@@ -86,7 +87,7 @@ internal static class FormatDetector
         try
         {
             using var fs = File.OpenRead(filePath);
-            SkipUtf8BomIfPresent(fs);
+            Utf8BomUtility.SkipUtf8Bom(fs);
 
             var b = fs.ReadByte();
             while (b != -1 && char.IsWhiteSpace((char)b))
@@ -110,26 +111,5 @@ internal static class FormatDetector
         {
             return Results.Failure<DataFormat>($"Failed to read file: {ex.Message}");
         }
-    }
-
-    private static void SkipUtf8BomIfPresent(FileStream fs)
-    {
-        Span<byte> bom = stackalloc byte[3];
-        try
-        {
-            fs.ReadExactly(bom);
-        }
-        catch (EndOfStreamException)
-        {
-            fs.Seek(0, SeekOrigin.Begin);
-            return;
-        }
-
-        if (bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF)
-        {
-            return;
-        }
-
-        fs.Seek(-3, SeekOrigin.Current);
     }
 }

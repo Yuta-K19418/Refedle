@@ -6,7 +6,7 @@ using Refedle.Engine.IO.DrillDown;
 namespace Refedle.Tests.Engine.IO.DrillDown;
 
 /// <summary>
-/// Tests for <see cref="FileChunkReader"/>'s buffer-refill path, CRLF trimming, UTF-8 BOM skipping,
+/// Tests for <see cref="FileChunkReader"/>'s buffer-refill path, CRLF trimming,
 /// and range reading. Each test constructs a real <see cref="MmapService"/> over a temp file so the
 /// <see cref="FileChunkReader"/> helpers are exercised directly, not through FullAggregationScanner.
 /// The boundary carry-over scenario uses the real <see cref="FileChunkReader.BufferSize"/> (1 MiB)
@@ -96,35 +96,6 @@ public sealed class FileChunkReaderTests : IDisposable
 
         // Assert
         result.ToArray().Should().Equal("abc"u8.ToArray());
-    }
-
-    public static IEnumerable<object[]> SkipUtf8BomCases()
-    {
-        // Full UTF-8 BOM (EF BB BF) followed by content → skip 3 bytes.
-        yield return [(byte[])[0xEF, 0xBB, 0xBF, (byte)'{'], 3L];
-        // Full UTF-8 BOM with nothing after it → skip 3 bytes (EOF right after the BOM).
-        yield return [(byte[])[0xEF, 0xBB, 0xBF], 3L];
-        // No BOM — ordinary content of 3+ bytes → skip 0.
-        yield return [Encoding.ASCII.GetBytes("abc"), 0L];
-        // Near-miss — first two BOM bytes but the third differs (BE vs BF) → skip 0.
-        yield return [(byte[])[0xEF, 0xBB, 0xBE], 0L];
-        // File shorter than 3 bytes → skip 0 (early return before reading).
-        yield return [Encoding.ASCII.GetBytes("ab"), 0L];
-    }
-
-    [Theory]
-    [MemberData(nameof(SkipUtf8BomCases))]
-    public void SkipUtf8Bom_VariousHeaders_ReturnsExpectedSkipLength(byte[] header, long expected)
-    {
-        // Arrange
-        File.WriteAllBytes(_testFilePath, header);
-        using var mmap = MmapService.Open(_testFilePath).Value;
-
-        // Act
-        var skipLength = FileChunkReader.SkipUtf8Bom(mmap);
-
-        // Assert
-        skipLength.Should().Be(expected);
     }
 
     public static IEnumerable<object[]> ReadFileRangeCases()

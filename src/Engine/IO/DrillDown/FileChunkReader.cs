@@ -10,22 +10,6 @@ internal static class FileChunkReader
     internal const int BufferSize = 1024 * 1024;
 
     /// <summary>
-    /// Returns the byte length of a leading UTF-8 BOM at the start of <paramref name="mmap"/>, or
-    /// <c>0</c> when no BOM is present.
-    /// </summary>
-    internal static long SkipUtf8Bom(MmapService mmap)
-    {
-        if (mmap.Length < 3)
-        {
-            return 0;
-        }
-
-        Span<byte> header = stackalloc byte[3];
-        mmap.Read(0, header);
-        return header[0] == 0xEF && header[1] == 0xBB && header[2] == 0xBF ? 3 : 0;
-    }
-
-    /// <summary>
     /// Trims a single trailing CR byte from <paramref name="line"/>, if present, so CRLF and LF
     /// line endings produce identical line contents.
     /// </summary>

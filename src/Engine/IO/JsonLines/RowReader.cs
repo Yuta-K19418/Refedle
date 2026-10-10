@@ -95,14 +95,9 @@ public sealed class RowReader : IDisposable
     private long SkipBomIfAtStart(long byteOffset)
     {
         // Skip UTF-8 BOM if present at the beginning of the file
-        if (byteOffset == 0 && _mmap.Length >= 3)
+        if (byteOffset == 0)
         {
-            Span<byte> bomHeader = stackalloc byte[3];
-            _mmap.Read(0, bomHeader);
-            if (HasUtf8Bom(bomHeader))
-            {
-                return 3;
-            }
+            return _mmap.GetOffsetAfterUtf8Bom();
         }
 
         return byteOffset;
@@ -134,11 +129,6 @@ public sealed class RowReader : IDisposable
             result.Add(line);
             linesRead++;
         }
-    }
-
-    private static bool HasUtf8Bom(ReadOnlySpan<byte> header)
-    {
-        return header.Length >= 3 && header[0] == 0xEF && header[1] == 0xBB && header[2] == 0xBF;
     }
 
     /// <inheritdoc/>
