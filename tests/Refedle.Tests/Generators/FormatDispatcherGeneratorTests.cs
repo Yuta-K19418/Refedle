@@ -1,5 +1,4 @@
-using Microsoft.CodeAnalysis.CSharp.Testing;
-using Microsoft.CodeAnalysis.Testing;
+using AwesomeAssertions;
 using Refedle.Generators;
 
 namespace Refedle.Tests.Generators;
@@ -9,7 +8,7 @@ public sealed class FormatDispatcherGeneratorTests
     private const string HintName = "FormatDispatcher.g.cs";
 
     // The generated dispatcher relies on the App project's implicit usings for
-    // System.Collections.Generic (IReadOnlyList), which the harness compilation lacks.
+    // System.Collections.Generic (IReadOnlyList), which the test compilation lacks.
     private const string GlobalUsingsSource = """
         global using System.Collections.Generic;
         """;
@@ -507,144 +506,128 @@ public sealed class FormatDispatcherGeneratorTests
         """;
 
     [Fact]
-    public async Task Execute_WithNestedGenericReaderFactory_KeepsClosedGenericTypeIntact()
+    public void Execute_WithNestedGenericReaderFactory_KeepsClosedGenericTypeIntact()
     {
         // Arrange
-        var test = new CSharpSourceGeneratorTest<FormatDispatcherGenerator, DefaultVerifier>
-        {
-            TestState =
-            {
-                Sources =
-                {
-                    ("GlobalUsings.cs", GlobalUsingsSource),
-                    ("DataFormat.cs", DataFormatWithJsonArraySource),
-                    ("BatchOutputSchema.cs", BatchOutputSchemaSource),
-                    ("KeyPathSegment.cs", KeyPathSegmentSource),
-                    ("AppCliStubs.cs", AppCliStubsSource),
-                    ("ParsingStubs.cs", ParsingStubsSource),
-                    ("IOStubs.cs", IOStubsSource),
-                    ("CsvStubs.cs", CsvStubsSource),
-                    ("JsonStubs.cs", JsonStubsSource),
-                    ("ApplyStubs.cs", ApplyStubsSource),
-                    ("BatchSourceStubs.cs", BatchSourceStubsSource),
-                    ("NestedGenericReaderStubs.cs", NestedGenericReaderStubsSource),
-                    ("FactoryInterfaces.cs", FactoryInterfacesSource),
-                    ("Factories.cs", NestedGenericFactoriesSource),
-                },
-                GeneratedSources =
-                {
-                    (typeof(FormatDispatcherGenerator), HintName, NestedGenericDispatchSource.ReplaceLineEndings()),
-                },
-            },
-        };
+        SourceFile[] sources =
+        [
+            new("GlobalUsings.cs", GlobalUsingsSource),
+            new("DataFormat.cs", DataFormatWithJsonArraySource),
+            new("BatchOutputSchema.cs", BatchOutputSchemaSource),
+            new("KeyPathSegment.cs", KeyPathSegmentSource),
+            new("AppCliStubs.cs", AppCliStubsSource),
+            new("ParsingStubs.cs", ParsingStubsSource),
+            new("IOStubs.cs", IOStubsSource),
+            new("CsvStubs.cs", CsvStubsSource),
+            new("JsonStubs.cs", JsonStubsSource),
+            new("ApplyStubs.cs", ApplyStubsSource),
+            new("BatchSourceStubs.cs", BatchSourceStubsSource),
+            new("NestedGenericReaderStubs.cs", NestedGenericReaderStubsSource),
+            new("FactoryInterfaces.cs", FactoryInterfacesSource),
+            new("Factories.cs", NestedGenericFactoriesSource),
+        ];
+        var expectedSource = NestedGenericDispatchSource.ReplaceLineEndings();
 
         // Act
-        var run = test.RunAsync();
+        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
-        await run;
+        output.GeneratorDiagnostics.Should().BeEmpty();
+        output.CompilationDiagnostics.Should().BeEmpty();
+        var generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
+        generatedSource.HintName.Should().Be(HintName);
+        var generatedText = generatedSource.SourceText.ToString();
+        generatedText.Should().Be(expectedSource);
     }
 
     [Fact]
-    public async Task Execute_WithCsvAndJsonLinesFactories_GeneratesCurrentDispatchSource()
+    public void Execute_WithCsvAndJsonLinesFactories_GeneratesCurrentDispatchSource()
     {
         // Arrange
-        var test = new CSharpSourceGeneratorTest<FormatDispatcherGenerator, DefaultVerifier>
-        {
-            TestState =
-            {
-                Sources =
-                {
-                    ("GlobalUsings.cs", GlobalUsingsSource),
-                    ("DataFormat.cs", DataFormatSource),
-                    ("BatchOutputSchema.cs", BatchOutputSchemaSource),
-                    ("KeyPathSegment.cs", KeyPathSegmentSource),
-                    ("AppCliStubs.cs", AppCliStubsSource),
-                    ("ParsingStubs.cs", ParsingStubsSource),
-                    ("IOStubs.cs", IOStubsSource),
-                    ("CsvStubs.cs", CsvStubsSource),
-                    ("JsonStubs.cs", JsonStubsSource),
-                    ("ApplyStubs.cs", ApplyStubsSource),
-                    ("FactoryInterfaces.cs", FactoryInterfacesSource),
-                    ("Factories.cs", AllFactoriesSource),
-                },
-                GeneratedSources =
-                {
-                    (typeof(FormatDispatcherGenerator), HintName, CurrentDispatchSource.ReplaceLineEndings()),
-                },
-            },
-        };
+        SourceFile[] sources =
+        [
+            new("GlobalUsings.cs", GlobalUsingsSource),
+            new("DataFormat.cs", DataFormatSource),
+            new("BatchOutputSchema.cs", BatchOutputSchemaSource),
+            new("KeyPathSegment.cs", KeyPathSegmentSource),
+            new("AppCliStubs.cs", AppCliStubsSource),
+            new("ParsingStubs.cs", ParsingStubsSource),
+            new("IOStubs.cs", IOStubsSource),
+            new("CsvStubs.cs", CsvStubsSource),
+            new("JsonStubs.cs", JsonStubsSource),
+            new("ApplyStubs.cs", ApplyStubsSource),
+            new("FactoryInterfaces.cs", FactoryInterfacesSource),
+            new("Factories.cs", AllFactoriesSource),
+        ];
+        var expectedSource = CurrentDispatchSource.ReplaceLineEndings();
 
         // Act
-        var run = test.RunAsync();
+        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
-        await run;
+        output.GeneratorDiagnostics.Should().BeEmpty();
+        output.CompilationDiagnostics.Should().BeEmpty();
+        var generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
+        generatedSource.HintName.Should().Be(HintName);
+        var generatedText = generatedSource.SourceText.ToString();
+        generatedText.Should().Be(expectedSource);
     }
 
     [Fact]
-    public async Task Execute_WithReaderFactoriesOnly_GeneratesNoSource()
+    public void Execute_WithReaderFactoriesOnly_GeneratesNoSource()
     {
         // Arrange
-        var test = new CSharpSourceGeneratorTest<FormatDispatcherGenerator, DefaultVerifier>
-        {
-            TestState =
-            {
-                Sources =
-                {
-                    ("GlobalUsings.cs", GlobalUsingsSource),
-                    ("DataFormat.cs", DataFormatSource),
-                    ("BatchOutputSchema.cs", BatchOutputSchemaSource),
-                    ("KeyPathSegment.cs", KeyPathSegmentSource),
-                    ("AppCliStubs.cs", AppCliStubsSource),
-                    ("ParsingStubs.cs", ParsingStubsSource),
-                    ("IOStubs.cs", IOStubsSource),
-                    ("CsvStubs.cs", CsvStubsSource),
-                    ("JsonStubs.cs", JsonStubsSource),
-                    ("ApplyStubs.cs", ApplyStubsSource),
-                    ("FactoryInterfaces.cs", FactoryInterfacesSource),
-                    ("ReaderFactories.cs", ReaderFactoriesOnlySource),
-                },
-            },
-        };
+        SourceFile[] sources =
+        [
+            new("GlobalUsings.cs", GlobalUsingsSource),
+            new("DataFormat.cs", DataFormatSource),
+            new("BatchOutputSchema.cs", BatchOutputSchemaSource),
+            new("KeyPathSegment.cs", KeyPathSegmentSource),
+            new("AppCliStubs.cs", AppCliStubsSource),
+            new("ParsingStubs.cs", ParsingStubsSource),
+            new("IOStubs.cs", IOStubsSource),
+            new("CsvStubs.cs", CsvStubsSource),
+            new("JsonStubs.cs", JsonStubsSource),
+            new("ApplyStubs.cs", ApplyStubsSource),
+            new("FactoryInterfaces.cs", FactoryInterfacesSource),
+            new("ReaderFactories.cs", ReaderFactoriesOnlySource),
+        ];
 
         // Act
-        var run = test.RunAsync();
+        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
-        await run;
+        output.GeneratorDiagnostics.Should().BeEmpty();
+        output.CompilationDiagnostics.Should().BeEmpty();
+        output.GeneratedSources.Should().BeEmpty();
     }
 
     [Fact]
-    public async Task Execute_WithWriterFactoriesOnly_GeneratesNoSource()
+    public void Execute_WithWriterFactoriesOnly_GeneratesNoSource()
     {
         // Arrange
-        var test = new CSharpSourceGeneratorTest<FormatDispatcherGenerator, DefaultVerifier>
-        {
-            TestState =
-            {
-                Sources =
-                {
-                    ("GlobalUsings.cs", GlobalUsingsSource),
-                    ("DataFormat.cs", DataFormatSource),
-                    ("BatchOutputSchema.cs", BatchOutputSchemaSource),
-                    ("KeyPathSegment.cs", KeyPathSegmentSource),
-                    ("AppCliStubs.cs", AppCliStubsSource),
-                    ("ParsingStubs.cs", ParsingStubsSource),
-                    ("IOStubs.cs", IOStubsSource),
-                    ("CsvStubs.cs", CsvStubsSource),
-                    ("JsonStubs.cs", JsonStubsSource),
-                    ("ApplyStubs.cs", ApplyStubsSource),
-                    ("FactoryInterfaces.cs", FactoryInterfacesSource),
-                    ("WriterFactories.cs", WriterFactoriesOnlySource),
-                },
-            },
-        };
+        SourceFile[] sources =
+        [
+            new("GlobalUsings.cs", GlobalUsingsSource),
+            new("DataFormat.cs", DataFormatSource),
+            new("BatchOutputSchema.cs", BatchOutputSchemaSource),
+            new("KeyPathSegment.cs", KeyPathSegmentSource),
+            new("AppCliStubs.cs", AppCliStubsSource),
+            new("ParsingStubs.cs", ParsingStubsSource),
+            new("IOStubs.cs", IOStubsSource),
+            new("CsvStubs.cs", CsvStubsSource),
+            new("JsonStubs.cs", JsonStubsSource),
+            new("ApplyStubs.cs", ApplyStubsSource),
+            new("FactoryInterfaces.cs", FactoryInterfacesSource),
+            new("WriterFactories.cs", WriterFactoriesOnlySource),
+        ];
 
         // Act
-        var run = test.RunAsync();
+        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
-        await run;
+        output.GeneratorDiagnostics.Should().BeEmpty();
+        output.CompilationDiagnostics.Should().BeEmpty();
+        output.GeneratedSources.Should().BeEmpty();
     }
 }
