@@ -10,6 +10,26 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~T:Refedle.Tests.App.Tui.Workers.Schema.BackgroundSchemaRefinerTests",
     Justification = "Each test awaits the refiner's returned continuation (or its publish TCS, which fires inside the continuation) before the using state is disposed; the scanner task completes before that continuation starts.")]
 
+// IndexingCompletionTests
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexingCompletionTests.FakeRowIndexer.FirstCheckpointReached",
+    Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexingCompletionTests.FakeRowIndexer.ProgressChanged",
+    Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Tests.App.Tui.Workers.IndexingCompletionTests.FakeRowIndexer.BuildIndexCompleted",
+    Justification = "Test stub mirrors IRowIndexer's Action-based event contract.")]
+
 // IndexTaskManagerTests
 [assembly: SuppressMessage(
     "Reliability",

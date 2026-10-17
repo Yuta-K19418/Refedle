@@ -48,6 +48,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 Interlocked.Increment(ref invokeCount);
                 action();
             },
+            Task.CompletedTask,
             state.Cts.Token);
         var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await continuation;
@@ -80,6 +81,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 queuedInvokes.Add(action);
                 posted.TrySetResult();
             },
+            Task.CompletedTask,
             state.Cts.Token);
         await posted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
@@ -122,6 +124,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
             scanner,
             initialSchema,
             _ => Interlocked.Increment(ref invokeCount),
+            Task.CompletedTask,
             cancelledToken);
         await continuation;
 
@@ -147,6 +150,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
             scanner,
             initialSchema,
             _ => Interlocked.Increment(ref invokeCount),
+            Task.CompletedTask,
             state.Cts.Token);
         // Awaiting verifies the returned task completes without propagating the scanner fault.
         await continuation;
@@ -171,6 +175,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
             scanner,
             initialSchema,
             _ => Interlocked.Increment(ref invokeCount),
+            Task.CompletedTask,
             state.Cts.Token);
         // Awaiting verifies the returned task completes without propagating the scan cancellation.
         await continuation;
@@ -195,6 +200,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 scanner,
                 initialSchema,
                 _ => { },
+                Task.CompletedTask,
                 CancellationToken.None);
         };
 
@@ -219,7 +225,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 null!,
                 initialSchema,
                 _ => { },
-                state.Cts.Token);
+                Task.CompletedTask,
+            state.Cts.Token);
         };
 
         // Assert
@@ -243,7 +250,8 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 scanner,
                 null!,
                 _ => { },
-                state.Cts.Token);
+                Task.CompletedTask,
+            state.Cts.Token);
         };
 
         // Assert
@@ -268,11 +276,93 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
                 scanner,
                 initialSchema,
                 null!,
-                state.Cts.Token);
+                Task.CompletedTask,
+            state.Cts.Token);
         };
 
         // Assert
         act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("uiThreadInvoke");
+    }
+
+    [Fact]
+    public async Task Start_WithPendingIndexingCompleted_DoesNotStartBackgroundScanUntilIndexingCompletes()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
+        var initialSchema = CreateIdSchema();
+        var scanner = new GatedSchemaScanner(initialSchema);
+        var indexingCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Act
+        var continuation = BackgroundSchemaRefiner.StartAsync(
+            state,
+            scanner,
+            initialSchema,
+            action => action(),
+            indexingCompleted.Task,
+            state.Cts.Token);
+        var startedBeforeCompletion = scanner.BackgroundScanStarted.IsCompleted;
+        indexingCompleted.SetResult();
+        await scanner.BackgroundScanStarted.WaitAsync(TimeSpan.FromSeconds(10));
+        await continuation.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        startedBeforeCompletion.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Start_WhenCancelledWhileWaitingForIndexing_CompletesWithoutInvokingUiThreadInvoke()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
+        var initialSchema = CreateIdSchema();
+        var scanner = new GatedSchemaScanner(initialSchema);
+        var indexingCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invokeCount = 0;
+        var continuation = BackgroundSchemaRefiner.StartAsync(
+            state,
+            scanner,
+            initialSchema,
+            _ => Interlocked.Increment(ref invokeCount),
+            indexingCompleted.Task,
+            state.Cts.Token);
+
+        // Act
+        state.RenewCtsWithCancel();
+        // Awaiting verifies the returned task completes without propagating the cancellation.
+        await continuation.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        Volatile.Read(ref invokeCount).Should().Be(0);
+        scanner.BackgroundScanStarted.IsCompleted.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Start_WithNullIndexingCompleted_ThrowsArgumentNullException()
+    {
+        // Arrange
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
+        var initialSchema = CreateIdSchema();
+        var scanner = new GatedSchemaScanner(initialSchema);
+
+        // Act
+        // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
+        var act = () =>
+        {
+            BackgroundSchemaRefiner.StartAsync(
+                state,
+                scanner,
+                initialSchema,
+                _ => { },
+                null!,
+                state.Cts.Token);
+        };
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("indexingCompleted");
     }
 
     /// <summary>

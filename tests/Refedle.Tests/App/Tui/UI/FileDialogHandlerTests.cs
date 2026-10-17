@@ -462,6 +462,35 @@ public sealed class FileDialogHandlerTests : IDisposable
         viewType.Should().Be<CsvTableView>();
     }
 
+    [Fact]
+    public async Task HandleFileSelectedAsync_CsvFile_StartsBackgroundScanOnlyAfterIndexingCompletes()
+    {
+        // Arrange
+        var scanner = new GatedSchemaScanner(CreateCsvSchema());
+        scanner.Release();
+        var indexerStarted = new TaskCompletionSource<IRowIndexer>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var state = new AppState();
+            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var handler = new FileDialogHandler(
+                app, state, viewManager, indexer => indexerStarted.TrySetResult(indexer), () => { }, _ => scanner, _ => { });
+            return new LiveTestContext<FileDialogHandler>(state, viewManager, handler);
+        });
+
+        // Act
+        await session.InvokeAsync((_, ctx) => ctx.Handler.HandleFileSelectedAsync(_csvFile));
+        var indexer = await indexerStarted.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var startedBeforeIndexing = scanner.BackgroundScanStarted.IsCompleted;
+        indexer.BuildIndex();
+        await scanner.BackgroundScanStarted.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        startedBeforeIndexing.Should().BeFalse();
+    }
+
     private static TableSchema CreateCsvSchema() => new()
     {
         Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],

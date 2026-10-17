@@ -73,6 +73,7 @@ public sealed class ModeControllerTests : IDisposable
         var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var indexer = new RowIndexer(_jsonlFilePath);
+        indexer.BuildIndex();
         using var state = new AppState();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
@@ -111,6 +112,7 @@ public sealed class ModeControllerTests : IDisposable
         await using var session = await LivePumpTestSession.StartAsync((app, _) =>
         {
             var indexer = new RowIndexer(_jsonlFilePath);
+            indexer.BuildIndex();
             var state = new AppState();
             state.StartNewFile(_jsonlFilePath);
             state.BeginIndexedTreeLoad(indexer);
@@ -137,11 +139,37 @@ public sealed class ModeControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task ToggleJsonLinesModeAsync_WithIndexingInProgress_StartsBackgroundScanOnlyAfterIndexingCompletes()
+    {
+        // Arrange
+        await WriteRefinementFixtureAsync(_jsonlFilePath);
+        var scanner = new GatedSchemaScanner(CreateIdSchema());
+        scanner.Release();
+        var indexer = new RowIndexer(_jsonlFilePath);
+        using var state = new AppState();
+        state.StartNewFile(_jsonlFilePath);
+        state.BeginIndexedTreeLoad(indexer);
+        state.EnterJsonLinesTree();
+        var controller = new ModeController(state, action => action(), _ => scanner);
+
+        // Act
+        var result = await controller.ToggleJsonLinesModeAsync();
+        var startedBeforeIndexing = scanner.BackgroundScanStarted.IsCompleted;
+        indexer.BuildIndex();
+        await scanner.BackgroundScanStarted.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        startedBeforeIndexing.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ToggleJsonLinesModeAsync_WhenScanIsCancelledBeforeUiDispatch_DoesNotPublishStaleSchema()
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
         var indexer = new RowIndexer(_jsonlFilePath);
+        indexer.BuildIndex();
         using var state = new AppState();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
