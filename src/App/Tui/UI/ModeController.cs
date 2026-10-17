@@ -38,7 +38,8 @@ internal sealed class ModeController(
             return Results.Success();
         }
 
-        if (_state.RowIndexer is null)
+        var rowIndexer = _state.RowIndexer;
+        if (rowIndexer is null)
         {
             return Results.Success();
         }
@@ -75,7 +76,9 @@ internal sealed class ModeController(
 
             _state.CompleteJsonLinesSchemaScan(schema);
 
-            _ = BackgroundSchemaRefiner.StartAsync(_state, scanner, schema, _uiThreadInvoke, scanToken);
+            var indexingCompleted = IndexingCompletion.WhenCompletedAsync(rowIndexer);
+            _ = BackgroundSchemaRefiner.StartAsync(
+                _state, scanner, schema, _uiThreadInvoke, indexingCompleted, scanToken);
 
             return Results.Success();
         }

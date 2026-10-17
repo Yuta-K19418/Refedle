@@ -154,8 +154,9 @@ internal sealed class FileDialogHandler(
 
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
+                var indexingCompleted = IndexingCompletion.WhenCompletedAsync(indexer);
                 _ = BackgroundSchemaRefiner.StartAsync(
-                    _state, schemaScanner, schema, _app.Invoke, scanToken);
+                    _state, schemaScanner, schema, _app.Invoke, indexingCompleted, scanToken);
 
                 _onIndexerStart(indexer);
             });

@@ -24,6 +24,7 @@ internal static class BackgroundSchemaRefiner
     /// <param name="scanner">The scanner that produced <paramref name="initialSchema"/>.</param>
     /// <param name="initialSchema">The schema produced by the initial scan.</param>
     /// <param name="uiThreadInvoke">Marshals the publish callback onto the UI thread.</param>
+    /// <param name="indexingCompleted">Completes when indexing finishes; the full scan starts only after it.</param>
     /// <param name="scanToken">The token captured when the scans started.</param>
     /// <returns>A <see cref="Task"/> that completes once the refined schema has been handed to <paramref name="uiThreadInvoke"/> or discarded.</returns>
     public static Task StartAsync(
@@ -31,17 +32,29 @@ internal static class BackgroundSchemaRefiner
         ISchemaScanner scanner,
         TableSchema initialSchema,
         Action<Action> uiThreadInvoke,
+        Task indexingCompleted,
         CancellationToken scanToken)
     {
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(scanner);
         ArgumentNullException.ThrowIfNull(initialSchema);
         ArgumentNullException.ThrowIfNull(uiThreadInvoke);
+        ArgumentNullException.ThrowIfNull(indexingCompleted);
 
         return RunAsync();
 
         async Task RunAsync()
         {
+            try
+            {
+                await indexingCompleted.WaitAsync(scanToken).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // The session was replaced while waiting for indexing; nothing to publish.
+                return;
+            }
+
             // WhenAny observes completion without propagating a faulted or canceled scan task.
             Task<TableSchema> scanTask = scanner.StartBackgroundScanAsync(initialSchema, scanToken);
             await Task.WhenAny(scanTask).ConfigureAwait(false);
