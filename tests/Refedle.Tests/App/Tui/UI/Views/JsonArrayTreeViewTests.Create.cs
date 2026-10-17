@@ -12,7 +12,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
 
         // Act
         var act = () => JsonArrayTreeView.Create(null!, () => { }, _ => { }, SynchronousUiThreadInvoke);
@@ -26,7 +26,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -42,7 +42,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -58,7 +58,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -74,7 +74,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[{\"a\":1}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
         List<IReadOnlyList<KeyPathSegment>> observedPaths = [];
@@ -98,7 +98,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1, 2, 3, 4, 5]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -120,7 +120,7 @@ public sealed partial class JsonArrayTreeViewTests
         var elements = Enumerable.Range(0, 1000)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var filePath = CreateTempFile($"[{string.Join(",", elements)}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -142,7 +142,7 @@ public sealed partial class JsonArrayTreeViewTests
         var elements = Enumerable.Range(0, 1001)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var filePath = CreateTempFile($"[{string.Join(",", elements)}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -164,7 +164,7 @@ public sealed partial class JsonArrayTreeViewTests
         var elements = Enumerable.Range(0, 2500)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var filePath = CreateTempFile($"[{string.Join(",", elements)}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -186,7 +186,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -203,7 +203,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_SmallArray_SkipsEmptyBytes_WhenReaderReturnsFewerElements()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile("[1, 2]");
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
@@ -226,7 +226,7 @@ public sealed partial class JsonArrayTreeViewTests
         var elements = Enumerable.Range(0, 1001)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var filePath = CreateTempFile($"[{string.Join(",", elements)}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -246,7 +246,7 @@ public sealed partial class JsonArrayTreeViewTests
         var elements = Enumerable.Range(0, 2500)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
         var filePath = CreateTempFile($"[{string.Join(",", elements)}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -266,7 +266,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — indexer completed, file size suggests > 1M estimated rows
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         // Fake: 200MB file → estimatedRows=2,000,000 → superRangeSize=2,000; TotalRows=5000
@@ -291,7 +291,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — indexer is still building (IsIndexingCompleted == false)
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -321,7 +321,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — indexer completes between FirstCheckpointReached and Create() call
         var filePath = CreateTempFile("[1, 2, 3]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new ToctouStubRowIndexer(realIndexer, 3);
@@ -344,7 +344,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — TotalRows=3500, nodeGroupSize=1000 (small file size)
         // ProgressChanged adds 3 full group nodes, BuildIndexCompleted adds 1 remainder node → 4 total
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -380,7 +380,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -411,7 +411,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 → 3 full + 1 remainder = 4
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -440,7 +440,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -469,7 +469,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — TotalRows=3000 is an exact multiple of nodeGroupSize=1000 → remainder=0
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);

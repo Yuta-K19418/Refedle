@@ -43,7 +43,7 @@ public sealed partial class MainWindowTests
     public void StartIndexing_WithProgress_ShowsOverlayWithInitialProgressText()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -61,7 +61,7 @@ public sealed partial class MainWindowTests
     public void ProgressChanged_WhenIndexerRaisesProgress_UpdatesOverlayText()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -80,7 +80,7 @@ public sealed partial class MainWindowTests
     public void StartIndexing_WithProgress_PlacesOverlayOneRowAboveStatusBarOneColumnInsideStatusBarRightEdge()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -103,7 +103,7 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WithOverlayShown_RemovesAndDisposesSpinnerAndLabel()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -131,7 +131,7 @@ public sealed partial class MainWindowTests
     public void StopCurrentIndexing_WithOverlayShown_RemovesSpinnerAndLabel()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -152,7 +152,7 @@ public sealed partial class MainWindowTests
     public void ProgressChanged_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_DoesNotOverwriteNewIndexerText()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         var previous = new ProgressIndexer(0L, OneGb);
@@ -177,7 +177,7 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_KeepsNewIndexerOverlayShown()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         var previous = new ProgressIndexer(0L, OneGb);
@@ -201,7 +201,7 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WhenNotificationIsQueuedBeforeStopAndNewIndexerStarted_KeepsNewIndexerOverlayShown()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         var stopped = new ProgressIndexer(0L, OneGb);

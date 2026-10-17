@@ -1,7 +1,8 @@
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
+using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
@@ -26,7 +27,62 @@ internal sealed record LiveTestContext<THandler>(AppState State, ViewManager Vie
 internal static class LivePumpTestSession
 {
     public static Task<LivePumpTestSession<T>> StartAsync<T>(Func<IApplication, Window, T> setup) =>
+        LivePumpTestSession<T>.StartAsync(app =>
+        {
+            var window = new Window();
+            try
+            {
+                return (window, setup(app, window));
+            }
+            catch
+            {
+                // The core's finally disposes only the window it received, so this
+                // overload must release the one it created before propagating.
+                window.Dispose();
+                throw;
+            }
+        });
+
+    /// <summary>
+    /// Variant for scenarios whose setup must also pick the window the pump runs (e.g. a real
+    /// <c>MainWindow</c> instead of the default empty window): setup returns that window
+    /// together with its payload, and the session runs and disposes the returned window.
+    /// </summary>
+    public static Task<LivePumpTestSession<T>> StartAsync<T>(Func<IApplication, (Window runWindow, T setup)> setup) =>
         LivePumpTestSession<T>.StartAsync(setup);
+}
+
+/// <summary>
+/// One-shot key delivery for live-pump tests that open a modal dialog.
+/// </summary>
+internal static class ModalKeys
+{
+    /// <summary>
+    /// Sends <paramref name="keys"/> through the application keyboard on the first loop
+    /// iteration whose top runnable view is not <paramref name="runWindow"/> — i.e. while the
+    /// modal opened on top of the running window is pumping — and unsubscribes right before
+    /// sending.
+    /// </summary>
+    public static void SendOnceOnTop(IApplication app, View runWindow, params Key[] keys)
+    {
+        void OnIteration(object? sender, EventArgs<IApplication?> args)
+        {
+            // Iterations also run before the modal opens; sending there would waste the one
+            // shot on the dialog-free main window and leave the modal open until timeout.
+            if (app.TopRunnableView is not { } topView || ReferenceEquals(topView, runWindow))
+            {
+                return;
+            }
+
+            app.Iteration -= OnIteration;
+            foreach (var key in keys)
+            {
+                app.Keyboard.RaiseKeyDownEvent(key);
+            }
+        }
+
+        app.Iteration += OnIteration;
+    }
 }
 
 /// <summary>
@@ -57,9 +113,9 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
         _pumpTask = pumpTask;
     }
 
-    public static async Task<LivePumpTestSession<T>> StartAsync(Func<IApplication, Window, T> setup)
+    public static async Task<LivePumpTestSession<T>> StartAsync(Func<IApplication, (Window runWindow, T setup)> setup)
     {
-        var initTcs = new TaskCompletionSource<(IApplication App, T Setup)>(
+        var initTcs = new TaskCompletionSource<(IApplication app, T setup)>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var cts = new CancellationTokenSource();
@@ -72,12 +128,10 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
 
             try
             {
-                app = Application.Create();
-                app.Init(DriverRegistry.Names.ANSI);
-                Assert.NotNull(app.Driver);
-                app.Driver.SetScreenSize(80, 25);
-                window = new Window();
-                setupResult = setup(app, window);
+                app = TestAppFactory.Create();
+                var setupPair = setup(app);
+                window = setupPair.runWindow;
+                setupResult = setupPair.setup;
 
                 void OnFirstIteration(object? sender, EventArgs<IApplication?> args)
                 {

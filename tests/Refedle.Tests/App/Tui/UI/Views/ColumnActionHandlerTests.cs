@@ -2,23 +2,12 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class ColumnActionHandlerTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     [Fact]
     public void GetAvailableActions_Always_ReturnsAllSixActions()
     {
@@ -35,7 +24,7 @@ public sealed class ColumnActionHandlerTests
     public void ExecuteAction_WithUnknownAction_DoesNotCallOnMorphAction()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         var actionCalled = false;
         var handler = new ColumnActionHandler(
@@ -66,7 +55,7 @@ public sealed class ColumnActionHandlerTests
     public void ExecuteAction_WithEachValidAction_DoesNotThrow(string action, DataFormat format)
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         var handler = new ColumnActionHandler(
             app, table, 0,
@@ -82,20 +71,27 @@ public sealed class ColumnActionHandlerTests
     }
 
     [Fact]
-    public void ExecuteAction_WhenFillConfirmed_UsesRawColumnNameInMorphAction()
+    public async Task ExecuteAction_WhenFillConfirmed_UsesRawColumnNameInMorphAction()
     {
         // Arrange
-        using var app = CreateTestApp();
-        var table = new TableSource(["amount (number)"], ["amount"]);
         MorphAction? capturedAction = null;
-        var handler = new ColumnActionHandler(
-            app, table, 0,
-            action => capturedAction = action,
-            DataFormat.Csv);
-        app.Iteration += (_, _) => app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        {
+            var table = new TableSource(["amount (number)"], ["amount"]);
+            var handler = new ColumnActionHandler(
+                app, table, 0,
+                action => capturedAction = action,
+                DataFormat.Csv);
+            ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+            return handler;
+        });
 
         // Act
-        handler.ExecuteAction("Fill");
+        await session.InvokeAsync((_, handler) =>
+        {
+            handler.ExecuteAction("Fill");
+            return Task.CompletedTask;
+        });
 
         // Assert
         capturedAction.Should().BeOfType<FillColumnAction>().Which.ColumnName.Should().Be("amount");

@@ -1,7 +1,5 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
-using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -9,20 +7,11 @@ namespace Refedle.Tests.App.Tui.UI.Views.Dialogs;
 
 public sealed class HelpDialogTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     [Fact]
     public void OnKeyDown_WithEscKey_ReturnsTrue()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new HelpDialog();
 
         // Act
@@ -37,7 +26,7 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithQKey_ReturnsTrue()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new HelpDialog();
 
         // Act
@@ -52,7 +41,7 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithLowercaseQKey_ReturnsTrue()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new HelpDialog();
 
         // Act
@@ -67,7 +56,7 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithQuestionMarkKey_ReturnsTrue()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new HelpDialog();
 
         // Act
@@ -83,7 +72,7 @@ public sealed class HelpDialogTests
     public void Constructor_InitializesDialogCorrectly()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
 
         // Act
         using var dialog = new HelpDialog();
@@ -96,7 +85,7 @@ public sealed class HelpDialogTests
     public void Constructor_HelpText_IncludesBackspaceBinding()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
 
         // Act
         using var dialog = new HelpDialog();
@@ -110,7 +99,7 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithOtherKey_DoesNotCloseDialog()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new HelpDialog();
 
         // Act

@@ -1,8 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
 using Refedle.Engine.Models.Actions;
-using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -10,16 +8,6 @@ namespace Refedle.Tests.App.Tui.UI.Views.Dialogs;
 
 public sealed class FilterColumnDialogTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        var driver = app.Driver;
-        driver.Should().NotBeNull();
-        driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     private static TextField GetTextField(FilterColumnDialog dialog)
         => dialog.SubViews.OfType<TextField>().First();
 
@@ -95,7 +83,7 @@ public sealed class FilterColumnDialogTests
     public void Confirm_WithUnparseableNumberValue_KeepsDialogOpenAndShowsError()
     {
         // Arrange — NaN is not a finite number, so Number validation rejects it
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new FilterColumnDialog("Score");
         var textField = GetTextField(dialog);
         var comparisonTypeSelector = GetComparisonTypeSelector(dialog);
@@ -116,7 +104,7 @@ public sealed class FilterColumnDialogTests
     public void Confirm_WithValidInput_SetsSelectedComparisonType()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var dialog = new FilterColumnDialog("Score");
         var textField = GetTextField(dialog);
         var comparisonTypeSelector = GetComparisonTypeSelector(dialog);

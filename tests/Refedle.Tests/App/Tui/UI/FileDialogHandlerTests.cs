@@ -10,7 +10,6 @@ using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -70,15 +69,6 @@ public sealed class FileDialogHandlerTests : IDisposable
         }
     }
 
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     /// <summary>
     /// Waits for the next <see cref="OpenDialog"/> to become the active runnable, then sets its
     /// <see cref="FileDialog.Path"/> and invokes <see cref="Command.Accept"/> on it — the same
@@ -104,7 +94,7 @@ public sealed class FileDialogHandlerTests : IDisposable
     public void Constructor_WithValidDependencies_DoesNotThrow()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -124,7 +114,7 @@ public sealed class FileDialogHandlerTests : IDisposable
     public void Constructor_WithNullScannerFactory_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -144,7 +134,7 @@ public sealed class FileDialogHandlerTests : IDisposable
     public void Constructor_WithNullFilePathChangedCallback_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);

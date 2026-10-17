@@ -11,7 +11,6 @@ using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -20,15 +19,6 @@ namespace Refedle.Tests.App.Tui.UI;
 
 public sealed partial class RecipeCommandHandlerTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     /// <summary>
     /// On every loop iteration, accepts whichever modal is currently on top of <paramref name="mainWindow"/>:
     /// a <see cref="FileDialog"/> gets <paramref name="path"/> set before <see cref="Command.Accept"/>,
@@ -60,7 +50,7 @@ public sealed partial class RecipeCommandHandlerTests
     public async Task SaveAsync_WithNonTableMode_DoesNothing()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -78,7 +68,7 @@ public sealed partial class RecipeCommandHandlerTests
     public void BuildRecipe_FromFocusedTableWithActiveDrillDown_UsesDrillDownKeyPathAndActionStack()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
         var drillDownAction = new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" };
@@ -110,7 +100,7 @@ public sealed partial class RecipeCommandHandlerTests
     {
         // Arrange — the DrillDown's scope must not be captured once an error view has replaced
         // FocusedTable
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         var baseAction = new RenameColumnAction { OldName = "base", NewName = "renamed_base" };
         using var state = new AppState();
@@ -141,7 +131,7 @@ public sealed partial class RecipeCommandHandlerTests
     public async Task LoadAsync_WithNoFilePath_DoesNothing()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
