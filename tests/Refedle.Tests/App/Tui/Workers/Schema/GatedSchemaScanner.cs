@@ -16,12 +16,18 @@ internal sealed class GatedSchemaScanner(
     bool backgroundCanceled = false) : ISchemaScanner
 {
     private readonly TaskCompletionSource _started = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private readonly TaskCompletionSource _backgroundScanStarted = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
     /// <summary>
     /// Gets a task that completes once the initial scan has begun.
     /// </summary>
     public Task Started => _started.Task;
+
+    /// <summary>
+    /// Gets a task that completes once <see cref="StartBackgroundScanAsync"/> has been called.
+    /// </summary>
+    public Task BackgroundScanStarted => _backgroundScanStarted.Task;
 
     /// <summary>
     /// Lets the pending initial scan finish.
@@ -37,6 +43,7 @@ internal sealed class GatedSchemaScanner(
 
     public Task<TableSchema> StartBackgroundScanAsync(TableSchema currentSchema, CancellationToken cancellationToken)
     {
+        _backgroundScanStarted.TrySetResult();
         if (backgroundCanceled)
         {
             return Task.FromCanceled<TableSchema>(new CancellationToken(canceled: true));
