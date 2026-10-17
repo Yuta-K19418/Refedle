@@ -12,15 +12,6 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 // cells, complementing the Text-level tests in FilePathBarTests.cs.
 public sealed partial class FilePathBarTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        var driver = DriverOf(app);
-        driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     // Fails the test clearly when the ANSI driver has not been initialized.
     private static IDriver DriverOf(IApplication app) =>
         app.Driver ?? throw new InvalidOperationException("the ANSI driver is not initialized");
@@ -63,7 +54,7 @@ public sealed partial class FilePathBarTests
     {
         // Arrange — a Window works as the top-level for Begin; no border so the bar's geometry
         // matches the plain View used by the text tests.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
         using var fileMenuItem = new MenuBarItem("_File", []);
         using var menuBar = new MenuBar { Menus = [fileMenuItem] };
@@ -94,7 +85,7 @@ public sealed partial class FilePathBarTests
     public void Draw_WithNoPath_PaintsOnlyFileLabelWithMenuColors()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
         using var fileMenuItem = new MenuBarItem("_File", []);
         using var menuBar = new MenuBar { Menus = [fileMenuItem] };
@@ -118,7 +109,7 @@ public sealed partial class FilePathBarTests
     public void Draw_WithPathExactlyAsWideAsBar_PaintsWholeRowUpToBarEndWithMenuColors()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
         using var fileMenuItem = new MenuBarItem("_File", []);
         using var menuBar = new MenuBar { Menus = [fileMenuItem] };
@@ -148,7 +139,7 @@ public sealed partial class FilePathBarTests
     {
         // Arrange — draw the path once, then clear it, so the test exercises the repaint
         // transition rather than the initial no-path state.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
         using var fileMenuItem = new MenuBarItem("_File", []);
         using var menuBar = new MenuBar { Menus = [fileMenuItem] };

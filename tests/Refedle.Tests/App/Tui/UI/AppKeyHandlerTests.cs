@@ -10,7 +10,6 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
-using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -77,7 +76,7 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenCurrentViewIsNotMorphTableView_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -97,7 +96,7 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -119,7 +118,7 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableIsNotPagedTableSource_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -147,7 +146,7 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenOnMorphActionIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -169,7 +168,7 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableValueIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -196,7 +195,7 @@ public sealed class AppKeyHandlerTests
     public void HandleClearActions_WhenActionStackIsEmpty_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -218,7 +217,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange — base ActionStack has entries, but the active DrillDown's own stack is empty;
         // clearing from FocusedTable must consult the DrillDown's stack, not the base one
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
@@ -245,7 +244,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
         // clearing must consult the (empty) base stack, not those actions
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         var drillDown = new DrillDownState(
@@ -278,7 +277,7 @@ public sealed class AppKeyHandlerTests
     public void OnGlobalKeyDown_BackspaceInFocusedTableWithDrillDown_CallsReturnFromDrillDown()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("id", "1"u8.ToArray())];
         var schema = new TableSchema { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
@@ -308,7 +307,7 @@ public sealed class AppKeyHandlerTests
     public void OnGlobalKeyDown_BackspaceOutsideFocusedTable_ReturnsUnhandled()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -326,35 +325,39 @@ public sealed class AppKeyHandlerTests
     }
 
     [Fact]
-    public void HandleActionMenu_WithJsonObjectFormatAndArrayNode_DispatchesSingleDrillDown()
+    public async Task HandleActionMenu_WithJsonObjectFormatAndArrayNode_DispatchesSingleDrillDown()
     {
         // Arrange
         var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
         try
         {
-            using var app = CreateTestApp();
-            using var state = new AppState();
-            state.StartNewFile(filePath);
-            using var window = new Window();
-            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            using var viewManager = new ViewManager(window, state, modeController, action => action());
-            viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
-            var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
-            treeView.SelectedObject = JsonObjectTreeView.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
-            var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-            var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-            using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
-            app.Iteration += (_, _) => app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState();
+                state.StartNewFile(filePath);
+                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                var viewManager = new ViewManager(window, state, modeController, action => action());
+                viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
+                var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
+                treeView.SelectedObject = JsonObjectTreeView.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
+                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+            });
 
             // Act — HandleActionMenu detects JsonObject format and dispatches to HandleSingleDrillDown,
             // which runs an ActionMenuDialog confirmed here via the Enter-key pattern.
-            var result = handler.HandleActionMenu();
+            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
             result.Should().BeTrue();
-            state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-            viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>();
+            var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
+            mode.Should().Be(ViewMode.FocusedTable);
+            viewType.Should().Be<FocusedTableView>();
         }
         finally
         {
@@ -373,7 +376,7 @@ public sealed class AppKeyHandlerTests
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
         try
         {
-            using var app = CreateTestApp();
+            using var app = TestAppFactory.Create();
             using var state = new AppState();
             state.StartNewFile(filePath);
             using var window = new Window();
@@ -411,15 +414,6 @@ public sealed class AppKeyHandlerTests
 
         // Guard 3: mixed-type children (object + value) fail the "all children must be objects" check.
         yield return [(new JsonArrayTreeNode("[{},1]"u8.ToArray()))];
-    }
-
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
     }
 
     /// <summary>

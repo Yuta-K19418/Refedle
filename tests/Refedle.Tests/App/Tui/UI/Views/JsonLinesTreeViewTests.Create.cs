@@ -12,7 +12,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
 
         // Act
         var act = () => JsonLinesTreeView.Create(null!, () => { }, _ => { }, SynchronousUiThreadInvoke);
@@ -25,7 +25,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_WithNullOnTableModeToggle_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile("{\"a\":1}");
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
@@ -41,7 +41,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile("{\"a\":1}");
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
@@ -57,7 +57,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_WithNullOnPathChanged_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile("{\"a\":1}");
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
@@ -74,7 +74,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("{\"a\":1}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
         List<IReadOnlyList<KeyPathSegment>> observedPaths = [];
@@ -98,7 +98,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -120,7 +120,7 @@ public sealed partial class JsonLinesTreeViewTests
         var lines = Enumerable.Range(0, 1000)
             .Select(i => $"{{\"id\":{i}}}");
         var filePath = CreateTempFile(string.Join("\n", lines));
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -142,7 +142,7 @@ public sealed partial class JsonLinesTreeViewTests
         var lines = Enumerable.Range(0, 1001)
             .Select(i => $"{{\"id\":{i}}}");
         var filePath = CreateTempFile(string.Join("\n", lines));
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -164,7 +164,7 @@ public sealed partial class JsonLinesTreeViewTests
         var lines = Enumerable.Range(0, 2500)
             .Select(i => $"{{\"id\":{i}}}");
         var filePath = CreateTempFile(string.Join("\n", lines));
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -185,7 +185,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_EmptyFile_AddsNoNodes()
     {
         // Arrange — non-empty file so RowReader can mmap, but stub reports 0 rows
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile(" \n");
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
@@ -204,7 +204,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_SmallFile_SkipsEmptyBytes_WhenCacheReturnsEmpty()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
@@ -227,7 +227,7 @@ public sealed partial class JsonLinesTreeViewTests
         var lines = Enumerable.Range(0, 2500)
             .Select(i => $"{{\"id\":{i}}}");
         var filePath = CreateTempFile(string.Join("\n", lines));
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -247,7 +247,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — indexer completed, file size suggests > 1M estimated rows
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         // Fake: 200MB file → estimatedRows=2,000,000 → superRangeSize=2,000; TotalRows=5000
@@ -272,7 +272,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — indexer is still building (IsIndexingCompleted == false)
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -304,7 +304,7 @@ public sealed partial class JsonLinesTreeViewTests
         var lines = Enumerable.Range(0, 1001)
             .Select(i => $"{{\"id\":{i}}}");
         var filePath = CreateTempFile(string.Join("\n", lines));
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
 
@@ -324,7 +324,7 @@ public sealed partial class JsonLinesTreeViewTests
         // ToctouStubRowIndexer returns false on first IsIndexingCompleted check,
         // then true on the TOCTOU re-check inside Create
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new ToctouStubRowIndexer(realIndexer, 3);
@@ -348,7 +348,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — TotalRows=3500, nodeGroupSize=1000 (small file size)
         // ProgressChanged adds 3 full group nodes, BuildIndexCompleted adds 1 remainder node → 4 total
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -384,7 +384,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -415,7 +415,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 → 3 full + 1 remainder = 4
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -444,7 +444,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -473,7 +473,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — TotalRows=3000 is an exact multiple of nodeGroupSize=1000 → remainder=0
         var filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);

@@ -1,8 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.IO.JsonArray;
-using Terminal.Gui.App;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
@@ -36,15 +34,6 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
         return filePath;
     }
 
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     private static void SynchronousUiThreadInvoke(Action action) => action();
 
     [Fact]
@@ -52,7 +41,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     {
         // Arrange
         var filePath = CreateTempFile("[{\"a\":1}]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
         using var view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
@@ -73,7 +62,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     {
         // Arrange — view created with event subscriptions via in-progress indexer
         var filePath = CreateTempFile("[1, 2]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var realIndexer = new RowIndexer(filePath);
         realIndexer.BuildIndex();
         var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
@@ -99,7 +88,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     {
         // Arrange — IsIndexingCompleted == true at creation (fast-path, no event subscriptions)
         var filePath = CreateTempFile("[1, 2, 3]");
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var indexer = new RowIndexer(filePath);
         indexer.BuildIndex();
         using var view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);

@@ -1,8 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI;
-using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
-using Terminal.Gui.Drivers;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using Attribute = Terminal.Gui.Drawing.Attribute;
@@ -11,15 +9,6 @@ namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class IndexingProgressOverlayTests
 {
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        app.Driver.Should().NotBeNull();
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     private static Window CreateParent() => new() { Width = Dim.Fill(), Height = Dim.Fill() };
 
     private static Label GetLabel(View parent) => parent.SubViews.OfType<Label>().Single();
@@ -28,7 +17,7 @@ public sealed class IndexingProgressOverlayTests
     public void Show_WithParent_AddsSpinnerAndLabelWithInitialText()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
 
@@ -44,7 +33,7 @@ public sealed class IndexingProgressOverlayTests
     public void Show_WhenAlreadyShown_KeepsOnlyOneSpinnerAndLabel()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         overlay.Show(parent);
@@ -61,7 +50,7 @@ public sealed class IndexingProgressOverlayTests
     public void Show_WithParent_UsesAutoSpinningDotsSpinnerWithOverlayScheme()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
 
@@ -80,7 +69,7 @@ public sealed class IndexingProgressOverlayTests
     public void Show_WithParent_UsesWhiteOnDarkGrayWithoutBorderForOverlayViews()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
 
@@ -101,7 +90,7 @@ public sealed class IndexingProgressOverlayTests
     public void Show_WithParent_PlacesOverlayOneRowAboveParentBottomOneColumnInsideRightEdge()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         app.StopAfterFirstIteration = true;
@@ -127,7 +116,7 @@ public sealed class IndexingProgressOverlayTests
     public void Update_WithProgressValues_ShowsPercentAndBytes(long bytesRead, long fileSize, string expectedText)
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         overlay.Show(parent);
@@ -149,7 +138,7 @@ public sealed class IndexingProgressOverlayTests
     public void Update_WithSizeAtUnitBoundary_ShowsBytesInExpectedUnit(long size, string expectedText)
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         overlay.Show(parent);
@@ -167,7 +156,7 @@ public sealed class IndexingProgressOverlayTests
     public void Update_WithNonPositiveFileSize_KeepsInitialText(long fileSize)
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         overlay.Show(parent);
@@ -196,7 +185,7 @@ public sealed class IndexingProgressOverlayTests
     public void Dismiss_WithOverlayShown_RemovesAndDisposesSpinnerAndLabel()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var parent = CreateParent();
         using var overlay = new IndexingProgressOverlay();
         overlay.Show(parent);

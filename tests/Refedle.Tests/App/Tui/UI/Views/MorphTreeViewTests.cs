@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
-using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -20,15 +19,6 @@ public sealed class MorphTreeViewTests
         public bool ProcessKey(Key key) => OnKeyDown(key);
     }
 
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
-    }
-
     // -----------------------------------------------------------------------
     // OnKeyDown characterization tests
     // These lock the current return-value semantics (consumed=true /
@@ -43,7 +33,7 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_TKey_InvokesTableModeToggleAndReturnsTrue()
     {
         // Arrange — T switches to table mode via the injected callback.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var toggled = false;
         using var view = new ConcreteMorphTreeView(() => toggled = true, _ => { });
 
@@ -63,7 +53,7 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_VimSelectionKey_IsConsumedAndReturnsTrue(KeyCode keyCode)
     {
         // Arrange — j/k move by one row, d/u move by one page; all go through ConsumeAction.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -80,7 +70,7 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — h/l are forwarded to the base TreeView as CursorLeft/CursorRight.
         // Their return value depends on base TreeView state, so only exception-safety is locked.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -94,7 +84,7 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_FirstGOfSequence_IsConsumedAndReturnsTrue()
     {
         // Arrange — first 'g' enters the pending state (PendingGSequence).
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -109,7 +99,7 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — 'gg' within the timeout resolves to GoToFirst. The view owns its own
         // translator with a 1000 ms timeout, so two synchronous presses stay well within it.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -125,7 +115,7 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_ShiftG_GoesToEndAndReturnsTrue()
     {
         // Arrange — Shift+G resolves to GoToEnd.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -143,7 +133,7 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — global shortcuts must NOT be consumed so they reach AppKeyHandler.
         // (T is excluded here because it is intercepted earlier as the table-mode toggle.)
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act
@@ -160,7 +150,7 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — neither a vim key nor a global shortcut, so it falls through to base.OnKeyDown.
         // The return value depends on base TreeView state, so only exception-safety is locked.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTreeView(() => { }, _ => { });
 
         // Act

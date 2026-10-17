@@ -1,6 +1,5 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
-using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -32,15 +31,6 @@ public sealed partial class MorphTableViewTests
         public string[] ColumnNames => [];
         public object this[int row, int col] => throw new NotImplementedException();
         public void Dispose() => IsDisposed = true;
-    }
-
-    private static IApplication CreateTestApp()
-    {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
     }
 
     private sealed class NonDisposableTableSource : ITableSource
@@ -93,7 +83,7 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_WhenTableIsNull_DelegatesToBaseWithoutThrowing()
     {
         // Arrange — Table is null, so OnKeyDown short-circuits to the base view.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView();
 
         // Act
@@ -113,7 +103,7 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_VimNavigationKey_IsConsumedAndReturnsTrue(KeyCode keyCode)
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),
@@ -130,7 +120,7 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_FirstGOfSequence_IsConsumedAndReturnsTrue()
     {
         // Arrange — first 'g' enters the pending state (PendingGSequence).
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),
@@ -148,7 +138,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — 'gg' within the timeout resolves to GoToFirst. The view owns its own
         // translator with a 1000 ms timeout, so two synchronous presses stay well within it.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),
@@ -167,7 +157,7 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_ShiftG_GoesToEndAndReturnsTrue()
     {
         // Arrange — Shift+G resolves to GoToEnd.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),
@@ -187,7 +177,7 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_GlobalShortcut_BubblesUpAndReturnsFalse(KeyCode keyCode)
     {
         // Arrange — global shortcuts must NOT be consumed so they reach AppKeyHandler.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),
@@ -207,7 +197,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — neither a vim key nor a global shortcut, so it falls through to base.OnKeyDown.
         // The return value depends on base TableView state, so only exception-safety is locked.
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var view = new ConcreteMorphTableView
         {
             Table = new TwoRowTableSource(),

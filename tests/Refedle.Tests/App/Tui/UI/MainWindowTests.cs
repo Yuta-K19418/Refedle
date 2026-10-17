@@ -8,26 +8,53 @@ using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
 
 public sealed partial class MainWindowTests
 {
-    private static IApplication CreateTestApp()
+    // Bundles what the Q/C key tests drive on the live pump: the state they arrange and
+    // assert on, and the MainWindow the pump runs (also the baseline for modal detection).
+    // Disposing releases the state; the pump's own disposal releases the window.
+    private sealed record MainWindowContext(AppState State, MainWindow Window) : IDisposable
     {
-        var app = Application.Create();
-        app.Init(DriverRegistry.Names.ANSI);
-        Assert.NotNull(app.Driver);
-        app.Driver.SetScreenSize(80, 25);
-        return app;
+        public void Dispose()
+        {
+            State.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Records that the quit-confirmation modal appeared (into <paramref name="onShown"/>),
+    /// then dismisses it with Enter. Same one-shot semantics and pre-modal guard as
+    /// <see cref="ModalKeys.SendOnceOnTop"/>.
+    /// </summary>
+    private static void ObserveQuitConfirmation(IApplication app, View runWindow, Action onShown)
+    {
+        void OnIteration(object? sender, EventArgs<IApplication?> args)
+        {
+            // Iterations also run before the modal opens; recording or sending there would
+            // waste the one shot before the confirmation is even shown.
+            if (app.TopRunnableView is not { } topView || ReferenceEquals(topView, runWindow))
+            {
+                return;
+            }
+
+            onShown();
+            app.Iteration -= OnIteration;
+            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+        }
+
+        app.Iteration += OnIteration;
     }
 
     [Fact]
     public void KeyDown_WithOKey_HandlesOpen()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -46,7 +73,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithSKey_HandlesSave()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -65,7 +92,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithQKey_HandlesQuit()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -84,7 +111,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithQuestionMarkAndShift_HandlesHelp()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -104,7 +131,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithTKey_WhenNoFileLoaded_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -123,7 +150,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithXKey_WhenNoFileLoaded_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -142,7 +169,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithUnrecognizedKey_ReturnsFalse()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -161,7 +188,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithHelpKey_ShowsHelpDialog()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         app.StopAfterFirstIteration = true;
@@ -181,7 +208,7 @@ public sealed partial class MainWindowTests
     public void KeyDown_WithOKey_WhenInputFocused_DoesNotTriggerFileOpen()
     {
         // Arrange
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         using var mainWindow = new MainWindow(app, state);
         mainWindow.CanFocus = true;
@@ -208,22 +235,26 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenUnsavedChanges_HandlesKey()
+    public async Task KeyDown_WithQKey_WhenUnsavedChanges_HandlesKey()
     {
         // Arrange
-        using var app = CreateTestApp();
-        using var state = new AppState();
-        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        using var mainWindow = new MainWindow(app, state);
-        // Auto-dismiss the "unsaved changes" confirmation dialog by pressing Enter (= "Yes").
-        app.Iteration += (_, _) => app.Keyboard.RaiseKeyDownEvent(Key.Enter);
-        app.StopAfterFirstIteration = true;
+        await using var session = await LivePumpTestSession.StartAsync(app =>
+        {
+            var state = new AppState();
+            state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+            var mainWindow = new MainWindow(app, state);
+            // Auto-dismiss the "unsaved changes" confirmation dialog by pressing Enter (= "Yes").
+            ModalKeys.SendOnceOnTop(app, mainWindow, Key.Enter);
+            return (mainWindow, new MainWindowContext(state, mainWindow));
+        });
 
         // Act
-        app.Begin(mainWindow);
-        mainWindow.SubscribeKeyHandler();
-        mainWindow.SetFocus();
-        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+        var handled = await session.InvokeAsync((app, ctx) =>
+        {
+            ctx.Window.SubscribeKeyHandler();
+            ctx.Window.SetFocus();
+            return Task.FromResult(app.Keyboard.RaiseKeyDownEvent((Key)'q'));
+        });
 
         // Assert
         handled.Should().BeTrue();
@@ -234,7 +265,7 @@ public sealed partial class MainWindowTests
     {
         // Arrange — base ActionStack has entries, but the active DrillDown's own stack is empty;
         // quitting from FocusedTable must consult the DrillDown's stack, not the base one
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
@@ -260,7 +291,7 @@ public sealed partial class MainWindowTests
     {
         // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
         // quitting must consult the (empty) base stack, not those actions
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         var drillDown = new DrillDownState(
@@ -290,7 +321,7 @@ public sealed partial class MainWindowTests
     {
         // Arrange — the issue #340 scenario: a non-empty ActionStack that was just saved to a
         // recipe; the count-based check would prompt, the unsaved-changes flag must not
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
         state.MarkRecipeSaved();
@@ -314,7 +345,7 @@ public sealed partial class MainWindowTests
         // Arrange — FocusedTable with a saved (clean) DrillDown stack while the root stack is
         // dirty: quitting must consult the current mode's flag, neither the stack counts nor the
         // root flag
-        using var app = CreateTestApp();
+        using var app = TestAppFactory.Create();
         var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
@@ -341,37 +372,37 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenFocusedTableDrillDownIsDirty_ShowsQuitConfirmation()
+    public async Task KeyDown_WithQKey_WhenFocusedTableDrillDownIsDirty_ShowsQuitConfirmation()
     {
         // Arrange — FocusedTable with an empty but unsaved DrillDown session (e.g. actions were
         // applied then cleared): the flag, not the stack count, must drive the confirmation
-        using var app = CreateTestApp();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
-        var drillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-            schema,
-            ViewMode.JsonLinesTree,
-            KeyPath: [],
-            ActionStack: [],
-            HasUnsavedChanges: true);
-        state.EnterFocusedTable(drillDown);
-        using var mainWindow = new MainWindow(app, state);
-        // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
-        // Without the dirty check no modal is ever opened.
         var confirmationShown = false;
-        app.Iteration += (_, _) =>
+        await using var session = await LivePumpTestSession.StartAsync(app =>
         {
-            confirmationShown |= app.TopRunnableView is { } topView && !ReferenceEquals(topView, mainWindow);
-            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
-        };
-        app.StopAfterFirstIteration = true;
+            var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+            var state = new AppState();
+            var drillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [],
+                HasUnsavedChanges: true);
+            state.EnterFocusedTable(drillDown);
+            var mainWindow = new MainWindow(app, state);
+            // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
+            // Without the dirty check no modal is ever opened.
+            ObserveQuitConfirmation(app, mainWindow, () => confirmationShown = true);
+            return (mainWindow, new MainWindowContext(state, mainWindow));
+        });
 
         // Act
-        app.Begin(mainWindow);
-        mainWindow.SubscribeKeyHandler();
-        mainWindow.SetFocus();
-        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+        var handled = await session.InvokeAsync((app, ctx) =>
+        {
+            ctx.Window.SubscribeKeyHandler();
+            ctx.Window.SetFocus();
+            return Task.FromResult(app.Keyboard.RaiseKeyDownEvent((Key)'q'));
+        });
 
         // Assert
         handled.Should().BeTrue();
@@ -379,39 +410,39 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseRootIsDirty_ShowsQuitConfirmation()
+    public async Task KeyDown_WithQKey_WhenErrorViewReplacedFocusedTableAndBaseRootIsDirty_ShowsQuitConfirmation()
     {
         // Arrange — a dirty root stack after an error view replaced a clean FocusedTable:
         // quitting must consult the root flag
-        using var app = CreateTestApp();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
-        state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        var drillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-            schema,
-            ViewMode.JsonLinesTree,
-            KeyPath: [],
-            ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }],
-            HasUnsavedChanges: false);
-        state.EnterFocusedTable(drillDown);
-        state.EnterPlaceholderMode();
-        using var mainWindow = new MainWindow(app, state);
-        // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
-        // Without the dirty check no modal is ever opened.
         var confirmationShown = false;
-        app.Iteration += (_, _) =>
+        await using var session = await LivePumpTestSession.StartAsync(app =>
         {
-            confirmationShown |= app.TopRunnableView is { } topView && !ReferenceEquals(topView, mainWindow);
-            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
-        };
-        app.StopAfterFirstIteration = true;
+            var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+            var state = new AppState();
+            state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
+            var drillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }],
+                HasUnsavedChanges: false);
+            state.EnterFocusedTable(drillDown);
+            state.EnterPlaceholderMode();
+            var mainWindow = new MainWindow(app, state);
+            // Record whether a modal (the confirmation) is on top, then dismiss it with Enter (= "Yes").
+            // Without the dirty check no modal is ever opened.
+            ObserveQuitConfirmation(app, mainWindow, () => confirmationShown = true);
+            return (mainWindow, new MainWindowContext(state, mainWindow));
+        });
 
         // Act
-        app.Begin(mainWindow);
-        mainWindow.SubscribeKeyHandler();
-        mainWindow.SetFocus();
-        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'q');
+        var handled = await session.InvokeAsync((app, ctx) =>
+        {
+            ctx.Window.SubscribeKeyHandler();
+            ctx.Window.SetFocus();
+            return Task.FromResult(app.Keyboard.RaiseKeyDownEvent((Key)'q'));
+        });
 
         // Assert
         handled.Should().BeTrue();
@@ -419,90 +450,86 @@ public sealed partial class MainWindowTests
     }
 
     [Fact]
-    public void KeyDown_WithCKey_WhenFocusedTableDrillDownHasActions_ClearsOnlyDrillDownStack()
+    public async Task KeyDown_WithCKey_WhenFocusedTableDrillDownHasActions_ClearsOnlyDrillDownStack()
     {
         // Arrange — confirming the clear from FocusedTable must only clear the DrillDown's own
         // ActionStack, leaving the base table's ActionStack untouched
-        using var app = CreateTestApp();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
-        state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
-        var drillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-            schema,
-            ViewMode.JsonLinesTree,
-            KeyPath: [],
-            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
-        state.EnterFocusedTable(drillDown);
-        using var mainWindow = new MainWindow(app, state);
-        // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
-        // then confirm (Enter). Self-unsubscribes so it fires only once — resending on every
-        // subsequent Iteration tick would keep steering focus in the (now dialog-free) main window.
-        void ConfirmYes(object? sender, EventArgs e)
+        await using var session = await LivePumpTestSession.StartAsync(app =>
         {
-            app.Iteration -= ConfirmYes;
-            app.Keyboard.RaiseKeyDownEvent(Key.CursorLeft);
-            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
-        }
-
-        app.Iteration += ConfirmYes;
-        app.StopAfterFirstIteration = true;
+            var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+            var state = new AppState();
+            state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+            var drillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
+            state.EnterFocusedTable(drillDown);
+            var mainWindow = new MainWindow(app, state);
+            // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
+            // then confirm (Enter). Sent once, on the confirmation's first iteration only.
+            ModalKeys.SendOnceOnTop(app, mainWindow, Key.CursorLeft, Key.Enter);
+            return (mainWindow, new MainWindowContext(state, mainWindow));
+        });
 
         // Act
-        app.Begin(mainWindow);
-        mainWindow.SubscribeKeyHandler();
-        mainWindow.SetFocus();
-        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'c');
+        var handled = await session.InvokeAsync((app, ctx) =>
+        {
+            ctx.Window.SubscribeKeyHandler();
+            ctx.Window.SetFocus();
+            return Task.FromResult(app.Keyboard.RaiseKeyDownEvent((Key)'c'));
+        });
 
         // Assert
+        var (rootActionCount, drillDownAfter) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.ActionStack.Count, ctx.State.GetDrillDownOrNull())));
         handled.Should().BeTrue();
-        state.ActionStack.Should().ContainSingle();
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
-        drillDownAfter.ActionStack.Should().BeEmpty();
-        drillDownAfter.HasUnsavedChanges.Should().BeTrue();
+        rootActionCount.Should().Be(1);
+        var drillDownTyped = drillDownAfter.Should().BeOfType<DrillDownState>().Which;
+        drillDownTyped.ActionStack.Should().BeEmpty();
+        drillDownTyped.HasUnsavedChanges.Should().BeTrue();
     }
 
     [Fact]
-    public void KeyDown_WithCKey_WhenErrorViewReplacedFocusedTableAndBaseStackHasActions_ClearsBaseStack()
+    public async Task KeyDown_WithCKey_WhenErrorViewReplacedFocusedTableAndBaseStackHasActions_ClearsBaseStack()
     {
         // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
         // confirming the clear must clear the base stack and leave no DrillDown session behind
-        using var app = CreateTestApp();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
-        var drillDown = new DrillDownState(
-            [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
-            schema,
-            ViewMode.JsonLinesTree,
-            KeyPath: [],
-            ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
-        state.EnterFocusedTable(drillDown);
-        state.EnterPlaceholderMode();
-        state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
-        using var mainWindow = new MainWindow(app, state);
-        // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
-        // then confirm (Enter). Self-unsubscribes so it fires only once — resending on every
-        // subsequent Iteration tick would keep steering focus in the (now dialog-free) main window.
-        void ConfirmYes(object? sender, EventArgs e)
+        await using var session = await LivePumpTestSession.StartAsync(app =>
         {
-            app.Iteration -= ConfirmYes;
-            app.Keyboard.RaiseKeyDownEvent(Key.CursorLeft);
-            app.Keyboard.RaiseKeyDownEvent(Key.Enter);
-        }
-
-        app.Iteration += ConfirmYes;
-        app.StopAfterFirstIteration = true;
+            var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+            var state = new AppState();
+            var drillDown = new DrillDownState(
+                [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
+                schema,
+                ViewMode.JsonLinesTree,
+                KeyPath: [],
+                ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }]);
+            state.EnterFocusedTable(drillDown);
+            state.EnterPlaceholderMode();
+            state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
+            var mainWindow = new MainWindow(app, state);
+            // MessageBox.Query defaults focus to the last button ("No"); move focus to "Yes" (Left)
+            // then confirm (Enter). Sent once, on the confirmation's first iteration only.
+            ModalKeys.SendOnceOnTop(app, mainWindow, Key.CursorLeft, Key.Enter);
+            return (mainWindow, new MainWindowContext(state, mainWindow));
+        });
 
         // Act
-        app.Begin(mainWindow);
-        mainWindow.SubscribeKeyHandler();
-        mainWindow.SetFocus();
-        var handled = app.Keyboard.RaiseKeyDownEvent((Key)'c');
+        var handled = await session.InvokeAsync((app, ctx) =>
+        {
+            ctx.Window.SubscribeKeyHandler();
+            ctx.Window.SetFocus();
+            return Task.FromResult(app.Keyboard.RaiseKeyDownEvent((Key)'c'));
+        });
 
         // Assert
+        var (rootActionCount, rootDirty, hasDrillDown) = await session.InvokeAsync((app, ctx) => Task.FromResult(
+            (ctx.State.ActionStack.Count, ctx.State.HasUnsavedChanges, ctx.State.TryGetDrillDown(out _))));
         handled.Should().BeTrue();
-        state.ActionStack.Should().BeEmpty();
-        state.HasUnsavedChanges.Should().BeTrue();
-        state.TryGetDrillDown(out _).Should().BeFalse();
+        rootActionCount.Should().Be(0);
+        rootDirty.Should().BeTrue();
+        hasDrillDown.Should().BeFalse();
     }
 }
