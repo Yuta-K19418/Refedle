@@ -3,7 +3,7 @@ namespace Refedle.Engine.Models.Actions;
 /// <summary>
 /// Action that reformats the string representation of date/time values in a Timestamp column.
 /// </summary>
-public sealed record FormatTimestampAction : MorphAction
+public sealed record FormatTimestampAction : IMorphAction
 {
     /// <summary>
     /// Gets the name of the column to format.
@@ -18,6 +18,6 @@ public sealed record FormatTimestampAction : MorphAction
     /// <summary>
     /// Gets a human-readable description of this action.
     /// </summary>
-    public override string Description =>
+    public string Description =>
         $"Format timestamp column '{ColumnName}' → \"{TargetFormat}\"";
 }

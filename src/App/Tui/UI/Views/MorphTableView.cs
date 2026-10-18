@@ -26,7 +26,7 @@ internal abstract class MorphTableView : TableView
     /// Callback invoked when the user confirms a column morphing action.
     /// <see langword="null"/> means morphing is disabled for this view instance.
     /// </summary>
-    internal Action<MorphAction>? OnMorphAction { get; init; }
+    internal Action<IMorphAction>? OnMorphAction { get; init; }
 
     /// <summary>
     /// Optional predicate that returns <see langword="true"/> when the row indexer's

@@ -25,7 +25,7 @@ public static class ActionApplier
     /// </returns>
     public static Result<BatchOutputSchema> BuildOutputSchema(
         IReadOnlyList<string> columnNames,
-        IReadOnlyList<MorphAction> actions
+        IReadOnlyList<IMorphAction> actions
     )
     {
         ArgumentNullException.ThrowIfNull(columnNames);
@@ -58,7 +58,7 @@ public static class ActionApplier
     }
 
     private static Result ApplyAction(
-        MorphAction action,
+        IMorphAction action,
         List<(string Name, int ColumnIndex, string OutputName)> workingColumns,
         Dictionary<string, int> nameToWorkingIndex,
         List<BatchFilterSpec> filterSpecs,

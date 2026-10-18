@@ -13,6 +13,16 @@ namespace Refedle.Engine.IO.Json;
 public static class JsonObjectCellExtractor
 {
     /// <summary>
+    /// Cell value returned for malformed JSON.
+    /// </summary>
+    public const string ErrorValue = "<error>";
+
+    /// <summary>
+    /// Cell value returned for missing keys or JSON null.
+    /// </summary>
+    public const string NullValue = "<null>";
+
+    /// <summary>
     /// Extracts a cell value from a raw JSON line by column name.
     /// </summary>
     /// <param name="lineBytes">Raw bytes of a single JSON Lines row.</param>
@@ -26,7 +36,7 @@ public static class JsonObjectCellExtractor
     {
         if (lineBytes.IsEmpty)
         {
-            return "<error>";
+            return ErrorValue;
         }
 
         try
@@ -35,7 +45,7 @@ public static class JsonObjectCellExtractor
 
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
             {
-                return "<error>";
+                return ErrorValue;
             }
 
             while (reader.Read())
@@ -58,17 +68,17 @@ public static class JsonObjectCellExtractor
 
                 if (!reader.Read())
                 {
-                    return "<error>";
+                    return ErrorValue;
                 }
 
                 return FormatValue(ref reader);
             }
 
-            return "<null>";
+            return NullValue;
         }
         catch (JsonException)
         {
-            return "<error>";
+            return ErrorValue;
         }
     }
 
@@ -84,10 +94,10 @@ public static class JsonObjectCellExtractor
             JsonTokenType.String => Encoding.UTF8.GetString(reader.ValueSpan),
             JsonTokenType.True => "True",
             JsonTokenType.False => "False",
-            JsonTokenType.Null => "<null>",
+            JsonTokenType.Null => NullValue,
             JsonTokenType.StartObject => JsonByteExtractor.FormatObjectPreview(ref reader),
             JsonTokenType.StartArray => JsonByteExtractor.FormatArrayPreview(ref reader),
-            _ => "<null>",
+            _ => NullValue,
         };
     }
 
@@ -109,6 +119,6 @@ public static class JsonObjectCellExtractor
             return doubleValue.ToString(CultureInfo.InvariantCulture);
         }
 
-        return "<error>";
+        return ErrorValue;
     }
 }

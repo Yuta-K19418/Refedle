@@ -14,7 +14,7 @@ internal sealed class ColumnActionHandler(
     IApplication app,
     IExtendedTableSource table,
     int selectedColumn,
-    Action<MorphAction> onMorphAction,
+    Action<IMorphAction> onMorphAction,
     DataFormat format,
     Func<bool>? isRowIndexComplete = null)
 {

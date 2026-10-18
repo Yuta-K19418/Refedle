@@ -20,7 +20,7 @@ internal sealed record SingleDrillDownRequest(
     DataFormat Format,
     JsonRawBytes NodeBytes,
     IReadOnlyList<KeyPathSegment> KeyPath,
-    IReadOnlyList<MorphAction> InitialActionStack)
+    IReadOnlyList<IMorphAction> InitialActionStack)
     : DrillDownRequest(Format);
 
 /// <summary>Full-aggregation DrillDown: JSON Lines / JSON Array format, scans the entire file.</summary>
@@ -33,5 +33,5 @@ internal sealed record SingleDrillDownRequest(
 internal sealed record FullAggregationDrillDownRequest(
     DataFormat Format,
     IReadOnlyList<KeyPathSegment> KeyPath,
-    IReadOnlyList<MorphAction> InitialActionStack)
+    IReadOnlyList<IMorphAction> InitialActionStack)
     : DrillDownRequest(Format);

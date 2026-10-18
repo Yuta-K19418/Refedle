@@ -7,7 +7,7 @@ namespace Refedle.Engine.Models.Actions;
 /// A row-level filter action that retains only source rows satisfying a column value condition.
 /// Multiple <see cref="FilterAction"/>s in the action stack are applied with AND semantics.
 /// </summary>
-public sealed record FilterAction : MorphAction
+public sealed record FilterAction : IMorphAction
 {
     /// <summary>The name of the column to filter on.</summary>
     public string ColumnName { get; }
@@ -120,5 +120,5 @@ public sealed record FilterAction : MorphAction
         };
 
     /// <inheritdoc/>
-    public override string Description => $"Filter '{ColumnName}' {Operator} '{Value}'";
+    public string Description => $"Filter '{ColumnName}' {Operator} '{Value}'";
 }

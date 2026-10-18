@@ -8,7 +8,7 @@ namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
 /// Wraps an <see cref="IExtendedTableSource"/> and applies an ordered Action Stack of
-/// <see cref="MorphAction"/>s lazily — only to the cells currently requested by the TableView.
+/// <see cref="IMorphAction"/>s lazily — only to the cells currently requested by the TableView.
 /// When one or more <see cref="FilterAction"/>s are present, uses an
 /// <see cref="IFilterRowIndexer"/> (provided via a factory in <see cref="Create"/>)
 /// to map filtered row indices to source rows.
@@ -57,7 +57,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
     public static LazyTransformer Create(
         IExtendedTableSource source,
         TableSchema originalSchema,
-        IReadOnlyList<MorphAction> actions,
+        IReadOnlyList<IMorphAction> actions,
         Func<IReadOnlyList<FilterSpec>, IFilterRowIndexer>? filterRowIndexerFactory = null
     )
     {

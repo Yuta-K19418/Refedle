@@ -74,7 +74,7 @@ public sealed class ColumnActionHandlerTests
     public async Task ExecuteAction_WhenFillConfirmed_UsesRawColumnNameInMorphAction()
     {
         // Arrange
-        MorphAction? capturedAction = null;
+        IMorphAction? capturedAction = null;
         await using var session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             var table = new TableSource(["amount (number)"], ["amount"]);

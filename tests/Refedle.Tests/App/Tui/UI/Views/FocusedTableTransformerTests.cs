@@ -122,7 +122,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "#", NewName = "hash" },
             new DeleteColumnAction { ColumnName = "#" },
@@ -154,7 +154,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions = [new RenameColumnAction { OldName = "name", NewName = "label" }];
+        IReadOnlyList<IMorphAction> actions = [new RenameColumnAction { OldName = "name", NewName = "label" }];
 
         // Act
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
@@ -182,7 +182,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "name" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "name" }];
 
         // Act
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
@@ -209,7 +209,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
             [new CastColumnAction { ColumnName = "val", TargetType = ColumnType.FloatingPoint }];
 
         // Act
@@ -237,7 +237,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
             [FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value];
 
         // Act
@@ -263,7 +263,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value,
             FilterAction.Create("val", FilterOperator.GreaterThan, ComparisonType.Number, "2").Value,
@@ -291,7 +291,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "name", NewName = "label" },
             FilterAction.Create("label", FilterOperator.Equals, ComparisonType.Text, "B").Value,
@@ -321,7 +321,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "name", "val"]
         );
         var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions = [new FillColumnAction { ColumnName = "val", Value = "N/A" }];
+        IReadOnlyList<IMorphAction> actions = [new FillColumnAction { ColumnName = "val", Value = "N/A" }];
 
         // Act
         using var transformer = FocusedTableTransformer.Create(source, schema, actions);
@@ -347,7 +347,7 @@ public sealed class FocusedTableTransformerTests
             ["#", "created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Timestamp));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {

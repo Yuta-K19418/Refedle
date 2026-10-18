@@ -5,7 +5,7 @@ namespace Refedle.Engine.Models.Actions;
 /// <summary>
 /// Represents an action to cast a column to a different data type.
 /// </summary>
-public sealed record CastColumnAction : MorphAction
+public sealed record CastColumnAction : IMorphAction
 {
     /// <summary>
     /// Gets the name of the column to cast.
@@ -20,5 +20,5 @@ public sealed record CastColumnAction : MorphAction
     /// <summary>
     /// Gets a description of the action.
     /// </summary>
-    public override string Description => $"Cast column '{ColumnName}' to {TargetType}";
+    public string Description => $"Cast column '{ColumnName}' to {TargetType}";
 }

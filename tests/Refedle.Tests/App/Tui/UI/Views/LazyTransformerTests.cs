@@ -67,7 +67,7 @@ public sealed class LazyTransformerTests
     private static LazyTransformer MakeFilteredTransformer(
         FakeTableSource source,
         TableSchema schema,
-        IReadOnlyList<MorphAction> actions,
+        IReadOnlyList<IMorphAction> actions,
         IReadOnlyList<int> matchedRows
     ) => LazyTransformer.Create(source, schema, actions, _ => new SyncFilterRowIndexer(matchedRows));
 
@@ -140,7 +140,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
@@ -164,7 +164,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
@@ -196,7 +196,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
         using var transformer = LazyTransformer.Create(source, schema, actions);
@@ -221,7 +221,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
         using var transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
@@ -242,7 +242,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "A" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
         using var transformer = LazyTransformer.Create(source, schema, actions);
@@ -266,7 +266,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
         ];
@@ -294,7 +294,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
             new DeleteColumnAction { ColumnName = "X" },
@@ -354,7 +354,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
         ];
@@ -384,7 +384,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
         ];
@@ -412,7 +412,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "DoesNotExist" },
         ];
@@ -551,7 +551,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
         using var transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
@@ -572,7 +572,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
@@ -602,7 +602,7 @@ public sealed class LazyTransformerTests
             ["Name"]
         );
         var schema = MakeSchema(("Name", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
         ];
@@ -630,7 +630,7 @@ public sealed class LazyTransformerTests
             ["Fruit"]
         );
         var schema = MakeSchema(("Fruit", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Fruit", FilterOperator.Contains, ComparisonType.Text, "ap").Value,
         ];
@@ -662,7 +662,7 @@ public sealed class LazyTransformerTests
             ["Name", "Age"]
         );
         var schema = MakeSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
             FilterAction.Create("Age", FilterOperator.Equals, ComparisonType.Text, "30").Value,
@@ -689,7 +689,7 @@ public sealed class LazyTransformerTests
             ["Name"]
         );
         var schema = MakeSchema(("Name", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Charlie").Value,
         ];
@@ -717,7 +717,7 @@ public sealed class LazyTransformerTests
             ["Name"]
         );
         var schema = MakeSchema(("Name", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
             FilterAction.Create("FullName", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
@@ -743,7 +743,7 @@ public sealed class LazyTransformerTests
             ["Name", "Status"]
         );
         var schema = MakeSchema(("Name", ColumnType.Text), ("Status", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "Status" },
             // Filter targets a deleted column — should be silently skipped, no rows excluded
@@ -776,7 +776,7 @@ public sealed class LazyTransformerTests
             ["Score"]
         );
         var schema = MakeSchema(("Score", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Score", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
@@ -802,7 +802,7 @@ public sealed class LazyTransformerTests
             ["Word"]
         );
         var schema = MakeSchema(("Word", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Word", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
@@ -831,7 +831,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
         ];
@@ -856,7 +856,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "DoesNotExist", Value = "FILLED" },
         ];
@@ -880,7 +880,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = string.Empty },
         ];
@@ -904,7 +904,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
             new FillColumnAction { ColumnName = "X", Value = "FILLED" },
@@ -930,7 +930,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "first" },
             new FillColumnAction { ColumnName = "A", Value = "second" },
@@ -958,7 +958,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "B", Value = "FILLED" },
         ];
@@ -983,7 +983,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -1008,7 +1008,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
             new FillColumnAction { ColumnName = "A", Value = "hello" },
@@ -1037,7 +1037,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "B", Value = "FILLED" },
         ];
@@ -1089,7 +1089,7 @@ public sealed class LazyTransformerTests
             ["A", "B"]
         );
         var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
@@ -1117,7 +1117,7 @@ public sealed class LazyTransformerTests
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
-        IReadOnlyList<MorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
+        IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
         using var transformer = LazyTransformer.Create(source, schema, actions);
@@ -1132,7 +1132,7 @@ public sealed class LazyTransformerTests
         // Arrange
         var source = new FakeTableSource([["42"]], ["A"]);
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
         ];
@@ -1188,7 +1188,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = fillValue },
         ];
@@ -1207,7 +1207,7 @@ public sealed class LazyTransformerTests
         // Arrange
         var source = new FakeTableSource([["100"]], ["Price"]);
         var schema = MakeSchema(("Price", ColumnType.WholeNumber));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Price", Value = "N/A" },
         ];
@@ -1226,7 +1226,7 @@ public sealed class LazyTransformerTests
         // Arrange
         var source = new FakeTableSource([["hello"]], ["Value"]);
         var schema = MakeSchema(("Value", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Value", Value = "42" },
         ];
@@ -1254,7 +1254,7 @@ public sealed class LazyTransformerTests
             ["created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Timestamp));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {
@@ -1282,7 +1282,7 @@ public sealed class LazyTransformerTests
             ["A"]
         );
         var schema = MakeSchema(("A", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {
@@ -1309,7 +1309,7 @@ public sealed class LazyTransformerTests
             ["created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Text));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
             new FormatTimestampAction
@@ -1337,7 +1337,7 @@ public sealed class LazyTransformerTests
             ["created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Timestamp));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {
@@ -1369,7 +1369,7 @@ public sealed class LazyTransformerTests
             ["created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Timestamp));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {
@@ -1396,7 +1396,7 @@ public sealed class LazyTransformerTests
             ["created_at"]
         );
         var schema = MakeSchema(("created_at", ColumnType.Timestamp));
-        IReadOnlyList<MorphAction> actions =
+        IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
             {

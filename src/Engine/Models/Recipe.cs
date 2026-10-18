@@ -31,7 +31,7 @@ public sealed record Recipe
     /// The ordered list of transformation actions to apply.
     /// Actions are applied sequentially in the order they appear.
     /// </summary>
-    public required IReadOnlyList<MorphAction> Actions { get; init; }
+    public required IReadOnlyList<IMorphAction> Actions { get; init; }
 
     /// <summary>
     /// Metadata: timestamp when the recipe was created or last modified.

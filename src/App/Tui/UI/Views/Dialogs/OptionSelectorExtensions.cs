@@ -44,13 +44,10 @@ internal static class OptionSelectorExtensions
                 return;
             }
 
-            if (key == Key.K)
+            if (key == Key.K && selector.FocusedItem > 0)
             {
-                if (selector.FocusedItem > 0)
-                {
-                    selector.FocusedItem--;
-                    key.Handled = true;
-                }
+                selector.FocusedItem--;
+                key.Handled = true;
             }
         };
     }

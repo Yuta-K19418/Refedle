@@ -4,7 +4,7 @@ namespace Refedle.Engine.Models.Actions;
 /// Represents an action to overwrite every value in a named column with a fixed string.
 /// Use case: anonymization, masking, bulk initialization.
 /// </summary>
-public sealed record FillColumnAction : MorphAction
+public sealed record FillColumnAction : IMorphAction
 {
     /// <summary>
     /// Gets the name of the column to fill.
@@ -19,5 +19,5 @@ public sealed record FillColumnAction : MorphAction
     /// <summary>
     /// Gets a description of the action.
     /// </summary>
-    public override string Description => $"Fill column '{ColumnName}' with '{Value}'";
+    public string Description => $"Fill column '{ColumnName}' with '{Value}'";
 }

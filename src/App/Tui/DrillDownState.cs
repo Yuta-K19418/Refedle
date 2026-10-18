@@ -23,5 +23,5 @@ internal sealed record DrillDownState(
     TableSchema Schema,
     ViewMode PreviousMode,
     IReadOnlyList<KeyPathSegment> KeyPath,
-    IReadOnlyList<MorphAction> ActionStack,
+    IReadOnlyList<IMorphAction> ActionStack,
     bool HasUnsavedChanges = false);

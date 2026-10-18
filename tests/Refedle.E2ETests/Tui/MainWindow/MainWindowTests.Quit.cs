@@ -1,3 +1,4 @@
+using AwesomeAssertions;
 using Refedle.App.Tui.UI;
 using Terminal.Gui.Drivers;
 
@@ -21,7 +22,8 @@ public sealed partial class MainWindowTests
 
         // Act & Assert: an empty action stack means no confirmation dialog is shown.
         Harness.SendKey(KeyCode.Q);
-        await Harness.WaitForExitAsync();
+        var waitForExit = () => Harness.WaitForExitAsync();
+        await waitForExit.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -35,7 +37,8 @@ public sealed partial class MainWindowTests
 
         // Act & Assert: an empty action stack means no confirmation dialog is shown.
         Harness.SendKey(KeyCode.Q);
-        await Harness.WaitForExitAsync();
+        var waitForExit = () => Harness.WaitForExitAsync();
+        await waitForExit.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -75,6 +78,7 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("Quit anyway?");
         Harness.SendKey(KeyCode.CursorLeft);
         Harness.SendKey(KeyCode.Enter);
-        await Harness.WaitForExitAsync();
+        var waitForExit = () => Harness.WaitForExitAsync();
+        await waitForExit.Should().NotThrowAsync();
     }
 }

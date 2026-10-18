@@ -28,7 +28,7 @@ public class RowByteCacheBenchmarks : IDisposable
     public RowByteCacheBenchmarks()
     {
         // Arrange - Create test data
-        _testFilePath = Path.GetTempFileName();
+        _testFilePath = Path.Combine(Path.GetTempPath(), $"row_byte_cache_benchmark_{Guid.NewGuid()}.jsonl");
 
         // Create 10,000 lines of test data
         var lines = Enumerable
@@ -81,7 +81,6 @@ public class RowByteCacheBenchmarks : IDisposable
     public void Access_SequentialPattern_CacheHit90()
     {
         var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
-        var totalLines = _indexer.TotalRows;
 
         // Sequential access pattern (approximately 90% cache hit rate)
         for (var i = 0; i < 1000; i++)
@@ -162,7 +161,7 @@ public class RowByteCacheBenchmarks : IDisposable
     public void Access_LargeFile_100kLines()
     {
         // Create separate file with 100k lines (for benchmarking only)
-        var largeFilePath = Path.GetTempFileName();
+        var largeFilePath = Path.Combine(Path.GetTempPath(), $"row_byte_cache_benchmark_large_{Guid.NewGuid()}.jsonl");
         try
         {
             var lines = Enumerable

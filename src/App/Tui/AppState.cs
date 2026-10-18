@@ -58,7 +58,7 @@ internal sealed class AppState : IDisposable
     /// </summary>
     public Action<TableSchema>? OnSchemaRefined { get; private set; }
 
-    private IReadOnlyList<MorphAction> _actionStack = [];
+    private IReadOnlyList<IMorphAction> _actionStack = [];
 
     /// <summary>
     /// Gets the current Action Stack of transformation operations applied to the loaded file.
@@ -66,7 +66,7 @@ internal sealed class AppState : IDisposable
     /// Mutation goes through <see cref="AddMorphAction"/>, <see cref="ClearMorphActions"/>, or
     /// <see cref="SetActionStack"/>.
     /// </summary>
-    public IReadOnlyList<MorphAction> ActionStack => _actionStack;
+    public IReadOnlyList<IMorphAction> ActionStack => _actionStack;
 
     private bool _hasUnsavedChanges;
     private long _revision;
@@ -263,7 +263,7 @@ internal sealed class AppState : IDisposable
     /// Does nothing when no session exists.
     /// </summary>
     /// <param name="action">The action to append.</param>
-    internal void AddDrillDownAction(MorphAction action)
+    internal void AddDrillDownAction(IMorphAction action)
     {
         if (_drillDown is not { } drillDown)
         {
@@ -352,7 +352,7 @@ internal sealed class AppState : IDisposable
     /// Creates a new <see cref="IReadOnlyList{T}"/> to preserve immutability.
     /// </summary>
     /// <param name="action">The action to append.</param>
-    internal void AddMorphAction(MorphAction action)
+    internal void AddMorphAction(IMorphAction action)
     {
         _actionStack = [.. _actionStack, action];
         _hasUnsavedChanges = true;
@@ -379,7 +379,7 @@ internal sealed class AppState : IDisposable
     /// Replaces the Action Stack wholesale, e.g. when loading a recipe.
     /// </summary>
     /// <param name="actions">The actions to set as the new Action Stack.</param>
-    internal void SetActionStack(IReadOnlyList<MorphAction> actions)
+    internal void SetActionStack(IReadOnlyList<IMorphAction> actions)
     {
         _actionStack = actions;
         _hasUnsavedChanges = true;

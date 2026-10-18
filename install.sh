@@ -55,36 +55,43 @@ detect_sha_tool() {
 
 # resolve_effective_url <url> : print the URL after following every redirect.
 resolve_effective_url() {
+    reu_url="$1"
+
     if [ "$HTTP_CLIENT" = "curl" ]; then
-        curl -fsSL -o /dev/null -w '%{url_effective}' "$1"
+        curl -fsSL -o /dev/null -w '%{url_effective}' "$reu_url"
         return
     fi
-    wget -S --spider "$1" 2>&1 \
+    wget -S --spider "$reu_url" 2>&1 \
         | awk 'tolower($1) == "location:" { location = $2 } END { print location }' \
         | tr -d '\r'
 }
 
 # http_status <url> : print the final HTTP status code, or 000 if unreachable.
 http_status() {
+    hs_url="$1"
+
     if [ "$HTTP_CLIENT" = "curl" ]; then
-        if hs_code=$(curl -sIL -o /dev/null -w '%{http_code}' "$1" 2>/dev/null); then
+        if hs_code=$(curl -sIL -o /dev/null -w '%{http_code}' "$hs_url" 2>/dev/null); then
             printf '%s' "$hs_code"
         else
             printf '000'
         fi
         return
     fi
-    wget -S --spider "$1" 2>&1 \
+    wget -S --spider "$hs_url" 2>&1 \
         | awk '$1 ~ /^HTTP\// { code = $2 } END { print (code == "" ? "000" : code) }'
 }
 
 # download <url> <dest> : download <url> to <dest>, failing on any HTTP error.
 download() {
+    dl_url="$1"
+    dl_dest="$2"
+
     if [ "$HTTP_CLIENT" = "curl" ]; then
-        curl -fsSL -o "$2" "$1"
+        curl -fsSL -o "$dl_dest" "$dl_url"
         return
     fi
-    wget -q -O "$2" "$1"
+    wget -q -O "$dl_dest" "$dl_url"
 }
 
 # --- release resolution ----------------------------------------------------
@@ -134,9 +141,12 @@ resolve_rid() {
 # --- checksum ------------------------------------------------------------
 
 sha256_hex() {
+    sh_file="$1"
+
     case "$SHA_TOOL" in
-        sha256sum) sha256sum "$1" | awk '{ print $1 }' ;;
-        shasum) shasum -a 256 "$1" | awk '{ print $1 }' ;;
+        sha256sum) sha256sum "$sh_file" | awk '{ print $1 }' ;;
+        shasum) shasum -a 256 "$sh_file" | awk '{ print $1 }' ;;
+        *) error "Unsupported SHA-256 tool: '${SHA_TOOL}'." ;;
     esac
 }
 
