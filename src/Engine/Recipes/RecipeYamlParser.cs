@@ -19,7 +19,7 @@ internal static class RecipeYamlParser
     public static Result<Recipe> Parse(string yaml)
     {
         var parseState = new RecipeYamlParseState(string.Empty, null, null, ParseState.Root, DrillDownKeyPathPresent: false);
-        List<MorphAction> actions = [];
+        List<IMorphAction> actions = [];
         List<KeyPathSegment> drillDownKeyPath = [];
         Dictionary<string, string> currentItem = [];
 
@@ -65,7 +65,7 @@ internal static class RecipeYamlParser
     private static Result FinalizePendingItem(
         RecipeYamlParseState parseState,
         Dictionary<string, string> currentItem,
-        List<MorphAction> actions,
+        List<IMorphAction> actions,
         List<KeyPathSegment> drillDownKeyPath)
     {
         if (parseState.ParseState == ParseState.DrillDownKeyPathItem)
@@ -83,7 +83,7 @@ internal static class RecipeYamlParser
         string line,
         RecipeYamlParseState parseState,
         Dictionary<string, string> currentItem,
-        List<MorphAction> actions,
+        List<IMorphAction> actions,
         List<KeyPathSegment> drillDownKeyPath)
     {
         if (parseState.ParseState == ParseState.Root)

@@ -10,7 +10,7 @@ namespace Refedle.App.Tui.UI.Views;
 
 /// <summary>
 /// Base class for lazy table transformers that wrap an <see cref="IExtendedTableSource"/> and
-/// apply an ordered Action Stack of <see cref="MorphAction"/>s lazily — only to the
+/// apply an ordered Action Stack of <see cref="IMorphAction"/>s lazily — only to the
 /// cells currently requested by the TableView.
 /// Owns the transformed column schema and shared cell formatting; derived classes
 /// decide how rows and columns resolve against the underlying source (an
@@ -41,7 +41,7 @@ internal abstract class LazyTransformerBase(
 
     /// <summary>
     /// Gets the raw (unlabeled) column names in output order.
-    /// Use these when constructing <see cref="MorphAction"/>s so that action
+    /// Use these when constructing <see cref="IMorphAction"/>s so that action
     /// <c>ColumnName</c> values match the schema names used inside <see cref="BuildTransformedSchema"/>.
     /// </summary>
     public string[] RawColumnNames { get; } = rawColumnNames;
@@ -98,7 +98,7 @@ internal abstract class LazyTransformerBase(
         IReadOnlyList<string?> fillValues,
         IReadOnlyList<string?> formatStrings,
         IReadOnlyList<FilterSpec> filterSpecs
-    ) BuildTransformedSchema(TableSchema originalSchema, IReadOnlyList<MorphAction> actions)
+    ) BuildTransformedSchema(TableSchema originalSchema, IReadOnlyList<IMorphAction> actions)
     {
         var working = originalSchema
             .Columns.Select(static c => new WorkingColumn(
@@ -137,7 +137,7 @@ internal abstract class LazyTransformerBase(
     }
 
     protected static void ApplyAction(
-        MorphAction action,
+        IMorphAction action,
         List<WorkingColumn> working,
         Dictionary<string, int> nameToIndex,
         List<FilterSpec> filterSpecs)
@@ -163,7 +163,7 @@ internal abstract class LazyTransformerBase(
                 ApplyFormatTimestamp(formatTs, working, nameToIndex);
                 break;
             default:
-                throw new UnreachableException($"Unhandled {nameof(MorphAction)} type: {action.GetType()}");
+                throw new UnreachableException($"Unhandled {nameof(IMorphAction)} type: {action.GetType()}");
         }
     }
 

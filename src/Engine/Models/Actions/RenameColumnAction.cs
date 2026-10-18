@@ -3,7 +3,7 @@ namespace Refedle.Engine.Models.Actions;
 /// <summary>
 /// Represents an action to rename a column in the dataset.
 /// </summary>
-public sealed record RenameColumnAction : MorphAction
+public sealed record RenameColumnAction : IMorphAction
 {
     /// <summary>
     /// Gets the current name of the column to rename.
@@ -18,5 +18,5 @@ public sealed record RenameColumnAction : MorphAction
     /// <summary>
     /// Gets a description of the action.
     /// </summary>
-    public override string Description => $"Rename column '{OldName}' to '{NewName}'";
+    public string Description => $"Rename column '{OldName}' to '{NewName}'";
 }

@@ -38,7 +38,7 @@ internal sealed class FocusedTableSource : IExtendedTableSource
 
     /// <summary>
     /// Gets the raw (unlabeled) column names in output order, with <c>"#"</c> at index 0.
-    /// Use these when constructing <see cref="MorphAction"/>s so that action
+    /// Use these when constructing <see cref="IMorphAction"/>s so that action
     /// <c>ColumnName</c> values match the DrillDown schema names.
     /// </summary>
     public string[] RawColumnNames => _rawColumnNames;

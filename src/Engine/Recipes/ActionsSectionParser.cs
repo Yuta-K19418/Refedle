@@ -11,7 +11,7 @@ internal static class ActionsSectionParser
         string line,
         RecipeYamlParseState parseState,
         Dictionary<string, string> currentAction,
-        List<MorphAction> actions)
+        List<IMorphAction> actions)
     {
         if (line == "drillDownKeyPath: []")
         {
@@ -58,10 +58,10 @@ internal static class ActionsSectionParser
         return Results.Success((parseState, currentAction));
     }
 
-    // Parses currentAction into a MorphAction and appends it, if a "type" field was collected;
+    // Parses currentAction into a IMorphAction and appends it, if a "type" field was collected;
     // a no-op otherwise. Shared by end-of-file finalization and the drillDownKeyPath transitions,
     // both of which must flush whatever action was still open before moving on.
-    internal static Result FinalizePending(Dictionary<string, string> currentAction, List<MorphAction> actions)
+    internal static Result FinalizePending(Dictionary<string, string> currentAction, List<IMorphAction> actions)
     {
         if (!currentAction.ContainsKey("type"))
         {
@@ -78,24 +78,24 @@ internal static class ActionsSectionParser
         return Results.Success();
     }
 
-    private static Result<(Dictionary<string, string> newAction, MorphAction? completedAction)> StartNewAction(
+    private static Result<(Dictionary<string, string> newAction, IMorphAction? completedAction)> StartNewAction(
         string line,
         Dictionary<string, string> currentAction)
     {
-        MorphAction? completedAction = null;
+        IMorphAction? completedAction = null;
         if (currentAction.ContainsKey("type"))
         {
             var parseResult = MorphActionParser.ParseAction(currentAction);
             if (parseResult.IsFailure)
             {
-                return Results.Failure<(Dictionary<string, string> newAction, MorphAction? completedAction)>(parseResult.Error);
+                return Results.Failure<(Dictionary<string, string> newAction, IMorphAction? completedAction)>(parseResult.Error);
             }
 
             completedAction = parseResult.Value;
         }
 
         var newAction = new Dictionary<string, string>(StringComparer.Ordinal) { ["type"] = line["  - type: ".Length..] };
-        return Results.Success<(Dictionary<string, string> newAction, MorphAction? completedAction)>((newAction, completedAction));
+        return Results.Success<(Dictionary<string, string> newAction, IMorphAction? completedAction)>((newAction, completedAction));
     }
 
     // Ends the actions section (finalizing whatever action was pending, if any) and
@@ -103,7 +103,7 @@ internal static class ActionsSectionParser
     private static Result<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)> TransitionToDrillDownKeyPath(
         RecipeYamlParseState parseState,
         Dictionary<string, string> currentAction,
-        List<MorphAction> actions)
+        List<IMorphAction> actions)
     {
         var finalizeResult = FinalizePending(currentAction, actions);
         if (finalizeResult.IsFailure)
@@ -121,7 +121,7 @@ internal static class ActionsSectionParser
     private static Result<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)> TransitionToEmptyDrillDownKeyPath(
         RecipeYamlParseState parseState,
         Dictionary<string, string> currentAction,
-        List<MorphAction> actions)
+        List<IMorphAction> actions)
     {
         var finalizeResult = FinalizePending(currentAction, actions);
         if (finalizeResult.IsFailure)

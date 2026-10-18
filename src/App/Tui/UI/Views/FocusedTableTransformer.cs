@@ -52,7 +52,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     public static FocusedTableTransformer Create(
         IExtendedTableSource source,
         TableSchema originalSchema,
-        IReadOnlyList<MorphAction> actions
+        IReadOnlyList<IMorphAction> actions
     )
     {
         ArgumentNullException.ThrowIfNull(source);

@@ -425,7 +425,7 @@ internal sealed class ViewManager : IDisposable
     /// Appends the action to the stack and refreshes the current view.
     /// </summary>
     /// <param name="action">The morph action to apply.</param>
-    private void HandleMorphAction(MorphAction action)
+    private void HandleMorphAction(IMorphAction action)
     {
         if (_state.TryGetDrillDown(out _))
         {

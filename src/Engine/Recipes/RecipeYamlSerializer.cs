@@ -47,7 +47,7 @@ internal static class RecipeYamlSerializer
         return sb.ToString();
     }
 
-    private static void AppendActions(StringBuilder sb, IReadOnlyList<MorphAction> actions)
+    private static void AppendActions(StringBuilder sb, IReadOnlyList<IMorphAction> actions)
     {
         if (actions.Count == 0)
         {
@@ -101,7 +101,7 @@ internal static class RecipeYamlSerializer
     // Index-kind KeyPathSegment.Value is always in "[N]" form (see KeyPathSegment's doc comment).
     private static string ExtractIndexLabel(string value) => value[1..^1];
 
-    private static void AppendAction(StringBuilder sb, MorphAction action)
+    private static void AppendAction(StringBuilder sb, IMorphAction action)
     {
         switch (action)
         {
@@ -137,7 +137,7 @@ internal static class RecipeYamlSerializer
                 sb.Append("    targetFormat: ").Append(StringUtility.QuoteString(formatTimestamp.TargetFormat)).Append(NewLine);
                 break;
             default:
-                throw new UnreachableException("Unhandled MorphAction subtype in serializer");
+                throw new UnreachableException("Unhandled IMorphAction subtype in serializer");
         }
     }
 }
