@@ -185,10 +185,12 @@ public sealed class MmapServiceTests : IDisposable
     {
         // Arrange
         using var service = MmapService.Open(_testFilePath).Value;
-        var buffer = Span<byte>.Empty;
 
-        // Act & Assert (should not throw)
-        service.Read(0, buffer);
+        // Act
+        var act = () => service.Read(0, []);
+
+        // Assert
+        act.Should().NotThrow();
     }
 
     [Fact]
@@ -196,10 +198,12 @@ public sealed class MmapServiceTests : IDisposable
     {
         // Arrange
         using var service = MmapService.Open(_testFilePath).Value;
-        var buffer = Span<byte>.Empty;
 
-        // Act & Assert (should not throw)
-        service.Read(TestContent.Length, buffer);
+        // Act
+        var act = () => service.Read(TestContent.Length, []);
+
+        // Assert
+        act.Should().NotThrow();
     }
 
     [Fact]
