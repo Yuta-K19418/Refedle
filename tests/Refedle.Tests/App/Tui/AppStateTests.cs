@@ -11,12 +11,12 @@ namespace Refedle.Tests.App.Tui;
 
 public sealed class AppStateTests
 {
-    private static readonly MorphAction RootAction = new RenameColumnAction { OldName = "root", NewName = "root_renamed" };
+    private static readonly IMorphAction RootAction = new RenameColumnAction { OldName = "root", NewName = "root_renamed" };
 
     private static TableSchema CreateSchema(string columnName = "col1") =>
         new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = columnName, Type = ColumnType.Text }] };
 
-    private static DrillDownState CreateDrillDownState(MorphAction drillDownAction) =>
+    private static DrillDownState CreateDrillDownState(IMorphAction drillDownAction) =>
         new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             CreateSchema(),
@@ -24,7 +24,7 @@ public sealed class AppStateTests
             KeyPath: [],
             ActionStack: [drillDownAction]);
 
-    private static AppState CreateStateWithDrillDown(MorphAction drillDownAction)
+    private static AppState CreateStateWithDrillDown(IMorphAction drillDownAction)
     {
         var state = new AppState();
         state.EnterFocusedTable(CreateDrillDownState(drillDownAction));
@@ -62,7 +62,7 @@ public sealed class AppStateTests
         return state;
     }
 
-    private static (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<MorphAction>, bool, IReadOnlyList<JsonObjectEntry>?)
+    private static (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<IMorphAction>, bool, IReadOnlyList<JsonObjectEntry>?)
         CaptureExceptMode(AppState state) =>
         (state.CurrentFilePath, state.CurrentKeyPath, state.Schema, state.RowIndexer, state.Cts,
             state.OnSchemaRefined, state.ActionStack, state.HasUnsavedChanges, state.JsonObjectEntries);
@@ -169,7 +169,7 @@ public sealed class AppStateTests
         // Arrange
         using var state = new AppState();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var replacement = new MorphAction[] { new DeleteColumnAction { ColumnName = "c" } };
+        var replacement = new IMorphAction[] { new DeleteColumnAction { ColumnName = "c" } };
 
         // Act
         state.SetActionStack(replacement);
@@ -232,7 +232,7 @@ public sealed class AppStateTests
         // Arrange
         var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
         using var state = CreateStateWithDrillDown(drillDownAction);
-        var replacement = new MorphAction[] { new DeleteColumnAction { ColumnName = "base" } };
+        var replacement = new IMorphAction[] { new DeleteColumnAction { ColumnName = "base" } };
 
         // Act
         state.SetActionStack(replacement);

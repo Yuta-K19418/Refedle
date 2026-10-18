@@ -27,7 +27,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAction_UpdatesOutputName()
     {
         // Arrange
-        MorphAction[] actions = [new RenameColumnAction { OldName = "A", NewName = "RenamedA" }];
+        IMorphAction[] actions = [new RenameColumnAction { OldName = "A", NewName = "RenamedA" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
@@ -45,7 +45,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [new RenameColumnAction { OldName = "NonExistent", NewName = "NewName" }];
+        IMorphAction[] actions = [new RenameColumnAction { OldName = "NonExistent", NewName = "NewName" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -60,7 +60,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithDeleteAction_RemovesColumn()
     {
         // Arrange
-        MorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
+        IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
@@ -76,7 +76,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithDeleteAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [new DeleteColumnAction { ColumnName = "NonExistent" }];
+        IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "NonExistent" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
@@ -89,7 +89,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterAction_AddsBatchFilterSpec()
     {
         // Arrange
-        MorphAction[] actions = [FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "test").Value];
+        IMorphAction[] actions = [FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -107,7 +107,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [FilterAction.Create("NonExistent", FilterOperator.Equals, ComparisonType.Text, "test").Value];
+        IMorphAction[] actions = [FilterAction.Create("NonExistent", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -120,7 +120,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFilterOnDeletedColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "B" },
             FilterAction.Create("B", FilterOperator.Equals, ComparisonType.Text, "test").Value,
@@ -138,7 +138,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastAction_DoesNotAffectColumnInclusion()
     {
         // Arrange
-        MorphAction[] actions = [new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber }];
+        IMorphAction[] actions = [new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -154,7 +154,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastThenFilterOnSameColumn_UsesComparisonTypeNotColumnType()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
             FilterAction.Create("A", FilterOperator.GreaterThan, ComparisonType.Number, "10").Value,
@@ -173,7 +173,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_PreservesColumnOrder()
     {
         // Arrange
-        MorphAction[] actions = [new DeleteColumnAction { ColumnName = "B" }];
+        IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A", "B", "C"], actions).Value;
@@ -188,7 +188,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [new CastColumnAction { ColumnName = "NonExistent", TargetType = ColumnType.WholeNumber }];
+        IMorphAction[] actions = [new CastColumnAction { ColumnName = "NonExistent", TargetType = ColumnType.WholeNumber }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -202,7 +202,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithMultipleFilterActions_AddsAllFilterSpecs()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "value1").Value,
             FilterAction.Create("B", FilterOperator.Contains, ComparisonType.Text, "value2").Value,
@@ -221,7 +221,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithChainedRenameActions_AppliesAllRenamesInOrder()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "B" },
             new RenameColumnAction { OldName = "B", NewName = "C" },
@@ -240,7 +240,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithNullColumnNames_ThrowsArgumentNullException()
     {
         // Arrange
-        MorphAction[] actions = [];
+        IMorphAction[] actions = [];
 
         // Act
         var act = () => ActionApplier.BuildOutputSchema(null!, actions);
@@ -265,7 +265,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithAllColumnsDeleted_ReturnsEmptyColumnsAndNoFilters()
     {
         // Arrange — delete the only column; output schema should have no columns and no filters
-        MorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
+        IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -279,7 +279,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastRenameThenFilter_ResolvesByRenamedNameAndComparisonType()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
             new RenameColumnAction { OldName = "A", NewName = "RenamedA" },
@@ -305,7 +305,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_SingleColumn_AttachesTransformToColumn()
     {
         // Arrange
-        MorphAction[] actions = [new FillColumnAction { ColumnName = "Email", Value = "REDACTED" }];
+        IMorphAction[] actions = [new FillColumnAction { ColumnName = "Email", Value = "REDACTED" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
@@ -322,7 +322,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [new FillColumnAction { ColumnName = "NonExistent", Value = "FILL" }];
+        IMorphAction[] actions = [new FillColumnAction { ColumnName = "NonExistent", Value = "FILL" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
@@ -336,7 +336,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithMultipleActions_IncludingFill_AppliesAllCorrectly()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
             new FillColumnAction { ColumnName = "Email", Value = "REDACTED" },
@@ -359,7 +359,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithRenameAndFill_FillTargetsRenamedColumn()
     {
         // Arrange — rename first, then fill using the new name; transform must be attached
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new RenameColumnAction { OldName = "Email", NewName = "EmailAddress" },
             new FillColumnAction { ColumnName = "EmailAddress", Value = "REDACTED" },
@@ -379,7 +379,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithTwoFillsOnSameColumn_LastFillWins()
     {
         // Arrange — two consecutive fills on the same column; second value must win
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new FillColumnAction { ColumnName = "Status", Value = "FIRST" },
             new FillColumnAction { ColumnName = "Status", Value = "SECOND" },
@@ -397,7 +397,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillAction_OnDeletedColumn_SkipsSilently()
     {
         // Arrange — delete the column first; subsequent fill on the same (now removed) column is a no-op
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "Email" },
             new FillColumnAction { ColumnName = "Email", Value = "REDACTED" },
@@ -415,7 +415,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFillThenDelete_ColumnIsRemoved()
     {
         // Arrange — fill column, then delete it; column should not appear in output
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
             new DeleteColumnAction { ColumnName = "A" },
@@ -437,7 +437,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnTimestampColumn_AttachesTransformToColumn()
     {
         // Arrange
-        MorphAction[] actions = [new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy/MM/dd" }];
+        IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
@@ -455,7 +455,7 @@ public sealed class ActionApplierTests
     {
         // Arrange — there is no schema-time Timestamp gate anymore, so any column
         // accepts the transform (per-row parsing happens at read time, unchanged).
-        MorphAction[] actions = [new FormatTimestampAction { ColumnName = "Name", TargetFormat = "yyyy/MM/dd" }];
+        IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "Name", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["Name"], actions);
@@ -470,7 +470,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnNonExistentColumn_SkipsSilently()
     {
         // Arrange
-        MorphAction[] actions = [new FormatTimestampAction { ColumnName = "NonExistent", TargetFormat = "yyyy/MM/dd" }];
+        IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "NonExistent", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
         var result = ActionApplier.BuildOutputSchema(["A"], actions);
@@ -485,7 +485,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithCastToTimestampThenFormat_AppliesCorrectly()
     {
         // Arrange
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new CastColumnAction { ColumnName = "Date", TargetType = ColumnType.Timestamp },
             new FormatTimestampAction { ColumnName = "Date", TargetFormat = "dd-MM-yyyy" },
@@ -505,7 +505,7 @@ public sealed class ActionApplierTests
     public void BuildOutputSchema_WithFormatTimestampAction_OnDeletedColumn_SkipsSilently()
     {
         // Arrange — delete column first; subsequent format_timestamp on same (now removed) column is a no-op
-        MorphAction[] actions =
+        IMorphAction[] actions =
         [
             new DeleteColumnAction { ColumnName = "CreatedAt" },
             new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy/MM/dd" },
