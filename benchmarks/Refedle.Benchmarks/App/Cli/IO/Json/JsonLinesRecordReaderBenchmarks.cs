@@ -33,7 +33,7 @@ public class JsonLinesRecordReaderBenchmarks
     [GlobalSetup]
     public void Setup()
     {
-        _tempFilePath = Path.GetTempFileName();
+        _tempFilePath = Path.Combine(Path.GetTempPath(), $"jsonlines_record_reader_benchmark_{Guid.NewGuid()}.jsonl");
         File.WriteAllText(_tempFilePath, JsonLine);
 
         var rowIndexer = new RowIndexer(_tempFilePath);
