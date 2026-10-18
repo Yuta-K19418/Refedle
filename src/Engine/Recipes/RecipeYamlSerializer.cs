@@ -17,6 +17,7 @@ internal static class RecipeYamlSerializer
     // Recipe YAML always uses LF-only line endings, regardless of OS (StringBuilder.AppendLine
     // would use Environment.NewLine, producing CRLF on Windows).
     private const char NewLine = '\n';
+    private const string ColumnNameLine = "    columnName: ";
 
     /// <summary>
     /// Serializes a recipe to a YAML string.
@@ -111,28 +112,28 @@ internal static class RecipeYamlSerializer
                 break;
             case DeleteColumnAction delete:
                 sb.Append("  - type: Delete").Append(NewLine);
-                sb.Append("    columnName: ").Append(StringUtility.QuoteString(delete.ColumnName)).Append(NewLine);
+                sb.Append(ColumnNameLine).Append(StringUtility.QuoteString(delete.ColumnName)).Append(NewLine);
                 break;
             case CastColumnAction cast:
                 sb.Append("  - type: Cast").Append(NewLine);
-                sb.Append("    columnName: ").Append(StringUtility.QuoteString(cast.ColumnName)).Append(NewLine);
+                sb.Append(ColumnNameLine).Append(StringUtility.QuoteString(cast.ColumnName)).Append(NewLine);
                 sb.Append(CultureInfo.InvariantCulture, $"    targetType: {cast.TargetType}").Append(NewLine);
                 break;
             case FilterAction filter:
                 sb.Append("  - type: Filter").Append(NewLine);
-                sb.Append("    columnName: ").Append(StringUtility.QuoteString(filter.ColumnName)).Append(NewLine);
+                sb.Append(ColumnNameLine).Append(StringUtility.QuoteString(filter.ColumnName)).Append(NewLine);
                 sb.Append(CultureInfo.InvariantCulture, $"    operator: {filter.Operator}").Append(NewLine);
                 sb.Append(CultureInfo.InvariantCulture, $"    comparisonType: {filter.ComparisonType}").Append(NewLine);
                 sb.Append("    value: ").Append(StringUtility.QuoteString(filter.Value)).Append(NewLine);
                 break;
             case FillColumnAction fill:
                 sb.Append("  - type: Fill").Append(NewLine);
-                sb.Append("    columnName: ").Append(StringUtility.QuoteString(fill.ColumnName)).Append(NewLine);
+                sb.Append(ColumnNameLine).Append(StringUtility.QuoteString(fill.ColumnName)).Append(NewLine);
                 sb.Append("    value: ").Append(StringUtility.QuoteString(fill.Value)).Append(NewLine);
                 break;
             case FormatTimestampAction formatTimestamp:
                 sb.Append("  - type: FormatTimestamp").Append(NewLine);
-                sb.Append("    columnName: ").Append(StringUtility.QuoteString(formatTimestamp.ColumnName)).Append(NewLine);
+                sb.Append(ColumnNameLine).Append(StringUtility.QuoteString(formatTimestamp.ColumnName)).Append(NewLine);
                 sb.Append("    targetFormat: ").Append(StringUtility.QuoteString(formatTimestamp.TargetFormat)).Append(NewLine);
                 break;
             default:

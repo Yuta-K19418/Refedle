@@ -9,6 +9,8 @@ namespace Refedle.Engine.Recipes;
 /// </summary>
 internal static class MorphActionParser
 {
+    private const string ColumnNameKey = "columnName";
+
     /// <summary>
     /// Parses a field dictionary into a <see cref="MorphAction"/>.
     /// Returns a failure result if required fields are missing or invalid.
@@ -50,7 +52,7 @@ internal static class MorphActionParser
 
     private static Result<MorphAction> ParseDeleteAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("columnName", out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
         {
             return Results.Failure<MorphAction>("Missing required field 'columnName' for delete action");
         }
@@ -60,7 +62,7 @@ internal static class MorphActionParser
 
     private static Result<MorphAction> ParseCastAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("columnName", out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
         {
             return Results.Failure<MorphAction>("Missing required field 'columnName' for cast action");
         }
@@ -84,7 +86,7 @@ internal static class MorphActionParser
 
     private static Result<MorphAction> ParseFillAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("columnName", out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
         {
             return Results.Failure<MorphAction>("Missing required field 'columnName' for fill action");
         }
@@ -99,7 +101,7 @@ internal static class MorphActionParser
 
     private static Result<MorphAction> ParseFilterAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("columnName", out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
         {
             return Results.Failure<MorphAction>("Missing required field 'columnName' for filter action");
         }
@@ -140,7 +142,7 @@ internal static class MorphActionParser
 
     private static Result<MorphAction> ParseFormatTimestampAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("columnName", out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
         {
             return Results.Failure<MorphAction>("Missing required field 'columnName' for format_timestamp action");
         }
