@@ -137,6 +137,7 @@ sha256_hex() {
     case "$SHA_TOOL" in
         sha256sum) sha256sum "$1" | awk '{ print $1 }' ;;
         shasum) shasum -a 256 "$1" | awk '{ print $1 }' ;;
+        *) error "Unsupported SHA-256 tool: '${SHA_TOOL}'." ;;
     esac
 }
 
