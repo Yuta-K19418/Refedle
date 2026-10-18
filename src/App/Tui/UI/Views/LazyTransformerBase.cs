@@ -299,14 +299,8 @@ internal abstract class LazyTransformerBase(
     /// <inheritdoc/>
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
         Dispose(true);
         GC.SuppressFinalize(this);
-        _disposed = true;
     }
 
     /// <summary>
@@ -318,9 +312,16 @@ internal abstract class LazyTransformerBase(
     /// </param>
     protected virtual void Dispose(bool disposing)
     {
+        if (_disposed)
+        {
+            return;
+        }
+
         if (disposing && Source is IDisposable d)
         {
             d.Dispose();
         }
+
+        _disposed = true;
     }
 }
