@@ -26,7 +26,7 @@ app_csproj="$repo_root/src/App/Refedle.App.csproj"
 # The rendered GIFs go into the sibling Refedle-Assets clone, not this repo.
 assets_dir="${REFEDLE_ASSETS_DIR:-$(dirname "$repo_root")/Refedle-Assets}"
 out_dir="$assets_dir/images"
-[ -d "$assets_dir/.git" ] || {
+[[ -d "$assets_dir/.git" ]] || {
     echo "error: Refedle-Assets clone not found at '$assets_dir'." >&2
     echo "       git clone https://github.com/Yuta-K19418/Refedle-Assets.git next to this repo," >&2
     echo "       or set REFEDLE_ASSETS_DIR to its path." >&2
@@ -57,7 +57,7 @@ dotnet publish "$app_csproj" -c Release -r "$rid" -o "$staging/bin" -v quiet
 # directory, so it never shows up in the app's own file dialogs during a recording.
 export PATH="$staging/bin:$PATH"
 
-if [ "$#" -gt 0 ]; then
+if [[ "$#" -gt 0 ]]; then
     tapes=("$@")
 else
     tapes=()
@@ -69,7 +69,7 @@ fi
 mkdir -p "$out_dir"
 for name in "${tapes[@]}"; do
     tape="$vhs_dir/$name.tape"
-    [ -f "$tape" ] || { echo "error: no tape for '$name' ($tape)" >&2; exit 1; }
+    [[ -f "$tape" ]] || { echo "error: no tape for '$name' ($tape)" >&2; exit 1; }
 
     # Fresh working directory per tape: no cross-tape ordering effects (e.g. one
     # tape overwriting people.yaml with a new timestamp that another then shows).
