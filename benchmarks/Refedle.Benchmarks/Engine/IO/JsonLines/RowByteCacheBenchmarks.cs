@@ -81,7 +81,6 @@ public class RowByteCacheBenchmarks : IDisposable
     public void Access_SequentialPattern_CacheHit90()
     {
         var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
-        var totalLines = _indexer.TotalRows;
 
         // Sequential access pattern (approximately 90% cache hit rate)
         for (var i = 0; i < 1000; i++)
