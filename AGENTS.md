@@ -16,4 +16,5 @@ Read each matching rule file in full before starting work. If multiple rules mat
 - `.claude/rules/testing.md` (`tests/**/*.cs`) - Read when changing or reviewing C# test files.
 
 ## Development Guidelines
-- `docs/development_guidelines.md` - Read when changing or reviewing architecture, dependencies, project structure, public APIs, or development workflow.
+- `docs/development.md` - Read when changing or reviewing architecture, dependencies, project structure, or build setup.
+- `docs/development_guidelines.md` - Read when changing or reviewing public APIs, coding conventions, or development workflow.

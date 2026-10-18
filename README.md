@@ -1,5 +1,10 @@
 ![Refedle](docs/images/refedle-terminal-mark.svg)
 
+[![Release](https://img.shields.io/github/v/release/Yuta-K19418/Refedle)](https://github.com/Yuta-K19418/Refedle/releases)
+[![CI](https://github.com/Yuta-K19418/Refedle/actions/workflows/ci.yml/badge.svg)](https://github.com/Yuta-K19418/Refedle/actions/workflows/ci.yml)
+[![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=Yuta-K19418_Refedle&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Yuta-K19418_Refedle)
+[![License: MIT](https://img.shields.io/github/license/Yuta-K19418/Refedle)](LICENSE)
+
 Refedle is a TUI-driven data transformation tool for CSV and JSON files, built with .NET 10 and Terminal.Gui v2. It lets you explore a file interactively, apply column-level transformations, and replay them as a recipe against large files from the command line.
 
 Explore a file and save the transformations as a recipe:
@@ -9,6 +14,13 @@ Explore a file and save the transformations as a recipe:
 Then replay that recipe from the command line, no UI:
 
 ![Replaying the recipe against a file with refedle apply](https://raw.githubusercontent.com/Yuta-K19418/Refedle-Assets/main/images/apply.gif)
+
+## Why Refedle
+
+- **Large files, no waiting** — Refedle reads only the parts of a file it needs instead of loading it all into memory, so you can start browsing right away.
+- **Nested JSON to tables** — explore deep JSON as a tree, then drill down to turn any path into a table.
+- **Explore once, replay anywhere** — every action you take in the TUI can be saved as a recipe and replayed against other files from the CLI.
+- **A single native binary** — no .NET, Python, or Node runtime to install.
 
 ## Install
 
@@ -31,7 +43,9 @@ refedle update       # replace the binary in place with the latest release
 
 For manual downloads, prebuilt binaries by platform, and OS security warnings, see [docs/usage/installation.md](docs/usage/installation.md).
 
-To build and run from source instead, replace `refedle` with `dotnet run --project src/App --` in the examples below.
+The prebuilt binaries are self-contained native executables; no .NET runtime is required.
+
+Building from source? See [docs/development.md](docs/development.md).
 
 ## Supported Formats
 
@@ -42,7 +56,7 @@ To build and run from source instead, replace `refedle` with `dotnet run --proje
 | JSON Array (`.json`) | ✅ | via drill-down only | drill-down recipe only |
 | JSON Object (`.json`) | ✅ | via drill-down only | drill-down recipe only |
 
-Any file extension other than those listed above results in a `NotSupportedException`.
+Files with any other extension are rejected with an error.
 
 **CSV (`.csv`)** — TUI Table view. No Tree view, since CSV rows have no nested structure to drill into.
 
@@ -100,42 +114,13 @@ Replays a saved recipe against a file, no UI. Add `--dry-run` to preview the pla
 
 Supported input/output combinations, drill-down recipe rules, and `--dry-run` details: [docs/usage/cli.md](docs/usage/cli.md)
 
-## Project Structure
+## Development
 
-```
-src/
-  App/               TUI (Terminal.Gui v2) and CLI entry point (Program.cs, Cli/)
-  Engine/            File I/O (mmap-backed), schema scanning, filtering, actions, recipe (de)serialization
-  Generators/        Roslyn incremental source generator for format-agnostic dispatch
-tests/
-  Refedle.Tests/     Unit tests
-  Refedle.E2ETests/  End-to-end tests (real refedle binary, real TUI)
-benchmarks/
-  Refedle.Benchmarks/  BenchmarkDotNet performance benchmarks
-docs/                Design documents and usage guides
-```
-
-## Implementation Notes
-
-- File reads use `System.IO.MemoryMappedFiles` with `ArrayPool<byte>` buffer reuse; CSV parsing is backed by the [Sep](https://github.com/nietras/Sep) library. There is no SIMD/vectorized scanning code in the engine at this time.
-- Recipe YAML is a hand-written, AOT-safe reader/writer (no YamlDotNet or reflection-based serialization).
-- Error handling favors a `Result`/`Result<T>` return type over exceptions on expected failure paths.
-- Both `App` and `Engine` are configured for Native AOT (`PublishAot=true` / `IsAotCompatible=true`) with `TreatWarningsAsErrors` enabled.
-
-## Requirements
-
-- .NET SDK 10.0.201+ (see [global.json](global.json))
-
-## Build & Test
-
-```bash
-dotnet build
-dotnet test
-```
+Build instructions, project structure, and implementation notes: [docs/development.md](docs/development.md)
 
 ## Acknowledgements
 
-Built with [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui) and [Sep](https://github.com/nietras/Sep), both MIT licensed. See [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) for full license texts.
+Built with [Terminal.Gui](https://github.com/gui-cs/Terminal.Gui), [Sep](https://github.com/nietras/Sep), and [Spectre.Console](https://github.com/spectreconsole/spectre.console), all MIT licensed. See [THIRD-PARTY-NOTICES.txt](THIRD-PARTY-NOTICES.txt) for full license texts.
 
 ## License
 
