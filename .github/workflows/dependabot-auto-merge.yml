@@ -1,0 +1,44 @@
+name: Dependabot Auto-Merge
+
+# Never add actions/checkout here: pull_request_target runs with write access,
+# so checking out PR code would let untrusted code run with those permissions.
+on:
+  pull_request_target:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  metadata:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      update-type: ${{ steps.metadata.outputs.update-type }}
+
+    steps:
+    - name: Fetch Dependabot metadata
+      id: metadata
+      uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  auto-merge:
+    needs: metadata
+    if: needs.metadata.outputs.update-type == 'version-update:semver-patch' || needs.metadata.outputs.update-type == 'version-update:semver-minor'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+    - name: Enable auto-merge
+      run: gh pr merge --auto --merge "$PR_URL"
+      env:
+        PR_URL: ${{ github.event.pull_request.html_url }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
