@@ -2,9 +2,11 @@
 
 Usage:
     python3 benchmarks/data/generate_data.py --format csv --size 1GB
+    python3 benchmarks/data/generate_data.py --format jsonl --size 1GB
 """
 
 import argparse
+import json
 import random
 import string
 import sys
@@ -13,7 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 # Sizes are binary units (1GB = 1024^3 bytes).
 UNITS = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
-EXTENSIONS = {"csv": "csv"}
+EXTENSIONS = {"csv": "csv", "jsonl": "jsonl"}
 BATCH_SIZE = 10_000
 BASE_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -30,8 +32,11 @@ def random_string(rng, length):
 
 
 class RecordFactory:
-    def __init__(self, rng):
+    def __init__(self, rng, nested_rng):
         self._rng = rng
+        # A separate RNG for JSON-only fields keeps the CSV output unchanged for a given seed.
+        self._nested_rng = nested_rng
+        self._cities = ["Tokyo", "Osaka", "Nagoya", "Sapporo", "Fukuoka", "Sendai", "Kobe", "Kyoto"]
         # Reuse pooled strings; generating fresh random text per row is too slow.
         self._payloads = [random_string(rng, 64) for _ in range(1000)]
         self._tags = [random_string(rng, 8) for _ in range(500)]
@@ -50,6 +55,11 @@ class RecordFactory:
             "timestamp": (BASE_TIME + timedelta(seconds=record_id)).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
+    def add_nested(self, record):
+        rng = self._nested_rng
+        record["address"] = {"city": rng.choice(self._cities), "zip": f"{rng.randrange(100000):05d}"}
+        return record
+
 
 def csv_header():
     return "id,name,email,category,score,tags,payload,timestamp\n"
@@ -63,23 +73,30 @@ def csv_line(record):
     )
 
 
+def jsonl_line(record):
+    return json.dumps(record, separators=(",", ":")) + "\n"
+
+
 def generate(fmt, target_bytes, output, seed):
-    factory = RecordFactory(random.Random(seed))
+    factory = RecordFactory(random.Random(seed), random.Random(seed + 1))
     record_id = 0
     written = 0
     start = time.time()
     last_log = start
 
     with open(output, "wb", buffering=16 * 1024 * 1024) as f:
-        header = csv_header().encode()
-        f.write(header)
-        written += len(header)
+        if fmt == "csv":
+            header = csv_header().encode()
+            f.write(header)
+            written += len(header)
 
         while written < target_bytes:
             chunk = []
             for _ in range(BATCH_SIZE):
                 record_id += 1
-                line = csv_line(factory.create(record_id)).encode()
+                record = factory.create(record_id)
+                text = csv_line(record) if fmt == "csv" else jsonl_line(factory.add_nested(record))
+                line = text.encode()
                 chunk.append(line)
                 written += len(line)
                 if written >= target_bytes:
