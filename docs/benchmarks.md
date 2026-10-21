@@ -183,3 +183,69 @@ sudo purge && /usr/bin/time -l fx bench_1gb.local.jsonl
 ```
 
 Quit with `q` as soon as the full load indicator (see [Method](#method-json-lines)) appears.
+
+## JSON Array
+
+### Tools Compared (JSON Array)
+
+The tools, versions, how they load a file, and their strengths are the same as for [JSON Lines](#tools-compared-json-lines).
+
+### Method (JSON Array)
+
+The method and full load indicators are the same as for [JSON Lines](#method-json-lines), except that a run where the tool exited with an error is marked "error".
+
+### Data (JSON Array)
+
+The same records as the JSON Lines data, in a single array with one record per line: 333,493 rows (100 MB), 3,382,522 rows (1 GB), 33,509,364 rows (10 GB).
+
+### Results (JSON Array)
+
+**First row**: immediate for Refedle, VisiData, and fx. Tabiew and jless show the file only after the full load.
+
+**Full load (seconds, median; cold / warm)**
+
+| Tool | 100 MB | 1 GB | 10 GB |
+|---|---|---|---|
+| Refedle | 1.4 / 0.9 | 2.9 / 2.3 | 17.5 / 17.0 |
+| Tabiew | 1.7 / 1.2 | 10.6 / 8.5 | error |
+| VisiData | 1.9 / 1.3 | 11.6 / 10.5 | did not finish |
+| jless | 1.3 / 0.8 | 3.6 / 2.8 | did not finish |
+| fx | 1.6 / 1.4 | 13.4 / 14.4 | did not finish |
+
+**Peak memory footprint**
+
+| Tool | 100 MB | 1 GB | 10 GB |
+|---|---|---|---|
+| Refedle | 25 MB | 26 MB | 26 MB |
+| Tabiew | 1.1 GB | 9.1 GB | error (10.0 GB at exit) |
+| VisiData | 711 MB | 6.8 GB | did not finish (15.5 GB when stopped) |
+| jless | 453 MB | 5.1–7.9 GB | did not finish (18.8 GB when stopped) |
+| fx | 1.4 GB | 13.8 GB | did not finish (40.5 GB when stopped) |
+
+- At 100 MB, every tool finishes loading almost instantly, so the differences are mostly reaction time.
+- jless's memory at 1 GB was 5.1 GB, 5.7 GB, or 7.9 GB, depending on the run.
+- At 10 GB, none of the other tools finished loading:
+  - Tabiew exited with an `InputTooLarge` error after about 26 seconds, without showing a table.
+  - VisiData was force quit from Activity Monitor because the Mac's memory usage had passed 15 GB.
+  - jless still showed no screen after about 50 seconds. It was terminated because the Mac's memory usage had passed 15 GB (footprint 18.8 GB).
+  - fx was still showing its spinner after about 1.5 minutes. It was terminated because the Mac's memory usage had passed 15 GB (footprint 40.5 GB).
+
+### Reproducing (JSON Array)
+
+Generate the data (sizes: `100MB`, `1GB`, `10GB`):
+
+```bash
+python3 benchmarks/data/generate_data.py --format json-array --size 1GB
+```
+
+Open it with each tool (cold; for warm, drop `sudo purge &&`):
+
+```bash
+sudo purge && /usr/bin/time -l refedle --file bench_1gb.local.array.json
+sudo purge && /usr/bin/time -l tw bench_1gb.local.array.json
+sudo purge && /usr/bin/time -l vd bench_1gb.local.array.json
+sudo purge && /usr/bin/time -l jless bench_1gb.local.array.json
+sudo purge && /usr/bin/time -l fx bench_1gb.local.array.json
+```
+
+Quit with `q` as soon as the full load indicator (see [Method](#method-json-lines)) appears.
