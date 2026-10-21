@@ -4,6 +4,7 @@ Usage:
     python3 benchmarks/data/generate_data.py --format csv --size 1GB
     python3 benchmarks/data/generate_data.py --format jsonl --size 1GB
     python3 benchmarks/data/generate_data.py --format json-array --size 1GB
+    python3 benchmarks/data/generate_data.py --format json-object --size 100MB
 """
 
 import argparse
@@ -16,8 +17,10 @@ from datetime import datetime, timedelta, timezone
 
 # Sizes are binary units (1GB = 1024^3 bytes).
 UNITS = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
-# json-array uses "array.json" so a later JSON Object file can share the .json extension.
-EXTENSIONS = {"csv": "csv", "jsonl": "jsonl", "json-array": "array.json"}
+# JSON Array and JSON Object share the .json extension, so the name tells them apart.
+EXTENSIONS = {"csv": "csv", "jsonl": "jsonl", "json-array": "array.json", "json-object": "object.json"}
+# Opening and closing text around the records, for formats that wrap them.
+WRAPPERS = {"json-array": ("[\n", "\n]\n"), "json-object": ("{\n", "\n}\n")}
 BATCH_SIZE = 10_000
 BASE_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -85,9 +88,12 @@ def record_text(fmt, factory, record, written, target_bytes):
     text = json_text(factory.add_nested(record))
     if fmt == "jsonl":
         return text + "\n"
-    # json-array: one record per line; the record that reaches the target size closes the array.
+    if fmt == "json-object":
+        # Keyed by id, so each top-level value stays small.
+        text = f'"{record["id"]}":{text}'
+    # One record per line; the record that reaches the target size closes the wrapper.
     if written + len(text) + len(",\n") >= target_bytes:
-        return text + "\n]\n"
+        return text + WRAPPERS[fmt][1]
     return text + ",\n"
 
 
@@ -99,7 +105,7 @@ def generate(fmt, target_bytes, output, seed):
     last_log = start
 
     with open(output, "wb", buffering=16 * 1024 * 1024) as f:
-        header = {"csv": csv_header(), "json-array": "[\n"}.get(fmt, "").encode()
+        header = (csv_header() if fmt == "csv" else WRAPPERS.get(fmt, ("", ""))[0]).encode()
         f.write(header)
         written += len(header)
 
