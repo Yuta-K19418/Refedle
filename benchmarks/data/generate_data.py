@@ -3,6 +3,7 @@
 Usage:
     python3 benchmarks/data/generate_data.py --format csv --size 1GB
     python3 benchmarks/data/generate_data.py --format jsonl --size 1GB
+    python3 benchmarks/data/generate_data.py --format json-array --size 1GB
 """
 
 import argparse
@@ -15,7 +16,8 @@ from datetime import datetime, timedelta, timezone
 
 # Sizes are binary units (1GB = 1024^3 bytes).
 UNITS = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
-EXTENSIONS = {"csv": "csv", "jsonl": "jsonl"}
+# json-array uses "array.json" so a later JSON Object file can share the .json extension.
+EXTENSIONS = {"csv": "csv", "jsonl": "jsonl", "json-array": "array.json"}
 BATCH_SIZE = 10_000
 BASE_TIME = datetime(2026, 1, 1, tzinfo=timezone.utc)
 
@@ -73,8 +75,20 @@ def csv_line(record):
     )
 
 
-def jsonl_line(record):
-    return json.dumps(record, separators=(",", ":")) + "\n"
+def json_text(record):
+    return json.dumps(record, separators=(",", ":"))
+
+
+def record_text(fmt, factory, record, written, target_bytes):
+    if fmt == "csv":
+        return csv_line(record)
+    text = json_text(factory.add_nested(record))
+    if fmt == "jsonl":
+        return text + "\n"
+    # json-array: one record per line; the record that reaches the target size closes the array.
+    if written + len(text) + len(",\n") >= target_bytes:
+        return text + "\n]\n"
+    return text + ",\n"
 
 
 def generate(fmt, target_bytes, output, seed):
@@ -85,17 +99,16 @@ def generate(fmt, target_bytes, output, seed):
     last_log = start
 
     with open(output, "wb", buffering=16 * 1024 * 1024) as f:
-        if fmt == "csv":
-            header = csv_header().encode()
-            f.write(header)
-            written += len(header)
+        header = {"csv": csv_header(), "json-array": "[\n"}.get(fmt, "").encode()
+        f.write(header)
+        written += len(header)
 
         while written < target_bytes:
             chunk = []
             for _ in range(BATCH_SIZE):
                 record_id += 1
                 record = factory.create(record_id)
-                text = csv_line(record) if fmt == "csv" else jsonl_line(factory.add_nested(record))
+                text = record_text(fmt, factory, record, written, target_bytes)
                 line = text.encode()
                 chunk.append(line)
                 written += len(line)
