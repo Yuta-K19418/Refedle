@@ -42,6 +42,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      with:
+        persist-credentials: false
 
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
@@ -55,7 +57,7 @@ jobs:
       run: dotnet build --no-restore --configuration Release
 
     - name: Test with coverage
-      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage --blame-hang-timeout 2m --blame-hang-dump-type none
+      run: dotnet test --no-build --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage --blame-hang-timeout 2m --blame-hang-dump-type mini
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7
@@ -73,6 +75,15 @@ jobs:
         name: coverage-report
         path: ./coverage/**/coverage.cobertura.xml
         retention-days: 30
+
+    - name: Upload hang dumps
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      if: failure()
+      with:
+        name: hang-dumps-${{ matrix.os }}
+        path: ./coverage/**/*.dmp
+        if-no-files-found: ignore
+        retention-days: 1
 
   shellcheck-scripts:
     runs-on: ubuntu-latest
