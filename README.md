@@ -17,7 +17,7 @@ Then replay that recipe from the command line, no UI:
 
 ## Why Refedle
 
-- **Large files, no waiting** — Refedle reads only the parts of a file it needs instead of loading it all into memory, so you can start browsing right away.
+- **Large files, no waiting** — Refedle reads only the parts of a file it needs instead of loading it all into memory, so you can start browsing right away. A 10 GB CSV or JSON Lines file is fully indexed in about 5 seconds using about 26 MB of memory ([benchmarks](docs/benchmarks.md)).
 - **Nested JSON to tables** — explore deep JSON as a tree, then drill down to turn any path into a table.
 - **Explore once, replay anywhere** — every action you take in the TUI can be saved as a recipe and replayed against other files from the CLI.
 - **A single native binary** — no .NET, Python, or Node runtime to install.
