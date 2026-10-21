@@ -9,7 +9,7 @@ How Refedle compares with other terminal data viewers when opening large files. 
 
 ## CSV
 
-### Tools Compared
+### Tools Compared (CSV)
 
 | Tool | Version | How it loads a file |
 |---|---|---|
@@ -26,7 +26,7 @@ Strengths of the other tools:
 
 Holding every row in memory is what makes much of VisiData's and Tabiew's functionality possible; the trade-off shows up with very large files.
 
-### Method
+### Method (CSV)
 
 - **First row**: whether the first rows appear immediately or only after the whole file is loaded.
 - **Full load**: time until the tool's own on-screen indicator (below) shows that the whole file has been read. Measured as `real` from `/usr/bin/time -l`, quitting with `q` right after the indicator appears, so it includes human reaction time (a few hundred milliseconds). Sub-second differences are not meaningful.
@@ -41,11 +41,11 @@ Holding every row in memory is what makes much of VisiData's and Tabiew's functi
 | Tabiew | The table appears (it is shown only after loading) |
 | VisiData | The progress indicator reaches 100% |
 
-### Data
+### Data (CSV)
 
 8 columns, about 177 bytes per row: 581,811 rows (100 MB), 5,860,049 rows (1 GB), 57,659,233 rows (10 GB).
 
-### Results
+### Results (CSV)
 
 **First row**: immediate for Refedle, csvlens, and VisiData. Tabiew shows the table only after the full load.
 
@@ -71,7 +71,7 @@ Holding every row in memory is what makes much of VisiData's and Tabiew's functi
 - After indexing, Refedle runs a background scan to refine the schema. Its peak memory stays the same after that scan has also finished.
 - At 10 GB, Tabiew still showed no table after about 2 minutes. It was stopped with Ctrl+C because the Mac's memory usage had passed 15 GB and the system was at risk of becoming unresponsive. VisiData stopped responding to input after about 4 minutes and was terminated. Both had exceeded the machine's 16 GB of physical memory.
 
-### Reproducing
+### Reproducing (CSV)
 
 Generate the data (sizes: `100MB`, `1GB`, `10GB`):
 
@@ -88,4 +88,98 @@ sudo purge && /usr/bin/time -l tw bench_1gb.local.csv
 sudo purge && /usr/bin/time -l vd bench_1gb.local.csv
 ```
 
-Quit with `q` as soon as the full load indicator (see [Method](#method)) appears.
+Quit with `q` as soon as the full load indicator (see [Method](#method-csv)) appears.
+
+## JSON Lines
+
+### Tools Compared (JSON Lines)
+
+| Tool | Version | How it loads a file |
+|---|---|---|
+| Refedle | 0.10.6 | Indexes the file in the background and reads rows on demand |
+| Tabiew | 0.15.1 | Loads the whole file into memory as a Polars DataFrame |
+| VisiData | 3.4 | Loads all rows into memory, showing them as they load |
+| jless | 0.9.0 | Reads the whole file before showing it |
+| fx | 40.0.0 | Shows the screen immediately and reads the whole file in the background |
+
+Strengths of the other tools:
+
+- **Tabiew**: SQL queries and plotting, with support for many formats such as Parquet, Arrow, and Excel.
+- **VisiData**: Far more feature-rich than Refedle, with frequency tables and support for a very wide range of formats such as SQLite, Excel, and HDF5.
+- **jless**: Browse JSON as a collapsible tree with Vim-style navigation and regex search.
+- **fx**: Transform JSON with JavaScript expressions, with support for formats such as YAML and TOML, and path and query autocomplete.
+
+Holding the whole file in memory is what makes much of these tools' functionality possible; the trade-off shows up with very large files.
+
+### Method (JSON Lines)
+
+- **First row**: whether the first rows appear immediately or only after the whole file is loaded.
+- **Full load**: time until the tool's own on-screen indicator (below) shows that the whole file has been read. Measured as `real` from `/usr/bin/time -l`, quitting with `q` right after the indicator appears, so it includes human reaction time (a few hundred milliseconds). Sub-second differences are not meaningful.
+- **Memory**: `peak memory footprint` from `/usr/bin/time -l`, taken from the first cold run.
+- **Cache**: *cold* runs `sudo purge` before each run; *warm* runs read a file already in the OS cache. Times are the median of 3 runs.
+- A run was stopped and marked "did not finish" if loading had not finished after 5 minutes, or if the Mac's memory usage passed 15 GB. Such runs were tried only once.
+
+| Tool | Full load indicator |
+|---|---|
+| Refedle | The progress bar disappears and the row count is shown |
+| Tabiew | The table appears (it is shown only after loading) |
+| VisiData | The progress indicator reaches 100% |
+| jless | The screen appears (it is shown only after loading) |
+| fx | The spinner disappears and the scroll position (`0%`) is shown |
+
+### Data (JSON Lines)
+
+8 fields per row, with `tags` as an array and `address` as a nested object, about 316 bytes per row: 334,554 rows (100 MB), 3,393,178 rows (1 GB), 33,613,943 rows (10 GB).
+
+### Results (JSON Lines)
+
+**First row**: immediate for Refedle, VisiData, and fx. Tabiew and jless show the file only after the full load.
+
+**Full load (seconds, median; cold / warm)**
+
+| Tool | 100 MB | 1 GB | 10 GB |
+|---|---|---|---|
+| Refedle | 1.2 / 0.6 | 2.1 / 0.9 | 5.3 / 4.5 |
+| Tabiew | 1.6 / 1.1 | 10.2 / 8.2 | did not finish |
+| VisiData | 3.0 / 2.4 | 23.0 / 22.5 | did not finish |
+| jless | 1.4 / 0.7 | 3.5 / 2.8 | did not finish |
+| fx | 29.7 / 29.7 | about 360 (cold, 1 run) | not run |
+
+**Peak memory footprint**
+
+| Tool | 100 MB | 1 GB | 10 GB |
+|---|---|---|---|
+| Refedle | 24 MB | 26 MB | 26 MB |
+| Tabiew | 385 MB | 4.0 GB | did not finish (35.2 GB when stopped) |
+| VisiData | 690 MB | 6.5 GB | did not finish (18.9 GB when stopped) |
+| jless | 456 MB | 5.1–5.7 GB | did not finish (26.3 GB when stopped) |
+| fx | 2.1 GB | 20.7 GB | not run |
+
+- At 100 MB, Refedle and jless finish loading almost instantly, so their times are mostly reaction time.
+- jless's memory at 1 GB was either 5.1 GB or 5.7 GB, depending on the run.
+- When switched to Table mode, Refedle scans the whole file in the background to refine the schema. After that scan had finished, its peak memory was at most 32 MB (at 10 GB).
+- fx finished loading 1 GB in about 6 minutes. That is past the 5-minute limit, but since it did finish, the result is shown. Because one run takes about 6 minutes and cold and warm times were the same at 100 MB, it was measured with a single cold run. Its memory reached 20.7 GB, more than the machine's 16 GB of physical memory, so 10 GB was not run.
+- At 10 GB, the other tools were stopped before they finished loading. All of them had exceeded the machine's 16 GB of physical memory:
+  - Tabiew still showed no table after about 2 minutes. It was stopped with Ctrl+C because the Mac's memory usage had passed 15 GB.
+  - jless still showed no screen after about 1 minute. It was terminated because the Mac's memory usage had passed 15 GB.
+  - VisiData was terminated after about 2 minutes, when the Mac's memory usage had passed 14 GB and its footprint had reached 18.9 GB.
+
+### Reproducing (JSON Lines)
+
+Generate the data (sizes: `100MB`, `1GB`, `10GB`):
+
+```bash
+python3 benchmarks/data/generate_data.py --format jsonl --size 1GB
+```
+
+Open it with each tool (cold; for warm, drop `sudo purge &&`):
+
+```bash
+sudo purge && /usr/bin/time -l refedle --file bench_1gb.local.jsonl
+sudo purge && /usr/bin/time -l tw bench_1gb.local.jsonl
+sudo purge && /usr/bin/time -l vd bench_1gb.local.jsonl
+sudo purge && /usr/bin/time -l jless bench_1gb.local.jsonl
+sudo purge && /usr/bin/time -l fx bench_1gb.local.jsonl
+```
+
+Quit with `q` as soon as the full load indicator (see [Method](#method-json-lines)) appears.
