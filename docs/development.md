@@ -3,7 +3,7 @@
 Coding, testing, and commit conventions: [development_guidelines.md](development_guidelines.md)
 
 ## Setup & Common Commands
-- **Requirements**: .NET SDK 10.0.201+ (see [global.json](../global.json))
+- **Requirements**: .NET SDK 10.0.403+ (see [global.json](../global.json))
 - **Build**: `dotnet build`
 - **Test**: `dotnet test`
 - **Format**: `dotnet format`
