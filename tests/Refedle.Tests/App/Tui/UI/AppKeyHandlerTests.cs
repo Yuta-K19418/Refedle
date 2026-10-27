@@ -3,6 +3,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
+using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
@@ -340,7 +341,7 @@ public sealed class AppKeyHandlerTests
                 var viewManager = new ViewManager(window, state, modeController, action => action());
                 viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
                 var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
-                treeView.SelectedObject = JsonObjectTreeView.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
+                treeView.SelectedObject = JsonObjectRangeTreeNode.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
                 var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
                 var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
                 var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -408,6 +409,10 @@ public sealed class AppKeyHandlerTests
     {
         // Guard 1: a primitive value node is not a JsonArrayTreeNode.
         yield return [(new JsonValueTreeNode("not-an-array"))];
+
+        // Guard 1b: a JSON Object range node is not a JsonArrayTreeNode,
+        // so selecting it must not open the action menu.
+        yield return [(new JsonObjectRangeTreeNode([new JsonObjectEntry("k", "1"u8.ToArray())], 0L, 1L))];
 
         // Guard 2: array whose lazy Children parse to zero elements.
         yield return [(new JsonArrayTreeNode("[]"u8.ToArray()))];
