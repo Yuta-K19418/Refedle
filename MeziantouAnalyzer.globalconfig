@@ -35,6 +35,8 @@ dotnet_diagnostic.MA0236.severity = warning
 dotnet_diagnostic.MA0237.severity = warning
 # MA0238: The parameter type of an EventSource event method is not supported
 dotnet_diagnostic.MA0238.severity = warning
+# MA0243: Use an escape sequence for invisible characters
+dotnet_diagnostic.MA0243.severity = warning
 
 # Enabled style rules
 # MA0007: Add a trailing comma after the last value in multi-line initializers.
