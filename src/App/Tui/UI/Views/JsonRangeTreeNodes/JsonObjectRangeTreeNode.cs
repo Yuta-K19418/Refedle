@@ -52,10 +52,9 @@ internal sealed class JsonObjectRangeTreeNode : RangeTreeNodeBase
 
         try
         {
-            if (!reader.Read())
-            {
-                return invalidNode();
-            }
+            // With a final block and default options, the first Read() either produces a token
+            // or throws if no token can be read, so it cannot return false.
+            reader.Read();
 
             if (reader.TokenType == JsonTokenType.StartObject)
             {
