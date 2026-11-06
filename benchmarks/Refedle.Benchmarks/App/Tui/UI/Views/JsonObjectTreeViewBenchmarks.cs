@@ -99,11 +99,7 @@ public abstract class JsonObjectTreeViewSingleBenchmarksBase
 
     /// <summary>Disposes the view a failed iteration left behind.</summary>
     [GlobalCleanup]
-    public void Cleanup()
-    {
-        _view?.Dispose();
-        _view = null;
-    }
+    public void Cleanup() => DisposeView();
 }
 
 /// <summary>500-key case: .NET 10, single-shot.</summary>
