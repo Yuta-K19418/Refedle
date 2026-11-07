@@ -63,16 +63,25 @@ internal sealed class FilterScanManager(
         var cts = CancellationTokenSource.CreateLinkedTokenSource(_parentToken());
         // Evaluated when a queued UI callback runs, not when it is created. Cancellation keeps
         // IsCancellationRequested readable after the CTS is disposed.
-        bool isCurrent() => _session is { } current && ReferenceEquals(current.Cts, cts) && !cts.IsCancellationRequested;
+        bool isProgressCurrent()
+        {
+            if (_session is not { } current || !ReferenceEquals(current.Cts, cts) || cts.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         Action<int, int> progressHandler = (scannedRows, totalRows) =>
-            _uiThreadInvoke(() => HandleProgress(isCurrent, scannedRows, totalRows));
+            _uiThreadInvoke(() => HandleProgress(isProgressCurrent, scannedRows, totalRows));
         var session = new FilterScanSession(cts, indexer, source, style, progressHandler);
         indexer.ProgressChanged += progressHandler;
         _session = session;
         _tableView = null;
         _overlay.Show(loadingView);
 
-        _ = RunScanAsync(isCurrent);
+        _ = RunScanAsync();
     }
 
     /// <summary>
@@ -96,12 +105,22 @@ internal sealed class FilterScanManager(
     /// The token is read exactly once, before any cancellation can dispose the CTS.
     /// A non-cancellation fault is marshaled to the UI thread as a failure callback.
     /// </summary>
-    private async Task RunScanAsync(Func<bool> isCurrent)
+    private async Task RunScanAsync()
     {
         // Inputs are fixed before the first await, while this scan is still the current session
         if (_session is not { } session)
         {
             return;
+        }
+
+        bool isScanCurrent()
+        {
+            if (!ReferenceEquals(_session, session) || session.Cts.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         var indexer = session.Indexer;
@@ -113,7 +132,7 @@ internal sealed class FilterScanManager(
             await Task.WhenAny(indexer.ThresholdReached, scanTask).ConfigureAwait(false);
             if (indexer.ThresholdReached.IsCompletedSuccessfully)
             {
-                _uiThreadInvoke(() => RevealTableView(isCurrent));
+                _uiThreadInvoke(() => RevealTableView(isScanCurrent));
             }
 
             await scanTask.ConfigureAwait(false);
@@ -124,11 +143,11 @@ internal sealed class FilterScanManager(
         }
         catch (Exception exception)
         {
-            _uiThreadInvoke(() => FailScan(isCurrent, exception));
+            _uiThreadInvoke(() => FailScan(isScanCurrent, exception));
             return;
         }
 
-        _uiThreadInvoke(() => CompleteScan(isCurrent));
+        _uiThreadInvoke(() => CompleteScan(isScanCurrent));
     }
 
     /// <summary>
@@ -137,9 +156,9 @@ internal sealed class FilterScanManager(
     /// shows the error placeholder. Discards the fault of a session that is no longer
     /// current or was already canceled.
     /// </summary>
-    private void FailScan(Func<bool> isCurrent, Exception exception)
+    private void FailScan(Func<bool> isScanCurrent, Exception exception)
     {
-        if (!isCurrent())
+        if (!isScanCurrent())
         {
             return;
         }
@@ -153,9 +172,9 @@ internal sealed class FilterScanManager(
     /// table view with the overlay still attached. Discards the notification of a session
     /// that is no longer current, was already canceled, or already revealed its table.
     /// </summary>
-    private void RevealTableView(Func<bool> isCurrent)
+    private void RevealTableView(Func<bool> isScanCurrent)
     {
-        if (!isCurrent() || _tableView is not null || _session is not { } session)
+        if (!isScanCurrent() || _tableView is not null || _session is not { } session)
         {
             return;
         }
@@ -168,9 +187,9 @@ internal sealed class FilterScanManager(
     /// longer current or was already canceled: IsCancellationRequested stays readable after
     /// CTS disposal, so no token access is needed on this path.
     /// </summary>
-    private void HandleProgress(Func<bool> isCurrent, int scannedRows, int totalRows)
+    private void HandleProgress(Func<bool> isProgressCurrent, int scannedRows, int totalRows)
     {
-        if (!isCurrent())
+        if (!isProgressCurrent())
         {
             return;
         }
@@ -210,9 +229,9 @@ internal sealed class FilterScanManager(
     /// ownership moves to the table view built from it, so <see cref="FilterScanSession.Dispose"/>
     /// (which also disposes the transformer) must stay exclusive to the cancelled path.
     /// </summary>
-    private void CompleteScan(Func<bool> isCurrent)
+    private void CompleteScan(Func<bool> isScanCurrent)
     {
-        if (!isCurrent() || _session is not { } session)
+        if (!isScanCurrent() || _session is not { } session)
         {
             return;
         }

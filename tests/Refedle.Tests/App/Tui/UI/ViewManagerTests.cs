@@ -2186,6 +2186,55 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task FilterScanManagerProgress_WhenCurrentSessionIsCanceled_DoesNotUpdateOverlay()
+    {
+        // Arrange — the session stays the current one; only its CTS is canceled (parent token)
+        using var app = TestAppFactory.Create();
+        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using var rows = gated.Rows;
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        var drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using var transformer = FocusedTableTransformer.Create(
+            new FocusedTableSource(drillDown),
+            drillDown.Schema,
+            drillDown.ActionStack,
+            200);
+        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        var runner = new RecordingFilterScanRunner();
+        using var parentCts = new CancellationTokenSource();
+        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
+        await using var scope = new DirectScanScope(rows, runner);
+        var manager = new FilterScanManager(
+            runner,
+            captured.Enqueue,
+            () => parentCts.Token,
+            static (_, _) => throw new InvalidOperationException("The table view must not be created in this test."),
+            view => scope.LoadingView = view,
+            static () => { },
+            static _ => { },
+            static () => null);
+        scope.Manager = manager;
+        manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        // the threshold reveal and the first progress tick are both queued once the worker is blocked
+        await WaitForCallbacksAsync(captured, expectedCount: 2);
+        var loadingView = scope.LoadingView.Should().BeAssignableTo<Terminal.Gui.ViewBase.View>().Subject;
+        var bar = loadingView.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
+        var label = loadingView.SubViews.OfType<Label>().Where(static l => l.Text.Contains('%', StringComparison.Ordinal)).Should().ContainSingle().Subject;
+        var fractionBefore = bar.Fraction;
+        var textBefore = label.Text;
+
+        // Act
+        parentCts.Cancel();
+        ExecuteRemainingCallbacks(captured);
+
+        // Assert
+        bar.Fraction.Should().Be(fractionBefore);
+        label.Text.Should().Be(textBefore);
+        scope.BodyCompleted = true;
+    }
+
+    [Fact]
     public void HandleMorphAction_WithFocusedTableModeAndDrillDown_AppendsToDrillDownActionStack()
     {
         // Arrange
