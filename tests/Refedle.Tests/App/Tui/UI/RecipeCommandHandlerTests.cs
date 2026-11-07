@@ -54,7 +54,7 @@ public sealed partial class RecipeCommandHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
         // Act
@@ -84,7 +84,7 @@ public sealed partial class RecipeCommandHandlerTests
         state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
         // Act
@@ -116,7 +116,7 @@ public sealed partial class RecipeCommandHandlerTests
         state.AddMorphAction(baseAction);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
         // Act
@@ -135,7 +135,7 @@ public sealed partial class RecipeCommandHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var handler = new RecipeCommandHandler(app, state, viewManager);
 
         // Act
@@ -161,7 +161,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(action);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -192,7 +192,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -228,7 +228,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.EnterFocusedTable(drillDown);
             state.AddMorphAction(new RenameColumnAction { OldName = "base", NewName = "renamed_base" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -280,7 +280,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager, gatedManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -348,7 +348,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -395,7 +395,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.StartNewFile(_jsonLinesFile);
             state.EnterFocusedTable(drillDown);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             viewManager.SwitchToFocusedTable(drillDown);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
@@ -432,7 +432,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.StartNewFile(_jsonLinesFile);
             state.EnterFocusedTable(drillDown);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -464,7 +464,7 @@ public sealed partial class RecipeCommandHandlerTests
             state.CompleteCsvLoad(indexer, csvSchema);
             state.AddMorphAction(new RenameColumnAction { OldName = "old", NewName = "new" });
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });
@@ -493,7 +493,7 @@ public sealed partial class RecipeCommandHandlerTests
             var state = new AppState();
             state.StartNewFile(_jsonLinesFile);
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, app.Invoke);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), app.Invoke);
             var handler = new RecipeCommandHandler(app, state, viewManager);
             return new LiveTestContext<RecipeCommandHandler>(state, viewManager, handler);
         });

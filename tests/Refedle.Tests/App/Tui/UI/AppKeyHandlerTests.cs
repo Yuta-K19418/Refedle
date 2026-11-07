@@ -5,6 +5,7 @@ using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
+using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
@@ -81,7 +82,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -101,7 +102,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         using var view = new TestTableView { Table = null };
         window.Add(view);
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
@@ -123,7 +124,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         using var view = new TestTableView
         {
             Table = new NonExtendedTableSource(),
@@ -151,7 +152,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         using var view = new TestTableView { Table = new PagedTableSource(new TestTableSource()) };
         window.Add(view);
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
@@ -173,7 +174,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         using var view = new TestTableView
         {
             Table = new PagedTableSource(new TestTableSource()),
@@ -200,7 +201,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -227,7 +228,7 @@ public sealed class AppKeyHandlerTests
         state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -258,7 +259,7 @@ public sealed class AppKeyHandlerTests
         state.EnterPlaceholderMode();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -289,7 +290,7 @@ public sealed class AppKeyHandlerTests
         state.EnterFocusedTable(drillDown);
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -312,7 +313,7 @@ public sealed class AppKeyHandlerTests
         using var state = new AppState();
         using var window = new Window();
         var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, action => action());
+        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
         var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
         using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
@@ -338,7 +339,7 @@ public sealed class AppKeyHandlerTests
                 var state = new AppState();
                 state.StartNewFile(filePath);
                 var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                var viewManager = new ViewManager(window, state, modeController, action => action());
+                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
                 viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
                 var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
                 treeView.SelectedObject = JsonObjectRangeTreeNode.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
@@ -382,7 +383,7 @@ public sealed class AppKeyHandlerTests
             state.StartNewFile(filePath);
             using var window = new Window();
             var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            using var viewManager = new ViewManager(window, state, modeController, action => action());
+            using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
             viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
             var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
             treeView.SelectedObject = selectedNode;

@@ -9,9 +9,9 @@ namespace Refedle.App.Tui.UI.Views;
 /// <summary>
 /// <see cref="LazyTransformerBase"/> subclass for DrillDown results backed by a fully
 /// materialized <see cref="FocusedTableSource"/>. Unlike <see cref="LazyTransformer"/>,
-/// it has no <see cref="IFilterRowIndexer"/> — every row is already in memory, so
-/// <see cref="FilterAction"/>s are resolved synchronously in <see cref="Create"/> via the
-/// stateless <see cref="FilterEvaluator"/>.
+/// it resolves <see cref="FilterAction"/>s with a <see cref="FocusedTableFilterRowIndexer"/>
+/// that scans the in-memory rows; the caller must run its
+/// <see cref="IFilterRowIndexer.BuildIndexAsync"/> on a background task.
 /// Column 0 is the <c>"#"</c> pseudo column (a per-row hash), which is never a Morph
 /// target: <see cref="Create"/> runs <see cref="LazyTransformerBase.BuildTransformedSchema"/>
 /// over the DrillDown schema only, then prepends a fixed <c>"#"</c> slot to every output
@@ -19,11 +19,11 @@ namespace Refedle.App.Tui.UI.Views;
 /// </summary>
 internal sealed class FocusedTableTransformer : LazyTransformerBase
 {
-    private readonly IReadOnlyList<int>? _matchedRowIndices;
+    private readonly IFilterRowIndexer? _filterRowIndexer;
 
     private FocusedTableTransformer(
         IExtendedTableSource source,
-        IReadOnlyList<int>? matchedRowIndices,
+        IFilterRowIndexer? filterRowIndexer,
         string[] columnNames,
         string[] rawColumnNames,
         IReadOnlyList<ColumnType> columnTypes,
@@ -39,20 +39,24 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
             fillValues,
             formatStrings)
     {
-        _matchedRowIndices = matchedRowIndices;
+        _filterRowIndexer = filterRowIndexer;
     }
 
     /// <summary>
     /// Creates a new <see cref="FocusedTableTransformer"/> by applying the action stack
-    /// to derive the output column mapping, resolving any filters synchronously.
+    /// to derive the output column mapping. Filters are resolved by <see cref="FilterRowIndexer"/>.
     /// </summary>
     /// <param name="source">The <see cref="FocusedTableSource"/>-shaped source whose column 0 is the <c>"#"</c> hash column.</param>
     /// <param name="originalSchema">The DrillDown schema before any actions are applied (no <c>"#"</c> entry).</param>
     /// <param name="actions">The ordered list of transformation actions to apply.</param>
+    /// <param name="filterRevealThreshold">
+    /// Matched rows the filter indexer must confirm before its threshold wait completes.
+    /// </param>
     public static FocusedTableTransformer Create(
         IExtendedTableSource source,
         TableSchema originalSchema,
-        IReadOnlyList<IMorphAction> actions
+        IReadOnlyList<IMorphAction> actions,
+        int filterRevealThreshold
     )
     {
         ArgumentNullException.ThrowIfNull(source);
@@ -68,13 +72,13 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
         IReadOnlyList<string?> fillValues = [null, .. schema.fillValues];
         IReadOnlyList<string?> formatStrings = [null, .. schema.formatStrings];
 
-        var matchedRowIndices = schema.filterSpecs.Count > 0
-            ? ResolveMatchedRows(source, schema.filterSpecs)
+        IFilterRowIndexer? filterRowIndexer = schema.filterSpecs.Count > 0
+            ? new FocusedTableFilterRowIndexer(source, schema.filterSpecs, filterRevealThreshold)
             : null;
 
         return new FocusedTableTransformer(
             source,
-            matchedRowIndices,
+            filterRowIndexer,
             columnNames,
             rawColumnNames,
             columnTypes,
@@ -85,43 +89,14 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
     }
 
     /// <summary>
-    /// Resolves the source row indices matching every filter spec.
-    /// AND semantics across all specs, matching <see cref="IFilterRowIndexer"/> (Csv/JsonLines).
+    /// Gets the filter row indexer, if any filter is active.
+    /// The caller must invoke <see cref="IFilterRowIndexer.BuildIndexAsync"/> on a background task.
     /// </summary>
-    private static List<int> ResolveMatchedRows(
-        IExtendedTableSource source,
-        IReadOnlyList<FilterSpec> filterSpecs
-    )
-    {
-        List<int> matched = [];
-        for (var row = 0; row < source.TotalRows; row++)
-        {
-            var isMatch = true;
-            foreach (var spec in filterSpecs)
-            {
-                var rawValue = Convert.ToString(
-                    source[row, spec.SourceColumnIndex + 1],
-                    CultureInfo.InvariantCulture
-                ) ?? string.Empty;
-                isMatch = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
-                if (!isMatch)
-                {
-                    break;
-                }
-            }
-
-            if (isMatch)
-            {
-                matched.Add(row);
-            }
-        }
-
-        return matched;
-    }
+    internal IFilterRowIndexer? FilterRowIndexer => _filterRowIndexer;
 
     /// <inheritdoc/>
     public override long TotalRows =>
-        _matchedRowIndices is not null ? _matchedRowIndices.Count : Source.TotalRows;
+        _filterRowIndexer is not null ? _filterRowIndexer.TotalMatchedRows : Source.TotalRows;
 
     /// <inheritdoc/>
     public override object this[long row, int col]
@@ -140,8 +115,15 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
-            // Matched-row indices live in a list bounded by TotalRows, so the cast is safe.
-            var sourceRow = _matchedRowIndices is not null ? _matchedRowIndices[(int)row] : row;
+            // The filtered row space is indexed by IFilterRowIndexer, which is int-based.
+            var sourceRow = _filterRowIndexer is not null
+                ? _filterRowIndexer.GetSourceRow((int)row)
+                : row;
+
+            if (sourceRow < 0)
+            {
+                return string.Empty;
+            }
 
             if (col == 0)
             {

@@ -14,7 +14,7 @@ public sealed class FilterIndexingRunnerTests
         using var cts = new CancellationTokenSource();
 
         // Act
-        await FilterIndexingRunner.RunAsync(indexer, cts.Token);
+        await new FilterIndexingRunner().RunAsync(indexer, cts.Token);
 
         // Assert
         indexer.ObservedToken.Should().Be(cts.Token);
@@ -29,7 +29,7 @@ public sealed class FilterIndexingRunnerTests
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
         var act = () =>
         {
-            FilterIndexingRunner.RunAsync(null!, CancellationToken.None);
+            new FilterIndexingRunner().RunAsync(null!, CancellationToken.None);
         };
 
         // Assert
@@ -45,7 +45,7 @@ public sealed class FilterIndexingRunnerTests
         cts.Cancel();
 
         // Act
-        var act = async () => await FilterIndexingRunner.RunAsync(indexer, cts.Token);
+        var act = async () => await new FilterIndexingRunner().RunAsync(indexer, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -59,7 +59,7 @@ public sealed class FilterIndexingRunnerTests
         var indexer = new FaultingFilterRowIndexer();
 
         // Act
-        var act = async () => await FilterIndexingRunner.RunAsync(indexer, CancellationToken.None);
+        var act = async () => await new FilterIndexingRunner().RunAsync(indexer, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
