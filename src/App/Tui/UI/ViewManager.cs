@@ -23,8 +23,9 @@ namespace Refedle.App.Tui.UI;
 /// </summary>
 /// <remarks>
 /// Threading contract: all ViewManager state — including the filter-scan session state
-/// (<c>_filterScan</c>, <c>_filterScanTableView</c> and the session CTS cancel/dispose) — is
-/// UI-thread exclusive. Every synchronous entry point (<see cref="SwitchToFocusedTable"/>, the other
+/// owned by the <see cref="FilterScanManager"/> (the session, its staged table view and
+/// the session CTS cancel/dispose) — is UI-thread exclusive. Every synchronous entry
+/// point (<see cref="SwitchToFocusedTable"/>, the other
 /// view switches, <see cref="Dispose"/>, …) must be called on the UI thread.
 /// The only exceptions are the asynchronous entry points (for example
 /// <see cref="FullAggregationDrillDownAsync"/>, reached from recipe replay after
@@ -45,53 +46,14 @@ internal sealed class ViewManager : IDisposable
     private readonly Window _container;
     private readonly AppState _state;
     private readonly ModeController _modeController;
-    private readonly IFilterScanRunner _filterScanRunner;
+    private readonly IFilterScanRunner _lazyFilterScanRunner;
     private readonly Action<Action> _uiThreadInvoke;
     private readonly BreadcrumbBar _breadcrumbBar;
     private readonly View _contentContainer;
-    private readonly FilterScanProgressOverlay _filterScanOverlay = new();
+    private readonly FilterScanManager _filterScanManager;
     private View? _currentView;
     private Label? _itemCountLabel;
-    private FilterScanSession? _filterScan;
-    private Views.FocusedTableView? _filterScanTableView;
     private bool _disposed;
-
-    /// <summary>
-    /// State of the FocusedTable filter scan currently attached to the content view.
-    /// All session state is UI-thread exclusive: the session fields of ViewManager
-    /// (_filterScan, _filterScanTableView) and the session CTS cancel/dispose are touched
-    /// only on the UI thread, and worker progress/completion notifications re-enter through
-    /// _uiThreadInvoke, which serializes them with cancellation.
-    /// </summary>
-    private sealed record FilterScanSession(
-        CancellationTokenSource Cts,
-        Views.FocusedTableFilterRowIndexer Indexer,
-        Views.FocusedTableTransformer Source,
-        TableStyle Style,
-        Action<int, int> ProgressHandler) : IDisposable
-    {
-        private bool _disposed;
-
-        /// <summary>
-        /// Tears the session down for the cancelled path: unsubscribes progress, cancels and
-        /// disposes the CTS, then disposes the transformer. Idempotent.
-        /// The completed path must not call this: there the transformer's ownership moves to
-        /// the table view built from it, so completion releases only the subscription and CTS.
-        /// </summary>
-        public void Dispose()
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            _disposed = true;
-            Indexer.ProgressChanged -= ProgressHandler;
-            Cts.Cancel();
-            Cts.Dispose();
-            Source.Dispose();
-        }
-    }
 
     internal ViewManager(
         Window container,
@@ -108,8 +70,19 @@ internal sealed class ViewManager : IDisposable
         _container = container;
         _state = state;
         _modeController = modeController;
-        _filterScanRunner = filterScanRunner;
+        _lazyFilterScanRunner = filterScanRunner;
         _uiThreadInvoke = uiThreadInvoke;
+        // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
+        // it drives the content view, status bar and error display on the UI thread.
+        _filterScanManager = new FilterScanManager(
+            filterScanRunner,
+            uiThreadInvoke,
+            () => state.Cts.Token,
+            CreateFocusedTableView,
+            SwapView,
+            RefreshStatusBarHints,
+            ShowError,
+            GetCurrentView);
         _breadcrumbBar = new BreadcrumbBar();
         _contentContainer = new View
         {
@@ -343,7 +316,7 @@ internal sealed class ViewManager : IDisposable
 
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = _filterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
+            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 
@@ -452,7 +425,7 @@ internal sealed class ViewManager : IDisposable
 
         if (tableSource is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = _filterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
+            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 
@@ -555,10 +528,7 @@ internal sealed class ViewManager : IDisposable
     {
         // Replacing the content view orphans a running filter scan, except when the new view
         // is the scan's own staged replacement for the loading view.
-        if (_filterScan is { } scan && !ReferenceEquals(_filterScanTableView, newView))
-        {
-            CancelFilterScan(scan);
-        }
+        _filterScanManager.CancelIfNotStaged(newView);
 
         if (_currentView is not null)
         {
@@ -685,7 +655,7 @@ internal sealed class ViewManager : IDisposable
                 FilterRowIndexer: Views.FocusedTableFilterRowIndexer indexer,
             } transformer)
         {
-            StartFilterScan(transformer, indexer, style);
+            _filterScanManager.StartScan(transformer, indexer, style);
             return;
         }
 
@@ -706,191 +676,6 @@ internal sealed class ViewManager : IDisposable
             OnMorphAction = HandleMorphAction,
         };
         return view;
-    }
-
-    /// <summary>
-    /// Replaces the content view with a loading view and starts the background filter scan.
-    /// The indexer's threshold notification reveals the table view mid-scan; progress
-    /// callbacks then grow the visible rows until the scan completes.
-    /// Runs on the UI thread; worker notifications are marshaled back through
-    /// _uiThreadInvoke before they touch any session state.
-    /// </summary>
-    private void StartFilterScan(
-        Views.FocusedTableTransformer source,
-        Views.FocusedTableFilterRowIndexer indexer,
-        TableStyle style)
-    {
-        var loadingView = Views.LoadingView.Create("Filtering rows…");
-        SwapView(loadingView);
-        RefreshStatusBarHints();
-
-        // Created after SwapView so the swap's cancellation of the previous scan
-        // cannot touch this scan's token source.
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(_state.Cts.Token);
-        Action<int, int> progressHandler = (scannedRows, totalRows) =>
-            _uiThreadInvoke(() => HandleFilterScanProgress(cts, scannedRows, totalRows));
-        var session = new FilterScanSession(cts, indexer, source, style, progressHandler);
-        indexer.ProgressChanged += progressHandler;
-        _filterScan = session;
-        _filterScanTableView = null;
-        _filterScanOverlay.Show(loadingView);
-
-        _ = RunFilterScanAsync(session);
-    }
-
-    /// <summary>
-    /// Runs the background scan and awaits it in two stages: the first wait ends as soon as
-    /// the indexer confirms enough matched rows (or the scan ends below the threshold) and
-    /// queues the table reveal; the second awaits the scan itself and queues the completion.
-    /// The token is read exactly once, before any cancellation can dispose the CTS.
-    /// A non-cancellation fault is marshaled to the UI thread as a failure callback.
-    /// </summary>
-    private async Task RunFilterScanAsync(FilterScanSession session)
-    {
-        try
-        {
-            var scanTask = _filterScanRunner.RunAsync(session.Indexer, session.Cts.Token);
-            await Task.WhenAny(session.Indexer.ThresholdReached, scanTask).ConfigureAwait(false);
-            if (session.Indexer.ThresholdReached.IsCompletedSuccessfully)
-            {
-                _uiThreadInvoke(() => RevealFilterScanTableView(session));
-            }
-
-            await scanTask.ConfigureAwait(false);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-        catch (Exception exception)
-        {
-            _uiThreadInvoke(() => FailFilterScan(session, exception));
-            return;
-        }
-
-        _uiThreadInvoke(() => CompleteFilterScan(session));
-    }
-
-    /// <summary>
-    /// Applies a scan fault on the UI thread: retires the session exactly like the cancelled
-    /// path (unsubscribe, CTS cancel + dispose, transformer dispose, overlay dismiss) and
-    /// shows the error placeholder. Discards the fault of a session that is no longer
-    /// current or was already canceled.
-    /// </summary>
-    private void FailFilterScan(FilterScanSession session, Exception exception)
-    {
-        if (!ReferenceEquals(_filterScan, session) || session.Cts.IsCancellationRequested)
-        {
-            return;
-        }
-
-        CancelFilterScan(session);
-        ShowError($"Filter scan failed: {exception.Message}");
-    }
-
-    /// <summary>
-    /// Applies the threshold notification on the UI thread: swaps the loading view for the
-    /// table view with the overlay still attached. Discards the notification of a session
-    /// that is no longer current, was already canceled, or already revealed its table.
-    /// </summary>
-    private void RevealFilterScanTableView(FilterScanSession session)
-    {
-        if (!ReferenceEquals(_filterScan, session) || session.Cts.IsCancellationRequested)
-        {
-            return;
-        }
-
-        if (_filterScanTableView is not null)
-        {
-            return;
-        }
-
-        ShowFilterScanTableView(session, attachOverlay: true);
-    }
-
-    /// <summary>
-    /// Applies a progress tick on the UI thread. Discards ticks from a session that is no
-    /// longer current or was already canceled: IsCancellationRequested stays readable after
-    /// CTS disposal, so no token access is needed on this path.
-    /// </summary>
-    private void HandleFilterScanProgress(CancellationTokenSource scanCts, int scannedRows, int totalRows)
-    {
-        if (_filterScan is not { } scan || !ReferenceEquals(scan.Cts, scanCts) || scanCts.IsCancellationRequested)
-        {
-            return;
-        }
-
-        _filterScanOverlay.Update(scannedRows, totalRows);
-
-        if (_filterScanTableView is { } tableView)
-        {
-            // Rows found since the last tick become visible; the selection stays untouched
-            tableView.Update();
-            tableView.SetNeedsDraw();
-        }
-    }
-
-    private void ShowFilterScanTableView(FilterScanSession scan, bool attachOverlay)
-    {
-        // Detach the overlay while its host (the loading view) is still alive; the swap below disposes it
-        _filterScanOverlay.Dismiss();
-
-        var tableView = CreateFocusedTableView(scan.Source, scan.Style);
-        tableView.SetSelection(0, 0, false);
-        tableView.Update();
-        _filterScanTableView = tableView;
-        SwapView(tableView);
-        tableView.SetFocus();
-        RefreshStatusBarHints();
-
-        if (attachOverlay)
-        {
-            _filterScanOverlay.Show(tableView);
-        }
-    }
-
-    /// <summary>
-    /// Finalizes a scan that ran to completion on the UI thread. Discards the completion of
-    /// a canceled session, and releases only the subscription and the CTS: the transformer's
-    /// ownership moves to the table view built from it, so <see cref="FilterScanSession.Dispose"/>
-    /// (which also disposes the transformer) must stay exclusive to the cancelled path.
-    /// </summary>
-    private void CompleteFilterScan(FilterScanSession session)
-    {
-        if (!ReferenceEquals(_filterScan, session) || session.Cts.IsCancellationRequested)
-        {
-            return;
-        }
-
-        _filterScan = null;
-        session.Indexer.ProgressChanged -= session.ProgressHandler;
-        session.Cts.Dispose();
-        _filterScanTableView = null;
-
-        // The table was already revealed by the threshold notification, and the progress
-        // ticks performed the row refreshes: completion only retires the overlay. Fewer
-        // matches than the display threshold ever produced leaves the loading view as the
-        // current view, so the completion is the only remaining trigger that can reveal
-        // the table.
-        if (_currentView is Views.FocusedTableView)
-        {
-            _filterScanOverlay.Dismiss();
-            return;
-        }
-
-        ShowFilterScanTableView(session, attachOverlay: false);
-    }
-
-    /// <summary>
-    /// Stops a running scan on the UI thread by disposing its session (unsubscribe,
-    /// CTS cancel + dispose, transformer dispose) and retiring the scan-owned view state.
-    /// </summary>
-    private void CancelFilterScan(FilterScanSession scan)
-    {
-        _filterScan = null;
-        _filterScanTableView = null;
-        _filterScanOverlay.Dismiss();
-        scan.Dispose();
     }
 
     /// <summary>
@@ -939,12 +724,7 @@ internal sealed class ViewManager : IDisposable
         }
 
         _disposed = true;
-        if (_filterScan is { } scan)
-        {
-            CancelFilterScan(scan);
-        }
-
-        _filterScanOverlay.Dispose();
+        _filterScanManager.Dispose();
         RemoveItemCountLabel();
         _currentView?.Dispose();
     }

@@ -2137,6 +2137,55 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task FilterScanManagerDispose_CalledTwiceWithActiveScan_CancelsScanDisposesSessionAndDoesNotThrow()
+    {
+        // Arrange — the manager is driven directly, so only its own guard can make the
+        // second Dispose safe (ViewManager.Dispose short-circuits repeated calls)
+        using var app = TestAppFactory.Create();
+        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using var rows = gated.Rows;
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        var drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using var transformer = FocusedTableTransformer.Create(
+            new FocusedTableSource(drillDown),
+            drillDown.Schema,
+            drillDown.ActionStack,
+            200);
+        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        var runner = new RecordingFilterScanRunner();
+        using var parentCts = new CancellationTokenSource();
+        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
+        await using var scope = new DirectScanScope(rows, runner);
+        var manager = new FilterScanManager(
+            runner,
+            captured.Enqueue,
+            () => parentCts.Token,
+            static (_, _) => throw new InvalidOperationException("The table view must not be created in this test."),
+            view => scope.LoadingView = view,
+            static () => { },
+            static _ => { },
+            static () => null);
+        scope.Manager = manager;
+        manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Act
+        manager.Dispose();
+        var disposeAgain = () => manager.Dispose();
+        rows.ReleaseGate();
+
+        // Assert — the worker observed the cancellation after batches 1–2 only, and the
+        // session-owned transformer is disposed
+        disposeAgain.Should().NotThrow();
+        var assertScan = () => runner.TaskAt(0);
+        await assertScan.Should().ThrowAsync<OperationCanceledException>();
+        rows.ReadCount.Should().Be(2000);
+        var readDisposedTransformer = () => transformer[0, 1];
+        readDisposedTransformer.Should().Throw<ObjectDisposedException>();
+        scope.BodyCompleted = true;
+    }
+
+    [Fact]
     public void HandleMorphAction_WithFocusedTableModeAndDrillDown_AppendsToDrillDownActionStack()
     {
         // Arrange
@@ -2660,6 +2709,58 @@ public sealed class ViewManagerTests : IDisposable
                 task.IsCompleted.Should().BeTrue("a scan worker must terminate within the bounded cleanup wait");
             }
         }
+    }
+
+    /// <summary>
+    /// Cleanup scope for tests that drive a <see cref="FilterScanManager"/> directly: on every
+    /// exit it releases the gate, disposes the manager, joins the started workers with a
+    /// bounded wait and disposes the loading view, running every step even if one fails.
+    /// Cleanup failures surface only after the test body completed (<see cref="BodyCompleted"/>);
+    /// otherwise they are dropped so they cannot replace the failure already propagating.
+    /// </summary>
+    private sealed class DirectScanScope(GatedDrillDownRows rows, RecordingFilterScanRunner runner) : IAsyncDisposable
+    {
+        public FilterScanManager? Manager { get; set; }
+
+        public Terminal.Gui.ViewBase.View? LoadingView { get; set; }
+
+        public bool BodyCompleted { get; set; }
+
+        public async ValueTask DisposeAsync()
+        {
+            List<Exception> failures = [];
+            Capture(failures, rows.ReleaseGate);
+            Capture(failures, () => Manager?.Dispose());
+            foreach (var task in runner.Tasks())
+            {
+                // WhenAny observes a canceled or faulted worker without throwing
+                await Task.WhenAny(task.WaitAsync(TimeSpan.FromSeconds(10))).ConfigureAwait(false);
+                if (!task.IsCompleted)
+                {
+                    failures.Add(new TimeoutException("A scan worker did not terminate within the bounded cleanup wait."));
+                }
+            }
+
+            Capture(failures, () => LoadingView?.Dispose());
+            if (BodyCompleted && failures.Count > 0)
+            {
+                throw new AggregateException(failures);
+            }
+        }
+
+#pragma warning disable CA1031 // Every cleanup step must run; failures are collected and reported by the caller
+        private static void Capture(List<Exception> failures, Action step)
+        {
+            try
+            {
+                step();
+            }
+            catch (Exception exception)
+            {
+                failures.Add(exception);
+            }
+        }
+#pragma warning restore CA1031
     }
 
     /// <summary>
