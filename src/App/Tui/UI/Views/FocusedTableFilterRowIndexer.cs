@@ -10,15 +10,20 @@ namespace Refedle.App.Tui.UI.Views;
 /// Column 0 of the source is the <c>"#"</c> pseudo column, so a spec's
 /// <see cref="FilterSpec.SourceColumnIndex"/> maps to source column <c>SourceColumnIndex + 1</c>.
 /// </summary>
-internal sealed class FocusedTableFilterRowIndexer : IFilterRowIndexer
+internal sealed class FocusedTableFilterRowIndexer(
+    IExtendedTableSource source,
+    IReadOnlyList<FilterSpec> filterSpecs,
+    int revealThreshold) : IFilterRowIndexer
 {
     private const int BatchSize = 1000;
 
     private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
 
-    private readonly IExtendedTableSource _source;
-    private readonly IReadOnlyList<FilterSpec> _filterSpecs;
-    private readonly int _revealThreshold;
+    private readonly IExtendedTableSource _source = source ?? throw new ArgumentNullException(nameof(source));
+    private readonly IReadOnlyList<FilterSpec> _filterSpecs =
+        filterSpecs ?? throw new ArgumentNullException(nameof(filterSpecs));
+    private readonly int _revealThreshold =
+        revealThreshold > 0 ? revealThreshold : throw new ArgumentOutOfRangeException(nameof(revealThreshold));
     private readonly TaskCompletionSource _thresholdReached =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
@@ -38,27 +43,6 @@ internal sealed class FocusedTableFilterRowIndexer : IFilterRowIndexer
     /// so awaiting it via <c>Task.WhenAny</c> never hangs or leaks the cancellation.
     /// </summary>
     public Task ThresholdReached => _thresholdReached.Task;
-
-    /// <summary>
-    /// Initializes a new instance of <see cref="FocusedTableFilterRowIndexer"/>.
-    /// </summary>
-    /// <param name="source">The source whose rows are scanned; column 0 is the <c>"#"</c> hash column.</param>
-    /// <param name="filterSpecs">Resolved filter specifications to apply (AND semantics).</param>
-    /// <param name="revealThreshold">
-    /// Matched rows required before <see cref="ThresholdReached"/> completes.
-    /// </param>
-    public FocusedTableFilterRowIndexer(
-        IExtendedTableSource source,
-        IReadOnlyList<FilterSpec> filterSpecs,
-        int revealThreshold)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(filterSpecs);
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(revealThreshold);
-        _source = source;
-        _filterSpecs = filterSpecs;
-        _revealThreshold = revealThreshold;
-    }
 
     /// <inheritdoc/>
     public int TotalMatchedRows
@@ -92,32 +76,7 @@ internal sealed class FocusedTableFilterRowIndexer : IFilterRowIndexer
         try
         {
             var totalRows = (int)_source.TotalRows;
-
-            for (var batchStart = 0; batchStart < totalRows; batchStart += BatchSize)
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var batchEnd = Math.Min(batchStart + BatchSize, totalRows);
-                for (var row = batchStart; row < batchEnd; row++)
-                {
-                    if (MatchesAllFilters(row))
-                    {
-                        lock (_lock)
-                        {
-                            _matchedRows.Add(row);
-                            if (_matchedRows.Count >= _revealThreshold)
-                            {
-                                _thresholdReached.TrySetResult();
-                            }
-                        }
-                    }
-                }
-
-                await Task.Yield();
-                // Re-check after the async hop: a canceled scan must not report a further position.
-                ct.ThrowIfCancellationRequested();
-                OnProgressChanged(batchEnd, totalRows);
-            }
+            await ScanBatchesAsync(totalRows, ct).ConfigureAwait(false);
 
             // The final check also covers the empty source, where the loop body never runs.
             ct.ThrowIfCancellationRequested();
@@ -128,6 +87,53 @@ internal sealed class FocusedTableFilterRowIndexer : IFilterRowIndexer
             // whatever way it ended; after TrySetResult this cancel is a no-op.
             _thresholdReached.TrySetCanceled(ct);
         }
+    }
+
+    private async Task ScanBatchesAsync(int totalRows, CancellationToken ct)
+    {
+        for (var batchStart = 0; batchStart < totalRows; batchStart += BatchSize)
+        {
+            ct.ThrowIfCancellationRequested();
+            var batchEnd = Math.Min(batchStart + BatchSize, totalRows);
+            await ScanBatchAsync(batchStart, batchEnd, totalRows, ct).ConfigureAwait(false);
+        }
+    }
+
+    private async Task ScanBatchAsync(int batchStart, int batchEnd, int totalRows, CancellationToken ct)
+    {
+        for (var row = batchStart; row < batchEnd; row++)
+        {
+            RecordRowIfMatch(row);
+        }
+
+        await Task.Yield();
+        // Re-check after the async hop: a canceled scan must not report a further position.
+        ct.ThrowIfCancellationRequested();
+        OnProgressChanged(batchEnd, totalRows);
+    }
+
+    private void RecordRowIfMatch(int row)
+    {
+        if (!MatchesAllFilters(row))
+        {
+            return;
+        }
+
+        lock (_lock)
+        {
+            _matchedRows.Add(row);
+            SignalThresholdIfReached();
+        }
+    }
+
+    private void SignalThresholdIfReached()
+    {
+        if (_matchedRows.Count < _revealThreshold)
+        {
+            return;
+        }
+
+        _thresholdReached.TrySetResult();
     }
 
     private void OnProgressChanged(int scannedRows, int totalRows)
