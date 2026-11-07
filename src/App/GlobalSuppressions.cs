@@ -104,7 +104,7 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "CA1031:Do not catch general exception types",
     Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.FilterScanManager.RunScanAsync(Refedle.App.Tui.UI.FilterScanSession)",
+    Target = "~M:Refedle.App.Tui.UI.FilterScanManager.RunScanAsync(System.Func{System.Boolean})",
     Justification = "Top-level observer of a fire-and-forget scan: a row-read fault is arbitrary, must be observed, and is marshaled to the UI thread.")]
 [assembly: SuppressMessage(
     "Reliability",
