@@ -928,6 +928,45 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void SchemaRefined_AfterViewReplaced_LeavesCurrentViewUntouched()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            "col1");
+        var staleCallback = harness.State.OnSchemaRefined.Should().BeOfType<Action<TableSchema>>().Subject;
+        harness.ViewManager.SwitchToFileSelection();
+        var currentView = harness.ViewManager.GetCurrentView();
+
+        // Act
+        var exception = Record.Exception(() => staleCallback(CreateJsonLinesSchema("col1", "col2")));
+
+        // Assert
+        exception.Should().BeNull();
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(currentView);
+        currentView.Should().BeOfType<FileSelectionView>();
+    }
+
+    [Fact]
+    public void SchemaRefined_WithEmptyTable_SwapsTableWithoutSelection()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            0,
+            "col1");
+        var oldTable = harness.View.Table;
+
+        // Act
+        harness.Refine("col1", "col2");
+
+        // Assert
+        harness.View.Table.Should().NotBeSameAs(oldTable);
+        harness.Table.Columns.Should().Be(2);
+        harness.View.Value.Should().BeNull();
+    }
+
+    [Fact]
     public void SchemaRefined_WithoutActions_ExposesNewColumnOnSameView()
     {
         // Arrange
