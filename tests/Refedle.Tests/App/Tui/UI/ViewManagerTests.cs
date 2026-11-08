@@ -766,6 +766,59 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void SwitchToJsonLinesTableView_WithFilterAction_StartsFilterScanWithIndexerAndStateToken()
+    {
+        // Arrange
+        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using var app = TestAppFactory.Create();
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        state.AddMorphAction(FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "value").Value);
+        using var window = new Window();
+        var runner = new CapturingFilterScanRunner();
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using var viewManager = new ViewManager(window, state, modeController, runner, action => action());
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonLines,
+            Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
+        };
+
+        // Act
+        viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
+
+        // Assert
+        var call = runner.Calls.Should().ContainSingle().Subject;
+        call.Indexer.Should().BeOfType<Refedle.Engine.IO.JsonLines.FilterRowIndexer>();
+        call.Token.Should().Be(state.Cts.Token);
+    }
+
+    [Fact]
+    public void SwitchToJsonLinesTableView_WithoutActions_DoesNotStartFilterScan()
+    {
+        // Arrange
+        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using var app = TestAppFactory.Create();
+        using var state = new AppState();
+        state.StartNewFile(filePath);
+        using var window = new Window();
+        var runner = new CapturingFilterScanRunner();
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using var viewManager = new ViewManager(window, state, modeController, runner, action => action());
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.JsonLines,
+            Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
+        };
+
+        // Act
+        viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
+
+        // Assert
+        runner.Calls.Should().BeEmpty();
+    }
+
+    [Fact]
     public void SwitchToFileSelection_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into FileSelection
@@ -2623,6 +2676,22 @@ public sealed class ViewManagerTests : IDisposable
         public void BuildIndex(CancellationToken cancellationToken = default) { }
 
         public (long byteOffset, int rowOffset) GetCheckPoint(long targetRow) => (0, 0);
+    }
+
+    /// <summary>
+    /// <see cref="IFilterScanRunner"/> double that records each call and completes immediately.
+    /// </summary>
+    private sealed class CapturingFilterScanRunner : IFilterScanRunner
+    {
+        public sealed record Call(IFilterRowIndexer Indexer, CancellationToken Token);
+
+        public List<Call> Calls { get; } = [];
+
+        public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
+        {
+            Calls.Add(new Call(filterIndexer, ct));
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>
