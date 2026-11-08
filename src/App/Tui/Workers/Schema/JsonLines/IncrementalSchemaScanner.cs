@@ -32,12 +32,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         );
         var scanResult = SchemaScanner.ScanSchema(lines, InitialScanCount);
 
-        if (scanResult.IsFailure)
-        {
-            throw new InvalidOperationException(scanResult.Error);
-        }
-
-        return scanResult.Value;
+        return scanResult.IsFailure ? throw new InvalidOperationException(scanResult.Error) : scanResult.Value;
     }
 
     /// <inheritdoc/>

@@ -106,12 +106,9 @@ internal static class ActionsSectionParser
         List<IMorphAction> actions)
     {
         var finalizeResult = FinalizePending(currentAction, actions);
-        if (finalizeResult.IsFailure)
-        {
-            return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error);
-        }
-
-        return Results.Success((
+        return finalizeResult.IsFailure
+            ? Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error)
+            : (Result<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>)Results.Success((
             parseState with { ParseState = ParseState.DrillDownKeyPathItem, DrillDownKeyPathPresent = true },
             new Dictionary<string, string>(StringComparer.Ordinal)));
     }
@@ -124,12 +121,9 @@ internal static class ActionsSectionParser
         List<IMorphAction> actions)
     {
         var finalizeResult = FinalizePending(currentAction, actions);
-        if (finalizeResult.IsFailure)
-        {
-            return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error);
-        }
-
-        return Results.Success((
+        return finalizeResult.IsFailure
+            ? Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error)
+            : (Result<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>)Results.Success((
             parseState with { ParseState = ParseState.Root, DrillDownKeyPathPresent = true },
             new Dictionary<string, string>(StringComparer.Ordinal)));
     }

@@ -18,10 +18,13 @@ internal sealed record TuiStartupOptions(string? InputFile = null, string? Recip
             return $"Error: File not found: {InputFile}";
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (RecipeFile is not null && !File.Exists(RecipeFile))
         {
             return $"Error: Recipe file not found: {RecipeFile}";
         }
+#pragma warning restore IDE0046
 
         return null;
     }

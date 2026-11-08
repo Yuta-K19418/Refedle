@@ -50,10 +50,13 @@ internal readonly record struct ReleaseVersion(int Major, int Minor, int Patch) 
             return Major.CompareTo(other.Major);
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (Minor != other.Minor)
         {
             return Minor.CompareTo(other.Minor);
         }
+#pragma warning restore IDE0046
 
         return Patch.CompareTo(other.Patch);
     }

@@ -157,17 +157,12 @@ internal sealed class AppKeyHandler : IDisposable
     {
         var currentView = _viewManager.GetCurrentView();
 
-        if (currentView is MorphTableView mt)
+        return currentView switch
         {
-            return HandleActionMenuForTable(mt);
-        }
-
-        if (currentView is MorphTreeView tv)
-        {
-            return HandleActionMenuForTree(tv);
-        }
-
-        return false;
+            MorphTableView mt => HandleActionMenuForTable(mt),
+            MorphTreeView tv => HandleActionMenuForTree(tv),
+            _ => false,
+        };
     }
 
     private bool HandleActionMenuForTable(MorphTableView mt)
@@ -208,12 +203,9 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        if (treeFormat.Value == DataFormat.JsonObject)
-        {
-            return HandleSingleDrillDown(selectedNode, treeFormat.Value);
-        }
-
-        return HandleFullAggregationDrillDown(selectedNode, treeFormat.Value);
+        return treeFormat.Value == DataFormat.JsonObject
+            ? HandleSingleDrillDown(selectedNode, treeFormat.Value)
+            : HandleFullAggregationDrillDown(selectedNode, treeFormat.Value);
     }
 
     /// <summary>

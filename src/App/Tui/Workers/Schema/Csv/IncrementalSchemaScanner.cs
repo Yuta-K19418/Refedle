@@ -29,12 +29,7 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
         var columnNames = ReadColumnNames();
         var scanResult = SchemaScanner.ScanSchema(columnNames, rows, InitialScanCount);
 
-        if (scanResult.IsFailure)
-        {
-            throw new InvalidOperationException(scanResult.Error);
-        }
-
-        return scanResult.Value;
+        return scanResult.IsFailure ? throw new InvalidOperationException(scanResult.Error) : scanResult.Value;
     }
 
     /// <inheritdoc/>

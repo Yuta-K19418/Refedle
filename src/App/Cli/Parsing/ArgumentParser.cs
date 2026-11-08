@@ -104,12 +104,9 @@ internal static partial class ArgumentParser
         }
 
         // --output is required for a normal run; a dry run writes no output file, so it may be omitted.
-        if (!result.IsDryRun && string.IsNullOrWhiteSpace(result.OutputFile))
-        {
-            return Results.Failure<Arguments>($"Missing required flag: {OutputFlag}");
-        }
-
-        return Results.Success(new Arguments
+        return !result.IsDryRun && string.IsNullOrWhiteSpace(result.OutputFile)
+            ? Results.Failure<Arguments>($"Missing required flag: {OutputFlag}")
+            : Results.Success(new Arguments
         {
             InputFile = result.InputFile,
             RecipeFile = result.RecipeFile,

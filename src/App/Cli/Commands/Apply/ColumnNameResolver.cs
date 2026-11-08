@@ -54,12 +54,9 @@ internal static class ColumnNameResolver
         }
 
         var extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
-        if (extractResult.IsFailure)
-        {
-            return Results.Failure<IReadOnlyList<string>>(extractResult.Error);
-        }
-
-        return Results.Success<IReadOnlyList<string>>(
+        return extractResult.IsFailure
+            ? Results.Failure<IReadOnlyList<string>>(extractResult.Error)
+            : Results.Success<IReadOnlyList<string>>(
             [.. extractResult.Value.schema.Columns.Select(static c => c.Name)]);
     }
 
@@ -74,12 +71,9 @@ internal static class ColumnNameResolver
         CancellationToken ct)
     {
         var scanResult = FullAggregationSchemaScanner.Scan(inputFile, format, drillDownKeyPath, ct);
-        if (scanResult.IsFailure)
-        {
-            return Results.Failure<IReadOnlyList<string>>(scanResult.Error);
-        }
-
-        return Results.Success<IReadOnlyList<string>>(
+        return scanResult.IsFailure
+            ? Results.Failure<IReadOnlyList<string>>(scanResult.Error)
+            : Results.Success<IReadOnlyList<string>>(
             [.. scanResult.Value.Columns.Select(static c => c.Name)]);
     }
 

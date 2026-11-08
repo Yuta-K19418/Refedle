@@ -29,12 +29,7 @@ public readonly struct Result : IEquatable<Result>
     {
         get
         {
-            if (IsSuccess)
-            {
-                throw new InvalidOperationException("Cannot access Error on a successful result.");
-            }
-
-            return _error.Value;
+            return IsSuccess ? throw new InvalidOperationException("Cannot access Error on a successful result.") : _error.Value;
         }
     }
 
@@ -145,12 +140,9 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     {
         get
         {
-            if (IsFailure)
-            {
-                throw new InvalidOperationException("Cannot access Value on a failed result.");
-            }
-
-            return _value ?? throw new UnreachableException();
+            return IsFailure
+                ? throw new InvalidOperationException("Cannot access Value on a failed result.")
+                : _value ?? throw new UnreachableException();
         }
     }
 
@@ -162,12 +154,7 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     {
         get
         {
-            if (IsSuccess)
-            {
-                throw new InvalidOperationException("Cannot access Error on a successful result.");
-            }
-
-            return _error.Value;
+            return IsSuccess ? throw new InvalidOperationException("Cannot access Error on a successful result.") : _error.Value;
         }
     }
 
@@ -246,14 +233,10 @@ public readonly struct Result<T> : IEquatable<Result<T>>
     /// <returns>true if the results are equal; otherwise, false.</returns>
     public bool Equals(Result<T> other)
     {
-        if (IsSuccess != other.IsSuccess)
-        {
-            return false;
-        }
-
-        return IsSuccess
-            ? EqualityComparer<T?>.Default.Equals(_value, other._value)
-            : _error.Equals(other._error);
+        return IsSuccess == other.IsSuccess
+            && (IsSuccess
+                ? EqualityComparer<T?>.Default.Equals(_value, other._value)
+                : _error.Equals(other._error));
     }
 
     /// <summary>

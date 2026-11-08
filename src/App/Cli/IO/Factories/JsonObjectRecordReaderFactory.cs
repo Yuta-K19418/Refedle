@@ -37,11 +37,8 @@ internal readonly struct JsonObjectRecordReaderFactory : IRecordReaderFactory<Js
         }
 
         var extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
-        if (extractResult.IsFailure)
-        {
-            throw new InvalidOperationException(extractResult.Error);
-        }
-
-        return new JsonObjectRecordReader(extractResult.Value.childRawValues, inputColumnNames, outputSchema);
+        return extractResult.IsFailure
+            ? throw new InvalidOperationException(extractResult.Error)
+            : new JsonObjectRecordReader(extractResult.Value.childRawValues, inputColumnNames, outputSchema);
     }
 }

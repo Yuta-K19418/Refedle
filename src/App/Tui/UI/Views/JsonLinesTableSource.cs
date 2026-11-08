@@ -64,12 +64,7 @@ internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
             }
 
             var lineBytes = _cache.GetRow(row);
-            if (lineBytes.IsEmpty)
-            {
-                return "<null>";
-            }
-
-            return JsonObjectCellExtractor.ExtractCell(lineBytes.Span, _columnNameUtf8[col]);
+            return lineBytes.IsEmpty ? "<null>" : JsonObjectCellExtractor.ExtractCell(lineBytes.Span, _columnNameUtf8[col]);
         }
     }
 

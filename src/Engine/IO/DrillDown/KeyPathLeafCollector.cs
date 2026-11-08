@@ -133,12 +133,7 @@ internal static class KeyPathLeafCollector
                 continue;
             }
 
-            if (!reader.Read())
-            {
-                return null;
-            }
-
-            return JsonByteExtractor.ExtractValueBytes(ref reader, objectBytes);
+            return !reader.Read() ? null : (JsonRawBytes?)JsonByteExtractor.ExtractValueBytes(ref reader, objectBytes);
         }
 
         return null;

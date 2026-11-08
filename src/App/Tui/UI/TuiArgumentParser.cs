@@ -76,11 +76,14 @@ internal static class TuiArgumentParser
                 $"{flag} specified more than once.");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (currentIndex >= args.Count || args[currentIndex].StartsWith("--", StringComparison.Ordinal))
         {
             return Results.Failure(
                 $"{flag} requires a value.");
         }
+#pragma warning restore IDE0046
 
         return Results.Success();
     }

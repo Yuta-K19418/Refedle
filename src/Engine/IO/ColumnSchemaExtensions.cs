@@ -28,12 +28,7 @@ public static class ColumnSchemaExtensions
         var resolvedType = ColumnTypeResolver.Resolve(schema.Type, observedType);
 
         // Copy-on-Write: return same instance if no change
-        if (schema.Type == resolvedType)
-        {
-            return schema;
-        }
-
-        return schema with { Type = resolvedType };
+        return schema.Type == resolvedType ? schema : (schema with { Type = resolvedType });
     }
 
     /// <summary>

@@ -103,15 +103,9 @@ public static class FilterEvaluator
         FilterOperator op
     )
     {
-        if (
-            !long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv)
-            || !long.TryParse(specValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ls)
-        )
-        {
-            return false;
-        }
-
-        return op switch
+        return long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv)
+            && long.TryParse(specValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ls)
+            && op switch
         {
             FilterOperator.GreaterThan => lv > ls,
             FilterOperator.LessThan => lv < ls,
@@ -127,25 +121,19 @@ public static class FilterEvaluator
         FilterOperator op
     )
     {
-        if (
-            !double.TryParse(
+        return double.TryParse(
                 rawValue,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
                 out var dv
             )
-            || !double.TryParse(
+            && double.TryParse(
                 specValue,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
                 out var ds
             )
-        )
-        {
-            return false;
-        }
-
-        return op switch
+            && op switch
         {
             FilterOperator.GreaterThan => dv > ds,
             FilterOperator.LessThan => dv < ds,
@@ -161,15 +149,9 @@ public static class FilterEvaluator
         FilterOperator op
     )
     {
-        if (
-            !DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tv)
-            || !DateTime.TryParse(specValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ts)
-        )
-        {
-            return false;
-        }
-
-        return op switch
+        return DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tv)
+            && DateTime.TryParse(specValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ts)
+            && op switch
         {
             FilterOperator.GreaterThan => tv > ts,
             FilterOperator.LessThan => tv < ts,

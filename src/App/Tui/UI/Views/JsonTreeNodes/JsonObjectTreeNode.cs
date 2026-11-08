@@ -123,11 +123,6 @@ internal sealed class JsonObjectTreeNode : TreeNode
             isValidObjectStart = false;
         }
 
-        if (!isValidObjectStart)
-        {
-            return "{Invalid Object}";
-        }
-
-        return JsonByteExtractor.FormatObjectPreview(ref reader);
+        return !isValidObjectStart ? "{Invalid Object}" : JsonByteExtractor.FormatObjectPreview(ref reader);
     }
 }

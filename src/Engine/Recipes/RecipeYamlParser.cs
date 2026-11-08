@@ -68,12 +68,9 @@ internal static class RecipeYamlParser
         List<IMorphAction> actions,
         List<KeyPathSegment> drillDownKeyPath)
     {
-        if (parseState.ParseState == ParseState.DrillDownKeyPathItem)
-        {
-            return DrillDownKeyPathSectionParser.FinalizePending(currentItem, drillDownKeyPath);
-        }
-
-        return ActionsSectionParser.FinalizePending(currentItem, actions);
+        return parseState.ParseState == ParseState.DrillDownKeyPathItem
+            ? DrillDownKeyPathSectionParser.FinalizePending(currentItem, drillDownKeyPath)
+            : ActionsSectionParser.FinalizePending(currentItem, actions);
     }
 
     // Dispatches a single YAML line to the handler for the current parse state.
@@ -94,12 +91,9 @@ internal static class RecipeYamlParser
                 : Results.Success((result.Value, currentItem));
         }
 
-        if (parseState.ParseState == ParseState.DrillDownKeyPathItem)
-        {
-            return DrillDownKeyPathSectionParser.ProcessLine(line, parseState, currentItem, drillDownKeyPath);
-        }
-
-        return ActionsSectionParser.ProcessLine(line, parseState, currentItem, actions);
+        return parseState.ParseState == ParseState.DrillDownKeyPathItem
+            ? DrillDownKeyPathSectionParser.ProcessLine(line, parseState, currentItem, drillDownKeyPath)
+            : ActionsSectionParser.ProcessLine(line, parseState, currentItem, actions);
     }
 
     private static bool IsSkippable(string line)
@@ -163,21 +157,15 @@ internal static class RecipeYamlParser
     private static Result<RecipeYamlParseState> ParseLastModifiedField(string value, RecipeYamlParseState state)
     {
         var parseResult = TryParseLastModified(value);
-        if (parseResult.IsFailure)
-        {
-            return Results.Failure<RecipeYamlParseState>(parseResult.Error);
-        }
-
-        return Results.Success(state with { LastModified = parseResult.Value });
+        return parseResult.IsFailure
+            ? Results.Failure<RecipeYamlParseState>(parseResult.Error)
+            : Results.Success(state with { LastModified = parseResult.Value });
     }
 
     private static Result<DateTimeOffset> TryParseLastModified(string value)
     {
-        if (!DateTimeOffset.TryParse(StringUtility.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
-        {
-            return Results.Failure<DateTimeOffset>($"Invalid lastModified value: '{value}'");
-        }
-
-        return Results.Success(dt);
+        return !DateTimeOffset.TryParse(StringUtility.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt)
+            ? Results.Failure<DateTimeOffset>($"Invalid lastModified value: '{value}'")
+            : Results.Success(dt);
     }
 }

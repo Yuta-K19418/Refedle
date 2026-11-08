@@ -115,17 +115,8 @@ public static class TopLevelScanner
     {
         var depth = reader.CurrentDepth;
 
-        if (depth == 0 && reader.TokenType == JsonTokenType.EndObject)
-        {
-            return true;
-        }
-
-        if (depth != 1)
-        {
-            return false;
-        }
-
-        return ProcessDepthOneToken(ref reader, ref state, buffer, result, keyIndex);
+        return (depth == 0 && reader.TokenType == JsonTokenType.EndObject)
+            || (depth == 1 && ProcessDepthOneToken(ref reader, ref state, buffer, result, keyIndex));
     }
 
     private static bool ProcessDepthOneToken(

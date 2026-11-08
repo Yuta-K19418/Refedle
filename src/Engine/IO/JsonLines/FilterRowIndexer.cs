@@ -60,12 +60,7 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
     {
         lock (_lock)
         {
-            if (filteredRow < 0 || filteredRow >= _matchedRows.Count)
-            {
-                return -1;
-            }
-
-            return _matchedRows[filteredRow];
+            return filteredRow < 0 || filteredRow >= _matchedRows.Count ? -1 : _matchedRows[filteredRow];
         }
     }
 

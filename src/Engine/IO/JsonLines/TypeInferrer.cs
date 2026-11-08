@@ -59,12 +59,7 @@ public static class TypeInferrer
 
         // Decimal point present (invariant: '.' only) → FloatingPoint.
         // Numbers without '.' that overflow int64 (e.g. big integers) → Text.
-        if (valueSpan.Contains((byte)'.'))
-        {
-            return ColumnType.FloatingPoint;
-        }
-
-        return ColumnType.Text;
+        return valueSpan.Contains((byte)'.') ? ColumnType.FloatingPoint : ColumnType.Text;
     }
 
     private static ColumnType InferStringType(ReadOnlySpan<byte> valueSpan) =>

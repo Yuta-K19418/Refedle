@@ -50,12 +50,7 @@ internal static class JsonObjectCellReader
                     continue;
                 }
 
-                if (!reader.Read())
-                {
-                    return new CellData([], CellPresence.Invalid);
-                }
-
-                return ReadPropertyValue(reader, objectBytes, valueBuffer);
+                return !reader.Read() ? new CellData([], CellPresence.Invalid) : ReadPropertyValue(reader, objectBytes, valueBuffer);
             }
 
             return new CellData([], CellPresence.Missing);

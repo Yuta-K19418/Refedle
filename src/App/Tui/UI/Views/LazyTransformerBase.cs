@@ -265,10 +265,13 @@ internal abstract class LazyTransformerBase(
 
     protected static string FormatBoolean(string rawValue)
     {
+        // Kept as if: the return is already a ternary; folding the guard would nest it.
+#pragma warning disable IDE0046
         if (!bool.TryParse(rawValue, out var b))
         {
             return ParseFailureLabel;
         }
+#pragma warning restore IDE0046
 
         return b ? "true" : "false";
     }

@@ -33,12 +33,9 @@ internal static class CellTransformFormatter
             return true;
         }
 
-        if (transform is TimestampFormatSpec fmt)
-        {
-            return TryApplyTimestampFormat(cell, fmt, out result, out reason);
-        }
-
-        throw new UnreachableException($"Unhandled CellTransformSpec: {transform.GetType().Name}");
+        return transform is TimestampFormatSpec fmt
+            ? TryApplyTimestampFormat(cell, fmt, out result, out reason)
+            : throw new UnreachableException($"Unhandled CellTransformSpec: {transform.GetType().Name}");
     }
 
     private static bool TryApplyTimestampFormat(CellData cell, TimestampFormatSpec fmt, out CellData result, out string reason)

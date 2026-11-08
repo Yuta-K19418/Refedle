@@ -61,10 +61,13 @@ internal sealed class FocusedTableSource : IExtendedTableSource
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
+            // Kept as if: folding it would also pull the preceding throw guard into the return.
+#pragma warning disable IDE0046
             if (col == 0)
             {
                 return _rows[rowIndex].HashValue;
             }
+#pragma warning restore IDE0046
 
             return JsonObjectCellExtractor.ExtractCell(_rows[rowIndex].Bytes.Span, _columnNamesUtf8[col - 1]);
         }

@@ -28,10 +28,13 @@ internal static class CellResolver
             return new ResolvedCellData(cell, string.Empty);
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (!CellTransformFormatter.TryFormat(transform, cell, out var formatted, out var reason))
         {
             return new ResolvedCellData(cell, reason);
         }
+#pragma warning restore IDE0046
 
         return new ResolvedCellData(formatted, string.Empty);
     }

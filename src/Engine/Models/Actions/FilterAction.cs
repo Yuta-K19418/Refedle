@@ -47,11 +47,14 @@ public sealed record FilterAction : IMorphAction
                 $"Operator '{op}' is not valid for comparison type '{comparisonType}'.");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (!IsValidValue(comparisonType, value))
         {
             return Results.Failure(
                 $"Value '{value}' is not parseable as comparison type '{comparisonType}'.");
         }
+#pragma warning restore IDE0046
 
         return Results.Success();
     }
@@ -64,12 +67,9 @@ public sealed record FilterAction : IMorphAction
         string columnName, FilterOperator op, ComparisonType comparisonType, string value)
     {
         var result = Validate(op, comparisonType, value);
-        if (result.IsFailure)
-        {
-            return Results.Failure<FilterAction>(result.Error);
-        }
-
-        return Results.Success(new FilterAction(columnName, op, comparisonType, value));
+        return result.IsFailure
+            ? Results.Failure<FilterAction>(result.Error)
+            : Results.Success(new FilterAction(columnName, op, comparisonType, value));
     }
 
     private static readonly FrozenSet<FilterOperator> _textOnlyOperators =
@@ -93,17 +93,10 @@ public sealed record FilterAction : IMorphAction
     private static bool IsValidCombination(FilterOperator op, ComparisonType comparisonType)
     {
         // Equals/NotEquals are valid for every comparison type; the rest are type-specific.
-        if (op is FilterOperator.Equals or FilterOperator.NotEquals)
-        {
-            return true;
-        }
-
-        if (comparisonType == ComparisonType.Text)
-        {
-            return _textOnlyOperators.Contains(op);
-        }
-
-        return _orderingOperators.Contains(op);
+        return op is FilterOperator.Equals or FilterOperator.NotEquals
+            || (comparisonType == ComparisonType.Text
+                ? _textOnlyOperators.Contains(op)
+                : _orderingOperators.Contains(op));
     }
 
     private static bool IsValidValue(ComparisonType comparisonType, string value)

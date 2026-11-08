@@ -151,12 +151,9 @@ internal sealed class UpdateCommand(
         var archivePath = Path.Combine(tempDirectoryPath, archiveName);
         var archiveResult = await releaseClient.DownloadAssetAsync(
             tag, archiveName, archivePath, cancellationToken).ConfigureAwait(false);
-        if (archiveResult.IsFailure)
-        {
-            return archiveResult;
-        }
-
-        return await InstallAsync(checksumsPath, archivePath, archiveName, setPhase, cancellationToken).ConfigureAwait(false);
+        return archiveResult.IsFailure
+            ? archiveResult
+            : await InstallAsync(checksumsPath, archivePath, archiveName, setPhase, cancellationToken).ConfigureAwait(false);
     }
 
     private async Task<Result> InstallAsync(

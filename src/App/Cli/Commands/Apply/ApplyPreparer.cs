@@ -98,12 +98,9 @@ internal static class ApplyPreparer
         var columnNames = columnNamesResult.Value;
 
         var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
-        if (outputSchemaResult.IsFailure)
-        {
-            return await LogAndFailAsync(logger, $"Error building output schema: {outputSchemaResult.Error}").ConfigureAwait(false);
-        }
-
-        return Results.Success(new ApplyPreparation(
+        return outputSchemaResult.IsFailure
+            ? await LogAndFailAsync(logger, $"Error building output schema: {outputSchemaResult.Error}").ConfigureAwait(false)
+            : Results.Success(new ApplyPreparation(
             recipe, inputFormat, outputFormat, columnNames, outputSchemaResult.Value));
     }
 

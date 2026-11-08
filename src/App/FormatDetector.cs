@@ -95,12 +95,9 @@ internal static class FormatDetector
                 b = fs.ReadByte();
             }
 
-            if (b == -1)
-            {
-                return Results.Failure<DataFormat>("File contains no valid JSON root token");
-            }
-
-            return (char)b switch
+            return b == -1
+                ? Results.Failure<DataFormat>("File contains no valid JSON root token")
+                : (char)b switch
             {
                 '{' => Results.Success(DataFormat.JsonObject),
                 '[' => Results.Success(DataFormat.JsonArray),

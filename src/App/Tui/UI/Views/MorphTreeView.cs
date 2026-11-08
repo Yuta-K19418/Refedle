@@ -55,12 +55,8 @@ internal abstract class MorphTreeView : TreeView
 
         var action = _vimKeys.Translate(key.KeyCode);
 
-        if (TrySelectionMove(action))
-        {
-            return true;
-        }
-
-        return action switch
+        return TrySelectionMove(action)
+            || action switch
         {
             VimAction.PendingGSequence => true,
             VimAction.MoveLeft => base.OnKeyDown(new Key(KeyCode.CursorLeft)),
@@ -96,12 +92,7 @@ internal abstract class MorphTreeView : TreeView
     {
         // Prevent global shortcut keys from being consumed by TreeView's incremental search.
         // By returning false, we let these keys bubble up to AppKeyHandler.
-        if (AppKeyHandler.IsGlobalShortcut(key.KeyCode))
-        {
-            return false;
-        }
-
-        return base.OnKeyDown(key);
+        return !AppKeyHandler.IsGlobalShortcut(key.KeyCode) && base.OnKeyDown(key);
     }
 
     private static bool ConsumeAction(Action action)

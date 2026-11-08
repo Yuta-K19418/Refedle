@@ -25,10 +25,13 @@ internal static class CellEncodingClassifier
             return CellEncoding.Numeric;
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out _))
         {
             return CellEncoding.Numeric;
         }
+#pragma warning restore IDE0046
 
         return CellEncoding.PlainText;
     }

@@ -34,12 +34,9 @@ internal static class ApplyRunner
         }
 
         var parsedArgs = parseResult.Value;
-        if (parsedArgs.IsDryRun)
-        {
-            return await DryRunner.RunAsync(parsedArgs, logger, statusReporter, ct).ConfigureAwait(false);
-        }
-
-        return await Runner.RunAsync(
+        return parsedArgs.IsDryRun
+            ? await DryRunner.RunAsync(parsedArgs, logger, statusReporter, ct).ConfigureAwait(false)
+            : await Runner.RunAsync(
             parsedArgs, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), statusReporter, ct).ConfigureAwait(false);
     }
 }

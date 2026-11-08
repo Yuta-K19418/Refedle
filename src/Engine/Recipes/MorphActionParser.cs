@@ -38,10 +38,13 @@ internal static class MorphActionParser
             return Results.Failure<IMorphAction>("Missing required field 'oldName' for rename action");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (!fields.TryGetValue("newName", out var newName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'newName' for rename action");
         }
+#pragma warning restore IDE0046
 
         return Results.Success<IMorphAction>(new RenameColumnAction
         {
@@ -52,12 +55,9 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseDeleteAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
-        {
-            return Results.Failure<IMorphAction>("Missing required field 'columnName' for delete action");
-        }
-
-        return Results.Success<IMorphAction>(new DeleteColumnAction { ColumnName = columnName });
+        return !fields.TryGetValue(ColumnNameKey, out var columnName)
+            ? Results.Failure<IMorphAction>("Missing required field 'columnName' for delete action")
+            : Results.Success<IMorphAction>(new DeleteColumnAction { ColumnName = columnName });
     }
 
     private static Result<IMorphAction> ParseCastAction(Dictionary<string, string> fields)
@@ -72,10 +72,13 @@ internal static class MorphActionParser
             return Results.Failure<IMorphAction>("Missing required field 'targetType' for cast action");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (!Enum.TryParse<ColumnType>(targetTypeStr, ignoreCase: false, out var targetType))
         {
             return Results.Failure<IMorphAction>($"Invalid enum value for targetType: '{targetTypeStr}'");
         }
+#pragma warning restore IDE0046
 
         return Results.Success<IMorphAction>(new CastColumnAction
         {
@@ -91,10 +94,13 @@ internal static class MorphActionParser
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for fill action");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (!fields.TryGetValue("value", out var value))
         {
             return Results.Failure<IMorphAction>("Missing required field 'value' for fill action");
         }
+#pragma warning restore IDE0046
 
         return Results.Success<IMorphAction>(new FillColumnAction { ColumnName = columnName, Value = value });
     }
@@ -132,12 +138,9 @@ internal static class MorphActionParser
         }
 
         var action = FilterAction.Create(columnName, filterOperator, comparisonType, filterValue);
-        if (action.IsFailure)
-        {
-            return Results.Failure<IMorphAction>(action.Error);
-        }
-
-        return Results.Success<IMorphAction>(action.Value);
+        return action.IsFailure
+            ? Results.Failure<IMorphAction>(action.Error)
+            : Results.Success<IMorphAction>(action.Value);
     }
 
     private static Result<IMorphAction> ParseFormatTimestampAction(Dictionary<string, string> fields)
@@ -152,10 +155,13 @@ internal static class MorphActionParser
             return Results.Failure<IMorphAction>("Missing required field 'targetFormat' for format_timestamp action");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (string.IsNullOrWhiteSpace(targetFormat))
         {
             return Results.Failure<IMorphAction>("Field 'targetFormat' must not be empty for format_timestamp action");
         }
+#pragma warning restore IDE0046
 
         return Results.Success<IMorphAction>(new FormatTimestampAction
         {

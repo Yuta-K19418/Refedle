@@ -50,17 +50,8 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
 
     private static bool HasAttributes(SyntaxNode node)
     {
-        if (node is StructDeclarationSyntax structDecl && structDecl.AttributeLists.Count > 0)
-        {
-            return true;
-        }
-
-        if (node is ClassDeclarationSyntax classDecl && classDecl.AttributeLists.Count > 0)
-        {
-            return true;
-        }
-
-        return false;
+        return (node is StructDeclarationSyntax structDecl && structDecl.AttributeLists.Count > 0)
+            || (node is ClassDeclarationSyntax classDecl && classDecl.AttributeLists.Count > 0);
     }
 
     private static FormatInfo? GetFormatAndType(GeneratorSyntaxContext context)

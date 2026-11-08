@@ -121,11 +121,6 @@ internal sealed class JsonArrayTreeNode : TreeNode
             isValidArrayStart = false;
         }
 
-        if (!isValidArrayStart)
-        {
-            return "[Invalid Array]";
-        }
-
-        return JsonByteExtractor.FormatArrayPreview(ref reader);
+        return !isValidArrayStart ? "[Invalid Array]" : JsonByteExtractor.FormatArrayPreview(ref reader);
     }
 }

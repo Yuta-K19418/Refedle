@@ -10,11 +10,8 @@ internal static class RecipeYamlFieldParser
     internal static Result<(string key, string value)> ParseField(string fieldContent)
     {
         var colonIdx = fieldContent.IndexOf(": ", StringComparison.Ordinal);
-        if (colonIdx < 0)
-        {
-            return Results.Failure<(string key, string value)>($"Malformed field: '{fieldContent}'");
-        }
-
-        return Results.Success((fieldContent[..colonIdx], StringUtility.UnquoteString(fieldContent[(colonIdx + 2)..])));
+        return colonIdx < 0
+            ? Results.Failure<(string key, string value)>($"Malformed field: '{fieldContent}'")
+            : (Result<(string key, string value)>)Results.Success((fieldContent[..colonIdx], StringUtility.UnquoteString(fieldContent[(colonIdx + 2)..])));
     }
 }

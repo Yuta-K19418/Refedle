@@ -56,19 +56,14 @@ internal sealed class JsonObjectRangeTreeNode : RangeTreeNodeBase
             // or throws if no token can be read, so it cannot return false.
             reader.Read();
 
-            if (reader.TokenType == JsonTokenType.StartObject)
+            return reader.TokenType switch
             {
-                return new JsonObjectTreeNode(valueBytes, prefix) { KeyName = key };
-            }
-
-            if (reader.TokenType == JsonTokenType.StartArray)
-            {
-                return new JsonArrayTreeNode(valueBytes, prefix) { KeyName = key };
-            }
-
-            return new JsonValueTreeNode($"{prefix}{reader.GetPrimitiveDisplay()}")
-            {
-                ValueKind = reader.TokenType.ToJsonValueKind(),
+                JsonTokenType.StartObject => new JsonObjectTreeNode(valueBytes, prefix) { KeyName = key },
+                JsonTokenType.StartArray => new JsonArrayTreeNode(valueBytes, prefix) { KeyName = key },
+                _ => new JsonValueTreeNode($"{prefix}{reader.GetPrimitiveDisplay()}")
+                {
+                    ValueKind = reader.TokenType.ToJsonValueKind(),
+                },
             };
         }
         catch (JsonException)

@@ -20,13 +20,10 @@ internal static class RidMapper
     {
         if (platform == OSPlatform.OSX)
         {
-            if (architecture == Architecture.Arm64)
-            {
-                return Results.Success("osx-arm64");
-            }
-
-            return Results.Failure<string>(
-                "macOS on Intel (osx-x64) is not supported. Build from source: " + RepositoryUrl);
+            return architecture == Architecture.Arm64
+                ? Results.Success("osx-arm64")
+                : Results.Failure<string>(
+                    "macOS on Intel (osx-x64) is not supported. Build from source: " + RepositoryUrl);
         }
 
         if (platform == OSPlatform.Linux)
@@ -42,13 +39,10 @@ internal static class RidMapper
             }
         }
 
-        if (platform == OSPlatform.Windows)
-        {
-            return Results.Failure<string>(
-                "Windows is not supported by 'refedle update'. Download the archive from " + RepositoryUrl + "/releases and replace the binary manually.");
-        }
-
-        return Results.Failure<string>($"Unsupported platform/architecture: {platform} {architecture}.");
+        return platform == OSPlatform.Windows
+            ? Results.Failure<string>(
+                "Windows is not supported by 'refedle update'. Download the archive from " + RepositoryUrl + "/releases and replace the binary manually.")
+            : Results.Failure<string>($"Unsupported platform/architecture: {platform} {architecture}.");
     }
 
     /// <summary>
@@ -67,10 +61,13 @@ internal static class RidMapper
             return OSPlatform.Linux;
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (OperatingSystem.IsWindows())
         {
             return OSPlatform.Windows;
         }
+#pragma warning restore IDE0046
 
         return OSPlatform.Create("Unknown");
     }

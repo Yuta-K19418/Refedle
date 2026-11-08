@@ -154,11 +154,8 @@ internal sealed class ModeController(
         var result = await FullAggregationScanRunner.RunAsync(filePath, request.Format, request.KeyPath, ct)
             .ConfigureAwait(false);
 
-        if (result.IsFailure)
-        {
-            return Results.Failure<DrillDownState>(result.Error);
-        }
-
-        return Results.Success(new DrillDownState(result.Value.rows, result.Value.schema, previousMode, request.KeyPath, ActionStack: request.InitialActionStack));
+        return result.IsFailure
+            ? Results.Failure<DrillDownState>(result.Error)
+            : Results.Success(new DrillDownState(result.Value.rows, result.Value.schema, previousMode, request.KeyPath, ActionStack: request.InitialActionStack));
     }
 }

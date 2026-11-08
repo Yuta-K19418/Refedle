@@ -24,14 +24,10 @@ internal static class DrillDownRecipeValidator
     {
         ArgumentNullException.ThrowIfNull(recipe);
 
-        if (inputFormat is not (DataFormat.JsonObject or DataFormat.JsonArray))
-        {
-            return Results.Success();
-        }
-
-        return recipe.DrillDownKeyPath is null
-            ? Results.Failure(
-                $"Recipe '{recipe.Name}' has no DrillDown scope, but {inputFormat} input requires one")
-            : Results.Success();
+        return inputFormat is not (DataFormat.JsonObject or DataFormat.JsonArray)
+            || recipe.DrillDownKeyPath is not null
+            ? Results.Success()
+            : Results.Failure(
+                $"Recipe '{recipe.Name}' has no DrillDown scope, but {inputFormat} input requires one");
     }
 }

@@ -59,10 +59,13 @@ internal sealed class JsonLinesRangeTreeNode : RangeTreeNodeBase
                 return new JsonObjectTreeNode(lineBytes, prefix) { RecordPosition = lineIndex + 1 };
             }
 
+            // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
             if (reader.TokenType == JsonTokenType.StartArray)
             {
                 return new JsonArrayTreeNode(lineBytes, prefix) { RecordPosition = lineIndex + 1 };
             }
+#pragma warning restore IDE0046
 
             return new JsonValueTreeNode($"{prefix}{reader.GetPrimitiveDisplay()}")
             {

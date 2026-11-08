@@ -116,10 +116,13 @@ public static class FullAggregationSchemaScanner
             return Results.Failure<TableSchema>("No matching records found.");
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (keyOrder.Count == 0)
         {
             return Results.Failure<TableSchema>("All child objects have no keys");
         }
+#pragma warning restore IDE0046
 
         return Results.Success(SchemaScanner.BuildTableSchema(keyOrder, columnTypes, keyObservedCount, totalRows, format));
     }

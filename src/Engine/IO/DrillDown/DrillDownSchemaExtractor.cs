@@ -28,12 +28,9 @@ public static class DrillDownSchemaExtractor
         }
 
         var schemaResult = BuildSchema(childrenResult.Value, format);
-        if (schemaResult.IsFailure)
-        {
-            return Results.Failure<(TableSchema, IReadOnlyList<JsonRawBytes>)>(schemaResult.Error);
-        }
-
-        return Results.Success<(TableSchema, IReadOnlyList<JsonRawBytes>)>(
+        return schemaResult.IsFailure
+            ? (Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)>)Results.Failure<(TableSchema, IReadOnlyList<JsonRawBytes>)>(schemaResult.Error)
+            : (Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)>)Results.Success<(TableSchema, IReadOnlyList<JsonRawBytes>)>(
             (schemaResult.Value, childrenResult.Value));
     }
 
@@ -77,12 +74,7 @@ public static class DrillDownSchemaExtractor
             children.Add(JsonByteExtractor.ExtractNestedBytes(ref reader, nodeBytes));
         }
 
-        if (children.Count == 0)
-        {
-            return Results.Failure<List<JsonRawBytes>>("Array is empty.");
-        }
-
-        return Results.Success(children);
+        return children.Count == 0 ? Results.Failure<List<JsonRawBytes>>("Array is empty.") : Results.Success(children);
     }
 
     private static Result<TableSchema> BuildSchema(List<JsonRawBytes> childRawValues, DataFormat format)
@@ -99,12 +91,9 @@ public static class DrillDownSchemaExtractor
             SchemaScanner.IncrementObservationCounts(observedKeys, keyObservedCount);
         }
 
-        if (keyOrder.Count == 0)
-        {
-            return Results.Failure<TableSchema>("All child objects have no keys");
-        }
-
-        return Results.Success(SchemaScanner.BuildTableSchema(
+        return keyOrder.Count == 0
+            ? Results.Failure<TableSchema>("All child objects have no keys")
+            : Results.Success(SchemaScanner.BuildTableSchema(
             keyOrder, columnTypes, keyObservedCount, childRawValues.Count, format));
     }
 }

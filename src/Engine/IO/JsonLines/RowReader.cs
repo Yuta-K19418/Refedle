@@ -95,12 +95,7 @@ public sealed class RowReader : IDisposable
     private long SkipBomIfAtStart(long byteOffset)
     {
         // Skip UTF-8 BOM if present at the beginning of the file
-        if (byteOffset == 0)
-        {
-            return _mmap.GetOffsetAfterUtf8Bom();
-        }
-
-        return byteOffset;
+        return byteOffset == 0 ? _mmap.GetOffsetAfterUtf8Bom() : byteOffset;
     }
 
     private static bool SkipLines(LineChunkCursor cursor, int linesToSkip)

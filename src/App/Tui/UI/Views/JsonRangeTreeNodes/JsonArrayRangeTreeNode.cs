@@ -58,10 +58,13 @@ internal sealed class JsonArrayRangeTreeNode : RangeTreeNodeBase
                 return new JsonObjectTreeNode(bytes, prefix) { RecordPosition = index };
             }
 
+            // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
             if (reader.TokenType == JsonTokenType.StartArray)
             {
                 return new JsonArrayTreeNode(bytes, prefix) { RecordPosition = index };
             }
+#pragma warning restore IDE0046
 
             return new JsonValueTreeNode($"{prefix}{reader.GetPrimitiveDisplay()}")
             {

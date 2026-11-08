@@ -86,12 +86,12 @@ internal abstract class MorphTableView : TableView
     // paging the true end must come from the paged source's long row count.
     private long LastRowIndex()
     {
-        if (Table is null)
+        return Table switch
         {
-            return 0;
-        }
-
-        return Table is PagedTableSource paged ? paged.TotalRows - 1 : Table.Rows - 1;
+            null => 0,
+            PagedTableSource paged => paged.TotalRows - 1,
+            _ => Table.Rows - 1,
+        };
     }
 
     private bool ConsumeRow(long row)
@@ -186,12 +186,7 @@ internal abstract class MorphTableView : TableView
     {
         // Prevent global shortcut keys from being consumed by TableView key handling.
         // By returning false, we let these keys bubble up to AppKeyHandler.
-        if (AppKeyHandler.IsGlobalShortcut(key.KeyCode))
-        {
-            return false;
-        }
-
-        return base.OnKeyDown(key);
+        return !AppKeyHandler.IsGlobalShortcut(key.KeyCode) && base.OnKeyDown(key);
     }
 
     protected override void Dispose(bool disposing)

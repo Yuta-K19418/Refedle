@@ -66,12 +66,7 @@ public static class JsonObjectCellExtractor
                     continue;
                 }
 
-                if (!reader.Read())
-                {
-                    return ErrorValue;
-                }
-
-                return FormatValue(ref reader);
+                return !reader.Read() ? ErrorValue : FormatValue(ref reader);
             }
 
             return NullValue;
@@ -84,13 +79,9 @@ public static class JsonObjectCellExtractor
 
     private static string FormatValue(ref Utf8JsonReader reader)
     {
-        if (reader.TokenType == JsonTokenType.Number)
-        {
-            return FormatNumber(reader.ValueSpan);
-        }
-
         return reader.TokenType switch
         {
+            JsonTokenType.Number => FormatNumber(reader.ValueSpan),
             JsonTokenType.String => Encoding.UTF8.GetString(reader.ValueSpan),
             JsonTokenType.True => "True",
             JsonTokenType.False => "False",
@@ -111,6 +102,8 @@ public static class JsonObjectCellExtractor
             return intValue.ToString(CultureInfo.InvariantCulture);
         }
 
+        // Kept as if: a preceding guard also returns; folding both would chain conditionals.
+#pragma warning disable IDE0046
         if (
             Utf8Parser.TryParse(valueSpan, out double doubleValue, out var consumed)
             && consumed == valueSpan.Length
@@ -118,6 +111,7 @@ public static class JsonObjectCellExtractor
         {
             return doubleValue.ToString(CultureInfo.InvariantCulture);
         }
+#pragma warning restore IDE0046
 
         return ErrorValue;
     }

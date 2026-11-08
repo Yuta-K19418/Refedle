@@ -82,12 +82,7 @@ internal sealed class VimKeyTranslator
         _pendingG = false;
 
         // Only unshifted h/j/k/l/d/u trigger vim moves
-        if ((keyCode & KeyCode.ShiftMask) != KeyCode.Null)
-        {
-            return VimAction.None;
-        }
-
-        return TranslateBasicKey(keyCode);
+        return (keyCode & KeyCode.ShiftMask) != KeyCode.Null ? VimAction.None : TranslateBasicKey(keyCode);
     }
 
     private static VimAction TranslateBasicKey(KeyCode keyCode) =>

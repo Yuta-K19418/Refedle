@@ -36,12 +36,7 @@ internal struct CsvRecordReader : IRecordReader
     public readonly ValueTask<bool> MoveNextAsync(CancellationToken ct)
     {
         ThrowIfDisposed();
-        if (_reader is null)
-        {
-            return new ValueTask<bool>(false);
-        }
-
-        return _reader.MoveNextAsync(ct);
+        return _reader is null ? new ValueTask<bool>(false) : _reader.MoveNextAsync(ct);
     }
 
     public readonly void ThrowIfDisposed()
