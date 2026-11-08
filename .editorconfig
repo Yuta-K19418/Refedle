@@ -341,6 +341,13 @@ dotnet_naming_style.begins_with_underscore.capitalization = camel_case
 # Application code doesn't need ConfigureAwait in modern .NET (no synchronization context in CLI apps)
 dotnet_diagnostic.CA2007.severity = none
 
+# IDE0046 / IDE0075: both the option and dotnet_diagnostic must be warning.
+# SonarAnalyzer.globalconfig bulk-silences analyzers; the option severity overrides dotnet_diagnostic.
+dotnet_style_prefer_conditional_expression_over_return = true:warning
+dotnet_style_prefer_simplified_boolean_expressions = true:warning
+dotnet_diagnostic.IDE0046.severity = warning
+dotnet_diagnostic.IDE0075.severity = warning
+
 # Test files
 [tests/**/*.cs]
 
