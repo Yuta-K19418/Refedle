@@ -21,28 +21,68 @@ namespace Refedle.App.Tui.UI;
 /// Reads Engine-layer objects from <see cref="AppState"/> and switches the visible view accordingly.
 /// Has no dependency on the Engine layer directly.
 /// </summary>
+/// <remarks>
+/// Threading contract: all ViewManager state — including the filter-scan session state
+/// owned by the <see cref="FilterScanManager"/> (the session, its staged table view and
+/// the session CTS cancel/dispose) — is UI-thread exclusive. Every synchronous entry
+/// point (<see cref="SwitchToFocusedTable"/>, the other
+/// view switches, <see cref="Dispose"/>, …) must be called on the UI thread.
+/// The only exceptions are the asynchronous entry points (for example
+/// <see cref="FullAggregationDrillDownAsync"/>, reached from recipe replay after
+/// <c>ConfigureAwait(false)</c>): they may be called off the UI thread, run their background
+/// work there, and apply every state and view change inside an <c>_uiThreadInvoke</c> callback.
+/// <c>_uiThreadInvoke</c> is a dispatcher that must execute the given action on the UI thread;
+/// it is also how worker-thread notifications re-enter, and it does not relax the contract for
+/// synchronous entry points.
+/// </remarks>
 internal sealed class ViewManager : IDisposable
 {
+    /// <summary>
+    /// Matched rows the filter scan must produce before the table view replaces the loading
+    /// view; passed into the indexer so its threshold wait fires at the same count.
+    /// </summary>
+    private const int FilterScanInitialTableRows = 200;
+
     private readonly Window _container;
     private readonly AppState _state;
     private readonly ModeController _modeController;
+    private readonly IFilterScanRunner _lazyFilterScanRunner;
     private readonly Action<Action> _uiThreadInvoke;
     private readonly BreadcrumbBar _breadcrumbBar;
     private readonly View _contentContainer;
+    private readonly FilterScanManager _filterScanManager;
     private View? _currentView;
     private Label? _itemCountLabel;
     private bool _disposed;
 
-    internal ViewManager(Window container, AppState state, ModeController modeController, Action<Action> uiThreadInvoke)
+    internal ViewManager(
+        Window container,
+        AppState state,
+        ModeController modeController,
+        IFilterScanRunner filterScanRunner,
+        Action<Action> uiThreadInvoke)
     {
         ArgumentNullException.ThrowIfNull(container);
         ArgumentNullException.ThrowIfNull(state);
         ArgumentNullException.ThrowIfNull(modeController);
+        ArgumentNullException.ThrowIfNull(filterScanRunner);
         ArgumentNullException.ThrowIfNull(uiThreadInvoke);
         _container = container;
         _state = state;
         _modeController = modeController;
+        _lazyFilterScanRunner = filterScanRunner;
         _uiThreadInvoke = uiThreadInvoke;
+        // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
+        // it drives the content view, status bar and error display on the UI thread.
+        _filterScanManager = new FilterScanManager(
+            filterScanRunner,
+            uiThreadInvoke,
+            () => state.Cts.Token,
+            CreateFocusedTableView,
+            SwapView,
+            RefreshStatusBarHints,
+            ShowError,
+            GetCurrentView);
         _breadcrumbBar = new BreadcrumbBar();
         _contentContainer = new View
         {
@@ -276,7 +316,7 @@ internal sealed class ViewManager : IDisposable
 
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = FilterIndexingRunner.RunAsync(filterIndexer, _state.Cts.Token);
+            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 
@@ -385,7 +425,7 @@ internal sealed class ViewManager : IDisposable
 
         if (tableSource is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = FilterIndexingRunner.RunAsync(filterIndexer, _state.Cts.Token);
+            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
     }
 
@@ -486,6 +526,10 @@ internal sealed class ViewManager : IDisposable
 
     private void SwapView(View newView)
     {
+        // Replacing the content view orphans a running filter scan, except when the new view
+        // is the scan's own staged replacement for the loading view.
+        _filterScanManager.CancelIfNotStaged(newView);
+
         if (_currentView is not null)
         {
             _contentContainer.Remove(_currentView);
@@ -586,6 +630,9 @@ internal sealed class ViewManager : IDisposable
     /// <summary>
     /// Creates FocusedTableSource and FocusedTableView, then switches to the FocusedTable view.
     /// Wraps the source with <see cref="Views.FocusedTableTransformer"/> when the Action Stack is non-empty.
+    /// With an active filter, a loading view plus a progress overlay is shown while the background
+    /// scan runs; the table replaces them once enough rows have matched or the scan finishes.
+    /// Must be called on the UI thread (see the class threading contract).
     /// </summary>
     internal void SwitchToFocusedTable(DrillDownState drillDown)
     {
@@ -593,22 +640,42 @@ internal sealed class ViewManager : IDisposable
 
         IExtendedTableSource rawSource = new Views.FocusedTableSource(drillDown);
         var source = drillDown.ActionStack.Count > 0
-            ? Views.FocusedTableTransformer.Create(rawSource, drillDown.Schema, drillDown.ActionStack)
+            ? Views.FocusedTableTransformer.Create(
+                rawSource,
+                drillDown.Schema,
+                drillDown.ActionStack,
+                FilterScanInitialTableRows)
             : rawSource;
 
         var style = new TableStyle { AlwaysShowHeaders = true };
+        _state.SetSchemaRefinedCallback(null);
+
+        if (source is Views.FocusedTableTransformer
+            {
+                FilterRowIndexer: Views.FocusedTableFilterRowIndexer indexer,
+            } transformer)
+        {
+            _filterScanManager.StartScan(transformer, indexer, style);
+            return;
+        }
+
+        var view = CreateFocusedTableView(source, style);
+        view.SetSelection(0, 0, false);
+        view.Update();
+        SwapView(view);
+        view.SetFocus();
+        RefreshStatusBarHints();
+    }
+
+    private Views.FocusedTableView CreateFocusedTableView(IExtendedTableSource source, TableStyle style)
+    {
         var view = new Views.FocusedTableView
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
         };
-        _state.SetSchemaRefinedCallback(null);
-        view.SetSelection(0, 0, false);
-        view.Update();
-        SwapView(view);
-        view.SetFocus();
-        RefreshStatusBarHints();
+        return view;
     }
 
     /// <summary>
@@ -648,6 +715,7 @@ internal sealed class ViewManager : IDisposable
     }
 
     /// <inheritdoc/>
+    /// <remarks>Must be called on the UI thread (see the class threading contract).</remarks>
     public void Dispose()
     {
         if (_disposed)
@@ -656,6 +724,7 @@ internal sealed class ViewManager : IDisposable
         }
 
         _disposed = true;
+        _filterScanManager.Dispose();
         RemoveItemCountLabel();
         _currentView?.Dispose();
     }

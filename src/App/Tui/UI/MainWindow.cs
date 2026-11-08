@@ -42,7 +42,7 @@ internal sealed class MainWindow : Window
         Width = Dim.Fill();
         Height = Dim.Fill();
 
-        _viewManager = new ViewManager(this, state, modeController, app.Invoke);
+        _viewManager = new ViewManager(this, state, modeController, new FilterIndexingRunner(), app.Invoke);
 
         _fileDialogHandler = new FileDialogHandler(
             app, state, _viewManager, StartIndexing, StopCurrentIndexing,

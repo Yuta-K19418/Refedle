@@ -81,11 +81,49 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToFocusedTable(Refedle.App.Tui.DrillDownState)",
     Justification = "Owned by container via SwapView.")]
 [assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.ViewManager.CreateFocusedTableView(Refedle.App.Tui.UI.Views.IExtendedTableSource,Terminal.Gui.Views.TableStyle)",
+    Justification = "Child views are owned by the container and disposed via SwapView.")]
+[assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.ViewManager.ReturnFromDrillDown",
     Justification = "Only tree ViewMode values are valid PreviousMode; the default arm throws for any other member.")]
+
+// FilterScanManager
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.FilterScanManager._session",
+    Justification = "The session is disposed on the UI thread by CancelScan (view swap, FilterScanManager.Dispose) or released by CompleteScan, which hands the transformer to the table view and disposes the CTS alone.")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1031:Do not catch general exception types",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.FilterScanManager.RunScanAsync(System.Func{System.Boolean})",
+    Justification = "Top-level observer of a fire-and-forget scan: a row-read fault is arbitrary, must be observed, and is marshaled to the UI thread.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.FilterScanManager.StartScan(Refedle.App.Tui.UI.Views.FocusedTableTransformer,Refedle.App.Tui.UI.Views.FocusedTableFilterRowIndexer,Terminal.Gui.Views.TableStyle)",
+    Justification = "The loading view is owned by the container via the swap-view delegate; the session owns the linked CTS and the transformer, and disposes both on the UI thread when the scan is cancelled (the completed path releases the CTS alone and hands the transformer to the table view).")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.FilterScanManager._tableView",
+    Justification = "While set, the table view is the current content view and is disposed via the ViewManager's current-view tracking.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.FilterScanSession.Dispose",
+    Justification = "Cancellation must complete before the token source is disposed. Session state is UI-thread exclusive and worker notifications re-enter through the UI-thread dispatcher, so Dispose runs on the UI thread where synchronous cancel is the established pattern.")]
 
 // MainWindow
 [assembly: SuppressMessage(
@@ -374,6 +412,12 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.Views.Dialogs.ActionMenuDialog.#ctor(System.String[],System.Action{System.String})",
     Justification = "Child views are owned by Dialog and disposed when Dialog is disposed.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.Views.LoadingView.#ctor(System.String)",
+    Justification = "The label is owned by the view and disposed when the view is disposed.")]
 
 // Intentional synchronous UI and scan operations
 [assembly: SuppressMessage(
