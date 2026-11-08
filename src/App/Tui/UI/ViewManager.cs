@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Text;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine.Filtering;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
@@ -395,7 +396,6 @@ internal sealed class ViewManager : IDisposable
 
         var cache = new RowByteCache(indexer);
         var source = new Views.JsonLinesTableSource(cache, schema);
-        _state.SetSchemaRefinedCallback(source.UpdateSchema);
 
         IExtendedTableSource tableSource = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
@@ -418,6 +418,14 @@ internal sealed class ViewManager : IDisposable
             Style = style,
             OnMorphAction = HandleMorphAction,
         };
+        _state.SetSchemaRefinedCallback(refined =>
+        {
+            source.UpdateSchema(refined);
+            if (tableSource is Views.LazyTransformer lazy)
+            {
+                RebuildLazyTransformer(view, source, lazy, refined);
+            }
+        });
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
         view.SetFocus();
@@ -427,6 +435,45 @@ internal sealed class ViewManager : IDisposable
         {
             _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
         }
+    }
+
+    /// <summary>
+    /// Replaces only the table source of <paramref name="view"/> with a <see cref="Views.LazyTransformer"/>
+    /// built from the refined schema, so columns discovered after indexing become visible.
+    /// The existing filter row indexer is reused, and the page and selection are carried over.
+    /// </summary>
+    private void RebuildLazyTransformer(
+        Views.JsonLinesTableView view,
+        Views.JsonLinesTableSource source,
+        Views.LazyTransformer current,
+        TableSchema refined)
+    {
+        if (_currentView != view || view.Table is not Views.PagedTableSource oldPaged)
+        {
+            return;
+        }
+
+        var pageNumber = oldPaged.CurrentPageNumber;
+        var selection = view.Value?.SelectedCell;
+        var rowOffset = view.RowOffset;
+        var columnOffset = view.ColumnOffset;
+
+        Func<IReadOnlyList<FilterSpec>, IFilterRowIndexer>? reuseFilterIndexer =
+            current.FilterRowIndexer is { } filterIndexer ? _ => filterIndexer : null;
+        IExtendedTableSource rebuilt = Views.LazyTransformer.Create(source, refined, _state.ActionStack, reuseFilterIndexer);
+        view.Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(rebuilt, view.Style));
+        var newPaged = (Views.PagedTableSource)view.Table;
+        newPaged.CurrentPageNumber = pageNumber;
+
+        if (selection is { } cell)
+        {
+            view.SetSelection(Math.Min(cell.X, newPaged.Columns - 1), cell.Y, false);
+            view.RowOffset = rowOffset;
+            view.ColumnOffset = columnOffset;
+            view.Update();
+        }
+
+        view.SetNeedsDraw();
     }
 
     /// <summary>

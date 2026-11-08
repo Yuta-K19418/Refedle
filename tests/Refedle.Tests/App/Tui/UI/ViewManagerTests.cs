@@ -819,6 +819,146 @@ public sealed class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void SchemaRefined_WithActionsApplied_KeepsViewAndDisplaysNewColumnValue()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            "col1");
+        var oldTable = harness.View.Table;
+
+        // Act
+        harness.Refine("col1", "col2");
+
+        // Assert
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(harness.View);
+        harness.View.Table.Should().NotBeSameAs(oldTable);
+        harness.Table.ColumnNames.Should().Equal("renamed (text)", "col2 (text)");
+        harness.Table[0, 0].Should().Be("a");
+        harness.Table[0, 1].Should().Be("b");
+    }
+
+    [Fact]
+    public async Task SchemaRefined_WhileFilterScanPaused_ShowsFilteredRowsAfterResumeWithoutSecondScan()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "a").Value],
+            "col1");
+        var oldTable = harness.View.Table;
+        var scan = harness.Runner.Calls.Should().ContainSingle().Subject;
+
+        // Act
+        harness.Refine("col1", "col2");
+        harness.Runner.Resume();
+        await harness.Runner.Completion;
+
+        // Assert
+        harness.View.Table.Should().NotBeSameAs(oldTable);
+        harness.Runner.Calls.Should().ContainSingle().Which.Should().BeSameAs(scan);
+        GetLazyTransformer(harness.ViewManager).FilterRowIndexer.Should().BeSameAs(scan.Indexer);
+        harness.Table.Rows.Should().Be(1);
+        harness.Table[0, 1].Should().Be("b");
+    }
+
+    [Fact]
+    public void SchemaRefined_WithActionsApplied_KeepsSelectedCell()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            "col1",
+            "col2");
+        var oldTable = harness.View.Table;
+        harness.View.SetSelection(1, 0, false);
+
+        // Act
+        harness.Refine("col1", "col2", "col3");
+
+        // Assert
+        harness.View.Table.Should().NotBeSameAs(oldTable);
+        harness.Table.Columns.Should().Be(3);
+        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, 0));
+    }
+
+    [Fact]
+    public void SchemaRefined_WithScrolledView_KeepsRowOffsetAndSelection()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            10,
+            "col1",
+            "col2");
+        harness.View.SetSelection(1, 3, false);
+        harness.View.RowOffset = 2;
+        var oldTable = harness.View.Table;
+        harness.View.RowOffset.Should().Be(2);
+
+        // Act
+        harness.Refine("col1", "col2", "col3");
+
+        // Assert
+        harness.View.Table.Should().NotBeSameAs(oldTable);
+        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, 3));
+        harness.View.RowOffset.Should().Be(2);
+    }
+
+    [Fact]
+    public void SchemaRefined_WithLaterPageSelected_KeepsPageAndSelection()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness(
+            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
+            1_500_000_000,
+            "col1",
+            "col2");
+        var pageSize = PagedTableSource.DefaultPageSize;
+        harness.View.SetSelection(1, pageSize + 5, false);
+        var pageBefore = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject.CurrentPageNumber;
+
+        // Act
+        harness.Refine("col1", "col2", "col3");
+
+        // Assert
+        var paged = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject;
+        pageBefore.Should().Be(2);
+        paged.CurrentPageNumber.Should().Be(pageBefore);
+        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, pageSize + 5));
+    }
+
+    [Fact]
+    public void SchemaRefined_WithoutActions_ExposesNewColumnOnSameView()
+    {
+        // Arrange
+        using var harness = new SchemaRefinementHarness([], "col1");
+
+        // Act
+        harness.Refine("col1", "col2");
+
+        // Assert
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(harness.View);
+        harness.Table.ColumnNames.Should().Equal("col1 (text)", "col2 (text)");
+        harness.Table[0, 1].Should().Be("b");
+        harness.Runner.Calls.Should().BeEmpty();
+    }
+
+    private static TableSchema CreateJsonLinesSchema(params string[] columnNames) =>
+        new()
+        {
+            SourceFormat = DataFormat.JsonLines,
+            Columns = [.. columnNames.Select((name, index) => new ColumnSchema { Name = name, Type = ColumnType.Text, ColumnIndex = index })],
+        };
+
+    private static LazyTransformer GetLazyTransformer(ViewManager viewManager)
+    {
+        var view = viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
+        var paged = view.Table.Should().BeOfType<PagedTableSource>().Subject;
+        var stabilizing = paged.Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Subject;
+        return stabilizing.Inner.Should().BeOfType<LazyTransformer>().Subject;
+    }
+
+    [Fact]
     public void SwitchToFileSelection_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into FileSelection
@@ -2676,6 +2816,85 @@ public sealed class ViewManagerTests : IDisposable
         public void BuildIndex(CancellationToken cancellationToken = default) { }
 
         public (long byteOffset, int rowOffset) GetCheckPoint(long targetRow) => (0, 0);
+    }
+
+    /// <summary>
+    /// Loads a single-row JSON Lines table with the given actions and exposes the schema
+    /// refinement callback registered by <see cref="ViewManager"/>.
+    /// </summary>
+    private sealed class SchemaRefinementHarness : IDisposable
+    {
+        private readonly string _filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+        private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
+        private readonly ViewManager _viewManager;
+
+        public SchemaRefinementHarness(IReadOnlyList<IMorphAction> actions, params string[] initialColumns)
+            : this(actions, 2, initialColumns)
+        {
+        }
+
+        public SchemaRefinementHarness(IReadOnlyList<IMorphAction> actions, long totalRows, params string[] initialColumns)
+        {
+            File.WriteAllText(_filePath, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"x\", \"col2\": \"y\"}\n");
+            State.StartNewFile(_filePath);
+            State.SetActionStack(actions);
+            var modeController = new ModeController(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            _viewManager = new ViewManager(Window, State, modeController, Runner, action => action());
+            _viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(_filePath, totalRows), CreateJsonLinesSchema(initialColumns));
+            View = _viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
+        }
+
+        public AppState State { get; } = new();
+        public Window Window { get; } = new();
+        public PausableFilterScanRunner Runner { get; } = new();
+        public ViewManager ViewManager => _viewManager;
+        public JsonLinesTableView View { get; }
+        public ITableSource Table => View.Table.Should().BeAssignableTo<ITableSource>().Subject;
+        public TableSelection Selection => View.Value.Should().BeOfType<TableSelection>().Subject;
+
+        public void Refine(params string[] columns)
+        {
+            State.OnSchemaRefined.Should().NotBeNull();
+            State.OnSchemaRefined(CreateJsonLinesSchema(columns));
+        }
+
+        public void Dispose()
+        {
+            _viewManager.Dispose();
+            Window.Dispose();
+            State.Dispose();
+            _app.Dispose();
+            File.Delete(_filePath);
+        }
+    }
+
+    /// <summary>
+    /// <see cref="IFilterScanRunner"/> double that records each call and holds the scan
+    /// until <see cref="Resume"/>, then builds the index on the calling indexer.
+    /// </summary>
+    private sealed class PausableFilterScanRunner : IFilterScanRunner
+    {
+        private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private Task _completion = Task.CompletedTask;
+
+        public List<CapturingFilterScanRunner.Call> Calls { get; } = [];
+
+        public Task Completion => _completion;
+
+        public void Resume() => _gate.TrySetResult();
+
+        public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
+        {
+            Calls.Add(new CapturingFilterScanRunner.Call(filterIndexer, ct));
+            _completion = RunAfterGateAsync(filterIndexer, ct);
+            return _completion;
+        }
+
+        private async Task RunAfterGateAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
+        {
+            await _gate.Task.ConfigureAwait(false);
+            await filterIndexer.BuildIndexAsync(ct).ConfigureAwait(false);
+        }
     }
 
     /// <summary>
