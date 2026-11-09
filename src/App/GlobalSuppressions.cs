@@ -63,6 +63,12 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToJsonLinesTableView(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.ViewManager.RebuildLazyTransformer(Refedle.App.Tui.UI.Views.JsonLinesTableView,Refedle.App.Tui.UI.Views.JsonLinesTableSource,Refedle.App.Tui.UI.Views.LazyTransformer,Refedle.Engine.Models.TableSchema)",
+    Justification = "The new table source is owned by the view and disposed with it.")]
+[assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
