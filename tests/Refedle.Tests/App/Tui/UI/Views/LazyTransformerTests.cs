@@ -341,6 +341,7 @@ public sealed class LazyTransformerTests
     [InlineData("007", ColumnType.WholeNumber, "7")]
     [InlineData("1.50", ColumnType.FloatingPoint, "1.5")]
     [InlineData("TRUE", ColumnType.Boolean, "true")]
+    [InlineData("FALSE", ColumnType.Boolean, "false")]
     public void Indexer_CastWithValidInput_ReturnsFormattedValue(
         string rawValue,
         ColumnType targetType,
@@ -397,6 +398,56 @@ public sealed class LazyTransformerTests
 
         // Assert
         result.Should().Be("<invalid>");
+    }
+
+    [Fact]
+    public void Indexer_CastToText_ReturnsRawValue()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["007"],
+            ],
+            ["count"]
+        );
+        var schema = MakeSchema(("count", ColumnType.WholeNumber));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "count", TargetType = ColumnType.Text },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var result = transformer[0, 0];
+
+        // Assert
+        result.Should().Be("007");
+    }
+
+    [Theory]
+    [InlineData(ColumnType.JsonObject, "{\"a\":1}")]
+    [InlineData(ColumnType.JsonArray, "[1,2]")]
+    public void Indexer_CastToJsonValueTypes_ReturnsRawValue(ColumnType targetType, string rawValue)
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                [rawValue],
+            ],
+            ["value"]
+        );
+        var schema = MakeSchema(("value", ColumnType.Text));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "value", TargetType = targetType },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var result = transformer[0, 0];
+
+        // Assert
+        result.Should().Be(rawValue);
     }
 
     // -------------------------------------------------------------------------
@@ -578,6 +629,31 @@ public sealed class LazyTransformerTests
 
         // Assert
         transformer.Columns.Should().Be(1);
+    }
+
+    [Fact]
+    public void Create_CastTargetingNonExistentColumn_IsSkippedAndOtherColumnsUnchanged()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["007"],
+            ],
+            ["A"]
+        );
+        var schema = MakeSchema(("A", ColumnType.Text));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "DoesNotExist", TargetType = ColumnType.WholeNumber },
+        ];
+
+        // Act
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Assert
+        transformer.Columns.Should().Be(1);
+        transformer.ColumnNames[0].Should().Be("A (text)");
+        transformer[0, 0].Should().Be("007");
     }
 
     // -------------------------------------------------------------------------
