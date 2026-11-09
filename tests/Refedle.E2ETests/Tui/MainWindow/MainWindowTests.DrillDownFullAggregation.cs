@@ -26,7 +26,15 @@ public sealed partial class MainWindowTests
         // Act: x opens a menu with a single "DrillDown" item on the root selection.
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name (text)", "age (number)", "email (text)");
+        // The union header stays readable above the dialog, so a contents-only wait can return
+        // while the Actions dialog still covers the table rows; require the dialog to be gone
+        // so the asserted frame is the settled one.
+        var lines = await Harness.WaitForConditionAsync(
+            l => l.Any(line => line.Contains("name (text)", StringComparison.Ordinal)
+                && line.Contains("age (number)", StringComparison.Ordinal)
+                && line.Contains("email (text)", StringComparison.Ordinal))
+                && l.All(line => !line.Contains("Actions", StringComparison.Ordinal)),
+            "drill-down table rendered and the Actions dialog closed");
 
         // Assert: every column contributed by any element is rendered together in the header,
         // and each element's own values still appear in its row even where other columns are
@@ -57,7 +65,14 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        await Harness.WaitForContentsAsync("name (text)", "age (number)", "email (text)");
+        // Same dialog-closing race as above: if Backspace lands while the Actions dialog is
+        // still pumping, the dialog swallows it and the back navigation never happens.
+        await Harness.WaitForConditionAsync(
+            l => l.Any(line => line.Contains("name (text)", StringComparison.Ordinal)
+                && line.Contains("age (number)", StringComparison.Ordinal)
+                && line.Contains("email (text)", StringComparison.Ordinal))
+                && l.All(line => !line.Contains("Actions", StringComparison.Ordinal)),
+            "drill-down table rendered and the Actions dialog closed");
 
         // Act
         Harness.SendKey(KeyCode.Backspace);
