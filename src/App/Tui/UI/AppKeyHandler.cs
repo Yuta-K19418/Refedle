@@ -1,5 +1,6 @@
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.Dialogs;
+using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
@@ -197,6 +198,13 @@ internal sealed class AppKeyHandler : IDisposable
     private bool HandleActionMenuForTree(MorphTreeView tv)
     {
         if (tv.SelectedObject is not ITreeNode selectedNode)
+        {
+            return false;
+        }
+
+        // A range node is a paging container with no JSON identity of its own: the KeyPath
+        // for it is always empty, so DrillDown would silently aggregate the entire file.
+        if (selectedNode is RangeTreeNodeBase)
         {
             return false;
         }
