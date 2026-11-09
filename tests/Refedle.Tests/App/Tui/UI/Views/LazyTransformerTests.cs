@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Filtering;
+using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
@@ -337,9 +338,9 @@ public sealed class LazyTransformerTests
     // -------------------------------------------------------------------------
 
     [Theory]
-    [InlineData("42", ColumnType.WholeNumber, "42")]
-    [InlineData("3.14", ColumnType.FloatingPoint, "3.14")]
-    [InlineData("true", ColumnType.Boolean, "true")]
+    [InlineData("007", ColumnType.WholeNumber, "7")]
+    [InlineData("1.50", ColumnType.FloatingPoint, "1.5")]
+    [InlineData("TRUE", ColumnType.Boolean, "true")]
     public void Indexer_CastWithValidInput_ReturnsFormattedValue(
         string rawValue,
         ColumnType targetType,
@@ -369,6 +370,7 @@ public sealed class LazyTransformerTests
 
     [Theory]
     [InlineData("not-a-number", ColumnType.WholeNumber)]
+    [InlineData("1.2.3", ColumnType.FloatingPoint)]
     [InlineData("not-a-bool", ColumnType.Boolean)]
     [InlineData("not-a-date", ColumnType.Timestamp)]
     public void Indexer_CastWithInvalidInput_ReturnsInvalidPlaceholder(
@@ -395,6 +397,160 @@ public sealed class LazyTransformerTests
 
         // Assert
         result.Should().Be("<invalid>");
+    }
+
+    // -------------------------------------------------------------------------
+    // Cell value — formatting scope (only columns hit by an action are formatted)
+    // -------------------------------------------------------------------------
+
+    [Fact]
+    public void FormatTimestampAction_OnOneTimestampColumn_LeavesOtherTimestampColumnsRaw()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["2024-01-15T09:30:00", "2024-03-20T14:05:33"],
+            ],
+            ["created_at", "updated_at"]
+        );
+        var schema = MakeSchema(
+            ("created_at", ColumnType.Timestamp),
+            ("updated_at", ColumnType.Timestamp)
+        );
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new FormatTimestampAction
+            {
+                ColumnName = "created_at",
+                TargetFormat = "yyyy/MM/dd",
+            },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var targeted = transformer[0, 0];
+        var untouched = transformer[0, 1];
+
+        // Assert
+        targeted.Should().Be("2024/01/15");
+        untouched.Should().Be("2024-03-20T14:05:33");
+    }
+
+    [Fact]
+    public void Indexer_WithActionOnOneColumn_UntouchedNumberAndBoolColumnsStayRaw()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["2024-01-15T09:30:00", "007", "1.50", "TRUE"],
+            ],
+            ["created_at", "count", "price", "active"]
+        );
+        var schema = MakeSchema(
+            ("created_at", ColumnType.Timestamp),
+            ("count", ColumnType.WholeNumber),
+            ("price", ColumnType.FloatingPoint),
+            ("active", ColumnType.Boolean)
+        );
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new FormatTimestampAction
+            {
+                ColumnName = "created_at",
+                TargetFormat = "yyyy/MM/dd",
+            },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var count = transformer[0, 1];
+        var price = transformer[0, 2];
+        var active = transformer[0, 3];
+
+        // Assert
+        count.Should().Be("007");
+        price.Should().Be("1.50");
+        active.Should().Be("TRUE");
+    }
+
+    [Fact]
+    public void CastAction_ToTimestamp_WithoutFormatTimestamp_UsesDefaultFormat()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["2024-03-20T14:05:33"],
+            ],
+            ["updated_at"]
+        );
+        var schema = MakeSchema(("updated_at", ColumnType.Text));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "updated_at", TargetType = ColumnType.Timestamp },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var result = transformer[0, 0];
+
+        // Assert
+        result.Should().Be("2024-03-20 14:05:33");
+    }
+
+    [Fact]
+    public void CastAction_AfterFormatTimestamp_DoesNotResetFormatString()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["2024-01-15T09:30:00"],
+            ],
+            ["created_at"]
+        );
+        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
+            new FormatTimestampAction { ColumnName = "created_at", TargetFormat = "yyyy/MM/dd" },
+            new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var result = transformer[0, 0];
+
+        // Assert
+        result.Should().Be("2024/01/15");
+    }
+
+    [Fact]
+    public void Indexer_CastThenRenameAndDelete_PreservesTargetColumnFormatting()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [["discard", "007", "1.50"]],
+            ["drop", "count", "price"]
+        );
+        var schema = MakeSchema(
+            ("drop", ColumnType.Text),
+            ("count", ColumnType.Text),
+            ("price", ColumnType.FloatingPoint)
+        );
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "count", TargetType = ColumnType.WholeNumber },
+            new RenameColumnAction { OldName = "count", NewName = "renamed" },
+            new DeleteColumnAction { ColumnName = "drop" },
+        ];
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Act
+        var targeted = transformer[0, 0];
+        var untouched = transformer[0, 1];
+
+        // Assert
+        targeted.Should().Be("7");
+        untouched.Should().Be("1.50");
     }
 
     // -------------------------------------------------------------------------
@@ -1023,6 +1179,57 @@ public sealed class LazyTransformerTests
     }
 
     [Fact]
+    public void FillColumnAction_BeforeCast_FillValueBypassesCastFormatting()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["42"],
+            ],
+            ["A"]
+        );
+        var schema = MakeSchema(("A", ColumnType.Text));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new FillColumnAction { ColumnName = "A", Value = "hello" },
+            new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
+        ];
+
+        // Act
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Assert
+        // A cast after the fill must not lose the raw fill override
+        transformer[0, 0].Should().Be("hello");
+    }
+
+    [Fact]
+    public void FillColumnAction_AfterCastAndRename_FillValueOverridesAndNeighborStaysRaw()
+    {
+        // Arrange
+        var source = new FakeTableSource(
+            [
+                ["007", "1.50"],
+            ],
+            ["count", "price"]
+        );
+        var schema = MakeSchema(("count", ColumnType.Text), ("price", ColumnType.FloatingPoint));
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "count", TargetType = ColumnType.WholeNumber },
+            new RenameColumnAction { OldName = "count", NewName = "renamed" },
+            new FillColumnAction { ColumnName = "renamed", Value = "N/A" },
+        ];
+
+        // Act
+        using var transformer = LazyTransformer.Create(source, schema, actions);
+
+        // Assert
+        transformer[0, 0].Should().Be("N/A");
+        transformer[0, 1].Should().Be("1.50");
+    }
+
+    [Fact]
     public void FillColumnAction_ColumnNames_PreservesAllColumnNames()
     {
         // Arrange
@@ -1411,6 +1618,51 @@ public sealed class LazyTransformerTests
 
         // Assert
         result.Should().Be("2024-01-15 09:30:00");
+    }
+
+    [Fact]
+    public void FormatTimestampAction_OverJsonLinesSource_LeavesOtherTimestampColumnsRaw()
+    {
+        // Arrange
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllLines(
+                path,
+                ["{\"created_at\":\"2024-01-15T09:30:00\",\"updated_at\":\"2024-03-20T14:05:33\"}"]
+            );
+            var indexer = new RowIndexer(path);
+            indexer.BuildIndex();
+            using var cache = new RowByteCache(indexer);
+            var schema = MakeSchema(
+                ("created_at", ColumnType.Timestamp),
+                ("updated_at", ColumnType.Timestamp)
+            );
+            // The transformer disposes its wrapped source; the using guards the
+            // transformer-construction gap (double dispose is a guarded no-op).
+            using var source = new JsonLinesTableSource(cache, schema);
+            IReadOnlyList<IMorphAction> actions =
+            [
+                new FormatTimestampAction
+                {
+                    ColumnName = "created_at",
+                    TargetFormat = "yyyy/MM/dd",
+                },
+            ];
+            using var transformer = LazyTransformer.Create(source, schema, actions);
+
+            // Act
+            var targeted = transformer[0, 0];
+            var untouched = transformer[0, 1];
+
+            // Assert
+            targeted.Should().Be("2024/01/15");
+            untouched.Should().Be("2024-03-20T14:05:33");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
     }
 
     [Fact]

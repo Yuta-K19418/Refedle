@@ -1,4 +1,3 @@
-using System.Globalization;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -26,7 +25,8 @@ internal sealed class LazyTransformer : LazyTransformerBase
         IReadOnlyList<ColumnType> columnTypes,
         IReadOnlyList<int> sourceColumnIndices,
         IReadOnlyList<string?> fillValues,
-        IReadOnlyList<string?> formatStrings
+        IReadOnlyList<string?> formatStrings,
+        IReadOnlyList<bool> castMarkers
     )
         : base(
             source,
@@ -35,7 +35,8 @@ internal sealed class LazyTransformer : LazyTransformerBase
             columnTypes,
             sourceColumnIndices,
             fillValues,
-            formatStrings
+            formatStrings,
+            castMarkers
         )
     {
         _filterRowIndexer = filterRowIndexer;
@@ -65,7 +66,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
         ArgumentNullException.ThrowIfNull(originalSchema);
         ArgumentNullException.ThrowIfNull(actions);
 
-        var schema = BuildTransformedSchema(originalSchema, actions);
+        var schema = TransformedSchemaBuilder.Build(originalSchema, actions);
         var filterRowIndexer = schema.filterSpecs.Count > 0 && filterRowIndexerFactory is not null
             ? filterRowIndexerFactory(schema.filterSpecs)
             : null;
@@ -78,7 +79,8 @@ internal sealed class LazyTransformer : LazyTransformerBase
             schema.columnTypes,
             schema.sourceColumnIndices,
             schema.fillValues,
-            schema.formatStrings
+            schema.formatStrings,
+            schema.castMarkers
         );
     }
 
@@ -125,16 +127,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
                 return string.Empty;
             }
 
-            var fillValue = FillValues[col];
-            if (fillValue is not null)
-            {
-                // Fill values bypass FormatCellValue by design — they are raw display overrides
-                return fillValue;
-            }
-
-            var sourceCol = SourceColumnIndices[col];
-            var rawValue = Convert.ToString(Source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
-            return FormatCellValue(rawValue, ColumnTypes[col], FormatStrings[col]);
+            return ResolveDisplayValue(col, sourceRow, SourceColumnIndices[col]);
         }
     }
 }
