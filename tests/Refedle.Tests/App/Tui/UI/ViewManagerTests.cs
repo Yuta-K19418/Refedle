@@ -17,7 +17,7 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
 
-public sealed class ViewManagerTests : IDisposable
+public sealed partial class ViewManagerTests : IDisposable
 {
     private readonly List<string> _tempFiles = [];
     private bool _disposed;

@@ -45,6 +45,9 @@ internal sealed class FilterScanManager(
     private FilterScanSession? _session;
     private FocusedTableView? _tableView;
 
+    /// <summary>Gets a value indicating whether a filter scan is currently running.</summary>
+    internal bool IsScanRunning => _session is not null;
+
     /// <summary>
     /// Replaces the content view with a loading view and starts the background filter scan.
     /// The indexer's threshold notification reveals the table view mid-scan; progress
@@ -56,7 +59,6 @@ internal sealed class FilterScanManager(
     {
         var loadingView = LoadingView.Create("Filtering rows…");
         _swapView(loadingView);
-        _refreshStatusBarHints();
 
         // Created after the view swap so the swap's cancellation of the previous scan
         // cannot touch this scan's token source.
@@ -73,6 +75,8 @@ internal sealed class FilterScanManager(
         _session = session;
         _tableView = null;
         _overlay.Show(loadingView);
+        // Refreshed once the session is registered so the item count label stays hidden during the scan.
+        _refreshStatusBarHints();
 
         _ = RunScanAsync(isScanCurrent);
     }
@@ -234,6 +238,7 @@ internal sealed class FilterScanManager(
         if (_getCurrentView() is FocusedTableView)
         {
             _overlay.Dismiss();
+            _refreshStatusBarHints();
             return;
         }
 

@@ -53,6 +53,7 @@ internal sealed class ViewManager : IDisposable
     private readonly View _contentContainer;
     private readonly FilterScanManager _filterScanManager;
     private View? _currentView;
+    private View? _lazyScanView;
     private Label? _itemCountLabel;
     private bool _disposed;
 
@@ -179,14 +180,19 @@ internal sealed class ViewManager : IDisposable
 
     private void AddItemCountLabel(StatusBar statusBar)
     {
-        if (_state.RowIndexer is not { IsIndexingCompleted: true })
+        if (_state.RowIndexer is not { IsIndexingCompleted: true } || IsFilterScanRunning())
         {
             return;
         }
 
+        // A displayed table reports its own (possibly filtered) count; other views fall back to the file total.
+        var rowCount = _currentView is MorphTableView { Table: Views.PagedTableSource paged }
+            ? paged.TotalRows
+            : _state.RowIndexer.TotalRows;
+
         _itemCountLabel = new Label
         {
-            Text = string.Create(CultureInfo.InvariantCulture, $"{_state.RowIndexer.TotalRows} items"),
+            Text = string.Create(CultureInfo.InvariantCulture, $"{rowCount} items"),
             // AnchorEnd places the right edge at the container boundary; subtract 1 to keep a margin
             X = Pos.AnchorEnd() - 1,
             // Place on the same row as the StatusBar (bottom line of the container)
@@ -194,6 +200,36 @@ internal sealed class ViewManager : IDisposable
             SchemeName = statusBar.SchemeName,
         };
         _container.Add(_itemCountLabel);
+    }
+
+    private bool IsFilterScanRunning() =>
+        _filterScanManager.IsScanRunning
+        || (_lazyScanView is not null && ReferenceEquals(_lazyScanView, _currentView));
+
+    /// <summary>
+    /// Runs the lazy filter scan for <paramref name="view"/> and, once it ends, hands the outcome to the
+    /// UI thread, which refreshes the item count label only for a successful scan of the still-current view.
+    /// </summary>
+    private async Task RunLazyFilterScanAsync(IFilterRowIndexer filterIndexer, View view)
+    {
+        var scanTask = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
+
+        // WhenAny never throws, so a canceled or faulted scan is observed without a catch-all.
+        await Task.WhenAny(scanTask).ConfigureAwait(false);
+        var succeeded = scanTask.IsCompletedSuccessfully;
+
+        _uiThreadInvoke(() => CompleteLazyFilterScan(view, succeeded));
+    }
+
+    private void CompleteLazyFilterScan(View view, bool succeeded)
+    {
+        if (!succeeded || _disposed || !ReferenceEquals(_currentView, view) || !ReferenceEquals(_lazyScanView, view))
+        {
+            return;
+        }
+
+        _lazyScanView = null;
+        RefreshStatusBarHints();
     }
 
     /// <summary>
@@ -313,12 +349,7 @@ internal sealed class ViewManager : IDisposable
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
         view.SetFocus();
-        RefreshStatusBarHints();
-
-        if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
-        {
-            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
-        }
+        StartLazyFilterScan(source, view);
     }
 
     /// <summary>
@@ -429,11 +460,18 @@ internal sealed class ViewManager : IDisposable
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
         view.SetFocus();
+        StartLazyFilterScan(tableSource, view);
+    }
+
+    private void StartLazyFilterScan(IExtendedTableSource source, View view)
+    {
+        // Marked before the refresh so the label stays hidden until the scan completes.
+        _lazyScanView = source is Views.LazyTransformer { FilterRowIndexer: not null } ? view : null;
         RefreshStatusBarHints();
 
-        if (tableSource is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
+        if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
+            _ = RunLazyFilterScanAsync(filterIndexer, view);
         }
     }
 
