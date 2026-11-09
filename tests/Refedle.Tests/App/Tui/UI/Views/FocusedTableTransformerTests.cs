@@ -411,6 +411,69 @@ public sealed class FocusedTableTransformerTests
         transformer[0, 1].Should().Be("2024/01/02");
     }
 
+    [Fact]
+    public void Create_WithFormatTimestampAction_LeavesOtherTimestampColumnsRaw()
+    {
+        // Arrange
+        var source = new FakeFocusedSource(
+            [
+                ["[0]", "2024-01-15T09:30:00", "2024-03-20T14:05:33"],
+            ],
+            ["#", "created_at", "updated_at"]
+        );
+        var schema = MakeSchema(
+            ("created_at", ColumnType.Timestamp),
+            ("updated_at", ColumnType.Timestamp)
+        );
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new FormatTimestampAction
+            {
+                ColumnName = "created_at",
+                TargetFormat = "yyyy/MM/dd",
+            },
+        ];
+
+        // Act
+        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        var hash = transformer[0, 0];
+        var targeted = transformer[0, 1];
+        var untouched = transformer[0, 2];
+
+        // Assert
+        hash.Should().Be("[0]");
+        targeted.Should().Be("2024/01/15");
+        untouched.Should().Be("2024-03-20T14:05:33");
+    }
+
+    [Fact]
+    public void Create_WithCastAndDelete_FormatsOnlyTargetAfterHashColumn()
+    {
+        // Arrange
+        var source = new FakeFocusedSource(
+            [["[0]", "discard", "007", "1.50"]],
+            ["#", "drop", "count", "price"]
+        );
+        var schema = MakeSchema(
+            ("drop", ColumnType.Text),
+            ("count", ColumnType.Text),
+            ("price", ColumnType.FloatingPoint)
+        );
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new CastColumnAction { ColumnName = "count", TargetType = ColumnType.WholeNumber },
+            new DeleteColumnAction { ColumnName = "drop" },
+        ];
+
+        // Act
+        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+
+        // Assert
+        transformer[0, 0].Should().Be("[0]");
+        transformer[0, 1].Should().Be("7");
+        transformer[0, 2].Should().Be("1.50");
+    }
+
     // -------------------------------------------------------------------------
     // Cell resolution — bounds and disposal guards
     // -------------------------------------------------------------------------

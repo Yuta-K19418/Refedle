@@ -1,4 +1,3 @@
-using System.Globalization;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -13,7 +12,7 @@ namespace Refedle.App.Tui.UI.Views;
 /// that scans the in-memory rows; the caller must run its
 /// <see cref="IFilterRowIndexer.BuildIndexAsync"/> on a background task.
 /// Column 0 is the <c>"#"</c> pseudo column (a per-row hash), which is never a Morph
-/// target: <see cref="Create"/> runs <see cref="LazyTransformerBase.BuildTransformedSchema"/>
+/// target: <see cref="Create"/> runs <see cref="TransformedSchemaBuilder.Build"/>
 /// over the DrillDown schema only, then prepends a fixed <c>"#"</c> slot to every output
 /// array. Use <see cref="Create"/> to construct — the constructor is private.
 /// </summary>
@@ -29,7 +28,8 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
         IReadOnlyList<ColumnType> columnTypes,
         IReadOnlyList<int> sourceColumnIndices,
         IReadOnlyList<string?> fillValues,
-        IReadOnlyList<string?> formatStrings)
+        IReadOnlyList<string?> formatStrings,
+        IReadOnlyList<bool> castMarkers)
         : base(
             source,
             columnNames,
@@ -37,7 +37,8 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
             columnTypes,
             sourceColumnIndices,
             fillValues,
-            formatStrings)
+            formatStrings,
+            castMarkers)
     {
         _filterRowIndexer = filterRowIndexer;
     }
@@ -63,7 +64,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
         ArgumentNullException.ThrowIfNull(originalSchema);
         ArgumentNullException.ThrowIfNull(actions);
 
-        var schema = BuildTransformedSchema(originalSchema, actions);
+        var schema = TransformedSchemaBuilder.Build(originalSchema, actions);
 
         string[] columnNames = ["#", .. schema.columnNames];
         string[] rawColumnNames = ["#", .. schema.rawColumnNames];
@@ -71,6 +72,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
         IReadOnlyList<int> sourceColumnIndices = [-1, .. schema.sourceColumnIndices];
         IReadOnlyList<string?> fillValues = [null, .. schema.fillValues];
         IReadOnlyList<string?> formatStrings = [null, .. schema.formatStrings];
+        IReadOnlyList<bool> castMarkers = [false, .. schema.castMarkers];
 
         IFilterRowIndexer? filterRowIndexer = schema.filterSpecs.Count > 0
             ? new FocusedTableFilterRowIndexer(source, schema.filterSpecs, filterRevealThreshold)
@@ -84,7 +86,8 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
             columnTypes,
             sourceColumnIndices,
             fillValues,
-            formatStrings
+            formatStrings,
+            castMarkers
         );
     }
 
@@ -130,16 +133,8 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
                 return Source[sourceRow, 0]; // "#" passthrough, never transformed
             }
 
-            var fillValue = FillValues[col];
-            if (fillValue is not null)
-            {
-                // Fill values bypass FormatCellValue by design — they are raw display overrides
-                return fillValue;
-            }
-
-            var sourceCol = SourceColumnIndices[col] + 1; // +1 skips the "#" pseudo column
-            var rawValue = Convert.ToString(Source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
-            return FormatCellValue(rawValue, ColumnTypes[col], FormatStrings[col]);
+            // +1 skips the "#" pseudo column in the wrapped source
+            return ResolveDisplayValue(col, sourceRow, SourceColumnIndices[col] + 1);
         }
     }
 }
