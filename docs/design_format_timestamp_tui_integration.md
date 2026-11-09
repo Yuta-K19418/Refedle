@@ -208,13 +208,16 @@ ColumnType.Timestamp => DateTime.TryParse(rawValue, out var dt)
     : "<invalid>",
 ```
 
-The default `"yyyy-MM-dd HH:mm:ss"` preserves existing behaviour when no
-`FormatTimestampAction` is present.
+The default applies only to columns an action targeted: cast to Timestamp, or a
+`FormatTimestampAction` with an empty format. Columns no action targeted are not passed to
+`FormatCellValue`; the indexer returns their raw values.
 
-The call site in the indexer:
+The call site (`ResolveDisplayValue`) is gated:
 
 ```csharp
-return FormatCellValue(rawValue, _columnTypes[col], _formatStrings[col]);
+return ShouldFormat(col)
+    ? CellDisplayFormatter.FormatCellValue(rawValue, ColumnTypes[col], FormatStrings[col])
+    : rawValue;
 ```
 
 ---
@@ -258,12 +261,12 @@ source of truth; the TUI would need to replicate that logic and keep it in sync.
 the Engine reject invalid stacks on export/apply is the existing pattern for type
 mismatches.
 
-### Why preserve the default format in `FormatCellValue`?
+### Why apply the default format only to targeted columns?
 
-`LazyTransformer` is a preview renderer. Columns that have never had a
-`FormatTimestampAction` applied should continue to render with the existing default
-`"yyyy-MM-dd HH:mm:ss"`. Using `timestampFormat ?? "yyyy-MM-dd HH:mm:ss"` avoids
-a behaviour change for all existing view configurations.
+Columns no action touched are shown with their original values, the same as when the action
+stack is empty. The default `"yyyy-MM-dd HH:mm:ss"` is applied only to a column cast to
+Timestamp, or when `FormatTimestampAction` has an empty format. Treating an empty format
+the same as an unspecified one keeps the behaviour simple.
 
 ### Why skip silently on unknown column?
 
