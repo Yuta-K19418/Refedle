@@ -3,6 +3,7 @@ using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.App.Cli.Commands.Apply;
 
@@ -47,7 +48,8 @@ internal static class ColumnNameResolver
         }
 
         var fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
-        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(fileBytes, drillDownKeyPath);
+        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(
+            Utf8BomUtility.TrimLeadingUtf8Bom(fileBytes), drillDownKeyPath);
         if (nodeResult.IsFailure)
         {
             return Results.Failure<IReadOnlyList<string>>(nodeResult.Error);

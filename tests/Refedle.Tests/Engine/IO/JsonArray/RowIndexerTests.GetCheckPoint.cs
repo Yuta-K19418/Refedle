@@ -1,3 +1,4 @@
+using System.Text;
 using AwesomeAssertions;
 using Refedle.Engine.IO.JsonArray;
 
@@ -5,6 +6,32 @@ namespace Refedle.Tests.Engine.IO.JsonArray;
 
 public sealed partial class RowIndexerTests
 {
+    [Fact]
+    public void GetCheckPoint_WithUtf8BomAndLaterCheckpoint_ReadsExpectedElement()
+    {
+        // Arrange — 1,500 elements force a second checkpoint; record 1000 must stay readable
+        // at its absolute post-BOM offset.
+        var elements = Enumerable.Range(0, 1500).Select(i => $"{{\"id\":{i}}}");
+        var body = $"[{string.Join(",", elements)}]";
+        File.WriteAllBytes(_testFilePath, [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(body)]);
+        var indexer = new RowIndexer(_testFilePath);
+        indexer.BuildIndex();
+        var marker = "{\"id\":1000}";
+        var expectedOffset = (long)body.IndexOf(marker, StringComparison.Ordinal) + 3; // + BOM bytes
+
+        // Act
+        var (byteOffset, rowOffset) = indexer.GetCheckPoint(1000);
+
+        // Assert
+        indexer.TotalRows.Should().Be(1500);
+        rowOffset.Should().Be(0);
+        byteOffset.Should().Be(expectedOffset);
+        using var reader = new ElementReader(_testFilePath);
+        var elementsAtCheckpoint = reader.ReadElements(byteOffset, rowOffset, 1);
+        elementsAtCheckpoint.Should().HaveCount(1);
+        Encoding.UTF8.GetString(elementsAtCheckpoint[0].Span).Should().Be(marker);
+    }
+
     [Fact]
     public void GetCheckPoint_BeforeBuildIndex_ReturnsNegativeOne()
     {

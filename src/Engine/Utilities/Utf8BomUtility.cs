@@ -17,6 +17,14 @@ public static class Utf8BomUtility
         bytes.Length >= Length && bytes[0] == Byte0 && bytes[1] == Byte1 && bytes[2] == Byte2;
 
     /// <summary>
+    /// Returns <paramref name="bytes"/> without a leading UTF-8 BOM when one is present —
+    /// the in-memory counterpart of <see cref="SkipUtf8Bom"/> for whole-file byte arrays.
+    /// </summary>
+    /// <param name="bytes">Bytes that may begin with a UTF-8 BOM (e.g. a file read into memory).</param>
+    public static ReadOnlyMemory<byte> TrimLeadingUtf8Bom(ReadOnlyMemory<byte> bytes) =>
+        StartsWithUtf8Bom(bytes.Span) ? bytes[Length..] : bytes;
+
+    /// <summary>
     /// Advances <paramref name="stream"/> past a UTF-8 BOM at its current position, or leaves the
     /// position unchanged when no BOM is present (including streams shorter than the BOM).
     /// </summary>

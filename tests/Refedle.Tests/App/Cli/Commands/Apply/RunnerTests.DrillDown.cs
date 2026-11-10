@@ -70,6 +70,49 @@ public sealed partial class RunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_JsonObjectToCsv_WithUtf8BomPrefixedInput_WritesTheDrilledDownRows()
+    {
+        // Arrange — a UTF-8 BOM at the start of the input must not break KeyPath resolution.
+        var inputFile = CreateTestFileWithUtf8Bom(
+            "input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        var outputFile = Path.Combine(_testDir, "output.csv");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().Be("id,item\n1,a\n2,b\n");
+    }
+
+    [Fact]
+    public async Task RunAsync_JsonArrayToJson_WithUtf8BomPrefixedInput_WritesTheFullAggregationRows()
+    {
+        // Arrange — a UTF-8 BOM at the start of the input must not break element indexing.
+        var inputFile = CreateTestFileWithUtf8Bom(
+            "input.json",
+            """[{"orders":[{"id":1,"item":"a"}]},{"orders":[{"id":2,"item":"b"},{"id":3,"item":"c"}]}]""");
+        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        var outputFile = Path.Combine(_testDir, "output.json");
+        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        var logger = new TestAppLogger();
+
+        // Act
+        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Success);
+        logger.Errors.Count.Should().Be(0);
+        var output = await File.ReadAllTextAsync(outputFile);
+        output.Should().Be("""[{"id":1,"item":"a"},{"id":2,"item":"b"},{"id":3,"item":"c"}]""");
+    }
+
+    [Fact]
     public async Task RunAsync_JsonArrayToJson_WithDrillDownRecipe_WritesTheFullAggregationRowsAsAJsonArray()
     {
         // Arrange — Full Aggregation: the KeyPath is traversed for every top-level array element.

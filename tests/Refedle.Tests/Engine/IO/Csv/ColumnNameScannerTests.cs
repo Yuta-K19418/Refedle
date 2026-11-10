@@ -34,6 +34,19 @@ public sealed class ColumnNameScannerTests : IDisposable
     }
 
     [Fact]
+    public void ScanColumnNames_WithUtf8Bom_ReturnsNamesWithoutBomInFirstColumn()
+    {
+        // Arrange — the Sep reader strips a UTF-8 BOM; it must not leak into the first name.
+        File.WriteAllBytes(_testFilePath, [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("name,age\nAlice,30")]);
+
+        // Act
+        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+
+        // Assert
+        names.Should().Equal(["name", "age"]);
+    }
+
+    [Fact]
     public void ScanColumnNames_WithHeaderOnlyFile_ReturnsNamesWithoutReadingDataRows()
     {
         // Arrange

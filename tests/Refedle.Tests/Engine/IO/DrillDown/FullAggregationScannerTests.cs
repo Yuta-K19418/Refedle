@@ -24,14 +24,24 @@ public sealed class FullAggregationScannerTests : IDisposable
         }
     }
 
-    private string CreateTempFile(DataFormat format, params string[] records)
+    private string CreateTempFile(DataFormat format, params string[] records) =>
+        WriteTempFile(format, withUtf8Bom: false, records);
+
+    private string CreateTempFileWithUtf8Bom(DataFormat format, params string[] records) =>
+        WriteTempFile(format, withUtf8Bom: true, records);
+
+    private string WriteTempFile(DataFormat format, bool withUtf8Bom, string[] records)
     {
         var extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
         var path = Path.ChangeExtension(Path.GetTempFileName(), extension);
         var content = format == DataFormat.JsonArray
             ? $"[{string.Join(",", records)}]"
             : string.Join("\n", records);
-        File.WriteAllText(path, content);
+        var bytes = withUtf8Bom
+            ? [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]
+            : Encoding.UTF8.GetBytes(content);
+        File.WriteAllBytes(path, bytes);
+
         _tempFiles.Add(path);
         return path;
     }
@@ -52,6 +62,27 @@ public sealed class FullAggregationScannerTests : IDisposable
         => [.. segments.Select(static s => new KeyPathSegment(
             s,
             s.StartsWith('[') ? KeyPathSegmentKind.Index : KeyPathSegmentKind.Key))];
+
+    [Fact]
+    public void Scan_WithUtf8BomPrefixedJsonArray_ReturnsOneRowPerRecord()
+    {
+        // Arrange — the ScanElements path must skip the BOM like the JSON Lines path does.
+        var path = CreateTempFileWithUtf8Bom(
+            DataFormat.JsonArray,
+            """{"user":{"name":"Alice","age":30}}""",
+            """{"user":{"name":"Bob","age":25}}""");
+
+        // Act
+        var result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("user"));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.rows.Should().HaveCount(2);
+        result.Value.rows[0].HashValue.Should().Be("0");
+        result.Value.rows[1].HashValue.Should().Be("1");
+        GetProperty(result.Value.rows[0].Bytes, "name").GetString().Should().Be("Alice");
+        GetProperty(result.Value.rows[1].Bytes, "name").GetString().Should().Be("Bob");
+    }
 
     [Theory]
     [InlineData(DataFormat.JsonLines)]
@@ -535,7 +566,8 @@ public sealed class FullAggregationScannerTests : IDisposable
     /// following "note" record's value straddles that boundary, forcing a FillBuffer carry-over
     /// (JsonLines) or a multi-segment Utf8JsonReader continuation (JsonArray) mid-value.
     /// </summary>
-    private (string path, string expectedValue) CreateBoundaryStraddlingFile(DataFormat format)
+    private (string path, string expectedValue) CreateBoundaryStraddlingFile(
+        DataFormat format, bool withUtf8Bom = false)
     {
         const int remaining = 100;
         const int targetValueLength = 500;
@@ -553,7 +585,11 @@ public sealed class FullAggregationScannerTests : IDisposable
         var extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
 
         var path = Path.ChangeExtension(Path.GetTempFileName(), extension);
-        File.WriteAllText(path, content);
+        var bytes = withUtf8Bom
+            ? [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]
+            : Encoding.UTF8.GetBytes(content);
+        File.WriteAllBytes(path, bytes);
+
         _tempFiles.Add(path);
         return (path, targetValue);
     }
@@ -569,6 +605,22 @@ public sealed class FullAggregationScannerTests : IDisposable
 
         // Act
         var result = FullAggregationScanner.Scan(path, format, KeyPath("note"));
+
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.rows.Should().HaveCount(1);
+        GetProperty(result.Value.rows[0].Bytes, "note").GetString().Should().Be(expectedValue);
+    }
+
+    [Fact]
+    public void Scan_WithUtf8BomAndJsonArrayElementSpanningBufferBoundary_ParsesRecordWithoutCorruption()
+    {
+        // Arrange — the boundary-straddling JSON Array fixture prefixed with a BOM: the shifted
+        // start offset must not corrupt the multi-segment reader continuation mid-value.
+        var (path, expectedValue) = CreateBoundaryStraddlingFile(DataFormat.JsonArray, withUtf8Bom: true);
+
+        // Act
+        var result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("note"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();

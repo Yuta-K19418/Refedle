@@ -196,6 +196,25 @@ public sealed class ColumnNameResolverTests : IDisposable
     }
 
     [Fact]
+    public async Task ResolveColumnNames_WithJsonObjectAndUtf8Bom_ReturnsDrilledDownColumnNames()
+    {
+        // Arrange — a UTF-8 BOM at the start of the file must not break KeyPath resolution.
+        var inputFile = Path.Combine(_testDir, "input.json");
+        File.WriteAllBytes(
+            inputFile,
+            [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("""{"orders":[{"id":1,"item":"a"},{"id":2}]}""")]);
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+
+        // Act
+        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+            DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
+
+        // Assert
+        namesResult.IsSuccess.Should().BeTrue();
+        namesResult.Value.Should().Equal(["id", "item"]);
+    }
+
+    [Fact]
     public async Task ResolveColumnNames_WithJsonObjectAndKeyPath_ReturnsDrilledDownColumnNames()
     {
         // Arrange — the union of the child objects' keys, in first-seen order.

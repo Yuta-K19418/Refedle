@@ -69,6 +69,25 @@ public sealed class ElementReaderTests : IDisposable
     }
 
     [Fact]
+    public void ReadElements_WithUtf8BomPrefixedFile_ReadsElementsFromPostBomCheckpoint()
+    {
+        // Arrange — the checkpoint comes from the BOM-aware RowIndexer: BOM (3) + root '[' (1) = 4.
+        WriteTestContent("""[{"a":1},{"a":2}]""", new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        var (byteOffset, rowOffset) = GetFirstCheckpoint(_testFilePath);
+
+        // Act
+        using var reader = new ElementReader(_testFilePath);
+        var elements = reader.ReadElements(byteOffset, rowOffset, 2);
+
+        // Assert
+        byteOffset.Should().Be(4L);
+        rowOffset.Should().Be(0);
+        elements.Should().HaveCount(2);
+        Encoding.UTF8.GetString(elements[0].Span).Should().Be("""{"a":1}""");
+        Encoding.UTF8.GetString(elements[1].Span).Should().Be("""{"a":2}""");
+    }
+
+    [Fact]
     public void Constructor_WithNonExistentFile_ThrowsInvalidOperationException()
     {
         // Arrange

@@ -492,4 +492,11 @@ public sealed partial class RunnerTests : IDisposable
         File.WriteAllText(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return filePath;
     }
+
+    private string CreateTestFileWithUtf8Bom(string fileName, string content)
+    {
+        var filePath = Path.Combine(_testDir, fileName);
+        File.WriteAllBytes(filePath, [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]);
+        return filePath;
+    }
 }

@@ -81,8 +81,13 @@ public sealed class RowIndexer : RowIndexerBase
             );
 
             var state = default(JsonReaderState);
-            var bufferOriginFileOffset = 0L;
-            var fileReadOffset = 0L;
+            // Both offsets start after a leading UTF-8 BOM so checkpoints remain absolute
+            // file offsets that ElementReader can read back from the memory map directly.
+            var dataOffset = handle.GetOffsetAfterUtf8Bom();
+            // Count the skipped BOM once so a completed scan reports BytesRead == FileSize.
+            Interlocked.Add(ref _bytesRead, dataOffset);
+            var bufferOriginFileOffset = dataOffset;
+            var fileReadOffset = dataOffset;
             var remainingLen = 0;
             var elementCount = 0L;
             var currentElementStart = -1L;
