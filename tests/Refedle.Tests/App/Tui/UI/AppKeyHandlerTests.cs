@@ -7,6 +7,8 @@ using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.IO.JsonArray;
+using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -15,6 +17,8 @@ using Refedle.Tests.App.Tui.Workers.Schema;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
+using JsonArrayRowIndexer = Refedle.Engine.IO.JsonArray.RowIndexer;
+using JsonLinesRowIndexer = Refedle.Engine.IO.JsonLines.RowIndexer;
 
 namespace Refedle.Tests.App.Tui.UI;
 
@@ -420,6 +424,106 @@ public sealed class AppKeyHandlerTests
 
         // Guard 3: mixed-type children (object + value) fail the "all children must be objects" check.
         yield return [(new JsonArrayTreeNode("[{},1]"u8.ToArray()))];
+    }
+
+    [Fact]
+    public async Task HandleActionMenu_WhenJsonLinesRangeNodeSelected_ReturnsFalse()
+    {
+        // Arrange — a range node is a paging container whose KeyPath is empty, so the action
+        // menu must not open for it. Enter auto-closes the dialog if the guard ever regresses,
+        // making the assertion fail instead of the test hanging on the modal loop.
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+        File.WriteAllText(filePath, "{\"id\":1}\n{\"id\":2}");
+        try
+        {
+            // The test owns the reader behind the range node; declaring it before the session
+            // makes it dispose after the session ends but before the temp file is deleted.
+            using var reader = new RowReader(filePath);
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState();
+                state.StartNewFile(filePath);
+                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+                var indexer = new JsonLinesRowIndexer(filePath);
+                indexer.BuildIndex();
+                viewManager.SwitchToJsonLinesTree(indexer);
+                var treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonLinesTree");
+                treeView.SelectedObject = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2L);
+                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+            });
+
+            // Act
+            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+
+            // Assert
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task HandleActionMenu_WhenJsonArrayRangeNodeSelected_ReturnsFalse()
+    {
+        // Arrange — same regression guard as the JSON Lines case, on the JSON Array tree view.
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        File.WriteAllText(filePath, "[1,2]");
+        try
+        {
+            // The test owns the reader behind the range node; declaring it before the session
+            // makes it dispose after the session ends but before the temp file is deleted.
+            using var reader = new ElementReader(filePath);
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var state = new AppState();
+                state.StartNewFile(filePath);
+                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+                var indexer = new JsonArrayRowIndexer(filePath);
+                indexer.BuildIndex();
+                viewManager.SwitchToJsonArrayTree(indexer);
+                var treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonArrayTree");
+                treeView.SelectedObject = new JsonArrayRangeTreeNode(indexer, reader, 0L, 2L);
+                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+            });
+
+            // Act
+            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+
+            // Assert
+            result.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    /// <summary>
+    /// Returns the current view as a <see cref="MorphTreeView"/>, or throws when the tree
+    /// switch failed to install one — a broken setup, not a nullable expectation.
+    /// </summary>
+    private static MorphTreeView GetCurrentTreeViewOrThrow(ViewManager viewManager, string treeSwitchName)
+    {
+        var currentView = viewManager.GetCurrentView();
+        if (currentView is not MorphTreeView treeView)
+        {
+            throw new InvalidOperationException(
+                $"{treeSwitchName} must install a MorphTreeView as the current view, but found: {currentView?.ToString() ?? "null"}");
+        }
+
+        return treeView;
     }
 
     /// <summary>
