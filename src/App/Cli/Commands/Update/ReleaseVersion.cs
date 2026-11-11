@@ -20,7 +20,7 @@ internal readonly record struct ReleaseVersion(int Major, int Minor, int Patch) 
     /// <returns><c>true</c> when the text is a valid version; otherwise <c>false</c>.</returns>
     public static bool TryParse(string text, out ReleaseVersion version)
     {
-        var body = text.StartsWith('v') ? text[1..] : text;
+        var body = text.StartsWith('v', StringComparison.Ordinal) ? text[1..] : text;
         var parts = body.Split('.');
         if (parts.Length != 3)
         {

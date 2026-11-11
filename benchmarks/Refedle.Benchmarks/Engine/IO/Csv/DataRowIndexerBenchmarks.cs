@@ -7,8 +7,8 @@ namespace Refedle.Benchmarks.Engine.IO.Csv;
 /// <summary>
 /// Benchmarks CSV row indexing.
 /// </summary>
-[SimpleJob(RuntimeMoniker.Net10_0)]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.Net11_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 [MemoryDiagnoser]
 [HideColumns("Error", "StdDev", "Median", "RatioSD")]
 public class DataRowIndexerBenchmarks : IDisposable

@@ -7,7 +7,7 @@ namespace Refedle.Benchmarks.Engine.IO.JsonObject;
 /// <summary>
 /// Benchmarks top-level JSON object scanning.
 /// </summary>
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 [MemoryDiagnoser]
 public class TopLevelScannerBenchmarks
 {

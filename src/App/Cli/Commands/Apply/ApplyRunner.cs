@@ -29,7 +29,7 @@ internal static class ApplyRunner
         var parseResult = ArgumentParser.Parse(args);
         if (parseResult.IsFailure)
         {
-            await Console.Error.WriteLineAsync(parseResult.Error).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(parseResult.Error, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 

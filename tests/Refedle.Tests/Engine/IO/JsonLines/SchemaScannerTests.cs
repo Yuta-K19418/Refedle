@@ -9,7 +9,7 @@ public sealed partial class SchemaScannerTests
 {
     private static JsonRawBytes Line(string json) =>
         new JsonRawBytes(
-            JsonSerializer.SerializeToUtf8Bytes(JsonDocument.Parse(json).RootElement)
+            JsonSerializer.SerializeToUtf8Bytes(JsonElement.Parse(json))
         );
 
     private static void AssertColumn(

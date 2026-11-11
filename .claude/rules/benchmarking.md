@@ -30,8 +30,8 @@ paths:
 - Benchmarks **must** be executed under the `NativeAot` toolchain so measurements reflect real-world Native AOT deployment
 - Standard job attributes on a benchmark class:
   ```csharp
-  [SimpleJob(RuntimeMoniker.Net10_0)]
-  [SimpleJob(RuntimeMoniker.NativeAot10_0)]
+  [SimpleJob(RuntimeMoniker.Net11_0)]
+  [SimpleJob(RuntimeMoniker.NativeAot11_0)]
   [MemoryDiagnoser]
   public class DataRowIndexerBenchmarks
   ```

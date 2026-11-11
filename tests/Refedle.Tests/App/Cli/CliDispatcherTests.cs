@@ -73,6 +73,22 @@ public sealed class CliDispatcherTests : IDisposable
         File.Exists(outputFile).Should().BeTrue();
     }
 
+    [Fact]
+    public async Task RunAsync_WithApplyCommand_WhenRequiredFlagMissing_ReturnsFailure()
+    {
+        // Arrange — missing required --recipe/--output flags fail argument parsing
+        // before any processing starts.
+        string[] args = ["apply", "--input", "x.csv"];
+        var logger = new TestAppLogger();
+        var statusReporter = new TestStatusReporter();
+
+        // Act
+        var exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
+
+        // Assert
+        exitCode.Should().Be(ExitCode.Failure);
+    }
+
     [Theory]
     [InlineData()]
     [InlineData("--input", "x.csv")]

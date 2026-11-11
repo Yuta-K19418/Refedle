@@ -9,8 +9,8 @@ namespace Refedle.Benchmarks.App.Tui.Workers.Schema.JsonLines;
 /// Benchmarks the background schema scan of the JSON Lines incremental schema scanner, including file I/O.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net10_0)]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.Net11_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class IncrementalSchemaScannerBenchmarks : IncrementalSchemaScannerBenchmarksBase
 {
     /// <inheritdoc/>

@@ -8,8 +8,8 @@ namespace Refedle.Benchmarks.Engine.IO.JsonLines;
 /// <summary>
 /// Benchmarks JSON Lines line reading for short and long lines.
 /// </summary>
-[SimpleJob(RuntimeMoniker.Net10_0)]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.Net11_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 [MemoryDiagnoser]
 public class RowReaderBenchmarks : IDisposable
 {
