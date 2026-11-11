@@ -20,6 +20,48 @@ public sealed class JsonObjectCellExtractorTests
     }
 
     [Fact]
+    public void ExtractCell_EscapedStringValue_ResolvesEscapeSequences()
+    {
+        // Arrange
+        var line = "{\"memo\": \"caf\\u00e9 \\u8336\\n\\\"quoted\\\" \\ud83d\\ude00\"}"u8;
+        var columnName = "memo"u8;
+
+        // Act
+        var result = JsonObjectCellExtractor.ExtractCell(line, columnName);
+
+        // Assert
+        result.Should().Be("café 茶\n\"quoted\" 😀");
+    }
+
+    [Fact]
+    public void ExtractCell_EscapedValueWithInvalidUtf8_ReturnsRawText()
+    {
+        // Arrange: the value token contains both an escape and an invalid UTF-8 byte (0xFF)
+        byte[] line = [.. "{\"memo\": \"a\\nb"u8, 0xFF, .. "\"}"u8];
+        var columnName = "memo"u8;
+
+        // Act
+        var result = JsonObjectCellExtractor.ExtractCell(line, columnName);
+
+        // Assert
+        result.Should().Be("a\\nb\uFFFD");
+    }
+
+    [Fact]
+    public void ExtractCell_UnescapedInvalidUtf8Value_ReturnsReplacementText()
+    {
+        // Arrange: bytes 0xC3 0x28 are not a valid UTF-8 sequence
+        byte[] line = [.. "{\"memo\": \""u8, 0xC3, 0x28, .. "\"}"u8];
+        var columnName = "memo"u8;
+
+        // Act
+        var result = JsonObjectCellExtractor.ExtractCell(line, columnName);
+
+        // Assert
+        result.Should().Be("\uFFFD(");
+    }
+
+    [Fact]
     public void ExtractCell_IntegerValue_ReturnsNumberAsString()
     {
         // Arrange

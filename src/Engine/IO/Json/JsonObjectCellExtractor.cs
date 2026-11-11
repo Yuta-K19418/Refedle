@@ -1,7 +1,7 @@
 using System.Buffers.Text;
 using System.Globalization;
-using System.Text;
 using System.Text.Json;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.Engine.IO.Json;
 
@@ -91,7 +91,7 @@ public static class JsonObjectCellExtractor
 
         return reader.TokenType switch
         {
-            JsonTokenType.String => Encoding.UTF8.GetString(reader.ValueSpan),
+            JsonTokenType.String => StringUtility.DecodeJsonString(ref reader),
             JsonTokenType.True => "True",
             JsonTokenType.False => "False",
             JsonTokenType.Null => NullValue,

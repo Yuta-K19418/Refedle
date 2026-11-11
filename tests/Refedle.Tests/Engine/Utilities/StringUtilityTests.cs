@@ -4,7 +4,7 @@ using Refedle.Engine.Utilities;
 
 namespace Refedle.Tests.Engine.Utilities;
 
-public sealed class StringUtilityTests
+public sealed partial class StringUtilityTests
 {
     [Theory]
     [InlineData("", true)]
