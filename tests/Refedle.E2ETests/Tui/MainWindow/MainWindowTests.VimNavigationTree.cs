@@ -32,14 +32,16 @@ public sealed partial class MainWindowTests
         var afterUp = await Harness.WaitForSelectedCellAsync(cell => cell == (3, 1));
         afterUp.Should().Be((3, 1));
 
-        // h/l map to collapse/expand (Terminal.Gui's CursorLeft/CursorRight), which is a no-op
-        // here since these array-element nodes render fully expanded already; the selection
-        // itself must stay put rather than moving to a different node.
+        // In the tree, h/l do not collapse or expand (Enter does), so the selection must stay put.
+        // A pre-key frame also shows (3, 1), so wait for the key to be processed and drawn before
+        // reading; otherwise this passes even if the key moved the selection.
         Harness.SendKey(KeyCode.L);
+        await Harness.WaitForInputProcessedAsync();
         var afterRight = await Harness.GetSelectedCellAsync();
         afterRight.Should().Be((3, 1));
 
         Harness.SendKey(KeyCode.H);
+        await Harness.WaitForInputProcessedAsync();
         var afterLeft = await Harness.GetSelectedCellAsync();
         afterLeft.Should().Be((3, 1));
 
