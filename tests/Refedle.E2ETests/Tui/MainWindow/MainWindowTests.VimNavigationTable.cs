@@ -22,7 +22,7 @@ public sealed partial class MainWindowTests
         // The initially selected cell (Row1, name) renders at screen row 6, column 2. Each
         // column is 12 screen columns wide including its separator, so the "age" column's
         // selected cell starts at column 14.
-        var initialCell = await Harness.GetSelectedCellAsync();
+        var initialCell = await Harness.WaitForSelectedCellAsync(cell => cell == (6, 2));
         initialCell.Should().Be((6, 2));
 
         // Act & Assert: h/j/k/l each move the selection highlight by exactly one row/column.

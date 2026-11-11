@@ -20,7 +20,7 @@ public sealed partial class MainWindowTests
         // The initially selected node is "[0]:", rendered at screen row 3 (below the window
         // border, menu bar, and "root" line) and column 1 (the tree line's own prefix character,
         // e.g. "├" or "└").
-        var initialCell = await Harness.GetSelectedCellAsync();
+        var initialCell = await Harness.WaitForSelectedCellAsync(cell => cell == (3, 1));
         initialCell.Should().Be((3, 1));
 
         // Act & Assert: j/k move the selection to the neighboring node.
