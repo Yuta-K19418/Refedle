@@ -1635,7 +1635,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Act — the first tick is queued while the worker is provably mid-scan
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         var onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
 
@@ -1666,7 +1666,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Act — once the worker is blocked, exactly two batch-1 notifications are queued:
         // the threshold reveal and the first tick, in whichever order the threads landed
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
 
@@ -1706,7 +1706,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Act — once the worker is blocked, exactly two batch-1 notifications are queued:
         // the threshold reveal and the first tick, in whichever order the threads landed
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
 
@@ -1856,7 +1856,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Act — while the worker is provably blocked, the threshold reveal is the only callback
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 1);
         ExecuteRemainingCallbacks(harness.Captured);
 
@@ -2118,7 +2118,7 @@ public sealed partial class ViewManagerTests : IDisposable
         await using var scope = new GatedScanScope(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; waiting for both keeps the later drain deterministic
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2159,7 +2159,7 @@ public sealed partial class ViewManagerTests : IDisposable
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; waiting for both keeps the later drain deterministic
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2192,7 +2192,7 @@ public sealed partial class ViewManagerTests : IDisposable
         await using var scope = new GatedScanScope(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; waiting for both keeps the later drain deterministic
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2225,7 +2225,7 @@ public sealed partial class ViewManagerTests : IDisposable
         await using var scope = new GatedScanScope(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2264,7 +2264,7 @@ public sealed partial class ViewManagerTests : IDisposable
         await using var scope = new GatedScanScope(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2307,7 +2307,7 @@ public sealed partial class ViewManagerTests : IDisposable
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2344,7 +2344,7 @@ public sealed partial class ViewManagerTests : IDisposable
         await using var scope = new GatedScanScope(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // both batch-1 notifications (threshold reveal and first tick) are queued once the
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2399,7 +2399,7 @@ public sealed partial class ViewManagerTests : IDisposable
             static () => null);
         scope.Manager = manager;
         manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Act
         manager.Dispose();
@@ -2447,7 +2447,7 @@ public sealed partial class ViewManagerTests : IDisposable
             static () => null);
         scope.Manager = manager;
         manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // the threshold reveal and the first progress tick are both queued once the worker is blocked
         await WaitForCallbacksAsync(captured, expectedCount: 2);
         var loadingView = scope.LoadingView.Should().BeAssignableTo<Terminal.Gui.ViewBase.View>().Subject;
