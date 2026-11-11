@@ -5,6 +5,66 @@ namespace Refedle.Tests.Engine.IO.JsonArray;
 
 public sealed partial class RowIndexerTests
 {
+    private void WriteTestFileWithUtf8Bom(string content) =>
+        File.WriteAllBytes(_testFilePath, [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes(content)]);
+
+    [Fact]
+    public void BuildIndex_WithUtf8Bom_IndexesAllElementsWithPostBomCheckpoints()
+    {
+        // Arrange
+        WriteTestFileWithUtf8Bom("[{\"a\":1},{\"a\":2},{\"a\":3}]");
+        var indexer = new RowIndexer(_testFilePath);
+
+        // Act
+        indexer.BuildIndex();
+
+        // Assert — checkpoints stay absolute file offsets: BOM (3) + root '[' (1) = 4.
+        indexer.TotalRows.Should().Be(3);
+        indexer.GetCheckPoint(0).Should().Be((4L, 0));
+    }
+
+    [Fact]
+    public void BuildIndex_WithUtf8Bom_ReportsBytesReadMatchingFileSize()
+    {
+        // Arrange
+        WriteTestFileWithUtf8Bom("[{\"a\":1},{\"a\":2}]");
+        var indexer = new RowIndexer(_testFilePath);
+
+        // Act
+        indexer.BuildIndex();
+
+        // Assert
+        indexer.BytesRead.Should().Be(new FileInfo(_testFilePath).Length);
+    }
+
+    [Fact]
+    public void BuildIndex_WithOnlyUtf8Bom_ReportsBytesReadMatchingFileSize()
+    {
+        // Arrange
+        WriteTestFileWithUtf8Bom(string.Empty);
+        var indexer = new RowIndexer(_testFilePath);
+
+        // Act
+        indexer.BuildIndex();
+
+        // Assert
+        indexer.BytesRead.Should().Be(new FileInfo(_testFilePath).Length);
+    }
+
+    [Fact]
+    public void BuildIndex_WithOnlyUtf8Bom_ReturnsZeroTotalRows()
+    {
+        // Arrange — a BOM-only file has no JSON content to index.
+        WriteTestFileWithUtf8Bom(string.Empty);
+        var indexer = new RowIndexer(_testFilePath);
+
+        // Act
+        indexer.BuildIndex();
+
+        // Assert
+        indexer.TotalRows.Should().Be(0);
+    }
+
     [Fact]
     public void BuildIndex_WithEmptyArray_ReturnsZeroTotalRows()
     {

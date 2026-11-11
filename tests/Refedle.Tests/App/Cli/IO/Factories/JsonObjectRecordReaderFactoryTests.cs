@@ -82,6 +82,30 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_WithUtf8BomPrefixedInput_ReturnsReaderOverResolvedRows()
+    {
+        // Arrange — a UTF-8 BOM at the start of the file must not break KeyPath resolution.
+        var inputFile = Path.Combine(_testDir, "input.json");
+        File.WriteAllBytes(
+            inputFile,
+            [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("""{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""")]);
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+        var factory = new JsonObjectRecordReaderFactory();
+
+        // Act
+        using var reader = await factory.CreateAsync(
+            inputFile, keyPath, ["id", "item"], BuildOutputSchema("id", "item"), new TestAppLogger(), CancellationToken.None);
+
+        // Assert
+        (await reader.MoveNextAsync(default)).Should().BeTrue();
+        reader.GetCellData(0).Value.ToString().Should().Be("1");
+        reader.GetCellData(1).Value.ToString().Should().Be("a");
+        (await reader.MoveNextAsync(default)).Should().BeTrue();
+        reader.GetCellData(0).Value.ToString().Should().Be("2");
+        (await reader.MoveNextAsync(default)).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task CreateAsync_WithValidKeyPath_ReturnsReaderOverResolvedRows()
     {
         // Arrange

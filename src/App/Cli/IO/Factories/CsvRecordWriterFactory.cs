@@ -14,7 +14,9 @@ internal readonly struct CsvRecordWriterFactory : IRecordWriterFactory<CsvRecord
         IAppLogger logger,
         CancellationToken ct)
     {
-        StreamWriter writer = new(outputFile, append: false, Encoding.UTF8);
+        // Match the other output writers: UTF-8 without a BOM.
+        StreamWriter writer = new(
+            outputFile, append: false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return new(new CsvRecordWriter(writer, outputSchema));
     }
 }

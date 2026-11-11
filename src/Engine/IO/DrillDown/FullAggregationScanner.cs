@@ -173,8 +173,8 @@ public static class FullAggregationScanner
         try
         {
             var state = default(JsonReaderState);
-            var bufferOriginFileOffset = 0L;
-            var fileReadOffset = 0L;
+            var fileReadOffset = mmap.GetOffsetAfterUtf8Bom();
+            var bufferOriginFileOffset = fileReadOffset;
             var remainingLen = 0;
             var recordPosition = 0L;
             var currentElementStart = -1L;

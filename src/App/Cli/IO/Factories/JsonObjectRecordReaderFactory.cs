@@ -2,6 +2,7 @@ using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Types;
+using Refedle.Engine.Utilities;
 
 namespace Refedle.App.Cli.IO.Factories;
 
@@ -30,7 +31,8 @@ internal readonly struct JsonObjectRecordReaderFactory : IRecordReaderFactory<Js
         }
 
         var fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
-        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(fileBytes, drillDownKeyPath);
+        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(
+            Utf8BomUtility.TrimLeadingUtf8Bom(fileBytes), drillDownKeyPath);
         if (nodeResult.IsFailure)
         {
             throw new InvalidOperationException(nodeResult.Error);

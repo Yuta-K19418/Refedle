@@ -8,6 +8,39 @@ public sealed partial class TopLevelScannerTests
 {
     private static JsonRawBytes Utf8(string s) => Encoding.UTF8.GetBytes(s);
 
+    private void WriteTestFileWithUtf8Bom(string content) =>
+        File.WriteAllBytes(_testFilePath, [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]);
+
+    [Fact]
+    public void Scan_WithUtf8Bom_ReturnsSameEntriesAsWithoutBom()
+    {
+        // Arrange
+        WriteTestFileWithUtf8Bom("{\"k\":\"v\",\"n\":42}");
+
+        // Act
+        var result = TopLevelScanner.Scan(_testFilePath);
+
+        // Assert
+        result.Should().HaveCount(2);
+        result[0].Key.Should().Be("k");
+        result[0].Value.ToArray().Should().BeEquivalentTo(Utf8("\"v\"").ToArray());
+        result[1].Key.Should().Be("n");
+        result[1].Value.ToArray().Should().BeEquivalentTo(Utf8("42").ToArray());
+    }
+
+    [Fact]
+    public void Scan_WithOnlyUtf8Bom_ReturnsEmptyList()
+    {
+        // Arrange — a BOM-only file has no JSON content to scan.
+        WriteTestFileWithUtf8Bom(string.Empty);
+
+        // Act
+        var result = TopLevelScanner.Scan(_testFilePath);
+
+        // Assert
+        result.Should().BeEmpty();
+    }
+
     [Fact]
     public void Scan_WithEmptyObject_ReturnsEmptyList()
     {
@@ -323,6 +356,24 @@ public sealed partial class TopLevelScannerTests
         var innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
         var innerObject = $"{{{innerFields}}}";
         File.WriteAllText(_testFilePath, $"{{\"big\":{innerObject}}}");
+
+        // Act
+        var result = TopLevelScanner.Scan(_testFilePath);
+
+        // Assert
+        result.Should().HaveCount(1);
+        result[0].Key.Should().Be("big");
+        result[0].Value.ToArray().Should().BeEquivalentTo(Utf8(innerObject).ToArray());
+    }
+
+    [Fact]
+    public void Scan_WithUtf8BomAndLargeNestedValueSpanningBufferBoundary_CapturesCorrectBytes()
+    {
+        // Arrange — the existing buffer-refill fixture prefixed with a BOM: the shifted start
+        // offset must not corrupt the buffer-origin arithmetic around the straddling value.
+        var innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
+        var innerObject = $"{{{innerFields}}}";
+        WriteTestFileWithUtf8Bom($"{{\"big\":{innerObject}}}");
 
         // Act
         var result = TopLevelScanner.Scan(_testFilePath);

@@ -36,7 +36,7 @@ public static class TopLevelScanner
                 FileShare.Read
             );
             var fileSize = RandomAccess.GetLength(handle);
-            var state = new JsonScanState(fileSize);
+            var state = new JsonScanState(fileSize, handle.GetOffsetAfterUtf8Bom());
             var rootCompleted = false;
             List<JsonObjectEntry> result = [];
             var keyIndex = new Dictionary<string, int>(StringComparer.Ordinal);

@@ -69,6 +69,23 @@ public sealed class RecipeManagerTests : IDisposable
     }
 
     [Fact]
+    public async Task SaveAsync_WritesFileWithoutUtf8Bom()
+    {
+        // Arrange
+        var manager = new RecipeManager();
+        var filePath = Path.Combine(_testDir, "recipe.yaml");
+        var recipe = new Recipe { Name = "test", Actions = [] };
+
+        // Act
+        var result = await manager.SaveAsync(recipe, filePath);
+
+        // Assert — check the BOM bytes literally so the test does not depend on the input-side utility.
+        result.IsSuccess.Should().BeTrue();
+        byte[] utf8Bom = [0xEF, 0xBB, 0xBF];
+        File.ReadAllBytes(filePath).AsSpan(0, 3).SequenceEqual(utf8Bom).Should().BeFalse();
+    }
+
+    [Fact]
     public async Task SaveAsync_OverwritesExistingFile()
     {
         // Arrange
