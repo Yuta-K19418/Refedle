@@ -49,7 +49,9 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// dialogs can be driven key by key; marshaling through <see cref="IApplication.Invoke(Action)"/>
     /// instead stalls once a key opens a modal dialog, because the nested run loop never drains the
     /// queued callback that would unblock the caller. Deliberately fire-and-forget: observe effects
-    /// through <see cref="WaitForContentsAsync"/> or <see cref="CaptureAsync"/> instead.
+    /// through <see cref="WaitForContentsAsync"/> or <see cref="CaptureAsync"/> instead — or, when
+    /// asserting that a key changed nothing, through <see cref="WaitForInputProcessedAsync"/>
+    /// followed by an immediate read, since a pre-key frame can show the same content.
     /// </summary>
     /// <param name="keyCode">The key to press, without modifiers unless required.</param>
     public void SendKey(KeyCode keyCode)
@@ -89,6 +91,47 @@ internal sealed class TuiTestHarness : IAsyncDisposable
             }
 
             SendKey(keyCode);
+        }
+    }
+
+    /// <summary>
+    /// Queues a completion marker behind every input queued before this call and waits until the
+    /// marker runs. The input queue delivers one input per run-loop iteration in FIFO order, so the
+    /// marker runs in a strictly later iteration than the last queued key. Within one iteration the
+    /// order is: <see cref="IApplication.Iteration"/> event (where queued inputs run), driver input,
+    /// layout and drawing, then timeouts and <see cref="IApplication.Invoke(Action)"/> callbacks.
+    /// <para>
+    /// Guarantee: a read made after this returns sees the frame drawn for effects the key caused
+    /// <em>synchronously</em> while it was handled. Effects deferred through <c>Invoke</c> or a timeout
+    /// run after that iteration's drawing and may not be drawn yet; this barrier does not cover them.
+    /// </para>
+    /// <para>
+    /// Preconditions: (a) the run loop has already drawn its first frame, because drawing is skipped
+    /// while it waits for the ANSI startup gate; (b) the handlers of the earlier keys return without
+    /// entering a nested loop. A key that opens a modal dialog does not satisfy (b): the nested loop can
+    /// run the marker before that handler returns and before the outer iteration has drawn, so the
+    /// marker cannot prove such a key finished. The barrier does work for keys sent to a dialog that is
+    /// already open, since Iteration events keep firing in its nested loop.
+    /// </para>
+    /// Await this before an immediate read (e.g. <see cref="GetSelectedCellAsync"/> or
+    /// <see cref="CaptureAsync"/>) when asserting that a key changed nothing: an unwaited read can land
+    /// on a pre-key frame that shows the same content and would pass even if the key had never been
+    /// processed. Throws <see cref="TimeoutException"/> after <see cref="_pollTimeout"/>.
+    /// </summary>
+    public async Task WaitForInputProcessedAsync()
+    {
+        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        AttachIterationPump();
+        _pendingInputs.Enqueue(() => completion.TrySetResult());
+
+        using var timeoutCts = new CancellationTokenSource(_pollTimeout);
+        try
+        {
+            await completion.Task.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException($"Queued inputs were not processed within {_pollTimeout}.");
         }
     }
 
