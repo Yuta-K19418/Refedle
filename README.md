@@ -5,7 +5,7 @@
 [![Quality gate status](https://sonarcloud.io/api/project_badges/measure?project=Yuta-K19418_Refedle&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Yuta-K19418_Refedle)
 [![License: MIT](https://img.shields.io/github/license/Yuta-K19418/Refedle)](LICENSE)
 
-Refedle is a TUI-driven data transformation tool for CSV and JSON files, built with .NET 10 and Terminal.Gui v2. It lets you explore a file interactively, apply column-level transformations, and replay them as a recipe against large files from the command line.
+Refedle is a TUI-driven data transformation tool for CSV and JSON files, built with .NET 11 and Terminal.Gui v2. It lets you explore a file interactively, apply column-level transformations, and replay them as a recipe against large files from the command line.
 
 Explore a file and save the transformations as a recipe:
 

@@ -8,7 +8,7 @@ namespace Refedle.Benchmarks.Engine.IO.JsonLines;
 /// Benchmarks JSON Lines row caching.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class RowByteCacheBenchmarks : IDisposable
 {
     private readonly string _testFilePath;

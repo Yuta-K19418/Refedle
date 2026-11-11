@@ -21,7 +21,7 @@ internal static class RecipeYamlParser
         var parseState = new RecipeYamlParseState(string.Empty, null, null, ParseState.Root, DrillDownKeyPathPresent: false);
         List<IMorphAction> actions = [];
         List<KeyPathSegment> drillDownKeyPath = [];
-        Dictionary<string, string> currentItem = [];
+        Dictionary<string, string> currentItem = new(StringComparer.Ordinal);
 
         foreach (var rawLine in yaml.Split('\n'))
         {

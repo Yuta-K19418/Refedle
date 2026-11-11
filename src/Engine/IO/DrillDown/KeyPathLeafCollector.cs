@@ -53,7 +53,7 @@ internal static class KeyPathLeafCollector
         var synthBytes = SynthesizeObject(colNameUtf8, leafBytes.Span);
         rows.Add(new FocusedTableRow(synthBytes, posHash));
         SchemaScanner.RegisterKeyIfNew(colName, keyOrder, keySet);
-        SchemaScanner.IncrementObservationCounts([colName], keyObservedCount);
+        SchemaScanner.IncrementObservationCounts(new HashSet<string>(StringComparer.Ordinal) { colName }, keyObservedCount);
     }
 
     internal static void CollectArrayLeafRows(
@@ -102,7 +102,7 @@ internal static class KeyPathLeafCollector
             var synthBytes = SynthesizeObject("value"u8, elementBytes.Span);
             rows.Add(new FocusedTableRow(synthBytes, elementHash));
             SchemaScanner.RegisterKeyIfNew("value", keyOrder, keySet);
-            SchemaScanner.IncrementObservationCounts(["value"], keyObservedCount);
+            SchemaScanner.IncrementObservationCounts(new HashSet<string>(StringComparer.Ordinal) { "value" }, keyObservedCount);
             elementIndex++;
         }
     }

@@ -31,7 +31,7 @@ public sealed class KeyPathTraverserTests
         }
 
         sb.Append('"').Append(leafValue).Append('"');
-        sb.Append(new string('}', depth));
+        sb.Append('}', depth);
         return sb.ToString();
     }
 

@@ -10,7 +10,7 @@ namespace Refedle.Benchmarks.Engine.IO.Json;
 /// single-column extraction vs full-row extraction.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class JsonObjectCellExtractorBenchmarks
 {
     /// <summary>

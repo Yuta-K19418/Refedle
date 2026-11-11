@@ -8,8 +8,8 @@ namespace Refedle.Benchmarks.Engine.IO;
 /// Benchmarks mapped-file reads.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net10_0)]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.Net11_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class MmapServiceBenchmarks : IDisposable
 {
     private readonly string _testFilePath;

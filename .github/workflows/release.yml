@@ -37,7 +37,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: '11.0.x'
 
       - name: Publish with Native AOT
         shell: bash
@@ -47,7 +47,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          publish_dir="src/App/bin/Release/net10.0/${{ matrix.rid }}/publish"
+          publish_dir="src/App/bin/Release/net11.0/${{ matrix.rid }}/publish"
           stage_dir="stage/refedle-${{ github.ref_name }}-${{ matrix.rid }}"
           mkdir -p "$stage_dir"
           cp "$publish_dir/${{ matrix.binary }}" "$stage_dir/"

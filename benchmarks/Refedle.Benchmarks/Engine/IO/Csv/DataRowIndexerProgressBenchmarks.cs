@@ -9,8 +9,8 @@ namespace Refedle.Benchmarks.Engine.IO.Csv;
 /// Benchmarks CSV row indexing with a progress subscriber that queues work per notification.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.Net10_0)]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.Net11_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class DataRowIndexerProgressBenchmarks : RowIndexerProgressBenchmarksBase
 {
     /// <inheritdoc/>

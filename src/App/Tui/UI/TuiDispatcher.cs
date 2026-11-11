@@ -16,7 +16,7 @@ internal static class TuiDispatcher
         var parseTuiResult = TuiArgumentParser.Parse(args);
         if (parseTuiResult.IsFailure)
         {
-            await Console.Error.WriteLineAsync(parseTuiResult.Error).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(parseTuiResult.Error, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 
@@ -24,7 +24,7 @@ internal static class TuiDispatcher
         var missingFileError = tuiOptions.FindMissingFileError();
         if (missingFileError is not null)
         {
-            await Console.Error.WriteLineAsync(missingFileError).ConfigureAwait(false);
+            await Console.Error.WriteLineAsync(missingFileError, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 

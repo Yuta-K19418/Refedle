@@ -102,10 +102,10 @@ public abstract class JsonObjectTreeViewSingleBenchmarksBase
     public void Cleanup() => DisposeView();
 }
 
-/// <summary>500-key case: .NET 10, single-shot.</summary>
+/// <summary>500-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.Net10_0,
+    runtimeMoniker: RuntimeMoniker.Net11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,
@@ -123,7 +123,7 @@ public class JsonObjectTreeViewSingleKeys500NetBenchmarks : JsonObjectTreeViewSi
 /// <summary>500-key case: Native AOT, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.NativeAot10_0,
+    runtimeMoniker: RuntimeMoniker.NativeAot11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,
@@ -138,10 +138,10 @@ public class JsonObjectTreeViewSingleKeys500AotBenchmarks : JsonObjectTreeViewSi
     public void CreateTree() => CreateTreeCore();
 }
 
-/// <summary>1,000-key case: .NET 10, single-shot.</summary>
+/// <summary>1,000-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.Net10_0,
+    runtimeMoniker: RuntimeMoniker.Net11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,
@@ -159,7 +159,7 @@ public class JsonObjectTreeViewSingleKeys1000NetBenchmarks : JsonObjectTreeViewS
 /// <summary>1,000-key case: Native AOT, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.NativeAot10_0,
+    runtimeMoniker: RuntimeMoniker.NativeAot11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,
@@ -174,10 +174,10 @@ public class JsonObjectTreeViewSingleKeys1000AotBenchmarks : JsonObjectTreeViewS
     public void CreateTree() => CreateTreeCore();
 }
 
-/// <summary>2,000-key case: .NET 10, single-shot.</summary>
+/// <summary>2,000-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.Net10_0,
+    runtimeMoniker: RuntimeMoniker.Net11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,
@@ -195,7 +195,7 @@ public class JsonObjectTreeViewSingleKeys2000NetBenchmarks : JsonObjectTreeViewS
 /// <summary>2,000-key case: Native AOT, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
-    runtimeMoniker: RuntimeMoniker.NativeAot10_0,
+    runtimeMoniker: RuntimeMoniker.NativeAot11_0,
     runStrategy: RunStrategy.Monitoring,
     warmupCount: 1,
     iterationCount: 1,

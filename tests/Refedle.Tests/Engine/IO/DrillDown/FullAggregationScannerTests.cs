@@ -61,7 +61,7 @@ public sealed class FullAggregationScannerTests : IDisposable
     private static IReadOnlyList<KeyPathSegment> KeyPath(params string[] segments)
         => [.. segments.Select(static s => new KeyPathSegment(
             s,
-            s.StartsWith('[') ? KeyPathSegmentKind.Index : KeyPathSegmentKind.Key))];
+            s.StartsWith('[', StringComparison.Ordinal) ? KeyPathSegmentKind.Index : KeyPathSegmentKind.Key))];
 
     [Fact]
     public void Scan_WithUtf8BomPrefixedJsonArray_ReturnsOneRowPerRecord()

@@ -25,7 +25,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '11.0.x'
 
     - name: Restore dependencies
       run: dotnet restore
@@ -48,7 +48,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '11.0.x'
 
     - name: Restore dependencies
       run: dotnet restore
@@ -114,7 +114,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '11.0.x'
 
     - name: Publish with Native AOT
       run: dotnet publish src/App/Refedle.App.csproj --configuration Release -r ${{ matrix.rid }} -p:Version=9.9.9
@@ -122,9 +122,9 @@ jobs:
     - name: Verify AOT binary exists
       shell: bash
       run: |
-        if [ -f "src/App/bin/Release/net10.0/${{ matrix.rid }}/publish/${{ matrix.binary }}" ]; then
+        if [ -f "src/App/bin/Release/net11.0/${{ matrix.rid }}/publish/${{ matrix.binary }}" ]; then
           echo "✓ Native AOT binary generated successfully"
-          ls -lh "src/App/bin/Release/net10.0/${{ matrix.rid }}/publish/${{ matrix.binary }}"
+          ls -lh "src/App/bin/Release/net11.0/${{ matrix.rid }}/publish/${{ matrix.binary }}"
         else
           echo "✗ Native AOT binary not found"
           exit 1
@@ -133,7 +133,7 @@ jobs:
     - name: Verify -p:Version propagates to the AOT binary
       shell: bash
       run: |
-        binary="src/App/bin/Release/net10.0/${{ matrix.rid }}/publish/${{ matrix.binary }}"
+        binary="src/App/bin/Release/net11.0/${{ matrix.rid }}/publish/${{ matrix.binary }}"
         output="$("$binary" --version)"
         output="${output%$'\r'}"
         if [ "$output" != "refedle 9.9.9" ]; then

@@ -3,7 +3,7 @@ paths:
   - "src/**/*.cs"
 ---
 
-# C# Coding Standards (.NET 10+ / C# 14 Strict)
+# C# Coding Standards (.NET 11+ / C# 15 Strict)
 
 ## Modern Syntax (MANDATORY)
 

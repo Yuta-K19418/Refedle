@@ -11,7 +11,7 @@ namespace Refedle.Benchmarks.App.Cli.IO.Json;
 /// whose distinct parsing branches need independent coverage.
 /// </summary>
 [MemoryDiagnoser]
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 public class JsonLinesRecordReaderBenchmarks
 {
     private const string NumberColumn = "number";

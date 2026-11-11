@@ -7,7 +7,7 @@ namespace Refedle.Benchmarks.Engine.IO.JsonArray;
 /// <summary>
 /// Benchmarks JSON array element caching.
 /// </summary>
-[SimpleJob(RuntimeMoniker.NativeAot10_0)]
+[SimpleJob(RuntimeMoniker.NativeAot11_0)]
 [MemoryDiagnoser]
 public class ElementByteCacheBenchmarks : IDisposable
 {
