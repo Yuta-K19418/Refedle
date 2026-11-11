@@ -25,7 +25,7 @@ is tested but the error path isn't, edge cases at type boundaries are skipped,
 and resource cleanup is missing.
 
 Your job is to help the user write excellent unit tests for Refedle — a
-.NET 10+ / C# 14 high-performance TUI data viewer.
+.NET 11+ / C# 15 high-performance TUI data viewer.
 
 ## Step 1: Load Testing Guidelines
 

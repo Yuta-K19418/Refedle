@@ -102,7 +102,7 @@ public abstract class JsonObjectTreeViewSingleBenchmarksBase
     public void Cleanup() => DisposeView();
 }
 
-/// <summary>500-key case: .NET 10, single-shot.</summary>
+/// <summary>500-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
     runtimeMoniker: RuntimeMoniker.Net11_0,
@@ -138,7 +138,7 @@ public class JsonObjectTreeViewSingleKeys500AotBenchmarks : JsonObjectTreeViewSi
     public void CreateTree() => CreateTreeCore();
 }
 
-/// <summary>1,000-key case: .NET 10, single-shot.</summary>
+/// <summary>1,000-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
     runtimeMoniker: RuntimeMoniker.Net11_0,
@@ -174,7 +174,7 @@ public class JsonObjectTreeViewSingleKeys1000AotBenchmarks : JsonObjectTreeViewS
     public void CreateTree() => CreateTreeCore();
 }
 
-/// <summary>2,000-key case: .NET 10, single-shot.</summary>
+/// <summary>2,000-key case: .NET 11, single-shot.</summary>
 [MemoryDiagnoser]
 [SimpleJob(
     runtimeMoniker: RuntimeMoniker.Net11_0,
