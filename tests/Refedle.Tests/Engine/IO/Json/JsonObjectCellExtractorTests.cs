@@ -1,3 +1,4 @@
+using System.Text;
 using AwesomeAssertions;
 using Refedle.Engine.IO.Json;
 
@@ -87,6 +88,38 @@ public sealed class JsonObjectCellExtractorTests
 
         // Assert
         result.Should().Be("3.14");
+    }
+
+    [Theory]
+    [InlineData("1.50")]
+    [InlineData("1e3")]
+    [InlineData("1.5E+3")]
+    [InlineData("-0")]
+    public void ExtractCell_NumberWithNotation_ReturnsTokenTextAsWritten(string rawNumber)
+    {
+        // Arrange
+        var line = Encoding.UTF8.GetBytes($"{{\"value\": {rawNumber}}}");
+        var columnName = "value"u8;
+
+        // Act
+        var result = JsonObjectCellExtractor.ExtractCell(line, columnName);
+
+        // Assert
+        result.Should().Be(rawNumber);
+    }
+
+    [Fact]
+    public void ExtractCell_IntegerBeyondInt64Range_ReturnsExactDigits()
+    {
+        // Arrange
+        var line = "{\"id\": 12345678901234567890}"u8;
+        var columnName = "id"u8;
+
+        // Act
+        var result = JsonObjectCellExtractor.ExtractCell(line, columnName);
+
+        // Assert
+        result.Should().Be("12345678901234567890");
     }
 
     [Fact]

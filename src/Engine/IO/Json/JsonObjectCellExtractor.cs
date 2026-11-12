@@ -1,5 +1,4 @@
-using System.Buffers.Text;
-using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using Refedle.Engine.Utilities;
 
@@ -84,13 +83,11 @@ public static class JsonObjectCellExtractor
 
     private static string FormatValue(ref Utf8JsonReader reader)
     {
-        if (reader.TokenType == JsonTokenType.Number)
-        {
-            return FormatNumber(reader.ValueSpan);
-        }
-
+        // Numbers return the raw token text (e.g. "1.50", "1e3") so the original
+        // notation is preserved; cast columns are reformatted by CellDisplayFormatter.
         return reader.TokenType switch
         {
+            JsonTokenType.Number => Encoding.UTF8.GetString(reader.ValueSpan),
             JsonTokenType.String => StringUtility.DecodeJsonString(ref reader),
             JsonTokenType.True => "True",
             JsonTokenType.False => "False",
@@ -99,26 +96,5 @@ public static class JsonObjectCellExtractor
             JsonTokenType.StartArray => JsonByteExtractor.FormatArrayPreview(ref reader),
             _ => NullValue,
         };
-    }
-
-    private static string FormatNumber(ReadOnlySpan<byte> valueSpan)
-    {
-        if (
-            Utf8Parser.TryParse(valueSpan, out long intValue, out var bytesConsumed)
-            && bytesConsumed == valueSpan.Length
-        )
-        {
-            return intValue.ToString(CultureInfo.InvariantCulture);
-        }
-
-        if (
-            Utf8Parser.TryParse(valueSpan, out double doubleValue, out var consumed)
-            && consumed == valueSpan.Length
-        )
-        {
-            return doubleValue.ToString(CultureInfo.InvariantCulture);
-        }
-
-        return ErrorValue;
     }
 }
