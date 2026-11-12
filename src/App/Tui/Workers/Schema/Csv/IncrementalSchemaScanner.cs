@@ -8,6 +8,8 @@ namespace Refedle.App.Tui.Workers.Schema.Csv;
 /// Performs incremental schema inference for CSV files.
 /// - Initial scan: first 200 rows
 /// - Background scan: remaining rows after the initial scan, read in a single pass
+/// - A row whose column count differs from the header fails the initial scan and ends the
+///   background scan, which keeps the schema inferred from the rows before it
 /// - Thread-safe schema updates via Copy-on-Write
 /// </summary>
 internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
@@ -60,9 +62,23 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     {
         using var reader = new DataRowReader(FilePath, columnCount);
 
-        foreach (var row in reader.EnumerateRows(rowsToSkip: InitialScanCount))
+        using var rows = reader.EnumerateRows(rowsToSkip: InitialScanCount).GetEnumerator();
+        while (TryMoveNext(rows))
         {
-            yield return row;
+            yield return rows.Current;
+        }
+    }
+
+    // Only a column-count mismatch ends the scan; I/O errors still propagate
+    private static bool TryMoveNext(IEnumerator<CsvDataRow> rows)
+    {
+        try
+        {
+            return rows.MoveNext();
+        }
+        catch (InvalidDataException)
+        {
+            return false;
         }
     }
 

@@ -39,7 +39,7 @@ public sealed class VirtualTableSourceTests : IDisposable
             ],
             SourceFormat = Refedle.Engine.Types.DataFormat.Csv
         };
-        using var source = new VirtualTableSource(indexer, schema);
+        using var source = new VirtualTableSource(indexer, schema, static _ => { });
         _ = source[0, 0]; // Ensure cache and reader are initialized
 
         // Act
@@ -49,5 +49,67 @@ public sealed class VirtualTableSourceTests : IDisposable
         // Verify indexer throws ObjectDisposedException
         var act = () => _ = source[0, 0];
         act.Should().Throw<ObjectDisposedException>();
+    }
+
+    [Fact]
+    public void Indexer_WhenWindowHasMismatchedRow_ReportsReadFailureOnlyOnceAndReturnsEmptyString()
+    {
+        // Arrange
+        File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3\nval4,val5");
+        var indexer = new DataRowIndexer(_testFilePath);
+        indexer.BuildIndex();
+        var schema = new TableSchema
+        {
+            Columns =
+            [
+                new ColumnSchema { ColumnIndex = 0, Name = "col1", Type = Refedle.Engine.Types.ColumnType.Text },
+                new ColumnSchema { ColumnIndex = 1, Name = "col2", Type = Refedle.Engine.Types.ColumnType.Text }
+            ],
+            SourceFormat = Refedle.Engine.Types.DataFormat.Csv
+        };
+        List<string> errors = [];
+        using var source = new VirtualTableSource(indexer, schema, errors.Add);
+
+        // Act
+        var first = source[0, 0];
+        var second = source[1, 1];
+
+        // Assert
+        first.Should().Be(string.Empty);
+        second.Should().Be(string.Empty);
+        errors.Should().ContainSingle().Which.Should().Contain("(2)");
+    }
+
+    [Fact]
+    public void Indexer_AfterReadFailure_ReturnsEmptyStringWithoutConsultingCache()
+    {
+        // Arrange - row 0 is cached by the first window; row 90 sits in a later window that fails
+        var lines = Enumerable.Range(0, 100).Select(static i => i == 90 ? "bad" : $"val{i},x");
+        File.WriteAllText(_testFilePath, "col1,col2\n" + string.Join('\n', lines));
+        var indexer = new DataRowIndexer(_testFilePath);
+        indexer.BuildIndex();
+        var schema = new TableSchema
+        {
+            Columns =
+            [
+                new ColumnSchema { ColumnIndex = 0, Name = "col1", Type = Refedle.Engine.Types.ColumnType.Text },
+                new ColumnSchema { ColumnIndex = 1, Name = "col2", Type = Refedle.Engine.Types.ColumnType.Text }
+            ],
+            SourceFormat = Refedle.Engine.Types.DataFormat.Csv
+        };
+        List<string> errors = [];
+        using var source = new VirtualTableSource(indexer, schema, errors.Add);
+        source[0, 0].Should().Be("val0");
+
+        // Act
+        var failed = source[95, 0];
+        var cachedRowAfterFailure = source[0, 0];
+        var otherRowAfterFailure = source[50, 1];
+
+        // Assert
+        failed.Should().Be(string.Empty);
+        cachedRowAfterFailure.Should().Be(string.Empty);
+        otherRowAfterFailure.Should().Be(string.Empty);
+        errors.Should().ContainSingle();
     }
 }

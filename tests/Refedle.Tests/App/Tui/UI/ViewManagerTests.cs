@@ -740,6 +740,91 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void SwitchToCsvTable_WhenDisplayedRowsHaveMismatchedColumnCount_ShowsErrorViewOnceAfterDraw()
+    {
+        // Arrange
+        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1,val2\nval3\nval4,val5\n"));
+        var queuedBeforeRead = fixture.Queued.Count;
+        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        csvView.Table.Should().NotBeNull();
+
+        // Act - drawing reads cells of the ragged window; the error must not swap views mid-draw
+        _ = csvView.Table[0, 0];
+        _ = csvView.Table[1, 1];
+        var viewDuringDraw = fixture.ViewManager.GetCurrentView();
+        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        callback();
+
+        // Assert
+        viewDuringDraw.Should().BeSameAs(csvView);
+        fixture.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+        var errorView = fixture.ViewManager.GetCurrentView();
+        errorView.Should().NotBeNull();
+        errorView.Text.Should().Contain("Error reading CSV");
+    }
+
+    [Fact]
+    public void SwitchToCsvTable_WhenModeChangedBeforeQueuedErrorRuns_KeepsCurrentView()
+    {
+        // Arrange
+        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        var queuedBeforeRead = fixture.Queued.Count;
+        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        csvView.Table.Should().NotBeNull();
+        _ = csvView.Table[0, 0];
+        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        fixture.State.EnterPlaceholderMode();
+
+        // Act
+        callback();
+
+        // Assert
+        fixture.ViewManager.GetCurrentView().Should().BeSameAs(csvView);
+    }
+
+    [Fact]
+    public void SwitchToCsvTable_WhenViewReplacedByAnotherCsvViewBeforeQueuedErrorRuns_KeepsNewView()
+    {
+        // Arrange
+        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        var queuedBeforeRead = fixture.Queued.Count;
+        var oldView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        oldView.Table.Should().NotBeNull();
+        _ = oldView.Table[0, 0];
+        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        fixture.ViewManager.SwitchToCsvTable(fixture.Indexer, fixture.Schema);
+        var newView = fixture.ViewManager.GetCurrentView();
+
+        // Act
+        callback();
+
+        // Assert
+        newView.Should().BeOfType<CsvTableView>().And.NotBeSameAs(oldView);
+        fixture.ViewManager.GetCurrentView().Should().BeSameAs(newView);
+        fixture.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+    }
+
+    [Fact]
+    public void SwitchToCsvTable_WhenViewManagerDisposedBeforeQueuedErrorRuns_DoesNothing()
+    {
+        // Arrange
+        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        var queuedBeforeRead = fixture.Queued.Count;
+        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        csvView.Table.Should().NotBeNull();
+        _ = csvView.Table[0, 0];
+        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        fixture.ViewManager.Dispose();
+
+        // Act
+        var act = () => callback();
+
+        // Assert
+        act.Should().NotThrow();
+        fixture.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+    }
+
+    [Fact]
     public void SwitchToJsonLinesTableView_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into JsonLinesTable
@@ -2833,6 +2918,73 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
+    }
+
+    /// <summary>
+    /// A ViewManager showing a two-column CSV table whose UI-thread dispatcher queues callbacks
+    /// instead of running them, so a test decides when a queued callback runs.
+    /// </summary>
+    private sealed class RaggedCsvFixture : IDisposable
+    {
+        private readonly Terminal.Gui.App.IApplication _app;
+        private readonly Window _window;
+
+        private RaggedCsvFixture(
+            Terminal.Gui.App.IApplication app,
+            AppState state,
+            Window window,
+            ViewManager viewManager,
+            List<Action> queued,
+            Refedle.Engine.IO.Csv.DataRowIndexer indexer,
+            TableSchema schema)
+        {
+            _app = app;
+            State = state;
+            _window = window;
+            ViewManager = viewManager;
+            Queued = queued;
+            Indexer = indexer;
+            Schema = schema;
+        }
+
+        public AppState State { get; }
+        public ViewManager ViewManager { get; }
+        public List<Action> Queued { get; }
+        public Refedle.Engine.IO.Csv.DataRowIndexer Indexer { get; }
+        public TableSchema Schema { get; }
+
+        public static RaggedCsvFixture Create(string filePath)
+        {
+            var app = TestAppFactory.Create();
+            var state = new AppState();
+            state.StartNewFile(filePath);
+            var window = new Window();
+            List<Action> queued = [];
+            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), queued.Add);
+            var indexer = new Refedle.Engine.IO.Csv.DataRowIndexer(filePath);
+            indexer.BuildIndex();
+            var schema = new TableSchema
+            {
+                SourceFormat = DataFormat.Csv,
+                Columns =
+                [
+                    new ColumnSchema { Name = "col1", Type = ColumnType.Text },
+                    new ColumnSchema { Name = "col2", Type = ColumnType.Text }
+                ]
+            };
+            state.CompleteCsvLoad(indexer, schema);
+            viewManager.SwitchToCsvTable(indexer, schema);
+            return new RaggedCsvFixture(app, state, window, viewManager, queued, indexer, schema);
+        }
+
+        public void Dispose()
+        {
+            ViewManager.Dispose();
+            _window.Dispose();
+            State.Dispose();
+            _app.Dispose();
+        }
     }
 
     /// <summary>

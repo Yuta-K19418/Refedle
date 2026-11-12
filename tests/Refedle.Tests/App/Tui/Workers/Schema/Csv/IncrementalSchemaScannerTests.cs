@@ -251,22 +251,65 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     [Theory]
     [InlineData("2")]
     [InlineData("2,text,excess")]
-    public async Task StartBackgroundScanAsync_WithMismatchedRowAfterInitialRows_FailsScan(
+    public async Task StartBackgroundScanAsync_WithMismatchedFirstBackgroundRow_KeepsInitialSchema(
         string mismatchedRow)
     {
-        // Arrange - 200 normal rows (initial scan), a mismatched row 201, then a valid row with text
+        // Arrange - exactly 200 valid rows (initial scan), a mismatched first background row,
+        // then a row that would change the types if the scan kept reading
         var initialRows = Enumerable.Repeat("1,20", 200);
-        string[] laterRows = [mismatchedRow, "3,text"];
+        string[] laterRows = [mismatchedRow, "abc,text"];
+        await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
+        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        var schema = await scanner.InitialScanAsync();
+
+        // Act
+        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+
+        // Assert - The scan succeeds and the schema is the one from the initial scan
+        refinedSchema.Columns[0].Type.Should().Be(ColumnType.WholeNumber);
+        refinedSchema.Columns[0].IsNullable.Should().BeFalse();
+        refinedSchema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
+        refinedSchema.Columns[1].IsNullable.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StartBackgroundScanAsync_WhenFileIsDeletedAfterInitialScan_PropagatesFileNotFoundException()
+    {
+        // Arrange
+        var rows = Enumerable.Repeat("1,20", 250).Prepend("Id,Age");
+        await File.WriteAllLinesAsync(_tempFilePath, rows);
+        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        var schema = await scanner.InitialScanAsync();
+        File.Delete(_tempFilePath);
+
+        // Act
+        var act = async () => await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+
+        // Assert - Only a column-count mismatch ends the scan quietly; I/O errors still propagate
+        await act.Should().ThrowAsync<FileNotFoundException>();
+    }
+
+    [Theory]
+    [InlineData("2")]
+    [InlineData("2,text,excess")]
+    public async Task StartBackgroundScanAsync_WithMismatchedRowAfterInitialRows_StopsAndKeepsSchemaFromEarlierRows(
+        string mismatchedRow)
+    {
+        // Arrange - 200 normal rows (initial scan), a text row that widens Age, a mismatched row,
+        // then a row that would widen Id if the scan kept reading
+        var initialRows = Enumerable.Repeat("1,20", 200);
+        string[] laterRows = ["3,text", mismatchedRow, "abc,5"];
         await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
         var scanner = new IncrementalSchemaScanner(_tempFilePath);
         var schema = await scanner.InitialScanAsync();
         schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
 
         // Act
-        var backgroundTask = scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
-        // Assert - The mismatched row fails the background scan and discards the refinement
-        Func<Task> act = () => backgroundTask;
-        await act.Should().ThrowAsync<InvalidDataException>();
+        // Assert - The scan ends at the mismatched row without faulting; rows after it are not reflected
+        refinedSchema.Columns[1].Type.Should().Be(ColumnType.Text);
+        refinedSchema.Columns[0].Type.Should().Be(ColumnType.WholeNumber);
+        refinedSchema.Columns[0].IsNullable.Should().BeFalse();
     }
 }

@@ -15,6 +15,12 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.MoveNext(nietras.SeparatedValues.SepReader)",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
     Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.SkipRows(nietras.SeparatedValues.SepReader,System.Int32)",
     Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
 [assembly: SuppressMessage(

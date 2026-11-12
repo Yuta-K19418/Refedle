@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using nietras.SeparatedValues;
 
@@ -37,7 +38,11 @@ public sealed class DataRowReader : IDisposable
     /// <param name="byteOffset">The byte offset in the file to start reading from.</param>
     /// <param name="rowsToSkip">Number of rows to skip after seeking to the byte offset.</param>
     /// <param name="rowsToRead">Maximum number of rows to read.</param>
-    /// <returns>A list of CSV rows.</returns>
+    /// <returns>A list of CSV rows. I/O errors yield an empty list.</returns>
+    /// <exception cref="InvalidDataException">
+    /// A row does not have the header's column count. This covers both the rows in the window and
+    /// the rows skipped between the checkpoint and the window.
+    /// </exception>
     public IReadOnlyList<CsvDataRow> ReadRows(long byteOffset, int rowsToSkip, int rowsToRead)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -124,11 +129,38 @@ public sealed class DataRowReader : IDisposable
         }
     }
 
-    private static void SkipRows(SepReader reader, int rowsToSkip)
+    // Sep compares each row with the first row it read, which may itself be a skipped row,
+    // so a ragged window makes Sep throw. Rethrow with the header's column count in the message.
+    private bool MoveNext(SepReader reader)
+    {
+        try
+        {
+            return reader.MoveNext();
+        }
+        catch (InvalidDataException ex)
+        {
+            throw ColumnCountMismatch(ex);
+        }
+    }
+
+    private InvalidDataException ColumnCountMismatch(Exception? inner = null) =>
+        new(
+            string.Create(
+                CultureInfo.InvariantCulture,
+                $"A row does not have the same number of columns as the header ({_columnCount})."),
+            inner);
+
+    // Skipped rows do not go through ParseRow, so they are checked against the header here
+    private void SkipRows(SepReader reader, int rowsToSkip)
     {
         var skipped = 0;
-        while (skipped < rowsToSkip && reader.MoveNext())
+        while (skipped < rowsToSkip && MoveNext(reader))
         {
+            if (reader.Current.ColCount != _columnCount)
+            {
+                throw ColumnCountMismatch();
+            }
+
             skipped++;
         }
     }
@@ -136,7 +168,7 @@ public sealed class DataRowReader : IDisposable
     private void ReadRowsInto(SepReader reader, int rowsToRead, List<CsvDataRow> rows)
     {
         var readCount = 0;
-        while (readCount < rowsToRead && reader.MoveNext())
+        while (readCount < rowsToRead && MoveNext(reader))
         {
             var record = reader.Current;
             rows.Add(ParseRow(in record));
@@ -148,27 +180,24 @@ public sealed class DataRowReader : IDisposable
     // avoids one allocation per column.
     private ReadOnlyMemory<char>[] ParseRow(in SepReader.Row record)
     {
-        var totalLength = 0;
-        for (var i = 0; i < _columnCount; i++)
+        var columnCount = record.ColCount;
+        if (columnCount != _columnCount)
         {
-            if (i < record.ColCount)
-            {
-                totalLength += record[i].Span.Length;
-            }
+            throw ColumnCountMismatch();
+        }
+
+        var totalLength = 0;
+        for (var i = 0; i < columnCount; i++)
+        {
+            totalLength += record[i].Span.Length;
         }
 
         var buffer = new char[totalLength];
-        var columns = new ReadOnlyMemory<char>[_columnCount];
+        var columns = new ReadOnlyMemory<char>[columnCount];
         var bufferPos = 0;
 
-        for (var i = 0; i < _columnCount; i++)
+        for (var i = 0; i < columnCount; i++)
         {
-            if (i >= record.ColCount)
-            {
-                columns[i] = ReadOnlyMemory<char>.Empty;
-                continue;
-            }
-
             var colSpan = record[i].Span;
             colSpan.CopyTo(buffer.AsSpan(bufferPos, colSpan.Length));
             columns[i] = new ReadOnlyMemory<char>(buffer, bufferPos, colSpan.Length);

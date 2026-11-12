@@ -325,7 +325,12 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        IExtendedTableSource rawSource = new Views.VirtualTableSource(indexer, schema);
+        // Assigned below; the queued error callback compares it with the then-current view
+        Views.CsvTableView? view = null;
+        IExtendedTableSource rawSource = new Views.VirtualTableSource(
+            indexer,
+            schema,
+            message => _uiThreadInvoke(() => ShowRowReadError(view, message)));
         var source = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
                 rawSource,
@@ -340,7 +345,7 @@ internal sealed class ViewManager : IDisposable
             : rawSource;
 
         var style = new TableStyle { AlwaysShowHeaders = true };
-        var view = new Views.CsvTableView
+        view = new Views.CsvTableView
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
@@ -576,6 +581,20 @@ internal sealed class ViewManager : IDisposable
         var view = Views.PlaceholderView.Create(_state);
         view.Text = message;
         SwapView(view);
+    }
+
+    // Raised while the table is drawing, so the view swap is queued until the draw has finished.
+    // A view that was replaced in the meantime must not replace its successor.
+    private void ShowRowReadError(View? erroredView, string message)
+    {
+        if (_disposed
+            || _state.CurrentMode is not ViewMode.CsvTable
+            || !ReferenceEquals(_currentView, erroredView))
+        {
+            return;
+        }
+
+        ShowError($"Error reading CSV: {message}");
     }
 
     private void SetInitialSelectionWhenReady(MorphTableView view, IRowIndexer indexer)

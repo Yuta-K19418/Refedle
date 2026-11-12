@@ -25,6 +25,9 @@ public sealed class DataRowCache(
     }
 
     /// <inheritdoc/>
+    /// <exception cref="InvalidDataException">
+    /// A row of the window, or a row skipped before it, does not have the header's column count.
+    /// </exception>
     protected override IEnumerable<CsvDataRow> LoadRows(
         long byteOffset,
         int rowOffsetToSkip,

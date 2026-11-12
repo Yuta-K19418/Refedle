@@ -42,6 +42,31 @@ public sealed class CsvRecordReaderTests
         }
     }
 
+    // The CLI must keep rejecting rows whose column count differs from the header.
+    [Fact]
+    public async Task MoveNextAsync_WithMismatchedColumnCount_ThrowsInvalidDataException()
+    {
+        // Arrange
+        var filePath = Path.GetTempFileName();
+        try
+        {
+            await File.WriteAllTextAsync(filePath, "value,filler\nhello\n");
+            var sepReader = await CsvSep.FromFileAsync(filePath);
+            var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
+            using var recordReader = new CsvRecordReader(sepReader, outputSchema);
+
+            // Act - Sep enforces the header column count on the first data row
+            var act = () => recordReader.MoveNextAsync(default).AsTask();
+
+            // Assert
+            await act.Should().ThrowAsync<InvalidDataException>();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
     [Fact]
     public async Task ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
