@@ -805,6 +805,28 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     [Fact]
+    public void SwitchToCsvTable_WhenNewFileSessionStartsBeforeQueuedErrorRuns_KeepsCurrentSession()
+    {
+        // Arrange - the old view is still current while the next file loads
+        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        var queuedBeforeRead = fixture.Queued.Count;
+        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        csvView.Table.Should().NotBeNull();
+        _ = csvView.Table[0, 0];
+        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        var nextFilePath = CreateTempFile(".csv", "col1,col2\nval1,val2\n");
+        fixture.State.StartNewFile(nextFilePath);
+
+        // Act
+        callback();
+
+        // Assert
+        fixture.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+        fixture.State.CurrentFilePath.Should().Be(nextFilePath);
+        fixture.ViewManager.GetCurrentView().Should().BeSameAs(csvView);
+    }
+
+    [Fact]
     public void SwitchToCsvTable_WhenViewManagerDisposedBeforeQueuedErrorRuns_DoesNothing()
     {
         // Arrange
