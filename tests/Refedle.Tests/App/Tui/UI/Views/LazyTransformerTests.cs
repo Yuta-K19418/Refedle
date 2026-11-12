@@ -1742,6 +1742,90 @@ public sealed class LazyTransformerTests
     }
 
     [Fact]
+    public void CastAction_OverJsonLinesNumberColumn_ReformatsCastColumnAndLeavesOtherRaw()
+    {
+        // Arrange
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllLines(path, ["{\"price\": 1.50, \"amount\": 1.50}"]);
+            var indexer = new RowIndexer(path);
+            indexer.BuildIndex();
+            using var cache = new RowByteCache(indexer);
+            var schema = MakeSchema(
+                ("price", ColumnType.FloatingPoint),
+                ("amount", ColumnType.FloatingPoint)
+            );
+            // The transformer disposes its wrapped source; the using guards the
+            // transformer-construction gap (double dispose is a guarded no-op).
+            using var source = new JsonLinesTableSource(cache, schema);
+            IReadOnlyList<IMorphAction> actions =
+            [
+                new CastColumnAction { ColumnName = "price", TargetType = ColumnType.FloatingPoint },
+            ];
+            using var transformer = LazyTransformer.Create(source, schema, actions);
+
+            // Act
+            var cast = transformer[0, 0];
+            var untouched = transformer[0, 1];
+
+            // Assert
+            cast.Should().Be("1.5");
+            untouched.Should().Be("1.50");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void CastAction_OverJsonLinesNumberColumn_ToWholeNumber_ShowsInvalidForRawNotations()
+    {
+        // Arrange
+        var path = Path.GetTempFileName();
+        try
+        {
+            File.WriteAllLines(path, ["{\"exponent\": 1e3, \"integral\": 1.0, \"plain\": 1000}"]);
+            var indexer = new RowIndexer(path);
+            indexer.BuildIndex();
+            using var cache = new RowByteCache(indexer);
+            // Schema types mirror the schema scan's inference: "1e3" -> Text,
+            // "1.0" -> FloatingPoint, "1000" -> WholeNumber.
+            var schema = MakeSchema(
+                ("exponent", ColumnType.Text),
+                ("integral", ColumnType.FloatingPoint),
+                ("plain", ColumnType.WholeNumber)
+            );
+            // The transformer disposes its wrapped source; the using guards the
+            // transformer-construction gap (double dispose is a guarded no-op).
+            using var source = new JsonLinesTableSource(cache, schema);
+            IReadOnlyList<IMorphAction> actions =
+            [
+                new CastColumnAction { ColumnName = "exponent", TargetType = ColumnType.WholeNumber },
+                new CastColumnAction { ColumnName = "integral", TargetType = ColumnType.WholeNumber },
+                new CastColumnAction { ColumnName = "plain", TargetType = ColumnType.WholeNumber },
+            ];
+            using var transformer = LazyTransformer.Create(source, schema, actions);
+
+            // Act
+            var exponent = transformer[0, 0];
+            var integral = transformer[0, 1];
+            var plain = transformer[0, 2];
+
+            // Assert — integral values in raw exponent/decimal notation fail long parsing;
+            // plain integers still display normally
+            exponent.Should().Be("<invalid>");
+            integral.Should().Be("<invalid>");
+            plain.Should().Be("1000");
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
+
+    [Fact]
     public void Dispose_DisposesUnderlyingSource()
     {
         // Arrange
