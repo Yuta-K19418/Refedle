@@ -16,12 +16,20 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
     private readonly string[] _rawColumnNames;
     private bool _disposed;
 
-    public VirtualTableSource(IRowIndexer indexer, TableSchema schema)
+    /// <param name="indexer">The completed or in-progress row indexer of the CSV file.</param>
+    /// <param name="schema">The table schema of the CSV file.</param>
+    /// <param name="onReadFailed">
+    /// Called once, while the table is being drawn, when a row window cannot be read.
+    /// It must not replace views synchronously.
+    /// </param>
+    public VirtualTableSource(IRowIndexer indexer, TableSchema schema, Action<string> onReadFailed)
     {
+        ArgumentNullException.ThrowIfNull(onReadFailed);
         _schema = schema;
         _columnNames = [.. _schema.Columns.Select(static c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
         _rawColumnNames = [.. _schema.Columns.Select(static c => c.Name)];
         _cache = new DataRowCache(indexer, _schema.ColumnCount);
+        _cache.ReadFailed += onReadFailed;
     }
 
     public long TotalRows => _cache.TotalRows;

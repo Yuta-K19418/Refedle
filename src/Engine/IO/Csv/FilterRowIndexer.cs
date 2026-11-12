@@ -91,7 +91,15 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
             ct.ThrowIfCancellationRequested();
 
             var rowsToRead = Math.Min(batchSize, totalRows - processed);
-            var rows = reader.ReadRows(readOffset, rowsToSkip, rowsToRead);
+            var readResult = reader.ReadRows(readOffset, rowsToSkip, rowsToRead);
+
+            // The scan task faults, which is how the caller learns that the filter scan failed
+            if (readResult.IsFailure)
+            {
+                throw new InvalidDataException(readResult.Error);
+            }
+
+            var rows = readResult.Value;
 
             if (rows.Count == 0)
             {

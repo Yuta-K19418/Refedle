@@ -13,6 +13,14 @@ public sealed class DataRowCache(
 {
     private readonly DataRowReader _reader = new(indexer.FilePath, columnCount);
     private bool _disposed;
+    private bool _readFailed;
+
+    /// <summary>
+    /// Raised once, on the thread that called <see cref="GetRow"/>, when a window of rows
+    /// cannot be read because a row does not have the header's column count. Afterwards the
+    /// cache stops reading and returns empty rows.
+    /// </summary>
+    public event Action<string>? ReadFailed;
 
     /// <inheritdoc/>
     protected override CsvDataRow EmptyValue => [];
@@ -29,7 +37,25 @@ public sealed class DataRowCache(
         long byteOffset,
         int rowOffsetToSkip,
         int rowsToFetch) =>
-        _reader.ReadRows(byteOffset, rowOffsetToSkip, rowsToFetch);
+        ReadWindow(byteOffset, rowOffsetToSkip, rowsToFetch);
+
+    private IReadOnlyList<CsvDataRow> ReadWindow(long byteOffset, int rowOffsetToSkip, int rowsToFetch)
+    {
+        if (_readFailed)
+        {
+            return [];
+        }
+
+        var result = _reader.ReadRows(byteOffset, rowOffsetToSkip, rowsToFetch);
+        if (result.IsSuccess)
+        {
+            return result.Value;
+        }
+
+        _readFailed = true;
+        ReadFailed?.Invoke(result.Error);
+        return [];
+    }
 
     /// <inheritdoc/>
     public void Dispose()

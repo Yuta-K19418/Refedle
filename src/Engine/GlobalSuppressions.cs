@@ -15,14 +15,35 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.SkipRows(nietras.SeparatedValues.SepReader,System.Int32)",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.TrySkipRows(nietras.SeparatedValues.SepReader,System.Int32)",
     Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
-    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.ReadRowsInto(nietras.SeparatedValues.SepReader,System.Int32,System.Collections.Generic.List{System.Collections.Generic.IReadOnlyList{System.ReadOnlyMemory{System.Char}}})",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.TryReadRowsInto(nietras.SeparatedValues.SepReader,System.Int32,System.Collections.Generic.List{System.Collections.Generic.IReadOnlyList{System.ReadOnlyMemory{System.Char}}})",
     Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.EnumerateRowsCore(System.Int32,System.Boolean)",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.MoveNext(nietras.SeparatedValues.SepReader,System.Boolean)",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+
+// DataRowCache
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Engine.IO.Csv.DataRowCache.ReadFailed",
+    Justification = "A plain Action keeps the single-message notification free of an EventArgs type, like the IRowIndexer events.")]
 
 // KeyPathLeafCollector
 [assembly: SuppressMessage(

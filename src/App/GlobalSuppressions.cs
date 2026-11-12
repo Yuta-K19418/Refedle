@@ -448,6 +448,12 @@ using System.Diagnostics.CodeAnalysis;
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",
     Scope = "member",
+    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
+    Justification = "The scanner base contract runs this header reader synchronously on a background task.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.AppKeyHandler.HandleHelp",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
 [assembly: SuppressMessage(
@@ -468,24 +474,6 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "Terminal.Gui modal dialogs run synchronously from key handlers.")]
-[assembly: SuppressMessage(
-    "Design",
-    "MA0045:Do not use blocking calls, even when the calling method must become async",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadRows(System.Int32,System.Int32)",
-    Justification = "The scanner base contract runs this batch reader synchronously on a background task.")]
-[assembly: SuppressMessage(
-    "Design",
-    "MA0045:Do not use blocking calls, even when the calling method must become async",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadRemainingRows",
-    Justification = "The scanner base contract runs this row reader synchronously on a background task.")]
-[assembly: SuppressMessage(
-    "Design",
-    "MA0045:Do not use blocking calls, even when the calling method must become async",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.Workers.Schema.Csv.IncrementalSchemaScanner.ReadColumnNames",
-    Justification = "The scanner base contract runs this header reader synchronously on a background task.")]
 [assembly: SuppressMessage(
     "Design",
     "MA0045:Do not use blocking calls, even when the calling method must become async",

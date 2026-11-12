@@ -194,4 +194,44 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
         schema.Columns[0].Name.Should().Be("say \"hi\"");
         schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
     }
+
+    [Theory]
+    [InlineData("Id,Age\n1,20\n2")]
+    [InlineData("Id,Age\n1,20\n2,text,excess")]
+    public async Task InitialScanAsync_WithMismatchedColumnCountInInitialRows_ThrowsInvalidDataException(
+        string csvContent)
+    {
+        // Arrange
+        await File.WriteAllTextAsync(_tempFilePath, csvContent);
+        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+
+        // Act
+        var act = async () => await scanner.InitialScanAsync();
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidDataException>();
+    }
+
+    [Theory]
+    [InlineData("2")]
+    [InlineData("2,text,excess")]
+    public async Task StartBackgroundScanAsync_WithMismatchedRowAfterInitialRows_SkipsRowAndKeepsReading(
+        string mismatchedRow)
+    {
+        // Arrange - 200 normal rows (initial scan), a mismatched row 201, then a valid row with text
+        var initialRows = Enumerable.Repeat("1,20", 200);
+        string[] laterRows = [mismatchedRow, "3,text"];
+        await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
+        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        var schema = await scanner.InitialScanAsync();
+        schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
+
+        // Act
+        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+
+        // Assert - The mismatched row is ignored (no nullable, no widening from it), the next row refines Age
+        refinedSchema.Columns[0].Type.Should().Be(ColumnType.WholeNumber);
+        refinedSchema.Columns[0].IsNullable.Should().BeFalse();
+        refinedSchema.Columns[1].Type.Should().Be(ColumnType.Text);
+    }
 }

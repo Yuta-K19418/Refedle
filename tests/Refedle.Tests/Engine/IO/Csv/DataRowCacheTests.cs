@@ -148,7 +148,7 @@ public sealed class DataRowCacheTests : IDisposable
     }
 
     [Fact]
-    public void GetRow_WithRaggedCsvDataRow_ThrowsInvalidDataException()
+    public void GetRow_WithRaggedCsvDataRow_RaisesReadFailedOnceAndReturnsEmptyRows()
     {
         // Arrange
         var csvContent = "col1,col2,col3\nval1,val2\nval3";
@@ -156,11 +156,17 @@ public sealed class DataRowCacheTests : IDisposable
         var indexer = new DataRowIndexer(_testFilePath);
         indexer.BuildIndex();
         using var cache = new DataRowCache(indexer, columnCount: 3, capacity: 200, prefetchWindow: 20);
+        List<string> errors = [];
+        cache.ReadFailed += errors.Add;
 
-        // Act & Assert
-        // Sep.Reader enforces strict column count matching by default
-        var act = () => cache.GetRow(0);
-        act.Should().Throw<InvalidDataException>();
+        // Act
+        var row0 = cache.GetRow(0);
+        var row1 = cache.GetRow(1);
+
+        // Assert
+        row0.Should().BeEmpty();
+        row1.Should().BeEmpty();
+        errors.Should().ContainSingle().Which.Should().Contain("(3)");
     }
 
     [Fact]
