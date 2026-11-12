@@ -122,10 +122,8 @@ public sealed partial class ViewManagerTests
         GetItemCountText(harness.Window).Should().NotBeNull();
     }
 
-    [Theory]
-    [InlineData(ScanOutcome.Faulted)]
-    [InlineData(ScanOutcome.Canceled)]
-    public async Task SwitchToCsvTable_WithUnsuccessfulScan_KeepsItemCountHidden(ScanOutcome outcome)
+    [Fact]
+    public async Task SwitchToCsvTable_WithFaultedScan_ShowsErrorViewWithFailureReason()
     {
         // Arrange
         using var app = TestAppFactory.Create();
@@ -135,11 +133,129 @@ public sealed partial class ViewManagerTests
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
 
         // Act
-        runner.End(0, outcome);
+        runner.End(0, ScanOutcome.Faulted);
         await harness.Queue.RunNextAsync();
 
         // Assert
+        harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+        var errorView = harness.ViewManager.GetCurrentView();
+        errorView.Should().NotBeNull();
+        errorView.Text.Should().Be("Filter scan failed: scan failed");
         GetItemCountText(harness.Window).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SwitchToJsonLinesTableView_WithFaultedScan_ShowsErrorViewWithFailureReason()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        var runner = new ControllableFilterScanRunner();
+        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        var indexer = new MockRowIndexer(filePath, 1);
+        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
+        var schema = CreateItemCountSchema(DataFormat.JsonLines);
+        harness.State.CompleteJsonLinesSchemaScan(schema);
+        harness.ViewManager.SwitchToJsonLinesTableView(indexer, schema);
+        harness.State.CurrentMode.Should().Be(ViewMode.JsonLinesTable);
+
+        // Act
+        runner.End(0, ScanOutcome.Faulted);
+        await harness.Queue.RunNextAsync();
+
+        // Assert
+        harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
+        var errorView = harness.ViewManager.GetCurrentView();
+        errorView.Should().NotBeNull();
+        errorView.Text.Should().Be("Filter scan failed: scan failed");
+        GetItemCountText(harness.Window).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SwitchToCsvTable_WithCanceledScan_KeepsTableAndItemCountHidden()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        var runner = new ControllableFilterScanRunner();
+        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        var tableView = harness.ViewManager.GetCurrentView();
+
+        // Act
+        runner.End(0, ScanOutcome.Canceled);
+        await harness.Queue.RunNextAsync();
+
+        // Assert
+        harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(tableView);
+        GetItemCountText(harness.Window).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SwitchToCsvTable_WhenFaultedScanIsSuperseded_KeepsNewView()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        var runner = new ControllableFilterScanRunner();
+        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        var schema = CreateItemCountSchema(DataFormat.Csv);
+        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        var newView = harness.ViewManager.GetCurrentView();
+
+        // Act
+        runner.End(0, ScanOutcome.Faulted);
+        await harness.Queue.RunNextAsync();
+
+        // Assert
+        harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(newView);
+    }
+
+    [Fact]
+    public async Task SwitchToCsvTable_WhenFaultedScanBelongsToPreviousFileSession_KeepsCurrentSession()
+    {
+        // Arrange - the view is still the old one while the next file loads
+        using var app = TestAppFactory.Create();
+        var runner = new ControllableFilterScanRunner();
+        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        var oldView = harness.ViewManager.GetCurrentView();
+        runner.End(0, ScanOutcome.Faulted);
+        var callback = await harness.Queue.NextAsync();
+        var nextFilePath = CreateTempFile(".csv", "col1\nb\n");
+        harness.State.StartNewFile(nextFilePath);
+
+        // Act
+        callback();
+
+        // Assert
+        harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
+        harness.State.CurrentFilePath.Should().Be(nextFilePath);
+        harness.ViewManager.GetCurrentView().Should().BeSameAs(oldView);
+    }
+
+    [Fact]
+    public async Task SwitchToCsvTable_WhenViewManagerIsDisposedBeforeFault_DoesNotShowError()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        var runner = new ControllableFilterScanRunner();
+        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        harness.ViewManager.Dispose();
+        runner.End(0, ScanOutcome.Faulted);
+        var callback = await harness.Queue.NextAsync();
+
+        // Act
+        var act = () => callback();
+
+        // Assert
+        act.Should().NotThrow();
+        harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
     }
 
     [Fact]
