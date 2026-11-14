@@ -23,6 +23,12 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.ReadRowsInto(nietras.SeparatedValues.SepReader,System.Int32,System.Collections.Generic.List{System.Collections.Generic.IReadOnlyList{System.ReadOnlyMemory{System.Char}}})",
     Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
+[assembly: SuppressMessage(
+    "Design",
+    "MA0045:Do not use blocking calls, even when the calling method must become async",
+    Scope = "member",
+    Target = "~M:Refedle.Engine.IO.Csv.DataRowReader.EnumerateRowsCore(System.Int32)",
+    Justification = "The synchronous row-reading API would require asynchronous propagation through its callers.")]
 
 // KeyPathLeafCollector
 [assembly: SuppressMessage(
