@@ -14,13 +14,24 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
     private readonly TableSchema _schema;
     private readonly string[] _columnNames;
     private readonly string[] _rawColumnNames;
+    private readonly Action<string> _onReadFailed;
+    private bool _readFailed;
     private bool _disposed;
 
-    public VirtualTableSource(IRowIndexer indexer, TableSchema schema)
+    /// <param name="indexer">The completed or in-progress row indexer of the CSV file.</param>
+    /// <param name="schema">The table schema of the CSV file.</param>
+    /// <param name="onReadFailed">
+    /// Called at most once, while the table is being drawn, when a row window cannot be read
+    /// because a row does not have the header's column count. Afterwards every cell is empty.
+    /// It must not replace views synchronously.
+    /// </param>
+    public VirtualTableSource(IRowIndexer indexer, TableSchema schema, Action<string> onReadFailed)
     {
+        ArgumentNullException.ThrowIfNull(onReadFailed);
         _schema = schema;
         _columnNames = [.. _schema.Columns.Select(static c => $"{c.Name} ({ColumnTypeLabel.ToLabel(c.Type)})")];
         _rawColumnNames = [.. _schema.Columns.Select(static c => c.Name)];
+        _onReadFailed = onReadFailed;
         _cache = new DataRowCache(indexer, _schema.ColumnCount);
     }
 
@@ -46,7 +57,12 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
-            var rowData = _cache.GetRow(row);
+            if (_readFailed)
+            {
+                return string.Empty;
+            }
+
+            var rowData = ReadRow(row);
 
             if (col < rowData.Count)
             {
@@ -56,6 +72,20 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
 
             // Return empty string for columns that might not exist in a ragged CSV row
             return string.Empty;
+        }
+    }
+
+    private CsvDataRow ReadRow(long row)
+    {
+        try
+        {
+            return _cache.GetRow(row);
+        }
+        catch (InvalidDataException ex)
+        {
+            _readFailed = true;
+            _onReadFailed(ex.Message);
+            return [];
         }
     }
 

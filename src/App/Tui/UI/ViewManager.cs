@@ -208,27 +208,47 @@ internal sealed class ViewManager : IDisposable
 
     /// <summary>
     /// Runs the lazy filter scan for <paramref name="view"/> and, once it ends, hands the outcome to the
-    /// UI thread, which refreshes the item count label only for a successful scan of the still-current view.
+    /// UI thread, which refreshes the item count label for a successful scan of the still-current view
+    /// and shows the error view for a faulted one.
     /// </summary>
     private async Task RunLazyFilterScanAsync(IFilterRowIndexer filterIndexer, View view)
     {
-        var scanTask = _lazyFilterScanRunner.RunAsync(filterIndexer, _state.Cts.Token);
+        // Captured by value: loading another file cancels this token, which marks the outcome stale
+        var sessionToken = _state.Cts.Token;
+        var scanTask = _lazyFilterScanRunner.RunAsync(filterIndexer, sessionToken);
 
         // WhenAny never throws, so a canceled or faulted scan is observed without a catch-all.
         await Task.WhenAny(scanTask).ConfigureAwait(false);
         var succeeded = scanTask.IsCompletedSuccessfully;
+        var failureMessage = scanTask.Exception?.GetBaseException().Message;
 
-        _uiThreadInvoke(() => CompleteLazyFilterScan(view, succeeded));
+        _uiThreadInvoke(() => CompleteLazyFilterScan(view, succeeded, failureMessage, sessionToken));
     }
 
-    private void CompleteLazyFilterScan(View view, bool succeeded)
+    // A canceled scan (neither succeeded nor failed) changes nothing, as its view is being replaced.
+    private void CompleteLazyFilterScan(
+        View view,
+        bool succeeded,
+        string? failureMessage,
+        CancellationToken sessionToken)
     {
-        if (!succeeded || _disposed || !ReferenceEquals(_currentView, view) || !ReferenceEquals(_lazyScanView, view))
+        var isCurrentScan = !_disposed
+            && !sessionToken.IsCancellationRequested
+            && ReferenceEquals(_currentView, view)
+            && ReferenceEquals(_lazyScanView, view);
+        if (!isCurrentScan || (!succeeded && failureMessage is null))
         {
             return;
         }
 
         _lazyScanView = null;
+
+        if (failureMessage is not null)
+        {
+            ShowError($"Filter scan failed: {failureMessage}");
+            return;
+        }
+
         RefreshStatusBarHints();
     }
 
@@ -325,7 +345,14 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        IExtendedTableSource rawSource = new Views.VirtualTableSource(indexer, schema);
+        // Assigned below; the queued error callback compares it with the then-current view.
+        // The token marks the callback stale once another file session has started.
+        Views.CsvTableView? view = null;
+        var sessionToken = _state.Cts.Token;
+        IExtendedTableSource rawSource = new Views.VirtualTableSource(
+            indexer,
+            schema,
+            message => _uiThreadInvoke(() => ShowRowReadError(view, message, sessionToken)));
         var source = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
                 rawSource,
@@ -340,7 +367,7 @@ internal sealed class ViewManager : IDisposable
             : rawSource;
 
         var style = new TableStyle { AlwaysShowHeaders = true };
-        var view = new Views.CsvTableView
+        view = new Views.CsvTableView
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
@@ -576,6 +603,21 @@ internal sealed class ViewManager : IDisposable
         var view = Views.PlaceholderView.Create(_state);
         view.Text = message;
         SwapView(view);
+    }
+
+    // Raised while the table is drawing, so the view swap is queued until the draw has finished.
+    // A view that was replaced in the meantime must not replace its successor.
+    private void ShowRowReadError(View? erroredView, string message, CancellationToken sessionToken)
+    {
+        if (_disposed
+            || sessionToken.IsCancellationRequested
+            || _state.CurrentMode is not ViewMode.CsvTable
+            || !ReferenceEquals(_currentView, erroredView))
+        {
+            return;
+        }
+
+        ShowError($"Error reading CSV: {message}");
     }
 
     private void SetInitialSelectionWhenReady(MorphTableView view, IRowIndexer indexer)
