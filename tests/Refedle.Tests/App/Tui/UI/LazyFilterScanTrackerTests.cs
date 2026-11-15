@@ -150,6 +150,120 @@ public sealed class LazyFilterScanTrackerTests
         harness.View.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
 
     [Fact]
+    public void Constructor_WithNullFilterScanRunner_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            null!,
+            static _ => { },
+            static () => CancellationToken.None,
+            static () => { },
+            static _ => { },
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullUiThreadInvoke_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            null!,
+            static () => CancellationToken.None,
+            static () => { },
+            static _ => { },
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullParentToken_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            static _ => { },
+            null!,
+            static () => { },
+            static _ => { },
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullRefreshStatusBarHints_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            static _ => { },
+            static () => CancellationToken.None,
+            null!,
+            static _ => { },
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullShowError_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            static _ => { },
+            static () => CancellationToken.None,
+            static () => { },
+            null!,
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullGetCurrentView_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            static _ => { },
+            static () => CancellationToken.None,
+            static () => { },
+            static _ => { },
+            null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
     public void StartScan_ShowsOverlayOnTableView()
     {
         // Arrange
