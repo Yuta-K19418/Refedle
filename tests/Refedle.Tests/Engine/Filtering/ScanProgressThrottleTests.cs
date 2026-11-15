@@ -152,6 +152,22 @@ public sealed class ScanProgressThrottleTests
     }
 
     [Fact]
+    public void ShouldNotify_WhenOlderFinalPositionArrivesLate_DoesNotMoveRecordedPositionBackwards()
+    {
+        // Arrange — a final position records 150, then an older final position arrives late
+        var throttle = new ScanProgressThrottle();
+        throttle.ShouldNotify(scannedRows: 150, totalRows: 100).Should().BeTrue();
+
+        // Act
+        var olderFinal = throttle.ShouldNotify(scannedRows: 100, totalRows: 100);
+        var nextScanOfLaterFile = throttle.ShouldNotify(scannedRows: 102, totalRows: 200);
+
+        // Assert — the older final is still reported but must not roll the recorded position back
+        olderFinal.Should().BeTrue();
+        nextScanOfLaterFile.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ShouldNotify_WhenCalledConcurrentlyForSamePosition_NotifiesOnce()
     {
         // Arrange
