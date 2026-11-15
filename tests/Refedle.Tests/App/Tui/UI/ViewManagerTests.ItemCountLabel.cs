@@ -53,7 +53,7 @@ public sealed partial class ViewManagerTests
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         var textWhileScanning = GetItemCountText(harness.Window);
-        await harness.Queue.RunNextAsync();
+        await harness.Queue.RunUntilAsync(() => GetItemCountText(harness.Window) is not null);
 
         // Assert
         textWhileScanning.Should().BeNull();
@@ -74,7 +74,7 @@ public sealed partial class ViewManagerTests
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
         var textWhileScanning = GetItemCountText(harness.Window);
-        await harness.Queue.RunNextAsync();
+        await harness.Queue.RunUntilAsync(() => GetItemCountText(harness.Window) is not null);
 
         // Assert
         textWhileScanning.Should().BeNull();
@@ -211,6 +211,7 @@ public sealed partial class ViewManagerTests
         // Assert
         harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
         harness.ViewManager.GetCurrentView().Should().BeSameAs(newView);
+        GetItemCountText(harness.Window).Should().BeNull("the replacement scan is still running");
     }
 
     [Fact]
@@ -235,6 +236,7 @@ public sealed partial class ViewManagerTests
         harness.State.CurrentMode.Should().Be(ViewMode.CsvTable);
         harness.State.CurrentFilePath.Should().Be(nextFilePath);
         harness.ViewManager.GetCurrentView().Should().BeSameAs(oldView);
+        GetItemCountText(harness.Window).Should().BeNull();
     }
 
     [Fact]

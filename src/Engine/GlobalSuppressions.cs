@@ -91,3 +91,23 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~E:Refedle.Engine.IO.IRowIndexer.BuildIndexCompleted",
     Justification = "See RowIndexerBase remarks for rationale")]
+
+// IFilterRowIndexer — Action-based progress event matches the IRowIndexer events above.
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Engine.Filtering.IFilterRowIndexer.ProgressChanged",
+    Justification = "See RowIndexerBase remarks for rationale")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Engine.IO.Csv.FilterRowIndexer.ProgressChanged",
+    Justification = "See RowIndexerBase remarks for rationale")]
+[assembly: SuppressMessage(
+    "Design",
+    "CA1003:Use generic event handler instances",
+    Scope = "member",
+    Target = "~E:Refedle.Engine.IO.JsonLines.FilterRowIndexer.ProgressChanged",
+    Justification = "See RowIndexerBase remarks for rationale")]

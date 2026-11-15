@@ -3,6 +3,7 @@ using Refedle.Engine.Filtering;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.Tests.Engine.Filtering;
 
 namespace Refedle.Tests.Engine.IO.JsonLines;
 
@@ -120,5 +121,146 @@ public sealed class FilterRowIndexerTests : IDisposable
         );
         await filterIndexer.BuildIndexAsync(CancellationToken.None);
         return filterIndexer;
+    }
+
+    private async Task<(FilterRowIndexer FilterIndexer, List<(int scannedRows, int totalRows)> Events)>
+        CreateFilterIndexerAsync(IReadOnlyList<string> lines, FilterSpec spec)
+    {
+        await File.WriteAllLinesAsync(_testFilePath, lines);
+        var rowIndexer = new RowIndexer(_testFilePath);
+        rowIndexer.BuildIndex();
+        var filterIndexer = new FilterRowIndexer(
+            rowIndexer,
+            _testFilePath,
+            ["value"u8.ToArray()],
+            [spec]
+        );
+        List<(int scannedRows, int totalRows)> events = [];
+        filterIndexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
+        return (filterIndexer, events);
+    }
+
+    private Task<(FilterRowIndexer FilterIndexer, List<(int scannedRows, int totalRows)> Events)>
+        CreateMatchingFilterIndexerAsync(int rowCount) =>
+        CreateFilterIndexerAsync(
+            [.. Enumerable.Range(0, rowCount).Select(static _ => "{\"value\": 1}")],
+            new FilterSpec(0, ColumnType.Text, FilterOperator.Equals, "1")
+        );
+
+    [Fact]
+    public async Task BuildIndexAsync_WithSingleBatch_FiresProgressChangedOnceWithFinalCounts()
+    {
+        // Arrange
+        FilterSpec spec = new(0, ColumnType.Text, FilterOperator.Equals, "1.50");
+        var (filterIndexer, events) =
+            await CreateFilterIndexerAsync(["{\"value\": 1.50}", "{\"value\": 1.4}"], spec);
+
+        // Act
+        await filterIndexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert — the single batch is the final batch, so it always notifies with the full counts
+        events.Should().ContainSingle().Which.Should().Be((2, 2));
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WithMultipleBatches_ProgressReportsEveryBatchBoundary()
+    {
+        // Arrange
+        FilterSpec spec = new(0, ColumnType.Text, FilterOperator.Equals, "1");
+        var lines = Enumerable.Range(0, 2500).Select(static _ => "{\"value\": 1}").ToArray();
+        var (filterIndexer, events) = await CreateFilterIndexerAsync(lines, spec);
+
+        // Act
+        await filterIndexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert — each batch advances the scan by more than 1% of the total, so all of them notify
+        events.Should().Equal((1000, 2500), (2000, 2500), (2500, 2500));
+        filterIndexer.TotalMatchedRows.Should().Be(2500);
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WithManyRows_SkipsBatchesBelowOnePercentAndReportsShortFinalBatch()
+    {
+        // Arrange — each 1000-row batch is below 1% of 150001 rows, so some batches are skipped
+        var (filterIndexer, events) = await CreateMatchingFilterIndexerAsync(150_001);
+
+        // Act
+        await filterIndexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert
+        events.Should().NotContain((1_000, 150_001));
+        events.Should().Contain((2_000, 150_001));
+        events.Should().NotContain((3_000, 150_001));
+        events.Should().Contain((4_000, 150_001));
+        events[^2].Should().Be((150_000, 150_001));
+        events[^1].Should().Be((150_001, 150_001));
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WithEmptySource_CompletesWithoutProgress()
+    {
+        // Arrange
+        FilterSpec spec = new(0, ColumnType.Text, FilterOperator.Equals, "1");
+        var (filterIndexer, events) = await CreateFilterIndexerAsync([], spec);
+
+        // Act
+        await filterIndexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert — no rows means no batch, so no progress notification fires
+        events.Should().BeEmpty();
+        filterIndexer.TotalMatchedRows.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData(999)]
+    [InlineData(1000)]
+    [InlineData(1001)]
+    public async Task BuildIndexAsync_AtBatchBoundary_ReportsFinalCountsAndMatchesEveryRow(int rowCount)
+    {
+        // Arrange
+        var (filterIndexer, events) = await CreateMatchingFilterIndexerAsync(rowCount);
+
+        // Act
+        await filterIndexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert
+        events[^1].Should().Be((rowCount, rowCount));
+        filterIndexer.TotalMatchedRows.Should().Be(rowCount);
+        filterIndexer.GetSourceRow(rowCount - 1).Should().Be(rowCount - 1);
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WhenCanceledAfterFirstProgress_ThrowsWithoutFurtherProgress()
+    {
+        // Arrange
+        var (filterIndexer, events) = await CreateMatchingFilterIndexerAsync(2500);
+        using var cts = new CancellationTokenSource();
+        filterIndexer.ProgressChanged += (_, _) => cts.Cancel();
+
+        // Act
+        var act = async () => await filterIndexer.BuildIndexAsync(cts.Token);
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        events.Should().Equal((1000, 2500));
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WhenCanceledWhileYielded_ThrowsWithoutReportingProgress()
+    {
+        // Arrange — a single batch is the final one, which would always notify if not guarded
+        var (filterIndexer, events) = await CreateMatchingFilterIndexerAsync(2);
+        using var cts = new CancellationTokenSource();
+        var context = new YieldCapturingSynchronizationContext();
+        var scan = context.Start(() => filterIndexer.BuildIndexAsync(cts.Token));
+
+        // Act — cancel while the scan is suspended at the yield, then resume it
+        cts.Cancel();
+        context.RunNext();
+        var act = async () => await scan;
+
+        // Assert
+        await act.Should().ThrowAsync<OperationCanceledException>();
+        events.Should().BeEmpty();
     }
 }

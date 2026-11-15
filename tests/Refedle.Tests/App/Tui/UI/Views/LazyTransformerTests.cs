@@ -28,6 +28,10 @@ public sealed class LazyTransformerTests
     /// </summary>
     private sealed class SyncFilterRowIndexer(IReadOnlyList<int> matchedRows) : IFilterRowIndexer
     {
+#pragma warning disable CS0067
+        public event Action<int, int>? ProgressChanged;
+#pragma warning restore CS0067
+
         public int TotalMatchedRows => matchedRows.Count;
 
         public int GetSourceRow(int filteredIndex) => matchedRows[filteredIndex];
