@@ -17,6 +17,12 @@ namespace Refedle.Tests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests
 {
+    /// <summary>
+    /// Grace period for the negative queue assertions: wide enough for a late queueing to
+    /// arrive and fail the test, short enough to keep the suite fast.
+    /// </summary>
+    private static readonly TimeSpan NothingQueuedGrace = TimeSpan.FromMilliseconds(250);
+
     private static TableSchema CreateItemCountSchema(DataFormat format) => new()
     {
         SourceFormat = format,
@@ -93,6 +99,7 @@ public sealed partial class ViewManagerTests
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         var textWhileScanning = GetItemCountText(harness.Window);
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
@@ -114,6 +121,7 @@ public sealed partial class ViewManagerTests
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
         var textWhileScanning = GetItemCountText(harness.Window);
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
@@ -131,6 +139,7 @@ public sealed partial class ViewManagerTests
         var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
         // Act
         runner.End(0, ScanOutcome.Faulted);
@@ -157,6 +166,7 @@ public sealed partial class ViewManagerTests
         harness.State.CompleteJsonLinesSchemaScan(schema);
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, schema);
         harness.State.CurrentMode.Should().Be(ViewMode.JsonLinesTable);
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
         // Act
         runner.End(0, ScanOutcome.Faulted);
@@ -179,6 +189,7 @@ public sealed partial class ViewManagerTests
         var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         var tableView = harness.ViewManager.GetCurrentView();
 
         // Act
@@ -201,7 +212,9 @@ public sealed partial class ViewManagerTests
         var schema = CreateItemCountSchema(DataFormat.Csv);
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the first scan begins
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        await harness.Queue.RunNextAsync(); // the replacement scan begins
         var newView = harness.ViewManager.GetCurrentView();
 
         // Act
@@ -223,6 +236,7 @@ public sealed partial class ViewManagerTests
         var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         var oldView = harness.ViewManager.GetCurrentView();
         runner.End(0, ScanOutcome.Faulted);
         var callback = await harness.Queue.NextAsync();
@@ -248,6 +262,7 @@ public sealed partial class ViewManagerTests
         var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         harness.ViewManager.Dispose();
         runner.End(0, ScanOutcome.Faulted);
         var callback = await harness.Queue.NextAsync();
@@ -270,7 +285,9 @@ public sealed partial class ViewManagerTests
         var schema = CreateItemCountSchema(DataFormat.Csv);
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the first scan begins
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
+        await harness.Queue.RunNextAsync(); // the replacement scan begins
 
         // Act
         runner.Complete(0);
@@ -293,6 +310,7 @@ public sealed partial class ViewManagerTests
         var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
+        await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
         // Act
         harness.ViewManager.Dispose();
@@ -404,6 +422,18 @@ public sealed partial class ViewManagerTests
             {
                 await RunNextAsync();
             }
+        }
+
+        /// <summary>
+        /// Fails when any callback arrives within <paramref name="grace"/>; a callback that
+        /// arrives later than the grace period is not detected by this check.
+        /// </summary>
+        public async Task AssertNothingQueuedAsync(TimeSpan grace)
+        {
+            using var cts = new CancellationTokenSource(grace);
+            var read = async () => await _channel.Reader.ReadAsync(cts.Token);
+            await read.Should().ThrowAsync<OperationCanceledException>(
+                "no callback must be queued within the grace period");
         }
     }
 

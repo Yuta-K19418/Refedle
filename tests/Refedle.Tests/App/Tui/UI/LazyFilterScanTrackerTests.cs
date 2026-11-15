@@ -9,8 +9,9 @@ using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
 
-// LazyFilterScanTracker in isolation: the overlay lifecycle on the CSV / JSON Lines table
-// views, progress handling, and the stale-notification discard for every retirement path.
+// LazyFilterScanTracker in isolation: the deferred start behind the row-indexing wait, the
+// overlay lifecycle on the CSV / JSON Lines table views, progress handling, and the
+// stale-notification discard for every retirement path.
 public sealed class LazyFilterScanTrackerTests
 {
     /// <summary>
@@ -147,6 +148,14 @@ public sealed class LazyFilterScanTrackerTests
 
         public SteppingFilterRowIndexer Indexer { get; } = new();
 
+        /// <summary>Completes when the test lets the row indexing finish.</summary>
+        public TaskCompletionSource Indexing { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        /// <summary>Starts a scan that waits for <see cref="Indexing"/> before it begins.</summary>
+        public Task StartScanAsync() => Tracker.StartScanAsync(Indexer, View, Indexing.Task);
+
+        public void CompleteIndexing() => Indexing.TrySetResult();
+
         /// <summary>Simulates the next file session starting, which retires the old token.</summary>
         public void StartNextSession() => _sessionCts.Cancel();
 
@@ -170,6 +179,16 @@ public sealed class LazyFilterScanTrackerTests
 
     private static Label GetOverlayLabel(TrackerHarness harness) =>
         harness.OverlayHost.SubViews.OfType<Label>().Should().ContainSingle().Subject;
+
+    /// <summary>
+    /// Lets the pending row indexing finish and runs the queued scan start, so the test observes
+    /// the tracker with the scan actually begun.
+    /// </summary>
+    private static async Task LetScanBeginAsync(TrackerHarness harness)
+    {
+        harness.CompleteIndexing();
+        await harness.Pending.RunPendingAsync(expectedCount: 1);
+    }
 
     [Fact]
     public void Constructor_WithNullFilterScanRunner_ThrowsArgumentNullException()
@@ -312,26 +331,201 @@ public sealed class LazyFilterScanTrackerTests
     }
 
     [Fact]
-    public void StartScan_ShowsOverlayOnOverlayHostInsteadOfTableView()
+    public void StartScan_WhileIndexingRuns_ShowsNoOverlayAndStartsNoScan()
     {
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
 
         // Act
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+
+        // Assert — while the row index is still building, the scan has not begun
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
+        harness.RefreshCount.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task StartScan_WhenIndexingCompletes_ShowsOverlayOnOverlayHostAndStartsScan()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+
+        // Act
+        await LetScanBeginAsync(harness);
 
         // Assert — spinner and percentage label sit on the host container, never on
         // the table view whose scrollable content would carry them out of the viewport
         GetOverlayLabel(harness).Text.Should().Be(" Filtering… 0%");
         harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.View.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.Runner.Tokens.Should().ContainSingle();
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
         harness.RefreshCount.Should().Be(0);
     }
 
     [Fact]
-    public void StartScan_PlacesOverlayAtHostBottomRegardlessOfTableRowCount()
+    public async Task StartScan_WhenIndexingAlreadyCompleted_StartsScan()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+
+        // Act — the completed wait continues synchronously, queuing the scan start
+        _ = harness.Tracker.StartScanAsync(harness.Indexer, harness.View, Task.CompletedTask);
+        await harness.Pending.RunPendingAsync(expectedCount: 1);
+
+        // Assert
+        GetOverlayLabel(harness).Text.Should().Be(" Filtering… 0%");
+        harness.Runner.Tokens.Should().ContainSingle();
+        harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenViewWasReplacedWhileWaitingIndexing_StartsNoScan()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.Tracker.Detach();
+
+        // Act
+        await LetScanBeginAsync(harness);
+
+        // Assert — the stale scan start is discarded without overlay or build
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenFileSessionEndedWhileWaitingIndexing_StartsNoScan()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        var deferredStart = harness.StartScanAsync();
+
+        // Act — the file session ends while indexing is still running, then indexing finishes;
+        // the awaited task is the synchronization point proving the wait abandoned the scan
+        harness.StartNextSession();
+        harness.CompleteIndexing();
+        await deferredStart.WaitAsync(TimeSpan.FromSeconds(10));
+
+        // Assert — once the wait ended, nothing was ever queued: no scan starts, no overlay
+        await harness.Pending.RunPendingAsync(expectedCount: 0);
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenTrackerDisposedWhileWaitingIndexing_StartsNoScan()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.Tracker.Dispose();
+
+        // Act
+        await LetScanBeginAsync(harness);
+
+        // Assert — the scan start after disposal is discarded without overlay or build
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenViewWasDetachedAfterStartIsQueued_DiscardsQueuedStart()
+    {
+        // Arrange — the scan start is queued and captured before the dispatcher runs it
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.CompleteIndexing();
+        var queuedStart = await harness.Pending.NextAsync();
+        harness.Tracker.Detach();
+
+        // Act
+        queuedStart();
+
+        // Assert — the stale start neither runs a build nor shows an overlay
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.RefreshCount.Should().Be(0);
+        harness.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenFileSessionEndsAfterStartIsQueued_DiscardsQueuedStart()
+    {
+        // Arrange — the scan start is queued and captured before the dispatcher runs it
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.CompleteIndexing();
+        var queuedStart = await harness.Pending.NextAsync();
+        harness.StartNextSession();
+
+        // Act
+        queuedStart();
+
+        // Assert — the stale start neither runs a build nor shows an overlay
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+        harness.RefreshCount.Should().Be(0);
+        harness.Errors.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenTrackerDisposedAfterStartIsQueued_DiscardsQueuedStart()
+    {
+        // Arrange — the scan start is queued and captured before the dispatcher runs it
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.CompleteIndexing();
+        var queuedStart = await harness.Pending.NextAsync();
+        harness.Tracker.Dispose();
+
+        // Act
+        var act = queuedStart;
+
+        // Assert — the start queued before disposal is discarded without throwing
+        act.Should().NotThrow();
+        harness.Runner.Tokens.Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task StartScan_WhenReplacedByNextScanAfterStartIsQueued_StartsOnlyNextScan()
+    {
+        // Arrange — the scan start is queued and captured before the dispatcher runs it
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness();
+        _ = harness.StartScanAsync();
+        harness.CompleteIndexing();
+        var queuedStart = await harness.Pending.NextAsync();
+
+        // Act — a second scan replaces the waiting one, then the stale start runs
+        _ = harness.Tracker.StartScanAsync(new SteppingFilterRowIndexer(), harness.View, Task.CompletedTask);
+        queuedStart();
+        await harness.Pending.RunPendingAsync(expectedCount: 1); // the replacement begins
+
+        // Assert — only the replacement scan started, and it owns the overlay untouched
+        harness.Runner.Tokens.Should().ContainSingle();
+        GetOverlayLabel(harness).Text.Should().Be(" Filtering… 0%");
+        harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task StartScan_PlacesOverlayAtHostBottomRegardlessOfTableRowCount()
     {
         // Arrange — the table content (50k rows) is far taller than the host viewport
         using var app = TestAppFactory.Create();
@@ -341,7 +535,8 @@ public sealed class LazyFilterScanTrackerTests
         harness.App.LayoutAndDraw();
 
         // Act
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         harness.App.LayoutAndDraw();
 
         // Assert — the strip stays on the host's bottom row even though the table content
@@ -357,7 +552,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         var label = GetOverlayLabel(harness);
 
         // Act — the tick is enqueued synchronously on the calling thread
@@ -375,7 +571,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         var label = GetOverlayLabel(harness);
 
         // Act — the tick is queued, then the view is replaced before the dispatcher runs it
@@ -395,7 +592,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
 
         // Act
         harness.Runner.Complete(0);
@@ -413,7 +611,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
 
         // Act
         harness.Runner.End(0);
@@ -432,7 +631,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
 
         // Act
         harness.Runner.Cancel(0);
@@ -451,7 +651,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange — the view stays current, but the scan's file session has ended
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         harness.StartNextSession();
 
         // Act
@@ -471,7 +672,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         harness.Tracker.Detach();
 
         // Act
@@ -489,7 +691,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
 
         // Act
         harness.Tracker.Dispose();
@@ -505,13 +708,15 @@ public sealed class LazyFilterScanTrackerTests
     [Fact]
     public async Task StartScan_WhilePreviousScanStillAttached_ReplacesIt()
     {
-        // Arrange
+        // Arrange — the first scan is running when the second one replaces it
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
 
         // Act — a second scan on the same view retires the first one's presentation
-        harness.Tracker.StartScan(new SteppingFilterRowIndexer(), harness.View);
+        _ = harness.Tracker.StartScanAsync(new SteppingFilterRowIndexer(), harness.View, Task.CompletedTask);
+        await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — one overlay remains, and the retired indexer's ticks no longer reach it
         harness.OverlayHost.SubViews.OfType<Label>().Should().ContainSingle();
@@ -525,11 +730,11 @@ public sealed class LazyFilterScanTrackerTests
     public async Task CompleteScan_WhenPreviousScanSucceedsAfterReplacement_KeepsCurrentOverlay()
     {
         // Arrange
-        using var scenario = new ReplacedScanScenario();
+        using var scenario = await ReplacedScanScenario.CreateAsync();
 
-        // Act — the old scan ends after the replacement; its queued tick and completion then run
+        // Act — the old scan ends after the replacement; its completion then runs
         scenario.Harness.Runner.Complete(0);
-        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 2);
+        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
         await scenario.AssertReplacementIntactAsync();
@@ -539,11 +744,11 @@ public sealed class LazyFilterScanTrackerTests
     public async Task CompleteScan_WhenPreviousScanFaultsAfterReplacement_KeepsCurrentOverlayAndShowsNoError()
     {
         // Arrange
-        using var scenario = new ReplacedScanScenario();
+        using var scenario = await ReplacedScanScenario.CreateAsync();
 
         // Act
         scenario.Harness.Runner.End(0);
-        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 2);
+        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
         await scenario.AssertReplacementIntactAsync();
@@ -554,30 +759,40 @@ public sealed class LazyFilterScanTrackerTests
     public async Task CompleteScan_WhenPreviousScanIsCanceledAfterReplacement_KeepsCurrentOverlay()
     {
         // Arrange
-        using var scenario = new ReplacedScanScenario();
+        using var scenario = await ReplacedScanScenario.CreateAsync();
 
         // Act
         scenario.Harness.Runner.Cancel(0);
-        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 2);
+        await scenario.Harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
         await scenario.AssertReplacementIntactAsync();
     }
 
     /// <summary>
-    /// Scan A has a progress tick queued, then scan B replaces it on the same view. The tests end
-    /// A with each outcome and then check, through the shared assertion, that B is unaffected.
+    /// Scan A is running with a progress tick queued, then scan B replaces it on the same view.
+    /// The tests end A with each outcome and then check, through the shared assertion, that B is
+    /// unaffected.
     /// </summary>
     private sealed class ReplacedScanScenario : IDisposable
     {
         private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
         private readonly SteppingFilterRowIndexer _nextIndexer = new();
 
-        public ReplacedScanScenario()
+        public static async Task<ReplacedScanScenario> CreateAsync()
         {
-            Harness.Tracker.StartScan(Harness.Indexer, Harness.View);
-            Harness.Indexer.RaiseProgress(1, 5);
-            Harness.Tracker.StartScan(_nextIndexer, Harness.View);
+            var scenario = new ReplacedScanScenario();
+            _ = scenario.Harness.StartScanAsync();
+            scenario.Harness.CompleteIndexing();
+            await scenario.Harness.Pending.RunPendingAsync(expectedCount: 1); // scan A begins
+
+            scenario.Harness.Indexer.RaiseProgress(1, 5); // A's tick queued
+            _ = scenario.Harness.Tracker.StartScanAsync(
+                scenario._nextIndexer,
+                scenario.Harness.View,
+                Task.CompletedTask);
+            await scenario.Harness.Pending.RunPendingAsync(expectedCount: 2); // stale tick, then B begins
+            return scenario;
         }
 
         public TrackerHarness Harness { get; } = new();
@@ -616,7 +831,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         var label = GetOverlayLabel(harness);
 
         // Act — the tick fires on a worker thread; nothing runs on the UI queue yet
@@ -634,7 +850,8 @@ public sealed class LazyFilterScanTrackerTests
         // Arrange — the view stays current, but the file session ends after the tick is queued
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
-        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        _ = harness.StartScanAsync();
+        await LetScanBeginAsync(harness);
         var label = GetOverlayLabel(harness);
         harness.Indexer.RaiseProgress(4, 5);
         harness.StartNextSession();
