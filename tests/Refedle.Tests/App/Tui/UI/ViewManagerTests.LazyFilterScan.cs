@@ -15,6 +15,28 @@ namespace Refedle.Tests.App.Tui.UI;
 // the content container and its survival across the JSON Lines schema refinement rebuild.
 public sealed partial class ViewManagerTests
 {
+    [Fact]
+    public void FilterScanManager_Constructor_WithNullOverlayHost_ThrowsArgumentNullException()
+    {
+        // Arrange
+        // (no setup required)
+
+        // Act
+        var act = () => new FilterScanManager(
+            new FilterIndexingRunner(),
+            static _ => { },
+            static () => CancellationToken.None,
+            static (_, _) => throw new InvalidOperationException("Not expected."),
+            static _ => { },
+            static () => { },
+            static _ => { },
+            null!,
+            static () => null);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("overlayHost");
+    }
+
     private static IEnumerable<View> SelfAndDescendants(View view)
     {
         var pending = new Stack<View>();

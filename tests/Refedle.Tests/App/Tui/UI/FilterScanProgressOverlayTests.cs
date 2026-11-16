@@ -201,4 +201,37 @@ public sealed class FilterScanProgressOverlayTests
         // Assert
         act.Should().NotThrow();
     }
+
+    [Fact]
+    public void Dismiss_WhenNotShown_DoesNotThrow()
+    {
+        // Arrange
+        using var overlay = new FilterScanProgressOverlay();
+
+        // Act
+        var act = overlay.Dismiss;
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void BringToFront_AfterDismiss_LeavesParentSubViewsUnchanged()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var parent = CreateParent();
+        using var overlay = new FilterScanProgressOverlay();
+        using var sibling = new View();
+        overlay.Show(parent);
+        parent.Add(sibling);
+        overlay.Dismiss();
+        var before = parent.SubViews.ToList();
+
+        // Act
+        overlay.BringToFront();
+
+        // Assert
+        parent.SubViews.Should().Equal(before);
+    }
 }
