@@ -226,7 +226,7 @@ if (key.KeyCode == (KeyCode.F | KeyCode.ShiftMask))
 `HandleFilterColumn()` follows the same guard + dialog pattern as the existing `HandleRenameColumn()`, `HandleDeleteColumn()`, `HandleCastColumn()` methods:
 
 1. Guard: `App`, `OnMorphAction`/`_onMorphAction`, `Table`, `SelectedColumn`
-2. **Guard: row indexer BuildIndex must be complete** — if still scanning, return early (no dialog).
+2. **Guard: row indexer BuildIndex must be complete** — if still scanning, show an error dialog ("Row index is still being built. Please wait.") and return without opening the filter dialog.
 3. Open `FilterColumnDialog(columnName)`
 4. On confirm: call `FilterAction.Create(ColumnName, Operator, ComparisonType, Value)`; the dialog already validated, so `IsFailure` here is unreachable — invoke the callback with `.Value`
 

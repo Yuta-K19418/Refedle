@@ -1,8 +1,10 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
+using Refedle.App.Tui.UI.Views.Dialogs;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.App.Tui.Workers;
@@ -14,9 +16,11 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
+using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
+using CsvRowIndexer = Refedle.Engine.IO.Csv.DataRowIndexer;
 using JsonArrayRowIndexer = Refedle.Engine.IO.JsonArray.RowIndexer;
 using JsonLinesRowIndexer = Refedle.Engine.IO.JsonLines.RowIndexer;
 
@@ -328,6 +332,121 @@ public sealed class AppKeyHandlerTests
 
         // Assert
         handled.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task HandleActionMenu_WhenTableActionSelected_ClosesMenuBeforeActionDialogOpens()
+    {
+        // Arrange
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
+        try
+        {
+            var probe = new MenuClosedProbe();
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var context = CreateTableMenuContext(app, window, filePath);
+                probe.Attach(app);
+                return context;
+            });
+
+            // Act
+            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+
+            // Assert
+            result.Should().BeTrue();
+            probe.MenuRunningWhenActionDialogOpened.Should().BeFalse();
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    [Fact]
+    public async Task HandleActionMenu_WhenTableMenuCancelled_RunsNoAction()
+    {
+        // Arrange
+        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
+        try
+        {
+            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            {
+                var context = CreateTableMenuContext(app, window, filePath);
+                ModalKeys.SendOnceOnTop(app, window, Key.Esc);
+                return context;
+            });
+
+            // Act
+            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+
+            // Assert
+            var actionCount = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.Count));
+            result.Should().BeTrue();
+            actionCount.Should().Be(0);
+        }
+        finally
+        {
+            File.Delete(filePath);
+        }
+    }
+
+    /// <summary>
+    /// Confirms the first action in the Actions menu, then records whether the menu was still
+    /// running at the moment the action's dialog became the top view, and dismisses that dialog.
+    /// </summary>
+    private sealed class MenuClosedProbe
+    {
+        private ActionMenuDialog? _menu;
+
+        public bool? MenuRunningWhenActionDialogOpened { get; private set; }
+
+        public void Attach(IApplication app)
+        {
+            void OnIteration(object? sender, EventArgs<IApplication?> args)
+            {
+                var topView = app.TopRunnableView;
+                if (topView is ActionMenuDialog top && _menu is null)
+                {
+                    _menu = top;
+                    app.Keyboard.RaiseKeyDownEvent(Key.Enter);
+                }
+                else if (topView is RenameColumnDialog)
+                {
+                    app.Iteration -= OnIteration;
+                    MenuRunningWhenActionDialogOpened = _menu?.IsRunning;
+                    app.Keyboard.RaiseKeyDownEvent(Key.Esc);
+                }
+            }
+
+            app.Iteration += OnIteration;
+        }
+    }
+
+    [SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope",
+        Justification = "The session disposes the returned context, the window owns the view, and the handler is owned by the test host.")]
+    private static LiveTestContext<AppKeyHandler> CreateTableMenuContext(
+        IApplication app, Window window, string filePath)
+    {
+        var state = new AppState();
+        state.StartNewFile(filePath);
+        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        var indexer = new CsvRowIndexer(filePath);
+        indexer.BuildIndex();
+        var schema = new TableSchema
+        {
+            SourceFormat = DataFormat.Csv,
+            Columns = [new ColumnSchema { Name = "Col1", Type = ColumnType.Text }],
+        };
+        viewManager.SwitchToCsvTable(indexer, schema);
+        var view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
+        view.Value = new TableSelection(new Point(0, 0));
+        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
+        var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
     }
 
     [Fact]

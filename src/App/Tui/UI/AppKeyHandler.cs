@@ -190,8 +190,16 @@ internal sealed class AppKeyHandler : IDisposable
             _app, paged.Inner, mt.Value.SelectedCell.X,
             mt.OnMorphAction, format.Value, mt.IsRowIndexComplete);
 
-        var dialog = new ActionMenuDialog(ColumnActionHandler.GetAvailableActions(), handler.ExecuteAction);
+        string? selectedAction = null;
+        var dialog = new ActionMenuDialog(ColumnActionHandler.GetAvailableActions(), action => selectedAction = action);
         _app.Run(dialog);
+
+        // Run after the menu is closed so the action's dialogs do not stack on top of it.
+        if (selectedAction is not null)
+        {
+            handler.ExecuteAction(selectedAction);
+        }
+
         return true;
     }
 
