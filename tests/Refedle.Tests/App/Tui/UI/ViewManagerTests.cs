@@ -1206,6 +1206,7 @@ public sealed partial class ViewManagerTests : IDisposable
         var decorated = view.Table.Should().BeOfType<PagedTableSource>().Which
             .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which;
         decorated.Inner.Should().BeOfType<FocusedTableSource>();
+        view.IsRowIndexComplete.Should().BeNull();
         view.OnMorphAction.Should().NotBeNull();
         decorated.RawColumnNames[1].Should().Be("name");
     }

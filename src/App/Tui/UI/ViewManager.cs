@@ -336,6 +336,7 @@ internal sealed class ViewManager : IDisposable
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
+            IsRowIndexComplete = () => indexer.IsIndexingCompleted,
         };
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
@@ -439,6 +440,7 @@ internal sealed class ViewManager : IDisposable
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(tableSource, style)),
             Style = style,
             OnMorphAction = HandleMorphAction,
+            IsRowIndexComplete = () => indexer.IsIndexingCompleted,
         };
         _state.SetSchemaRefinedCallback(refined =>
         {
