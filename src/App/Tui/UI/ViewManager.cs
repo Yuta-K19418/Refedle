@@ -73,6 +73,16 @@ internal sealed class ViewManager : IDisposable
         _state = state;
         _modeController = modeController;
         _uiThreadInvoke = uiThreadInvoke;
+        _breadcrumbBar = new BreadcrumbBar();
+        _contentContainer = new View
+        {
+            X = 0,
+            Y = Pos.Bottom(_breadcrumbBar),
+            Width = Dim.Fill(),
+            Height = Dim.Fill() - 1, // Leave room for StatusBar at the bottom
+            CanFocus = true,
+        };
+        _container.Add(_breadcrumbBar, _contentContainer);
         // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
         // it drives the content view, status bar and error display on the UI thread.
         _filterScanManager = new FilterScanManager(
@@ -84,24 +94,17 @@ internal sealed class ViewManager : IDisposable
             RefreshStatusBarHints,
             ShowError,
             GetCurrentView);
-        // Same decoupling for the lazy scan of the CSV / JSON Lines table views.
+        // Same decoupling for the lazy scan of the CSV / JSON Lines table views. The scan
+        // overlay rides the content container, whose content size is its viewport, so it
+        // stays in the visible area regardless of the table's row count.
         _lazyFilterScanTracker = new LazyFilterScanTracker(
             filterScanRunner,
             uiThreadInvoke,
             () => state.Cts.Token,
             RefreshStatusBarHints,
             ShowError,
+            _contentContainer,
             GetCurrentView);
-        _breadcrumbBar = new BreadcrumbBar();
-        _contentContainer = new View
-        {
-            X = 0,
-            Y = Pos.Bottom(_breadcrumbBar),
-            Width = Dim.Fill(),
-            Height = Dim.Fill() - 1, // Leave room for StatusBar at the bottom
-            CanFocus = true,
-        };
-        _container.Add(_breadcrumbBar, _contentContainer);
     }
 
     /// <summary>
@@ -615,8 +618,8 @@ internal sealed class ViewManager : IDisposable
         // Replacing the content view orphans a running filter scan, except when the new view
         // is the scan's own staged replacement for the loading view.
         _filterScanManager.CancelIfNotStaged(newView);
-        // Retire the lazy scan's overlay while its host view is still alive; the removal
-        // below disposes the host, and with it any view still attached.
+        // Retire the lazy scan's overlay before the scan's view goes away, so it cannot
+        // linger over the next content view; its host container survives the swap.
         _lazyFilterScanTracker.Detach();
 
         if (_currentView is not null)

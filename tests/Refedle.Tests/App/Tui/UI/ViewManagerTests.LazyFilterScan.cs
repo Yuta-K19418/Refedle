@@ -12,14 +12,31 @@ using Terminal.Gui.Views;
 namespace Refedle.Tests.App.Tui.UI;
 
 // Lazy filter scans of the CSV / JSON Lines table views: the progress overlay lifecycle on
-// the live content view and its survival across the JSON Lines schema refinement rebuild.
+// the content container and its survival across the JSON Lines schema refinement rebuild.
 public sealed partial class ViewManagerTests
 {
+    private static IEnumerable<View> SelfAndDescendants(View view)
+    {
+        var pending = new Stack<View>();
+        pending.Push(view);
+
+        while (pending.Count > 0)
+        {
+            var current = pending.Pop();
+            yield return current;
+
+            foreach (var child in current.SubViews)
+            {
+                pending.Push(child);
+            }
+        }
+    }
+
     private static ProgressBar? FindProgressOverlayBar(View? view) =>
-        view?.SubViews.OfType<ProgressBar>().FirstOrDefault();
+        view is null ? null : SelfAndDescendants(view).OfType<ProgressBar>().FirstOrDefault();
 
     [Fact]
-    public async Task SwitchToCsvTable_WithFilterAction_ShowsProgressOverlayUntilScanCompletes()
+    public async Task SwitchToCsvTable_WithFilterAction_ShowsOverlayOnContentContainerUntilScanCompletes()
     {
         // Arrange
         using var app = TestAppFactory.Create();
@@ -29,13 +46,20 @@ public sealed partial class ViewManagerTests
 
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
-        var barWhileScanning = FindProgressOverlayBar(harness.ViewManager.GetCurrentView());
+        var tableView = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        var barWhileScanning = SelfAndDescendants(harness.Window).OfType<ProgressBar>().Should().ContainSingle().Subject;
+
+        // Assert — while the scan runs, the overlay rides the content container (the table
+        // view's own parent) and never enters the table view's subtree
+        barWhileScanning.SuperView.Should().BeSameAs(tableView.SuperView);
+        SelfAndDescendants(tableView).OfType<ProgressBar>().Should().BeEmpty();
+
+        // Act — complete the scan
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
-        // Assert — the overlay rides on the table view while the scan runs, then retires
-        barWhileScanning.Should().NotBeNull();
-        FindProgressOverlayBar(harness.ViewManager.GetCurrentView()).Should().BeNull();
+        // Assert — the overlay retires with the scan and the item count appears
+        FindProgressOverlayBar(harness.Window).Should().BeNull();
         GetItemCountText(harness.Window).Should().NotBeNull();
     }
 
@@ -51,13 +75,13 @@ public sealed partial class ViewManagerTests
 
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
-        var barWhileScanning = FindProgressOverlayBar(harness.ViewManager.GetCurrentView());
+        var barWhileScanning = FindProgressOverlayBar(harness.Window);
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
         // Assert
         barWhileScanning.Should().NotBeNull();
-        FindProgressOverlayBar(harness.ViewManager.GetCurrentView()).Should().BeNull();
+        FindProgressOverlayBar(harness.Window).Should().BeNull();
         GetItemCountText(harness.Window).Should().NotBeNull();
     }
 
@@ -76,10 +100,10 @@ public sealed partial class ViewManagerTests
 
         // Act — rebuild the transformer on the same view while the scan's callbacks are queued
         harness.Refine("col1", "col2");
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle("the overlay must survive the rebuild");
+        FindProgressOverlayBar(harness.Window).Should().NotBeNull("the overlay must survive the rebuild");
         var finalTick = await harness.Queue.NextAsync();
         finalTick();
-        var barAfterTick = view.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
+        var barAfterTick = SelfAndDescendants(harness.Window).OfType<ProgressBar>().Should().ContainSingle().Subject;
         var completion = await harness.Queue.NextAsync();
         completion();
         await harness.Runner.TaskAt(0);
@@ -88,7 +112,7 @@ public sealed partial class ViewManagerTests
         // completion retires it without starting a second scan
         view.Table.Should().NotBeSameAs(oldTable);
         barAfterTick.Fraction.Should().Be(1f);
-        FindProgressOverlayBar(view).Should().BeNull();
+        FindProgressOverlayBar(harness.Window).Should().BeNull();
         harness.Runner.Tasks().Should().HaveCount(1);
         view.Table[0, 1].Should().Be("b");
     }
@@ -103,15 +127,22 @@ public sealed partial class ViewManagerTests
         using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
 
-        // Act — replace the content view, then let the orphaned scan complete
+        // Act — replace the content view while the scan still runs
         harness.ViewManager.SwitchToFileSelection();
+
+        // Assert — the swap already retired the overlay from the surviving host; the host
+        // container is not disposed by the swap, so only Detach can have removed it here
+        FindProgressOverlayBar(harness.Window).Should().BeNull(
+            "the view swap must retire the overlay while the scan is still running");
+
+        // Act — let the orphaned scan complete
         runner.Complete(0);
         var runStaleCompletion = () => harness.Queue.RunNextAsync();
 
         // Assert — the stale completion is discarded without touching the disposed table view
         await runStaleCompletion.Should().NotThrowAsync();
         harness.ViewManager.GetCurrentView().Should().BeOfType<FileSelectionView>();
-        FindProgressOverlayBar(harness.ViewManager.GetCurrentView()).Should().BeNull();
+        FindProgressOverlayBar(harness.Window).Should().BeNull();
     }
 
     /// <summary>
@@ -138,6 +169,8 @@ public sealed partial class ViewManagerTests
         public string FilePath { get; }
 
         public AppState State { get; } = new();
+
+        public Window Window => _window;
 
         public ViewManager ViewManager { get; }
 

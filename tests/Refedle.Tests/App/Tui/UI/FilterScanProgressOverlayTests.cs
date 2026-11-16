@@ -136,6 +136,33 @@ public sealed class FilterScanProgressOverlayTests
     }
 
     [Fact]
+    public void Show_WithParent_PlacesOverlayOnParentBottomRowOneColumnInsideRightEdge()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var parent = CreateParent();
+        using var overlay = new FilterScanProgressOverlay();
+        app.StopAfterFirstIteration = true;
+        app.Begin(parent);
+
+        // Act
+        overlay.Show(parent);
+        app.LayoutAndDraw();
+
+        // Assert — the whole strip sits on the parent's bottom row when the host does not
+        // scroll (its content size equals its viewport)
+        var spinner = parent.SubViews.OfType<SpinnerView>().Single();
+        var bar = GetProgressBar(parent);
+        var label = GetLabel(parent);
+        var contentSize = parent.GetContentSize();
+        spinner.Frame.Y.Should().Be(contentSize.Height - 1);
+        bar.Frame.Y.Should().Be(contentSize.Height - 1);
+        label.Frame.Y.Should().Be(contentSize.Height - 1);
+        label.Frame.Right.Should().Be(contentSize.Width - 1);
+        spinner.Frame.X.Should().Be(bar.Frame.X - 1);
+    }
+
+    [Fact]
     public void Show_WithParent_UsesWhiteOnDarkGraySchemeForAllViews()
     {
         // Arrange

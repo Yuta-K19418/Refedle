@@ -7,12 +7,12 @@ namespace Refedle.App.Tui.UI;
 
 /// <summary>
 /// Owns the lazy filter scan attached to a CSV / JSON Lines table view: the progress overlay
-/// on the table view, the per-tick row refreshes while the scan runs, the item-count refresh
-/// when it completes, and the error view shown when it faults. <see cref="ViewManager"/> drives
-/// it through <see cref="StartScan"/>, <see cref="Detach"/> and <see cref="Dispose"/>; which
-/// scan is current stays private to this class. Unlike the FocusedTable scan, the background
-/// build observes only the file-session token — replacing the content view retires the
-/// presentation (overlay and subscription) but does not cancel the build itself.
+/// on the stable overlay host, the per-tick row refreshes while the scan runs, the item-count
+/// refresh when it completes, and the error view shown when it faults. <see cref="ViewManager"/>
+/// drives it through <see cref="StartScan"/>, <see cref="Detach"/> and <see cref="Dispose"/>;
+/// which scan is current stays private to this class. Unlike the FocusedTable scan, the
+/// background build observes only the file-session token — replacing the content view retires
+/// the presentation (overlay and subscription) but does not cancel the build itself.
 /// </summary>
 /// <remarks>
 /// Threading contract: all tracker state is UI-thread exclusive. Worker progress and
@@ -26,6 +26,7 @@ internal sealed class LazyFilterScanTracker(
     Func<CancellationToken> parentToken,
     Action refreshStatusBarHints,
     Action<string> showError,
+    View overlayHost,
     Func<View?> getCurrentView) : IDisposable
 {
     private readonly IFilterScanRunner _filterScanRunner =
@@ -38,6 +39,8 @@ internal sealed class LazyFilterScanTracker(
         refreshStatusBarHints ?? throw new ArgumentNullException(nameof(refreshStatusBarHints));
     private readonly Action<string> _showError =
         showError ?? throw new ArgumentNullException(nameof(showError));
+    private readonly View _overlayHost =
+        overlayHost ?? throw new ArgumentNullException(nameof(overlayHost));
     private readonly Func<View?> _getCurrentView =
         getCurrentView ?? throw new ArgumentNullException(nameof(getCurrentView));
     private readonly FilterScanProgressOverlay _overlay = new();
@@ -55,7 +58,7 @@ internal sealed class LazyFilterScanTracker(
 
     /// <summary>
     /// Starts the lazy scan for <paramref name="view"/>: subscribes the indexer's progress,
-    /// shows the overlay on the table view and runs the background build. Replaces any scan
+    /// shows the overlay on the overlay host and runs the background build. Replaces any scan
     /// still attached from a previous view. Runs on the UI thread, after the view became the
     /// current content view.
     /// </summary>
@@ -79,15 +82,17 @@ internal sealed class LazyFilterScanTracker(
         var scan = new ActiveScan(indexer, view, progressHandler);
         _activeScan = scan;
         indexer.ProgressChanged += progressHandler;
-        _overlay.Show(view);
+        // The host's content size is its viewport, so the anchored overlay stays in the visible
+        // area; on the table view it would follow the row count and leave the viewport.
+        _overlay.Show(_overlayHost);
 
         _ = RunScanAsync(scan, isScanCurrent, sessionToken);
     }
 
     /// <summary>
     /// Retires the active scan's presentation — unsubscribes progress and dismisses the
-    /// overlay — without touching the background build itself. Called when the content view
-    /// is about to be replaced, while the overlay's host view is still alive.
+    /// overlay from its host — without touching the background build itself. Called when the
+    /// content view is about to be replaced, so the overlay never lingers over the next view.
     /// </summary>
     internal void Detach()
     {

@@ -9,7 +9,9 @@ namespace Refedle.App.Tui.UI;
 
 /// <summary>
 /// Compact filter-scan progress overlay: a spinner, a progress bar and a percentage label
-/// placed at the right edge, one row above the bottom of the parent view.
+/// placed at the right edge, on the bottom row of the parent view. The parent must be a
+/// container whose content size is its viewport (e.g. the content container), never a
+/// scrollable view whose content follows its row count.
 /// Must be used on the UI thread; it adds and removes Terminal.Gui views.
 /// </summary>
 internal sealed class FilterScanProgressOverlay : IDisposable

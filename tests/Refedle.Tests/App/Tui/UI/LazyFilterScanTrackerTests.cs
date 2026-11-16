@@ -92,13 +92,28 @@ public sealed class LazyFilterScanTrackerTests
     {
         private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
         private readonly CancellationTokenSource _sessionCts = new();
+        private readonly Window _top = new() { Width = Dim.Fill(), Height = Dim.Fill() };
 
-        public TrackerHarness()
+        public TrackerHarness(long totalRows = 5)
         {
+            // Mirrors the production tree: Window → content container (overlay host) → table view
+            OverlayHost = new View
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill(),
+            };
             View = new TestTableView
             {
-                Table = new PagedTableSource(new NumberedTableSource(5)),
+                Table = new PagedTableSource(new NumberedTableSource(totalRows)),
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill(),
             };
+            OverlayHost.Add(View);
+            _top.Add(OverlayHost);
             CurrentView = View;
             Tracker = new LazyFilterScanTracker(
                 Runner,
@@ -106,6 +121,7 @@ public sealed class LazyFilterScanTrackerTests
                 () => _sessionCts.Token,
                 () => RefreshCount++,
                 Errors.Add,
+                OverlayHost,
                 () => CurrentView);
         }
 
@@ -114,6 +130,12 @@ public sealed class LazyFilterScanTrackerTests
         public ControllableFilterScanRunner Runner { get; } = new();
 
         public LazyFilterScanTracker Tracker { get; }
+
+        public View OverlayHost { get; }
+
+        public Window Top => _top;
+
+        public Terminal.Gui.App.IApplication App => _app;
 
         public TestTableView View { get; }
 
@@ -131,7 +153,7 @@ public sealed class LazyFilterScanTrackerTests
         public void Dispose()
         {
             Tracker.Dispose();
-            View.Dispose();
+            _top.Dispose();
             _sessionCts.Dispose();
             _app.Dispose();
         }
@@ -147,13 +169,16 @@ public sealed class LazyFilterScanTrackerTests
     }
 
     private static ProgressBar GetOverlayBar(TrackerHarness harness) =>
-        harness.View.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
+
+    private static Label GetOverlayLabel(TrackerHarness harness) =>
+        harness.OverlayHost.SubViews.OfType<Label>().Should().ContainSingle().Subject;
 
     [Fact]
     public void Constructor_WithNullFilterScanRunner_ThrowsArgumentNullException()
     {
         // Arrange
-        // (no setup required)
+        using var host = new View();
 
         // Act
         var act = () => new LazyFilterScanTracker(
@@ -162,6 +187,7 @@ public sealed class LazyFilterScanTrackerTests
             static () => CancellationToken.None,
             static () => { },
             static _ => { },
+            host,
             static () => null);
 
         // Assert
@@ -172,7 +198,7 @@ public sealed class LazyFilterScanTrackerTests
     public void Constructor_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        // (no setup required)
+        using var host = new View();
 
         // Act
         var act = () => new LazyFilterScanTracker(
@@ -181,6 +207,7 @@ public sealed class LazyFilterScanTrackerTests
             static () => CancellationToken.None,
             static () => { },
             static _ => { },
+            host,
             static () => null);
 
         // Assert
@@ -191,7 +218,7 @@ public sealed class LazyFilterScanTrackerTests
     public void Constructor_WithNullParentToken_ThrowsArgumentNullException()
     {
         // Arrange
-        // (no setup required)
+        using var host = new View();
 
         // Act
         var act = () => new LazyFilterScanTracker(
@@ -200,6 +227,7 @@ public sealed class LazyFilterScanTrackerTests
             null!,
             static () => { },
             static _ => { },
+            host,
             static () => null);
 
         // Assert
@@ -210,7 +238,7 @@ public sealed class LazyFilterScanTrackerTests
     public void Constructor_WithNullRefreshStatusBarHints_ThrowsArgumentNullException()
     {
         // Arrange
-        // (no setup required)
+        using var host = new View();
 
         // Act
         var act = () => new LazyFilterScanTracker(
@@ -219,6 +247,7 @@ public sealed class LazyFilterScanTrackerTests
             static () => CancellationToken.None,
             null!,
             static _ => { },
+            host,
             static () => null);
 
         // Assert
@@ -229,7 +258,7 @@ public sealed class LazyFilterScanTrackerTests
     public void Constructor_WithNullShowError_ThrowsArgumentNullException()
     {
         // Arrange
-        // (no setup required)
+        using var host = new View();
 
         // Act
         var act = () => new LazyFilterScanTracker(
@@ -238,6 +267,7 @@ public sealed class LazyFilterScanTrackerTests
             static () => CancellationToken.None,
             static () => { },
             null!,
+            host,
             static () => null);
 
         // Assert
@@ -248,6 +278,26 @@ public sealed class LazyFilterScanTrackerTests
     public void Constructor_WithNullGetCurrentView_ThrowsArgumentNullException()
     {
         // Arrange
+        using var host = new View();
+
+        // Act
+        var act = () => new LazyFilterScanTracker(
+            new ControllableFilterScanRunner(),
+            static _ => { },
+            static () => CancellationToken.None,
+            static () => { },
+            static _ => { },
+            host,
+            null!);
+
+        // Assert
+        act.Should().Throw<ArgumentNullException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNullOverlayHost_ThrowsArgumentNullException()
+    {
+        // Arrange
         // (no setup required)
 
         // Act
@@ -257,14 +307,15 @@ public sealed class LazyFilterScanTrackerTests
             static () => CancellationToken.None,
             static () => { },
             static _ => { },
-            null!);
+            null!,
+            static () => null);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
-    public void StartScan_ShowsOverlayOnTableView()
+    public void StartScan_ShowsOverlayOnOverlayHostInsteadOfTableView()
     {
         // Arrange
         using var app = TestAppFactory.Create();
@@ -273,10 +324,34 @@ public sealed class LazyFilterScanTrackerTests
         // Act
         harness.Tracker.StartScan(harness.Indexer, harness.View);
 
-        // Assert — spinner, bar and percentage label sit on the table view while the scan runs
+        // Assert — spinner, bar and percentage label sit on the host container, never on
+        // the table view whose scrollable content would carry them out of the viewport
         GetOverlayBar(harness).Fraction.Should().Be(0f);
+        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
         harness.RefreshCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void StartScan_PlacesOverlayAtHostBottomRegardlessOfTableRowCount()
+    {
+        // Arrange — the table content (50k rows) is far taller than the host viewport
+        using var app = TestAppFactory.Create();
+        using var harness = new TrackerHarness(totalRows: 50_000);
+        harness.App.StopAfterFirstIteration = true;
+        harness.App.Begin(harness.Top);
+        harness.App.LayoutAndDraw();
+
+        // Act
+        harness.Tracker.StartScan(harness.Indexer, harness.View);
+        harness.App.LayoutAndDraw();
+
+        // Assert — the strip stays on the host's bottom row even though the table content
+        // extends far below the viewport
+        var hostContentHeight = harness.OverlayHost.GetContentSize().Height;
+        harness.View.GetContentSize().Height.Should().BeGreaterThan(hostContentHeight);
+        GetOverlayBar(harness).Frame.Y.Should().Be(hostContentHeight - 1);
+        GetOverlayLabel(harness).Frame.Y.Should().Be(hostContentHeight - 1);
     }
 
     [Fact]
@@ -313,7 +388,7 @@ public sealed class LazyFilterScanTrackerTests
 
         // Assert — the stale tick must not update or re-create the retired overlay
         bar.Fraction.Should().Be(0f);
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
     }
 
@@ -330,7 +405,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
         harness.RefreshCount.Should().Be(1);
     }
@@ -348,7 +423,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — a faulted scan retires the overlay and surfaces its failure reason
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Errors.Should().ContainSingle().Which.Should().Be("Filter scan failed: scan failed");
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
@@ -367,7 +442,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — a canceled scan has no failure reason, so no error view and no refresh
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Errors.Should().BeEmpty();
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
@@ -387,7 +462,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — the stale fault retires the overlay but must not swap in the error view
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
         harness.Errors.Should().BeEmpty();
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
@@ -427,7 +502,7 @@ public sealed class LazyFilterScanTrackerTests
         // Assert — the completion queued before disposal is discarded without throwing
         await runQueuedCompletion.Should().NotThrowAsync();
         harness.RefreshCount.Should().Be(0);
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
     }
 
     [Fact]
@@ -442,7 +517,7 @@ public sealed class LazyFilterScanTrackerTests
         harness.Tracker.StartScan(new SteppingFilterRowIndexer(), harness.View);
 
         // Assert — one overlay remains, and the retired indexer's ticks no longer reach it
-        harness.View.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().ContainSingle();
         harness.Indexer.RaiseProgress(4, 5);
         await harness.Pending.RunPendingAsync(expectedCount: 0);
         GetOverlayBar(harness).Fraction.Should().Be(0f);
@@ -526,7 +601,7 @@ public sealed class LazyFilterScanTrackerTests
 
             Harness.Runner.Complete(1);
             await Harness.Pending.RunPendingAsync(expectedCount: 1);
-            Harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+            Harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
             Harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
             Harness.RefreshCount.Should().Be(1);
         }
