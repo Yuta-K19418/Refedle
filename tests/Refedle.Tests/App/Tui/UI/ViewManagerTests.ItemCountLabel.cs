@@ -377,7 +377,7 @@ public sealed partial class ViewManagerTests
     }
 
     private static bool IsCompletedFocusedTable(ViewManager viewManager) =>
-        viewManager.GetCurrentView() is FocusedTableView view && !view.SubViews.OfType<ProgressBar>().Any();
+        viewManager.GetCurrentView() is FocusedTableView { SuperView: { } host } && !SelfAndDescendants(host).Any(IsProgressOverlayLabel);
 
     /// <summary>
     /// Signal-based replacement for polling: each captured UI-thread callback is read from a channel

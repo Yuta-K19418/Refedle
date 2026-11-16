@@ -168,9 +168,6 @@ public sealed class LazyFilterScanTrackerTests
         public object this[long row, int col] => $"row{row}";
     }
 
-    private static ProgressBar GetOverlayBar(TrackerHarness harness) =>
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
-
     private static Label GetOverlayLabel(TrackerHarness harness) =>
         harness.OverlayHost.SubViews.OfType<Label>().Should().ContainSingle().Subject;
 
@@ -324,10 +321,11 @@ public sealed class LazyFilterScanTrackerTests
         // Act
         harness.Tracker.StartScan(harness.Indexer, harness.View);
 
-        // Assert — spinner, bar and percentage label sit on the host container, never on
+        // Assert — spinner and percentage label sit on the host container, never on
         // the table view whose scrollable content would carry them out of the viewport
-        GetOverlayBar(harness).Fraction.Should().Be(0f);
-        harness.View.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        GetOverlayLabel(harness).Text.Should().Be(" Filtering… 0%");
+        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.View.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
         harness.RefreshCount.Should().Be(0);
     }
@@ -350,7 +348,6 @@ public sealed class LazyFilterScanTrackerTests
         // extends far below the viewport
         var hostContentHeight = harness.OverlayHost.GetContentSize().Height;
         harness.View.GetContentSize().Height.Should().BeGreaterThan(hostContentHeight);
-        GetOverlayBar(harness).Frame.Y.Should().Be(hostContentHeight - 1);
         GetOverlayLabel(harness).Frame.Y.Should().Be(hostContentHeight - 1);
     }
 
@@ -361,14 +358,14 @@ public sealed class LazyFilterScanTrackerTests
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
         harness.Tracker.StartScan(harness.Indexer, harness.View);
-        var bar = GetOverlayBar(harness);
+        var label = GetOverlayLabel(harness);
 
         // Act — the tick is enqueued synchronously on the calling thread
         harness.Indexer.RaiseProgress(4, 5);
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
-        bar.Fraction.Should().BeApproximately(0.8f, 0.001f);
+        label.Text.Should().Be(" Filtering… 80%");
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
     }
 
@@ -379,7 +376,7 @@ public sealed class LazyFilterScanTrackerTests
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
         harness.Tracker.StartScan(harness.Indexer, harness.View);
-        var bar = GetOverlayBar(harness);
+        var label = GetOverlayLabel(harness);
 
         // Act — the tick is queued, then the view is replaced before the dispatcher runs it
         harness.Indexer.RaiseProgress(4, 5);
@@ -387,8 +384,8 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — the stale tick must not update or re-create the retired overlay
-        bar.Fraction.Should().Be(0f);
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        label.Text.Should().Be(" Filtering… 0%");
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
     }
 
@@ -405,7 +402,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
         harness.RefreshCount.Should().Be(1);
     }
@@ -423,7 +420,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — a faulted scan retires the overlay and surfaces its failure reason
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Errors.Should().ContainSingle().Which.Should().Be("Filter scan failed: scan failed");
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
@@ -442,7 +439,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — a canceled scan has no failure reason, so no error view and no refresh
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Errors.Should().BeEmpty();
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
@@ -462,7 +459,7 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert — the stale fault retires the overlay but must not swap in the error view
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
         harness.Errors.Should().BeEmpty();
         harness.RefreshCount.Should().Be(0);
         harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
@@ -502,7 +499,7 @@ public sealed class LazyFilterScanTrackerTests
         // Assert — the completion queued before disposal is discarded without throwing
         await runQueuedCompletion.Should().NotThrowAsync();
         harness.RefreshCount.Should().Be(0);
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
     }
 
     [Fact]
@@ -517,10 +514,10 @@ public sealed class LazyFilterScanTrackerTests
         harness.Tracker.StartScan(new SteppingFilterRowIndexer(), harness.View);
 
         // Assert — one overlay remains, and the retired indexer's ticks no longer reach it
-        harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        harness.OverlayHost.SubViews.OfType<Label>().Should().ContainSingle();
         harness.Indexer.RaiseProgress(4, 5);
         await harness.Pending.RunPendingAsync(expectedCount: 0);
-        GetOverlayBar(harness).Fraction.Should().Be(0f);
+        GetOverlayLabel(harness).Text.Should().Be(" Filtering… 0%");
         harness.Runner.Tokens[0].IsCancellationRequested.Should().BeFalse();
     }
 
@@ -591,17 +588,17 @@ public sealed class LazyFilterScanTrackerTests
         /// </summary>
         public async Task AssertReplacementIntactAsync()
         {
-            GetOverlayBar(Harness).Fraction.Should().Be(0f);
+            GetOverlayLabel(Harness).Text.Should().Be(" Filtering… 0%");
             Harness.Runner.Tokens[0].IsCancellationRequested.Should().BeFalse();
             Harness.Tracker.IsRunningForCurrentView.Should().BeTrue();
             _nextIndexer.RaiseProgress(4, 5);
             await Harness.Pending.RunPendingAsync(expectedCount: 1);
-            GetOverlayBar(Harness).Fraction.Should().BeApproximately(0.8f, 0.001f);
+            GetOverlayLabel(Harness).Text.Should().Be(" Filtering… 80%");
             Harness.RefreshCount.Should().Be(0);
 
             Harness.Runner.Complete(1);
             await Harness.Pending.RunPendingAsync(expectedCount: 1);
-            Harness.OverlayHost.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+            Harness.OverlayHost.SubViews.OfType<Label>().Should().BeEmpty();
             Harness.Tracker.IsRunningForCurrentView.Should().BeFalse();
             Harness.RefreshCount.Should().Be(1);
         }
@@ -620,15 +617,15 @@ public sealed class LazyFilterScanTrackerTests
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
         harness.Tracker.StartScan(harness.Indexer, harness.View);
-        var bar = GetOverlayBar(harness);
+        var label = GetOverlayLabel(harness);
 
         // Act — the tick fires on a worker thread; nothing runs on the UI queue yet
         await Task.Run(() => harness.Indexer.RaiseProgress(4, 5));
 
         // Assert
-        bar.Fraction.Should().Be(0f);
+        label.Text.Should().Be(" Filtering… 0%");
         await harness.Pending.RunPendingAsync(expectedCount: 1);
-        bar.Fraction.Should().BeApproximately(0.8f, 0.001f);
+        label.Text.Should().Be(" Filtering… 80%");
     }
 
     [Fact]
@@ -638,7 +635,7 @@ public sealed class LazyFilterScanTrackerTests
         using var app = TestAppFactory.Create();
         using var harness = new TrackerHarness();
         harness.Tracker.StartScan(harness.Indexer, harness.View);
-        var bar = GetOverlayBar(harness);
+        var label = GetOverlayLabel(harness);
         harness.Indexer.RaiseProgress(4, 5);
         harness.StartNextSession();
 
@@ -646,6 +643,6 @@ public sealed class LazyFilterScanTrackerTests
         await harness.Pending.RunPendingAsync(expectedCount: 1);
 
         // Assert
-        bar.Fraction.Should().Be(0f);
+        label.Text.Should().Be(" Filtering… 0%");
     }
 }

@@ -8,7 +8,7 @@ using Attribute = Terminal.Gui.Drawing.Attribute;
 namespace Refedle.App.Tui.UI;
 
 /// <summary>
-/// Compact filter-scan progress overlay: a spinner, a progress bar and a percentage label
+/// Compact filter-scan progress overlay: a spinner and a percentage label
 /// placed at the right edge, on the bottom row of the parent view. The parent must be a
 /// container whose content size is its viewport (e.g. the content container), never a
 /// scrollable view whose content follows its row count.
@@ -17,11 +17,9 @@ namespace Refedle.App.Tui.UI;
 internal sealed class FilterScanProgressOverlay : IDisposable
 {
     private const string SchemeName = "FilterScanOverlay";
-    private const int BarWidth = 16;
 
     private View? _parent;
     private SpinnerView? _spinner;
-    private ProgressBar? _bar;
     private Label? _label;
 
     /// <summary>
@@ -33,24 +31,15 @@ internal sealed class FilterScanProgressOverlay : IDisposable
         EnsureSchemeRegistered();
         _label = new Label
         {
-            // Leading space keeps a gap between the bar and the text inside the colored strip
+            // Leading space keeps a gap between the spinner and the text inside the colored strip
             Text = " Filtering… 0%",
             X = Pos.AnchorEnd() - 1,
             Y = Pos.AnchorEnd(1),
             SchemeName = SchemeName,
         };
-        _bar = new ProgressBar
-        {
-            X = Pos.Left(_label) - BarWidth,
-            Y = Pos.AnchorEnd(1),
-            Width = BarWidth,
-            Height = 1,
-            ProgressBarStyle = ProgressBarStyle.Blocks,
-            SchemeName = SchemeName,
-        };
         _spinner = new SpinnerView
         {
-            X = Pos.Left(_bar) - 1,
+            X = Pos.Left(_label) - 1,
             Y = Pos.AnchorEnd(1),
             Width = 1,
             Height = 1,
@@ -60,7 +49,7 @@ internal sealed class FilterScanProgressOverlay : IDisposable
         };
 
         _parent = parent;
-        parent.Add(_label, _bar, _spinner);
+        parent.Add(_label, _spinner);
     }
 
     /// <summary>
@@ -69,29 +58,27 @@ internal sealed class FilterScanProgressOverlay : IDisposable
     /// </summary>
     public void BringToFront()
     {
-        if (_parent is null || _label is null || _bar is null || _spinner is null)
+        if (_parent is null || _label is null || _spinner is null)
         {
             return;
         }
 
         _parent.MoveSubViewToEnd(_label);
-        _parent.MoveSubViewToEnd(_bar);
         _parent.MoveSubViewToEnd(_spinner);
     }
 
     /// <summary>
-    /// Advances the bar and the percentage label to the given scan position.
+    /// Advances the percentage label to the given scan position.
     /// Does nothing when the overlay is not shown.
     /// </summary>
     public void Update(int scannedRows, int totalRows)
     {
-        if (_bar is null || _label is null)
+        if (_label is null)
         {
             return;
         }
 
         var fraction = totalRows > 0 ? Math.Clamp(scannedRows / (float)totalRows, 0f, 1f) : 0f;
-        _bar.Fraction = fraction;
         _label.Text = string.Create(
             CultureInfo.InvariantCulture,
             $" Filtering… {fraction * 100:F0}%");
@@ -107,13 +94,6 @@ internal sealed class FilterScanProgressOverlay : IDisposable
             _parent?.Remove(_spinner);
             _spinner.Dispose();
             _spinner = null;
-        }
-
-        if (_bar is not null)
-        {
-            _parent?.Remove(_bar);
-            _bar.Dispose();
-            _bar = null;
         }
 
         if (_label is not null)

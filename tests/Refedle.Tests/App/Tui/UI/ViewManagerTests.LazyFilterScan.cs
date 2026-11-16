@@ -32,8 +32,12 @@ public sealed partial class ViewManagerTests
         }
     }
 
-    private static ProgressBar? FindProgressOverlayBar(View? view) =>
-        view is null ? null : SelfAndDescendants(view).OfType<ProgressBar>().FirstOrDefault();
+    // The overlay has no progress bar; its percentage label is the one view that is unique to it
+    private static bool IsProgressOverlayLabel(View view) =>
+        view is Label label && label.Text.StartsWith(" Filtering", StringComparison.Ordinal);
+
+    private static Label? FindProgressOverlayLabel(View? view) =>
+        view is null ? null : SelfAndDescendants(view).OfType<Label>().FirstOrDefault(IsProgressOverlayLabel);
 
     [Fact]
     public async Task SwitchToCsvTable_WithFilterAction_ShowsOverlayOnContentContainerUntilScanCompletes()
@@ -47,19 +51,19 @@ public sealed partial class ViewManagerTests
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         var tableView = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
-        var barWhileScanning = SelfAndDescendants(harness.Window).OfType<ProgressBar>().Should().ContainSingle().Subject;
+        var labelWhileScanning = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
 
         // Assert — while the scan runs, the overlay rides the content container (the table
         // view's own parent) and never enters the table view's subtree
-        barWhileScanning.SuperView.Should().BeSameAs(tableView.SuperView);
-        SelfAndDescendants(tableView).OfType<ProgressBar>().Should().BeEmpty();
+        labelWhileScanning.SuperView.Should().BeSameAs(tableView.SuperView);
+        SelfAndDescendants(tableView).Where(IsProgressOverlayLabel).Should().BeEmpty();
 
         // Act — complete the scan
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
         // Assert — the overlay retires with the scan and the item count appears
-        FindProgressOverlayBar(harness.Window).Should().BeNull();
+        FindProgressOverlayLabel(harness.Window).Should().BeNull();
         GetItemCountText(harness.Window).Should().NotBeNull();
     }
 
@@ -75,13 +79,13 @@ public sealed partial class ViewManagerTests
 
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
-        var barWhileScanning = FindProgressOverlayBar(harness.Window);
+        var labelWhileScanning = FindProgressOverlayLabel(harness.Window);
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
         // Assert
-        barWhileScanning.Should().NotBeNull();
-        FindProgressOverlayBar(harness.Window).Should().BeNull();
+        labelWhileScanning.Should().NotBeNull();
+        FindProgressOverlayLabel(harness.Window).Should().BeNull();
         GetItemCountText(harness.Window).Should().NotBeNull();
     }
 
@@ -100,10 +104,10 @@ public sealed partial class ViewManagerTests
 
         // Act — rebuild the transformer on the same view while the scan's callbacks are queued
         harness.Refine("col1", "col2");
-        FindProgressOverlayBar(harness.Window).Should().NotBeNull("the overlay must survive the rebuild");
+        FindProgressOverlayLabel(harness.Window).Should().NotBeNull("the overlay must survive the rebuild");
         var finalTick = await harness.Queue.NextAsync();
         finalTick();
-        var barAfterTick = SelfAndDescendants(harness.Window).OfType<ProgressBar>().Should().ContainSingle().Subject;
+        var labelAfterTick = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
         var completion = await harness.Queue.NextAsync();
         completion();
         await harness.Runner.TaskAt(0);
@@ -111,8 +115,8 @@ public sealed partial class ViewManagerTests
         // Assert — the reused indexer keeps feeding the overlay on the rebuilt view, and the
         // completion retires it without starting a second scan
         view.Table.Should().NotBeSameAs(oldTable);
-        barAfterTick.Fraction.Should().Be(1f);
-        FindProgressOverlayBar(harness.Window).Should().BeNull();
+        labelAfterTick.Text.Should().Be(" Filtering… 100%");
+        FindProgressOverlayLabel(harness.Window).Should().BeNull();
         harness.Runner.Tasks().Should().HaveCount(1);
         view.Table[0, 1].Should().Be("b");
     }
@@ -132,7 +136,7 @@ public sealed partial class ViewManagerTests
 
         // Assert — the swap already retired the overlay from the surviving host; the host
         // container is not disposed by the swap, so only Detach can have removed it here
-        FindProgressOverlayBar(harness.Window).Should().BeNull(
+        FindProgressOverlayLabel(harness.Window).Should().BeNull(
             "the view swap must retire the overlay while the scan is still running");
 
         // Act — let the orphaned scan complete
@@ -142,7 +146,7 @@ public sealed partial class ViewManagerTests
         // Assert — the stale completion is discarded without touching the disposed table view
         await runStaleCompletion.Should().NotThrowAsync();
         harness.ViewManager.GetCurrentView().Should().BeOfType<FileSelectionView>();
-        FindProgressOverlayBar(harness.Window).Should().BeNull();
+        FindProgressOverlayLabel(harness.Window).Should().BeNull();
     }
 
     /// <summary>
