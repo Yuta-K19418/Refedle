@@ -196,7 +196,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     }
 
     [Fact]
-    public async Task BuildIndexAsync_WithMultipleBatches_FirstAndLastProgressReportBatchBoundaries()
+    public async Task BuildIndexAsync_WithMultipleBatches_ProgressReportsEveryBatchBoundary()
     {
         // Arrange
         var rows = Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", "A" }).ToArray();
@@ -207,10 +207,29 @@ public sealed class FocusedTableFilterRowIndexerTests
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);
 
-        // Assert — the first batch always notifies; the final batch always notifies
-        // with the full row count regardless of the throttle interval.
-        events[0].Should().Be((1000, 2500));
-        events[^1].Should().Be((2500, 2500));
+        // Assert — each batch advances the scan by more than 1% of the total, so all of them notify
+        events.Should().Equal((1000, 2500), (2000, 2500), (2500, 2500));
+    }
+
+    [Fact]
+    public async Task BuildIndexAsync_WithManyRows_SkipsBatchesBelowOnePercentAndReportsShortFinalBatch()
+    {
+        // Arrange — each 1000-row batch is below 1% of 150001 rows, so some batches are skipped
+        var rows = Enumerable.Range(0, 150_001).Select(i => new[] { $"[{i}]", "A" }).ToArray();
+        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        List<(int scannedRows, int totalRows)> events = [];
+        indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
+
+        // Act
+        await indexer.BuildIndexAsync(CancellationToken.None);
+
+        // Assert
+        events.Should().NotContain((1_000, 150_001));
+        events.Should().Contain((2_000, 150_001));
+        events.Should().NotContain((3_000, 150_001));
+        events.Should().Contain((4_000, 150_001));
+        events[^2].Should().Be((150_000, 150_001));
+        events[^1].Should().Be((150_001, 150_001));
     }
 
     [Fact]

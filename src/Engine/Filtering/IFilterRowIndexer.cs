@@ -9,6 +9,13 @@ namespace Refedle.Engine.Filtering;
 public interface IFilterRowIndexer
 {
     /// <summary>
+    /// Raised on the scanning task with the scan position as <c>(scannedRows, totalRows)</c>.
+    /// Implementations throttle the notifications while the scan runs; the final batch always
+    /// raises it with the full row count, so completion observers see the final state.
+    /// </summary>
+    event Action<int, int>? ProgressChanged;
+
+    /// <summary>
     /// Number of source rows confirmed to match all filters so far.
     /// Updated atomically; safe to read from the UI thread while
     /// <see cref="BuildIndexAsync"/> runs.

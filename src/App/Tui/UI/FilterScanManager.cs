@@ -25,6 +25,7 @@ internal sealed class FilterScanManager(
     Action<View> swapView,
     Action refreshStatusBarHints,
     Action<string> showError,
+    View overlayHost,
     Func<View?> getCurrentView) : IDisposable
 {
     private readonly IFilterScanRunner _filterScanRunner =
@@ -39,6 +40,7 @@ internal sealed class FilterScanManager(
     private readonly Action _refreshStatusBarHints =
         refreshStatusBarHints ?? throw new ArgumentNullException(nameof(refreshStatusBarHints));
     private readonly Action<string> _showError = showError ?? throw new ArgumentNullException(nameof(showError));
+    private readonly View _overlayHost = overlayHost ?? throw new ArgumentNullException(nameof(overlayHost));
     private readonly Func<View?> _getCurrentView =
         getCurrentView ?? throw new ArgumentNullException(nameof(getCurrentView));
     private readonly FilterScanProgressOverlay _overlay = new();
@@ -74,7 +76,9 @@ internal sealed class FilterScanManager(
         indexer.ProgressChanged += progressHandler;
         _session = session;
         _tableView = null;
-        _overlay.Show(loadingView);
+        // The host's content size is its viewport and it survives the loading view -> table swap;
+        // on the table view the anchored overlay would follow the row count and leave the viewport.
+        _overlay.Show(_overlayHost);
         // Refreshed once the session is registered so the item count label stays hidden during the scan.
         _refreshStatusBarHints();
 
@@ -158,7 +162,7 @@ internal sealed class FilterScanManager(
 
     /// <summary>
     /// Applies the threshold notification on the UI thread: swaps the loading view for the
-    /// table view with the overlay still attached. Discards the notification of a session
+    /// table view; the overlay stays on its host. Discards the notification of a session
     /// that is no longer current, was already canceled, or already revealed its table.
     /// </summary>
     private void RevealTableView(Func<bool> isScanCurrent)
@@ -168,7 +172,7 @@ internal sealed class FilterScanManager(
             return;
         }
 
-        ShowTableView(session.Source, session.Style, attachOverlay: true);
+        ShowTableView(session.Source, session.Style);
     }
 
     /// <summary>
@@ -193,23 +197,17 @@ internal sealed class FilterScanManager(
         }
     }
 
-    private void ShowTableView(IExtendedTableSource source, TableStyle style, bool attachOverlay)
+    private void ShowTableView(IExtendedTableSource source, TableStyle style)
     {
-        // Detach the overlay while its host (the loading view) is still alive; the swap below disposes it
-        _overlay.Dismiss();
-
         var tableView = _createFocusedTableView(source, style);
         tableView.SetSelection(0, 0, false);
         tableView.Update();
         _tableView = tableView;
         _swapView(tableView);
         tableView.SetFocus();
+        // The table was added after the overlay and would otherwise draw over it
+        _overlay.BringToFront();
         _refreshStatusBarHints();
-
-        if (attachOverlay)
-        {
-            _overlay.Show(tableView);
-        }
     }
 
     /// <summary>
@@ -229,6 +227,7 @@ internal sealed class FilterScanManager(
         session.Indexer.ProgressChanged -= session.ProgressHandler;
         session.Cts.Dispose();
         _tableView = null;
+        _overlay.Dismiss();
 
         // The table was already revealed by the threshold notification, and the progress
         // ticks performed the row refreshes: completion only retires the overlay. Fewer
@@ -237,12 +236,11 @@ internal sealed class FilterScanManager(
         // the table.
         if (_getCurrentView() is FocusedTableView)
         {
-            _overlay.Dismiss();
             _refreshStatusBarHints();
             return;
         }
 
-        ShowTableView(session.Source, session.Style, attachOverlay: false);
+        ShowTableView(session.Source, session.Style);
     }
 
     /// <summary>

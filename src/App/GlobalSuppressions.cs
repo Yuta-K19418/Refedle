@@ -131,6 +131,21 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Tui.UI.FilterScanSession.Dispose",
     Justification = "Cancellation must complete before the token source is disposed. Session state is UI-thread exclusive and worker notifications re-enter through the UI-thread dispatcher, so Dispose runs on the UI thread where synchronous cancel is the established pattern.")]
 
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.FilterScanManager._overlayHost",
+    Justification = "The overlay host is the ViewManager's content container, which outlives every scan and the manager itself, and is disposed with the Window.")]
+
+// LazyFilterScanTracker
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.LazyFilterScanTracker._overlayHost",
+    Justification = "The overlay host is the ViewManager's content container, which outlives every scan and the tracker itself, and is disposed with the Window.")]
+
 // MainWindow
 [assembly: SuppressMessage(
     "Reliability",

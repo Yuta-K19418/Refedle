@@ -25,7 +25,8 @@ namespace Refedle.App.Tui.UI;
 /// <remarks>
 /// Threading contract: all ViewManager state — including the filter-scan session state
 /// owned by the <see cref="FilterScanManager"/> (the session, its staged table view and
-/// the session CTS cancel/dispose) — is UI-thread exclusive. Every synchronous entry
+/// the session CTS cancel/dispose) and the lazy-scan state owned by the
+/// <see cref="LazyFilterScanTracker"/> — is UI-thread exclusive. Every synchronous entry
 /// point (<see cref="SwitchToFocusedTable"/>, the other
 /// view switches, <see cref="Dispose"/>, …) must be called on the UI thread.
 /// The only exceptions are the asynchronous entry points (for example
@@ -47,13 +48,12 @@ internal sealed class ViewManager : IDisposable
     private readonly Window _container;
     private readonly AppState _state;
     private readonly ModeController _modeController;
-    private readonly IFilterScanRunner _lazyFilterScanRunner;
     private readonly Action<Action> _uiThreadInvoke;
     private readonly BreadcrumbBar _breadcrumbBar;
     private readonly View _contentContainer;
     private readonly FilterScanManager _filterScanManager;
+    private readonly LazyFilterScanTracker _lazyFilterScanTracker;
     private View? _currentView;
-    private View? _lazyScanView;
     private Label? _itemCountLabel;
     private bool _disposed;
 
@@ -72,19 +72,7 @@ internal sealed class ViewManager : IDisposable
         _container = container;
         _state = state;
         _modeController = modeController;
-        _lazyFilterScanRunner = filterScanRunner;
         _uiThreadInvoke = uiThreadInvoke;
-        // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
-        // it drives the content view, status bar and error display on the UI thread.
-        _filterScanManager = new FilterScanManager(
-            filterScanRunner,
-            uiThreadInvoke,
-            () => state.Cts.Token,
-            CreateFocusedTableView,
-            SwapView,
-            RefreshStatusBarHints,
-            ShowError,
-            GetCurrentView);
         _breadcrumbBar = new BreadcrumbBar();
         _contentContainer = new View
         {
@@ -95,6 +83,29 @@ internal sealed class ViewManager : IDisposable
             CanFocus = true,
         };
         _container.Add(_breadcrumbBar, _contentContainer);
+        // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
+        // it drives the content view, status bar and error display on the UI thread.
+        _filterScanManager = new FilterScanManager(
+            filterScanRunner,
+            uiThreadInvoke,
+            () => state.Cts.Token,
+            CreateFocusedTableView,
+            SwapView,
+            RefreshStatusBarHints,
+            ShowError,
+            _contentContainer,
+            GetCurrentView);
+        // Same decoupling for the lazy scan of the CSV / JSON Lines table views. The scan
+        // overlay rides the content container, whose content size is its viewport, so it
+        // stays in the visible area regardless of the table's row count.
+        _lazyFilterScanTracker = new LazyFilterScanTracker(
+            filterScanRunner,
+            uiThreadInvoke,
+            () => state.Cts.Token,
+            RefreshStatusBarHints,
+            ShowError,
+            _contentContainer,
+            GetCurrentView);
     }
 
     /// <summary>
@@ -203,54 +214,7 @@ internal sealed class ViewManager : IDisposable
     }
 
     private bool IsFilterScanRunning() =>
-        _filterScanManager.IsScanRunning
-        || (_lazyScanView is not null && ReferenceEquals(_lazyScanView, _currentView));
-
-    /// <summary>
-    /// Runs the lazy filter scan for <paramref name="view"/> and, once it ends, hands the outcome to the
-    /// UI thread, which refreshes the item count label for a successful scan of the still-current view
-    /// and shows the error view for a faulted one.
-    /// </summary>
-    private async Task RunLazyFilterScanAsync(IFilterRowIndexer filterIndexer, View view)
-    {
-        // Captured by value: loading another file cancels this token, which marks the outcome stale
-        var sessionToken = _state.Cts.Token;
-        var scanTask = _lazyFilterScanRunner.RunAsync(filterIndexer, sessionToken);
-
-        // WhenAny never throws, so a canceled or faulted scan is observed without a catch-all.
-        await Task.WhenAny(scanTask).ConfigureAwait(false);
-        var succeeded = scanTask.IsCompletedSuccessfully;
-        var failureMessage = scanTask.Exception?.GetBaseException().Message;
-
-        _uiThreadInvoke(() => CompleteLazyFilterScan(view, succeeded, failureMessage, sessionToken));
-    }
-
-    // A canceled scan (neither succeeded nor failed) changes nothing, as its view is being replaced.
-    private void CompleteLazyFilterScan(
-        View view,
-        bool succeeded,
-        string? failureMessage,
-        CancellationToken sessionToken)
-    {
-        var isCurrentScan = !_disposed
-            && !sessionToken.IsCancellationRequested
-            && ReferenceEquals(_currentView, view)
-            && ReferenceEquals(_lazyScanView, view);
-        if (!isCurrentScan || (!succeeded && failureMessage is null))
-        {
-            return;
-        }
-
-        _lazyScanView = null;
-
-        if (failureMessage is not null)
-        {
-            ShowError($"Filter scan failed: {failureMessage}");
-            return;
-        }
-
-        RefreshStatusBarHints();
-    }
+        _filterScanManager.IsScanRunning || _lazyFilterScanTracker.IsRunningForCurrentView;
 
     /// <summary>
     /// Updates the breadcrumb bar to reflect the current location and stores it on <see cref="AppState"/>.
@@ -490,16 +454,15 @@ internal sealed class ViewManager : IDisposable
         StartLazyFilterScan(tableSource, view);
     }
 
-    private void StartLazyFilterScan(IExtendedTableSource source, View view)
+    private void StartLazyFilterScan(IExtendedTableSource source, MorphTableView view)
     {
-        // Marked before the refresh so the label stays hidden until the scan completes.
-        _lazyScanView = source is Views.LazyTransformer { FilterRowIndexer: not null } ? view : null;
-        RefreshStatusBarHints();
-
+        // Started before the refresh so the label stays hidden until the scan completes.
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _ = RunLazyFilterScanAsync(filterIndexer, view);
+            _lazyFilterScanTracker.StartScan(filterIndexer, view);
         }
+
+        RefreshStatusBarHints();
     }
 
     /// <summary>
@@ -656,6 +619,9 @@ internal sealed class ViewManager : IDisposable
         // Replacing the content view orphans a running filter scan, except when the new view
         // is the scan's own staged replacement for the loading view.
         _filterScanManager.CancelIfNotStaged(newView);
+        // Retire the lazy scan's overlay before the scan's view goes away, so it cannot
+        // linger over the next content view; its host container survives the swap.
+        _lazyFilterScanTracker.Detach();
 
         if (_currentView is not null)
         {
@@ -852,6 +818,7 @@ internal sealed class ViewManager : IDisposable
 
         _disposed = true;
         _filterScanManager.Dispose();
+        _lazyFilterScanTracker.Dispose();
         RemoveItemCountLabel();
         _currentView?.Dispose();
     }

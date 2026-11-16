@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Globalization;
 using Refedle.Engine.Filtering;
 
@@ -17,8 +16,6 @@ internal sealed class FocusedTableFilterRowIndexer(
 {
     private const int BatchSize = 1000;
 
-    private static readonly TimeSpan ProgressInterval = TimeSpan.FromMilliseconds(100);
-
     private readonly IExtendedTableSource _source = source ?? throw new ArgumentNullException(nameof(source));
     private readonly IReadOnlyList<FilterSpec> _filterSpecs =
         filterSpecs ?? throw new ArgumentNullException(nameof(filterSpecs));
@@ -28,11 +25,11 @@ internal sealed class FocusedTableFilterRowIndexer(
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
     private readonly List<int> _matchedRows = [];
-    private long _lastProgressTimestamp;
+    private readonly ScanProgressThrottle _progressThrottle = new();
 
     /// <summary>
     /// Raised on the scanning task with the scan position as <c>(scannedRows, totalRows)</c>.
-    /// Throttled to <see cref="ProgressInterval"/> while the scan runs; the final batch always
+    /// Throttled by <see cref="ScanProgressThrottle"/> while the scan runs; the final batch always
     /// raises it with the full row count, so completion observers see the final state.
     /// </summary>
     public event Action<int, int>? ProgressChanged;
@@ -138,14 +135,11 @@ internal sealed class FocusedTableFilterRowIndexer(
 
     private void OnProgressChanged(int scannedRows, int totalRows)
     {
-        // The timestamp starts at 0 (the stopwatch epoch), so the first batch always notifies.
-        var now = Stopwatch.GetTimestamp();
-        if (scannedRows < totalRows && Stopwatch.GetElapsedTime(_lastProgressTimestamp) < ProgressInterval)
+        if (!_progressThrottle.ShouldNotify(scannedRows, totalRows))
         {
             return;
         }
 
-        _lastProgressTimestamp = now;
         ProgressChanged?.Invoke(scannedRows, totalRows);
     }
 

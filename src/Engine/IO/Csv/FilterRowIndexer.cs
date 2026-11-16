@@ -16,6 +16,7 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
     private readonly Lock _lock = new();
     private readonly List<int> _matchedRows = [];
     private int _totalMatchedRows;
+    private readonly ScanProgressThrottle _progressThrottle = new();
 
     /// <summary>
     /// Initializes a new instance of <see cref="FilterRowIndexer"/>.
@@ -35,6 +36,13 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
         _sourceColumnCount = sourceColumnCount;
         _filterSpecs = filterSpecs;
     }
+
+    /// <summary>
+    /// Raised on the scanning task with the scan position as <c>(scannedRows, totalRows)</c>.
+    /// Throttled by <see cref="ScanProgressThrottle"/> while the scan runs; the final batch always
+    /// raises it with the full row count, so completion observers see the final state.
+    /// </summary>
+    public event Action<int, int>? ProgressChanged;
 
     /// <inheritdoc/>
     public int TotalMatchedRows
@@ -119,7 +127,20 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
             rowsToSkip = nextRowOffset;
 
             await Task.Yield();
+            // Re-check after the async hop: a canceled scan must not report a further position.
+            ct.ThrowIfCancellationRequested();
+            OnProgressChanged(processed, totalRows);
         }
+    }
+
+    private void OnProgressChanged(int scannedRows, int totalRows)
+    {
+        if (!_progressThrottle.ShouldNotify(scannedRows, totalRows))
+        {
+            return;
+        }
+
+        ProgressChanged?.Invoke(scannedRows, totalRows);
     }
 
     private bool MatchesAllFilters(CsvDataRow csvRow)

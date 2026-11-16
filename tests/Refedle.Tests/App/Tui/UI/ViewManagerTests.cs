@@ -1408,15 +1408,19 @@ public sealed partial class ViewManagerTests : IDisposable
     /// overlay is gone — the terminal look of a completed staged scan, regardless of how many
     /// notifications the scan produced.
     /// </summary>
+    private static List<Label> OverlayLabels(Terminal.Gui.ViewBase.View root) =>
+        [.. SelfAndDescendants(root).Where(IsProgressOverlayLabel).OfType<Label>()];
+
     private static async Task<FocusedTableView> WaitForCompletedFocusedTableViewAsync(
         ViewManager viewManager,
-        System.Collections.Concurrent.ConcurrentQueue<Action> captured)
+        System.Collections.Concurrent.ConcurrentQueue<Action> captured,
+        Terminal.Gui.ViewBase.View root)
     {
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (DateTime.UtcNow < deadline)
         {
             ExecuteRemainingCallbacks(captured);
-            if (viewManager.GetCurrentView() is FocusedTableView { } view && !view.SubViews.OfType<ProgressBar>().Any())
+            if (viewManager.GetCurrentView() is FocusedTableView { } view && OverlayLabels(root).Count == 0)
             {
                 return view;
             }
@@ -1457,7 +1461,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(1);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(window).Should().BeEmpty();
     }
 
     [Fact]
@@ -1488,11 +1492,11 @@ public sealed partial class ViewManagerTests : IDisposable
 
         var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(500);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        OverlayLabels(window).Should().ContainSingle();
 
         var onCompleted = await WaitForCallbackAsync(captured);
         onCompleted();
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(window).Should().BeEmpty();
     }
 
     [Fact]
@@ -1622,7 +1626,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(199);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
     }
 
     [Fact]
@@ -1651,14 +1655,18 @@ public sealed partial class ViewManagerTests : IDisposable
         // overlay attached; the live matched count by deferred-execution time is the final 250
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
+        SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
+        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
         var transformer = GetFocusedTableTransformer(view);
 
         var onCompleted = await WaitForCallbackAsync(harness.Captured);
         onCompleted();
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
 
         // the completed path hands the transformer to the table view: it stays readable
         transformer[0, 1].Should().Be("Match0");
@@ -1689,13 +1697,17 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — executing every pre-completion callback reveals the table
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
+        SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
+        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
         var onCompleted = await WaitForCallbackAsync(harness.Captured);
         onCompleted();
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
     }
 
     [Fact]
@@ -1718,7 +1730,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert — nothing the worker fired touches the view state before the UI thread invokes it
         harness.ViewManager.GetCurrentView().Should().BeSameAs(loadingView);
-        loadingView.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        OverlayLabels(harness.Window).Should().ContainSingle();
 
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
@@ -1780,19 +1792,23 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the mid-scan reveal shows exactly the threshold rows with the overlay attached
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
+        SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
+        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
         // the user moves off the first row, then the scan resumes and finds 50 more matches;
         // every remaining notification is applied while the completed look is awaited
         view.SetSelection(0, 5, false);
         rows.ReleaseGate();
-        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured);
+        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
 
         // rows grew to 250 without moving the user's selection, and the scan retired the overlay
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
         view.Value.Should().NotBeNull().And.Subject.As<TableSelection>().SelectedCell.Y.Should().Be(5);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
         harness.Captured.Should().BeEmpty();
     }
 
@@ -1820,14 +1836,69 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the mid-scan reveal shows the 201 matched rows with the overlay attached
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
+        SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
+        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
         rows.ReleaseGate();
-        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured);
+        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
         harness.Captured.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SwitchToFocusedTable_WhileLoading_HostsOverlayOnContentContainerNotLoadingView()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        var gated = CreateGatedDrillDown(matchedInFirstBatch: 50, matchedInSecondBatch: 0, totalBatches: 2);
+        using var rows = gated.Rows;
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        var drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using var harness = new FilterScanHarness();
+        await using var scope = new GatedScanScope(rows, harness);
+        harness.State.EnterFocusedTable(drillDown);
+
+        // Act — the scan is blocked below the reveal threshold, so the loading view stays current
+        harness.ViewManager.SwitchToFocusedTable(drillDown);
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // Assert
+        var loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(loadingView.SuperView);
+        SelfAndDescendants(loadingView).Where(IsProgressOverlayLabel).Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task SwitchToFocusedTable_WhenContentReplacedAfterMidScanReveal_RemovesOverlayBeforeStaleCallbacksRun()
+    {
+        // Arrange — the table is revealed mid-scan while the worker is blocked
+        using var app = TestAppFactory.Create();
+        var gated = CreateGatedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0, totalBatches: 2);
+        using var rows = gated.Rows;
+        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        var drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using var harness = new FilterScanHarness();
+        await using var scope = new GatedScanScope(rows, harness);
+        harness.State.EnterFocusedTable(drillDown);
+        harness.ViewManager.SwitchToFocusedTable(drillDown);
+        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
+        await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
+        ExecuteRemainingCallbacks(harness.Captured);
+        harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>();
+        OverlayLabels(harness.Window).Should().ContainSingle();
+
+        // Act — replace the content while the scan is still running; no queued callback has run yet
+        harness.ViewManager.ShowError("boom");
+
+        // Assert
+        OverlayLabels(harness.Window).Should().BeEmpty();
+        harness.ViewManager.GetCurrentView().Should().BeOfType<PlaceholderView>();
     }
 
     [Fact]
@@ -1850,7 +1921,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert — no table reveal, no redraw, no selection reset, no overlay dismissal
         harness.ViewManager.GetCurrentView().Should().BeSameAs(loadingView);
-        loadingView.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        OverlayLabels(harness.Window).Should().ContainSingle();
         harness.Captured.Should().BeEmpty();
 
         var disposeAfterParentCancel = () => harness.ViewManager.Dispose();
@@ -1884,7 +1955,7 @@ public sealed partial class ViewManagerTests : IDisposable
         harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
         var placeholder = harness.ViewManager.GetCurrentView().Should().BeOfType<PlaceholderView>().Which;
         placeholder.Text.Should().Contain("row read failed");
-        placeholder.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
         harness.Captured.Should().BeEmpty();
         var disposeAfterFailure = () => harness.ViewManager.Dispose();
         disposeAfterFailure.Should().NotThrow();
@@ -1970,14 +2041,18 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the table is revealed mid-scan, before any progress tick exists
         var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        view.SubViews.OfType<ProgressBar>().Should().ContainSingle();
+        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
+        SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
+        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
         // teardown — release the scan and let its remaining notifications drain
         rows.ReleaseGate();
-        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured);
+        await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        view.SubViews.OfType<ProgressBar>().Should().BeEmpty();
+        OverlayLabels(harness.Window).Should().BeEmpty();
     }
 
     [Fact]
@@ -2348,7 +2423,7 @@ public sealed partial class ViewManagerTests : IDisposable
         rows.ReleaseGate();
         var assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
-        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured);
+        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
 
         // Assert — the old session is torn down and the replacement scan produced the new view
         harness.Captured.Should().BeEmpty();
@@ -2385,7 +2460,7 @@ public sealed partial class ViewManagerTests : IDisposable
         rows.ReleaseGate();
         var assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
-        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured);
+        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
 
         // Assert — no queue-drain assertion here: the new scan also crosses the threshold, so
         // its reveal can legally be queued after the completion the helper waited for
@@ -2503,6 +2578,7 @@ public sealed partial class ViewManagerTests : IDisposable
             view => scope.LoadingView = view,
             static () => { },
             static _ => { },
+            scope.Host,
             static () => null);
         scope.Manager = manager;
         manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
@@ -2551,16 +2627,14 @@ public sealed partial class ViewManagerTests : IDisposable
             view => scope.LoadingView = view,
             static () => { },
             static _ => { },
+            scope.Host,
             static () => null);
         scope.Manager = manager;
         manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // the threshold reveal and the first progress tick are both queued once the worker is blocked
         await WaitForCallbacksAsync(captured, expectedCount: 2);
-        var loadingView = scope.LoadingView.Should().BeAssignableTo<Terminal.Gui.ViewBase.View>().Subject;
-        var bar = loadingView.SubViews.OfType<ProgressBar>().Should().ContainSingle().Subject;
-        var label = loadingView.SubViews.OfType<Label>().Where(static l => l.Text.Contains('%', StringComparison.Ordinal)).Should().ContainSingle().Subject;
-        var fractionBefore = bar.Fraction;
+        var label = scope.Host.SubViews.OfType<Label>().Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
         var textBefore = label.Text;
 
         // Act
@@ -2568,7 +2642,6 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(captured);
 
         // Assert
-        bar.Fraction.Should().Be(fractionBefore);
         label.Text.Should().Be(textBefore);
         scope.BodyCompleted = true;
     }
@@ -3272,6 +3345,8 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         public FilterScanManager? Manager { get; set; }
 
+        public Terminal.Gui.ViewBase.View Host { get; } = new();
+
         public Terminal.Gui.ViewBase.View? LoadingView { get; set; }
 
         public bool BodyCompleted { get; set; }
@@ -3292,6 +3367,7 @@ public sealed partial class ViewManagerTests : IDisposable
             }
 
             Capture(failures, () => LoadingView?.Dispose());
+            Capture(failures, Host.Dispose);
             if (BodyCompleted && failures.Count > 0)
             {
                 throw new AggregateException(failures);

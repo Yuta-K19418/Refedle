@@ -71,6 +71,10 @@ public sealed class FilterIndexingRunnerTests
     /// </summary>
     private sealed class FakeFilterRowIndexer : IFilterRowIndexer
     {
+#pragma warning disable CS0067
+        public event Action<int, int>? ProgressChanged;
+#pragma warning restore CS0067
+
         public int TotalMatchedRows => 0;
 
         public CancellationToken ObservedToken { get; private set; }
@@ -90,6 +94,10 @@ public sealed class FilterIndexingRunnerTests
     /// </summary>
     private sealed class FaultingFilterRowIndexer : IFilterRowIndexer
     {
+#pragma warning disable CS0067
+        public event Action<int, int>? ProgressChanged;
+#pragma warning restore CS0067
+
         public int TotalMatchedRows => 0;
 
         public int GetSourceRow(int filteredRow) => -1;
