@@ -64,6 +64,22 @@ internal sealed class FilterScanProgressOverlay : IDisposable
     }
 
     /// <summary>
+    /// Moves the overlay views above the parent's other subviews so a view added after
+    /// <see cref="Show"/> cannot draw over them. Does nothing when the overlay is not shown.
+    /// </summary>
+    public void BringToFront()
+    {
+        if (_parent is null || _label is null || _bar is null || _spinner is null)
+        {
+            return;
+        }
+
+        _parent.MoveSubViewToEnd(_label);
+        _parent.MoveSubViewToEnd(_bar);
+        _parent.MoveSubViewToEnd(_spinner);
+    }
+
+    /// <summary>
     /// Advances the bar and the percentage label to the given scan position.
     /// Does nothing when the overlay is not shown.
     /// </summary>

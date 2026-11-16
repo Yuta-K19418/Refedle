@@ -93,6 +93,7 @@ internal sealed class ViewManager : IDisposable
             SwapView,
             RefreshStatusBarHints,
             ShowError,
+            _contentContainer,
             GetCurrentView);
         // Same decoupling for the lazy scan of the CSV / JSON Lines table views. The scan
         // overlay rides the content container, whose content size is its viewport, so it

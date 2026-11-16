@@ -179,4 +179,39 @@ public sealed class FilterScanProgressOverlayTests
         GetProgressBar(parent).GetScheme().Normal.Should().Be(expected);
         GetLabel(parent).GetScheme().Normal.Should().Be(expected);
     }
+
+    [Fact]
+    public void BringToFront_WithViewAddedAfterShow_MovesOverlayViewsAboveIt()
+    {
+        // Arrange
+        using var app = TestAppFactory.Create();
+        using var parent = CreateParent();
+        using var overlay = new FilterScanProgressOverlay();
+        overlay.Show(parent);
+        using var later = new View();
+        parent.Add(later);
+
+        // Act
+        overlay.BringToFront();
+
+        // Assert
+        var order = parent.SubViews.ToList();
+        var laterIndex = order.IndexOf(later);
+        order.IndexOf(GetProgressBar(parent)).Should().BeGreaterThan(laterIndex);
+        order.IndexOf(GetLabel(parent)).Should().BeGreaterThan(laterIndex);
+        order.IndexOf(parent.SubViews.OfType<SpinnerView>().Single()).Should().BeGreaterThan(laterIndex);
+    }
+
+    [Fact]
+    public void BringToFront_WhenNotShown_DoesNotThrow()
+    {
+        // Arrange
+        using var overlay = new FilterScanProgressOverlay();
+
+        // Act
+        var act = overlay.BringToFront;
+
+        // Assert
+        act.Should().NotThrow();
+    }
 }
