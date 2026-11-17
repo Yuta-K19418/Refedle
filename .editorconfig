@@ -148,14 +148,24 @@ dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
 #### C# Coding Conventions ####
 
 # var preferences
-# Use 'var' as much as possible
-csharp_style_var_for_built_in_types = true:warning
-csharp_style_var_when_type_is_apparent = true:warning
-csharp_style_var_elsewhere = true:warning
+# Prefer explicit type names so the reader does not have to infer types from
+# the right-hand side.
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = false:warning
+# Suggestion only: 'var' stays acceptable when the right-hand side does not
+# reveal the type (e.g. .Where() chains) and for anonymous types, where an
+# explicit name is impossible or noisy. Results of .ToList()/.ToArray() are
+# "apparent" and fall under the warning rules above.
+csharp_style_var_elsewhere = false:suggestion
 
 # Expression-level preferences
-# Do not use target-typed 'new()'.
-csharp_style_implicit_object_creation_when_type_is_apparent = false:warning
+# Use target-typed 'new()' when the type is already explicit on the left-hand side.
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+
+# Keep the warning-level preferences above visible in builds. The 'elsewhere'
+# preference stays at suggestion severity and is not promoted to a warning.
+dotnet_diagnostic.IDE0008.severity = warning
+dotnet_diagnostic.IDE0090.severity = warning
 
 # Prefer collection expressions for collection initialization (e.g., List<string> list = [];)
 csharp_style_prefer_collection_expression = true:warning
@@ -340,26 +350,6 @@ dotnet_naming_style.begins_with_underscore.capitalization = camel_case
 # CA2007: Consider calling ConfigureAwait on awaited task
 # Application code doesn't need ConfigureAwait in modern .NET (no synchronization context in CLI apps)
 dotnet_diagnostic.CA2007.severity = none
-
-# var preferences
-# Prefer explicit type names in production code so the reader does not have
-# to infer types from the right-hand side.
-csharp_style_var_for_built_in_types = false:warning
-csharp_style_var_when_type_is_apparent = false:warning
-# Suggestion only: 'var' stays acceptable when the right-hand side does not
-# reveal the type (e.g. .Where() chains) and for anonymous types, where an
-# explicit name is impossible or noisy. Results of .ToList()/.ToArray() are
-# "apparent" and fall under the warning rules above.
-csharp_style_var_elsewhere = false:suggestion
-
-# Expression-level preferences
-# Use target-typed 'new()' when the type is already explicit on the left-hand side.
-csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
-
-# Keep the warning-level preferences above visible in builds. The 'elsewhere'
-# preference stays at suggestion severity and is not promoted to a warning.
-dotnet_diagnostic.IDE0008.severity = warning
-dotnet_diagnostic.IDE0090.severity = warning
 
 # Test files
 [tests/**/*.cs]
