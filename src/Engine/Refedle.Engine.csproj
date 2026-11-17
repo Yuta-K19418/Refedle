@@ -30,6 +30,7 @@
   <ItemGroup>
     <InternalsVisibleTo Include="Refedle.Benchmarks" />
     <InternalsVisibleTo Include="Refedle.Tests" />
+    <InternalsVisibleTo Include="Refedle.TestHelpers" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
+    <!-- Zero-Warning Policy -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Disable AOT for debugging -->
+    <PublishAot>false</PublishAot>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+
+    <!-- Shared helper library for the test projects; never a test project itself. -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
+    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Refedle.Tests" />
+    <InternalsVisibleTo Include="Refedle.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Empty scaffold: no helper uses the shared engine type aliases yet
+         (IDE0005 under the zero-warning policy). Re-include once helpers land. -->
+    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+  </ItemGroup>
+
+</Project>
