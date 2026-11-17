@@ -179,10 +179,14 @@ public sealed partial class ViewManagerTests
     [Fact]
     public async Task SwitchToCsvTable_WhenIndexingCompletes_IncludesRowsIndexedAfterSwitch()
     {
-        // Arrange — one matching row is indexed when the switch happens; a second lands before
-        // indexing finishes, so an early-starting scan would snapshot only the first row
+        // Arrange — the file holds two matching rows but only the first is indexed when the
+        // switch happens; the indexer reports the second before indexing finishes, so an
+        // early-starting scan would snapshot only the first row
         using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".csv", "col1\na\n");
+        // Not appended mid-test: the CSV table keeps the file open (FileShare.Read) while shown,
+        // so a write fails on Windows with an IOException (sharing violation). JSON Lines closes
+        // the file after mapping, so its variant can append.
+        var filePath = CreateTempFile(".csv", "col1\na\na\n");
         var indexer = new GrowableRowIndexer(filePath, "col1\n".Length);
         indexer.AddRows(1);
         var runner = new RecordingFilterScanRunner();
@@ -200,13 +204,13 @@ public sealed partial class ViewManagerTests
         GetItemCountText(harness.Window).Should().BeNull();
         runner.Tasks().Should().BeEmpty();
 
-        // Act — the late row lands, then indexing completes and the queued scan start runs
-        File.AppendAllText(filePath, "a\n");
+        // Act — the indexer reports the second row, then indexing completes and the queued
+        // scan start runs
         indexer.AddRows(1);
         indexer.Complete();
         await harness.Queue.RunNextAsync();
 
-        // Assert — the scan covers the late row: its count includes both rows
+        // Assert — the scan covers the later-indexed row: its count includes both rows
         runner.Tasks().Should().ContainSingle();
         await harness.Queue.RunUntilAsync(() => GetItemCountText(harness.Window) is not null);
         GetItemCountText(harness.Window).Should().Be("2 items");
