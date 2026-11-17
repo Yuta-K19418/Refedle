@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using Terminal.Gui.Drivers;
@@ -44,7 +45,7 @@ internal sealed class ActionMenuDialog : Dialog
         Width = Dim.Percent(50);
         Height = Dim.Percent(50);
 
-        var collection = new ObservableCollection<string>(availableActions);
+        ObservableCollection<string> collection = new(availableActions);
         _listView = new ListView
         {
             X = 0,
@@ -67,7 +68,7 @@ internal sealed class ActionMenuDialog : Dialog
         Add(_listView);
 
         // Add cancel button
-        var cancelButton = new Button { Text = "Cancel" };
+        Button cancelButton = new() { Text = "Cancel" };
         cancelButton.Accepting += (sender, e) =>
         {
             e.Handled = true;
@@ -82,7 +83,7 @@ internal sealed class ActionMenuDialog : Dialog
     /// </summary>
     private void ExecuteSelectedAction()
     {
-        var items = _listView.Source?.ToList();
+        IList? items = _listView.Source?.ToList();
         if (_listView.SelectedItem is { } idx && items is not null && idx < items.Count)
         {
             if (items[idx] is not string selectedAction)
@@ -99,8 +100,8 @@ internal sealed class ActionMenuDialog : Dialog
     /// <inheritdoc/>
     protected override bool OnKeyDown(Key key)
     {
-        var baseKey = (char)(key.KeyCode & KeyCode.CharMask);
-        var baseKeyLower = char.ToLowerInvariant(baseKey);
+        char baseKey = (char)(key.KeyCode & KeyCode.CharMask);
+        char baseKeyLower = char.ToLowerInvariant(baseKey);
 
         if (key.KeyCode == KeyCode.Esc || baseKeyLower == 'x')
         {

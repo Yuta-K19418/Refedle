@@ -59,7 +59,7 @@ internal sealed class JsonObjectTreeView : MorphTreeView
         ArgumentNullException.ThrowIfNull(entries);
         ArgumentNullException.ThrowIfNull(onTableModeToggle);
         ArgumentNullException.ThrowIfNull(onPathChanged);
-        var view = new JsonObjectTreeView(
+        JsonObjectTreeView view = new(
             onTableModeToggle,
             node => onPathChanged(node is null ? [] : KeyPathBuilder.Build(node)));
 
@@ -82,8 +82,8 @@ internal sealed class JsonObjectTreeView : MorphTreeView
                 .Range(0, (entries.Count + RangePartitionPolicy.RangeSize - 1) / RangePartitionPolicy.RangeSize)
                 .Select(i =>
                 {
-                    var start = i * RangePartitionPolicy.RangeSize;
-                    var count = Math.Min(RangePartitionPolicy.RangeSize, entries.Count - start);
+                    int start = i * RangePartitionPolicy.RangeSize;
+                    int count = Math.Min(RangePartitionPolicy.RangeSize, entries.Count - start);
                     return (ITreeNode)new JsonObjectRangeTreeNode(entries, start, count);
                 }));
 }

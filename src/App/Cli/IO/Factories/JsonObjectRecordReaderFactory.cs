@@ -1,6 +1,7 @@
 using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Refedle.Engine.Utilities;
 
@@ -30,15 +31,15 @@ internal readonly struct JsonObjectRecordReaderFactory : IRecordReaderFactory<Js
                 "DrillDownRecipeValidator and ColumnNameResolver already validated drillDownKeyPath for JsonObject input.");
         }
 
-        var fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
-        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(
+        byte[] fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
+        Result<JsonRawBytes> nodeResult = KeyPathNodeResolver.ResolveSingleNode(
             Utf8BomUtility.TrimLeadingUtf8Bom(fileBytes), drillDownKeyPath);
         if (nodeResult.IsFailure)
         {
             throw new InvalidOperationException(nodeResult.Error);
         }
 
-        var extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
         if (extractResult.IsFailure)
         {
             throw new InvalidOperationException(extractResult.Error);

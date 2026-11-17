@@ -56,7 +56,7 @@ internal sealed class JsonObjectTreeNode : TreeNode
     {
         List<ITreeNode> children = [];
 
-        var reader = new Utf8JsonReader(_rawJson.Span);
+        Utf8JsonReader reader = new(_rawJson.Span);
 
         bool isValidObjectStart;
         try
@@ -92,14 +92,14 @@ internal sealed class JsonObjectTreeNode : TreeNode
                 continue;
             }
 
-            var propertyName = reader.GetString() ?? string.Empty;
+            string propertyName = reader.GetString() ?? string.Empty;
 
             if (!reader.Read())
             {
                 break;
             }
 
-            var childNode = JsonTreeNodeHelper.CreateChildNode(ref reader, propertyName, _rawJson, RecordPosition, this);
+            ITreeNode? childNode = JsonTreeNodeHelper.CreateChildNode(ref reader, propertyName, _rawJson, RecordPosition, this);
             if (childNode is not null)
             {
                 children.Add(childNode);
@@ -111,7 +111,7 @@ internal sealed class JsonObjectTreeNode : TreeNode
 
     private string FormatDisplayText()
     {
-        var reader = new Utf8JsonReader(_rawJson.Span);
+        Utf8JsonReader reader = new(_rawJson.Span);
 
         bool isValidObjectStart;
         try

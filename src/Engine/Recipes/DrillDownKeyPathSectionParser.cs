@@ -24,14 +24,14 @@ internal static class DrillDownKeyPathSectionParser
                 $"Unexpected line in drillDownKeyPath context: '{line}'");
         }
 
-        var fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
+        Result<(string key, string value)> fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
         if (fieldResult.IsFailure)
         {
             return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(
                 $"Malformed action field: '{line}'");
         }
 
-        var (fieldKey, fieldValue) = fieldResult.Value;
+        (string? fieldKey, string? fieldValue) = fieldResult.Value;
         currentItem[fieldKey] = fieldValue;
         return Results.Success((parseState, currentItem));
     }
@@ -40,7 +40,7 @@ internal static class DrillDownKeyPathSectionParser
     // ActionsSectionParser.FinalizePending for the other section kind).
     internal static Result FinalizePending(Dictionary<string, string> currentItem, List<KeyPathSegment> drillDownKeyPath)
     {
-        var segmentsResult = ParseItem(currentItem);
+        Result<IReadOnlyList<KeyPathSegment>> segmentsResult = ParseItem(currentItem);
         if (segmentsResult.IsFailure)
         {
             return Results.Failure(segmentsResult.Error);
@@ -60,7 +60,7 @@ internal static class DrillDownKeyPathSectionParser
     {
         if (currentItem.Count > 0)
         {
-            var segmentsResult = ParseItem(currentItem);
+            Result<IReadOnlyList<KeyPathSegment>> segmentsResult = ParseItem(currentItem);
             if (segmentsResult.IsFailure)
             {
                 return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(segmentsResult.Error);
@@ -69,14 +69,14 @@ internal static class DrillDownKeyPathSectionParser
             drillDownKeyPath.AddRange(segmentsResult.Value);
         }
 
-        var fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
+        Result<(string key, string value)> fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
         if (fieldResult.IsFailure)
         {
             return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(
                 $"Malformed action field: '{line}'");
         }
 
-        var (fieldKey, fieldValue) = fieldResult.Value;
+        (string? fieldKey, string? fieldValue) = fieldResult.Value;
         return Results.Success((parseState, new Dictionary<string, string>(StringComparer.Ordinal) { [fieldKey] = fieldValue }));
     }
 
@@ -85,21 +85,21 @@ internal static class DrillDownKeyPathSectionParser
     // segment immediately followed by an Index segment (key always precedes index).
     private static Result<IReadOnlyList<KeyPathSegment>> ParseItem(Dictionary<string, string> item)
     {
-        var hasIndex = item.TryGetValue("index", out var indexValue);
+        bool hasIndex = item.TryGetValue("index", out string? indexValue);
 
         if (!item.ContainsKey("key") && !hasIndex)
         {
             return Results.Failure<IReadOnlyList<KeyPathSegment>>("DrillDownKeyPath item missing both 'key' and 'index'");
         }
 
-        var indexNumber = 0;
+        int indexNumber = 0;
         if (hasIndex && !int.TryParse(indexValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out indexNumber))
         {
             return Results.Failure<IReadOnlyList<KeyPathSegment>>($"Invalid DrillDownKeyPath index value: '{indexValue}'");
         }
 
         List<KeyPathSegment> segments = [];
-        if (item.TryGetValue("key", out var key))
+        if (item.TryGetValue("key", out string? key))
         {
             segments.Add(new KeyPathSegment(key, KeyPathSegmentKind.Key));
         }

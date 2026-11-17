@@ -109,8 +109,8 @@ public abstract class RowIndexerBase : IRowIndexer
     /// <param name="fileSize">Total file size.</param>
     protected void OnProgressChanged(long bytesRead, long fileSize)
     {
-        var lastNotifiedBytesRead = Interlocked.Read(ref _lastNotifiedBytesRead);
-        var notificationStep = fileSize / NotificationStepDivisor;
+        long lastNotifiedBytesRead = Interlocked.Read(ref _lastNotifiedBytesRead);
+        long notificationStep = fileSize / NotificationStepDivisor;
         if (bytesRead - lastNotifiedBytesRead < notificationStep)
         {
             return;

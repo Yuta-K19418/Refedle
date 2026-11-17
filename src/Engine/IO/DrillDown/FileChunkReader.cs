@@ -22,8 +22,8 @@ internal static class FileChunkReader
     /// </summary>
     internal static JsonRawBytes ReadFileRange(MmapService mmap, long startOffset, long endOffset)
     {
-        var length = (int)(endOffset - startOffset);
-        var bytes = new byte[length];
+        int length = (int)(endOffset - startOffset);
+        byte[] bytes = new byte[length];
         mmap.Read(startOffset, bytes);
         return bytes;
     }
@@ -47,8 +47,8 @@ internal static class FileChunkReader
             throw new NotSupportedException($"{sizeContext} exceeds maximum supported size.");
         }
 
-        var available = mmap.Length - fileOffset;
-        var toRead = (int)Math.Min(BufferSize - remainingLen, Math.Max(0L, available));
+        long available = mmap.Length - fileOffset;
+        int toRead = (int)Math.Min(BufferSize - remainingLen, Math.Max(0L, available));
         if (toRead > 0)
         {
             mmap.Read(fileOffset, buffer.AsSpan(remainingLen, toRead));

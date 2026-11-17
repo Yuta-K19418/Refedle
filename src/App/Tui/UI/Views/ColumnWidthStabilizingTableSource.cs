@@ -60,7 +60,7 @@ internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, 
     {
         get
         {
-            var value = _inner[row, col];
+            object value = _inner[row, col];
             TrackWidth(col, value);
             return value;
         }
@@ -87,15 +87,15 @@ internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, 
 
     private void TrackWidth(int col, object value)
     {
-        var representation = value is string text ? text : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
-        var width = representation.GetColumns();
+        string representation = value is string text ? text : Convert.ToString(value, CultureInfo.InvariantCulture) ?? string.Empty;
+        int width = representation.GetColumns();
 
         lock (_lock)
         {
             EnsureColumnsTracked(_inner.Columns);
 
-            var columnStyle = _columnStyles[col];
-            var clampedWidth = Math.Min(width, columnStyle.MaxWidth);
+            ColumnStyle columnStyle = _columnStyles[col];
+            int clampedWidth = Math.Min(width, columnStyle.MaxWidth);
 
             if (clampedWidth <= _maxObservedWidths[col])
             {
@@ -110,11 +110,11 @@ internal sealed class ColumnWidthStabilizingTableSource : IExtendedTableSource, 
     /// <summary>Grows the tracked width/style state to cover <paramref name="columnCount"/> columns. Callers must hold <see cref="_lock"/>.</summary>
     private void EnsureColumnsTracked(int columnCount)
     {
-        for (var col = _maxObservedWidths.Count; col < columnCount; col++)
+        for (int col = _maxObservedWidths.Count; col < columnCount; col++)
         {
-            var columnStyle = _style.GetOrCreateColumnStyle(col);
-            var headerWidth = Math.Min(_inner.ColumnNames[col].GetColumns(), columnStyle.MaxWidth);
-            var initialWidth = Math.Max(headerWidth, columnStyle.MinWidth);
+            ColumnStyle columnStyle = _style.GetOrCreateColumnStyle(col);
+            int headerWidth = Math.Min(_inner.ColumnNames[col].GetColumns(), columnStyle.MaxWidth);
+            int initialWidth = Math.Max(headerWidth, columnStyle.MinWidth);
             columnStyle.MinWidth = initialWidth;
 
             _maxObservedWidths.Add(initialWidth);

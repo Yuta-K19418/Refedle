@@ -1,4 +1,5 @@
 using Refedle.App.Cli.Parsing;
+using Refedle.Engine;
 
 namespace Refedle.App.Cli.Commands.Apply;
 
@@ -26,14 +27,14 @@ internal static class ApplyRunner
         IStatusReporter statusReporter,
         CancellationToken ct)
     {
-        var parseResult = ArgumentParser.Parse(args);
+        Result<Arguments> parseResult = ArgumentParser.Parse(args);
         if (parseResult.IsFailure)
         {
             await Console.Error.WriteLineAsync(parseResult.Error, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 
-        var parsedArgs = parseResult.Value;
+        Arguments parsedArgs = parseResult.Value;
         if (parsedArgs.IsDryRun)
         {
             return await DryRunner.RunAsync(parsedArgs, logger, statusReporter, ct).ConfigureAwait(false);

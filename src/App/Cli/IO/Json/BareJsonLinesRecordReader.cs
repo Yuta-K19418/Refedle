@@ -36,7 +36,7 @@ internal struct BareJsonLinesRecordReader : IRecordReader
             .Select(static c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
 
         _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
-        for (var i = 0; i < inputColumnNames.Count; i++)
+        for (int i = 0; i < inputColumnNames.Count; i++)
         {
             _filterIndexToNameBytes[i] = Encoding.UTF8.GetBytes(inputColumnNames[i]).AsMemory();
         }
@@ -80,8 +80,8 @@ internal struct BareJsonLinesRecordReader : IRecordReader
 
             ct.ThrowIfCancellationRequested();
 
-            var (byteOffset, rowOffset) = _rowIndexer.GetCheckPoint(_batchStart);
-            var linesToRead = (int)Math.Min(1000, _rowIndexer.TotalRows - _batchStart);
+            (long byteOffset, int rowOffset) = _rowIndexer.GetCheckPoint(_batchStart);
+            int linesToRead = (int)Math.Min(1000, _rowIndexer.TotalRows - _batchStart);
 
             _currentBatch = _rowReader.ReadLines(byteOffset, rowOffset, linesToRead);
             _batchStart += linesToRead;
@@ -98,14 +98,14 @@ internal struct BareJsonLinesRecordReader : IRecordReader
     {
         ThrowIfDisposed();
 
-        foreach (var filter in _filters)
+        foreach (BatchFilterSpec filter in _filters)
         {
-            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out var sourceColNameBytes))
+            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out JsonRawBytes sourceColNameBytes))
             {
                 continue;
             }
 
-            var value = JsonObjectCellExtractor.ExtractCell(_currentLineBytes.Span, sourceColNameBytes.Span);
+            string value = JsonObjectCellExtractor.ExtractCell(_currentLineBytes.Span, sourceColNameBytes.Span);
 
             if (value == "<null>" || value == "<error>")
             {

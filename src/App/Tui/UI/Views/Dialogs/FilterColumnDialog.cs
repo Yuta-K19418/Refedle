@@ -1,3 +1,4 @@
+using Refedle.Engine;
 using Refedle.Engine.Models.Actions;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -43,19 +44,19 @@ internal sealed class FilterColumnDialog : Dialog
     {
         Title = "Filter Column";
 
-        var colLabel = new Label
+        Label colLabel = new()
         {
             Text = $"Column: {columnName}",
             X = 0,
             Y = 0,
         };
-        var operatorLabel = new Label
+        Label operatorLabel = new()
         {
             Text = "Operator:",
             X = 0,
             Y = 2,
         };
-        var selector = new OptionSelector<FilterOperator>
+        OptionSelector<FilterOperator> selector = new()
         {
             X = Pos.Right(operatorLabel) + 1,
             Y = 2,
@@ -63,13 +64,13 @@ internal sealed class FilterColumnDialog : Dialog
             Value = FilterOperator.Equals,
         };
         selector.EnableAutoSelectAndVimKeys();
-        var comparisonTypeLabel = new Label
+        Label comparisonTypeLabel = new()
         {
             Text = "Comparison Type:",
             X = 0,
             Y = Pos.Bottom(selector) + 1,
         };
-        var comparisonTypeSelector = new OptionSelector<ComparisonType>
+        OptionSelector<ComparisonType> comparisonTypeSelector = new()
         {
             X = Pos.Right(comparisonTypeLabel) + 1,
             Y = Pos.Bottom(selector) + 1,
@@ -77,20 +78,20 @@ internal sealed class FilterColumnDialog : Dialog
             Value = ComparisonType.Text,
         };
         comparisonTypeSelector.EnableAutoSelectAndVimKeys();
-        var valueLabel = new Label
+        Label valueLabel = new()
         {
             Text = "Value:",
             X = 0,
             Y = Pos.Bottom(comparisonTypeSelector) + 1,
         };
-        var textField = new TextField
+        TextField textField = new()
         {
             Text = string.Empty,
             X = Pos.Right(valueLabel) + 1,
             Y = Pos.Bottom(comparisonTypeSelector) + 1,
             Width = Dim.Fill(),
         };
-        var errorLabel = new Label
+        Label errorLabel = new()
         {
             Text = string.Empty,
             X = 0,
@@ -99,8 +100,8 @@ internal sealed class FilterColumnDialog : Dialog
         Add(colLabel, operatorLabel, selector, comparisonTypeLabel, comparisonTypeSelector,
             valueLabel, textField, errorLabel);
 
-        var okButton = new Button { Text = "OK" };
-        var cancelButton = new Button { Text = "Cancel" };
+        Button okButton = new() { Text = "OK" };
+        Button cancelButton = new() { Text = "Cancel" };
 
         void Confirm()
         {
@@ -120,7 +121,7 @@ internal sealed class FilterColumnDialog : Dialog
             // Clear any stale error from a previous failed attempt before re-validating.
             errorLabel.Text = string.Empty;
 
-            var validation = FilterAction.Validate(op, comparisonType, textField.Text);
+            Result validation = FilterAction.Validate(op, comparisonType, textField.Text);
             if (validation.IsFailure)
             {
                 errorLabel.Text = validation.Error;

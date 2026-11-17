@@ -19,7 +19,7 @@ internal static class RangePartitionPolicy
     /// </summary>
     internal static long GetNodeGroupSize(long fileSize)
     {
-        var estimatedRows = fileSize / BytesPerRecord;
+        long estimatedRows = fileSize / BytesPerRecord;
         return estimatedRows > SuperRangeThreshold
             ? CalcSuperRangeSize(estimatedRows)
             : RangeSize;
@@ -27,8 +27,8 @@ internal static class RangePartitionPolicy
 
     private static long CalcSuperRangeSize(long estimatedRows)
     {
-        var rangesCount = (estimatedRows + RangeSize - 1) / RangeSize;
-        var superFactor = (rangesCount + RangeSize - 1) / RangeSize;
+        long rangesCount = (estimatedRows + RangeSize - 1) / RangeSize;
+        long superFactor = (rangesCount + RangeSize - 1) / RangeSize;
         return superFactor * RangeSize;
     }
 }

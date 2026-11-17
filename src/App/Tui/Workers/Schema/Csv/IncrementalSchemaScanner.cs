@@ -1,4 +1,6 @@
 using System.Globalization;
+using nietras.SeparatedValues;
+using Refedle.Engine;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 
@@ -26,9 +28,9 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     /// <inheritdoc/>
     protected override TableSchema ExecuteInitialScan()
     {
-        var columnNames = ReadColumnNames();
-        var rows = ReadInitialRows(columnNames.Length);
-        var scanResult = SchemaScanner.ScanSchema(columnNames, rows, InitialScanCount);
+        string[] columnNames = ReadColumnNames();
+        List<CsvDataRow> rows = ReadInitialRows(columnNames.Length);
+        Result<TableSchema> scanResult = SchemaScanner.ScanSchema(columnNames, rows, InitialScanCount);
 
         if (scanResult.IsFailure)
         {
@@ -53,16 +55,16 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
     private List<CsvDataRow> ReadInitialRows(int columnCount)
     {
-        using var reader = new DataRowReader(FilePath, columnCount);
+        using DataRowReader reader = new(FilePath, columnCount);
 
         return [.. reader.EnumerateRows(rowsToSkip: 0).Take(InitialScanCount)];
     }
 
     private IEnumerable<CsvDataRow> ReadRemainingRows(int columnCount)
     {
-        using var reader = new DataRowReader(FilePath, columnCount);
+        using DataRowReader reader = new(FilePath, columnCount);
 
-        using var rows = reader.EnumerateRows(rowsToSkip: InitialScanCount).GetEnumerator();
+        using IEnumerator<CsvDataRow> rows = reader.EnumerateRows(rowsToSkip: InitialScanCount).GetEnumerator();
         while (TryMoveNext(rows))
         {
             yield return rows.Current;
@@ -84,20 +86,20 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
     private string[] ReadColumnNames()
     {
-        using var reader = CsvSep.FromFile(FilePath);
+        using SepReader reader = CsvSep.FromFile(FilePath);
 
         // Header column names are automatically available
-        var header = reader.Header;
+        SepReaderHeader header = reader.Header;
         if (header.ColNames.Count == 0)
         {
             throw new InvalidOperationException("CSV file has no columns.");
         }
 
         // Process column names
-        var processedNames = new string[header.ColNames.Count];
-        for (var i = 0; i < header.ColNames.Count; i++)
+        string[] processedNames = new string[header.ColNames.Count];
+        for (int i = 0; i < header.ColNames.Count; i++)
         {
-            var columnName = header.ColNames[i];
+            string columnName = header.ColNames[i];
             if (string.IsNullOrWhiteSpace(columnName))
             {
                 columnName = string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}");

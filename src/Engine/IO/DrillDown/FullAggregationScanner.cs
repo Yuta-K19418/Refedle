@@ -38,15 +38,15 @@ public static class FullAggregationScanner
                 "JSON Object format does not support full aggregation.");
         }
 
-        var mmapResult = MmapService.Open(filePath);
+        Result<MmapService> mmapResult = MmapService.Open(filePath);
         if (mmapResult.IsFailure)
         {
             return Results.Failure<(TableSchema, IReadOnlyList<FocusedTableRow>)>(mmapResult.Error);
         }
 
-        using var mmap = mmapResult.Value;
+        using MmapService mmap = mmapResult.Value;
 
-        var scanData = format switch
+        ScanData scanData = format switch
         {
             DataFormat.JsonLines => ScanLines(mmap, keyPath, cancellationToken),
             DataFormat.JsonArray => ScanElements(mmap, keyPath, cancellationToken),
@@ -63,7 +63,7 @@ public static class FullAggregationScanner
             return Results.Failure<(TableSchema, IReadOnlyList<FocusedTableRow>)>("All child objects have no keys");
         }
 
-        var schema = SchemaScanner.BuildTableSchema(scanData.KeyOrder, scanData.ColumnTypes, scanData.KeyObservedCount, scanData.Rows.Count, format);
+        TableSchema schema = SchemaScanner.BuildTableSchema(scanData.KeyOrder, scanData.ColumnTypes, scanData.KeyObservedCount, scanData.Rows.Count, format);
         return Results.Success<(TableSchema, IReadOnlyList<FocusedTableRow>)>((schema, scanData.Rows));
     }
 
@@ -72,33 +72,33 @@ public static class FullAggregationScanner
         IReadOnlyList<KeyPathSegment> keyPath,
         CancellationToken cancellationToken)
     {
-        var colName = KeyPathTraverser.LastKeySegment(keyPath);
-        var colNameUtf8 = Encoding.UTF8.GetBytes(colName);
+        string colName = KeyPathTraverser.LastKeySegment(keyPath);
+        byte[] colNameUtf8 = Encoding.UTF8.GetBytes(colName);
 
         List<FocusedTableRow> rows = [];
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(FileChunkReader.BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(FileChunkReader.BufferSize);
         try
         {
-            var fileOffset = mmap.GetOffsetAfterUtf8Bom();
-            var recordPosition = 1L;
-            var remainingLen = 0;
+            long fileOffset = mmap.GetOffsetAfterUtf8Bom();
+            long recordPosition = 1L;
+            int remainingLen = 0;
 
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                (var dataEnd, fileOffset) = FileChunkReader.FillBuffer(mmap, buffer, remainingLen, fileOffset, "JSON line");
-                var isFinalBlock = fileOffset >= mmap.Length;
-                var consumed = 0;
+                (int dataEnd, fileOffset) = FileChunkReader.FillBuffer(mmap, buffer, remainingLen, fileOffset, "JSON line");
+                bool isFinalBlock = fileOffset >= mmap.Length;
+                int consumed = 0;
 
                 while (true)
                 {
-                    var newlineIndex = buffer.AsSpan(consumed, dataEnd - consumed).IndexOf((byte)'\n');
+                    int newlineIndex = buffer.AsSpan(consumed, dataEnd - consumed).IndexOf((byte)'\n');
                     if (newlineIndex == -1)
                     {
                         break;
@@ -144,7 +144,7 @@ public static class FullAggregationScanner
         Dictionary<string, ColumnType> columnTypes,
         Dictionary<string, int> keyObservedCount)
     {
-        var trimmed = FileChunkReader.TrimTrailingCr(lineSpan);
+        ReadOnlySpan<byte> trimmed = FileChunkReader.TrimTrailingCr(lineSpan);
         if (trimmed.IsEmpty)
         {
             return;
@@ -160,34 +160,34 @@ public static class FullAggregationScanner
         IReadOnlyList<KeyPathSegment> keyPath,
         CancellationToken cancellationToken)
     {
-        var colName = KeyPathTraverser.LastKeySegment(keyPath);
-        var colNameUtf8 = Encoding.UTF8.GetBytes(colName);
+        string colName = KeyPathTraverser.LastKeySegment(keyPath);
+        byte[] colNameUtf8 = Encoding.UTF8.GetBytes(colName);
 
         List<FocusedTableRow> rows = [];
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(FileChunkReader.BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(FileChunkReader.BufferSize);
         try
         {
-            var state = default(JsonReaderState);
-            var fileReadOffset = mmap.GetOffsetAfterUtf8Bom();
-            var bufferOriginFileOffset = fileReadOffset;
-            var remainingLen = 0;
-            var recordPosition = 0L;
-            var currentElementStart = -1L;
+            JsonReaderState state = default(JsonReaderState);
+            long fileReadOffset = mmap.GetOffsetAfterUtf8Bom();
+            long bufferOriginFileOffset = fileReadOffset;
+            int remainingLen = 0;
+            long recordPosition = 0L;
+            long currentElementStart = -1L;
 
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                (var dataEnd, fileReadOffset) = FileChunkReader.FillBuffer(mmap, buffer, remainingLen, fileReadOffset, "JSON element");
-                var isFinalBlock = fileReadOffset >= mmap.Length;
+                (int dataEnd, fileReadOffset) = FileChunkReader.FillBuffer(mmap, buffer, remainingLen, fileReadOffset, "JSON element");
+                bool isFinalBlock = fileReadOffset >= mmap.Length;
 
-                var reader = new Utf8JsonReader(buffer.AsSpan(0, dataEnd), isFinalBlock, state);
-                var rootDone = false;
+                Utf8JsonReader reader = new(buffer.AsSpan(0, dataEnd), isFinalBlock, state);
+                bool rootDone = false;
 
                 while (!rootDone && reader.Read())
                 {
@@ -202,7 +202,7 @@ public static class FullAggregationScanner
                 }
 
                 state = reader.CurrentState;
-                var consumed = (int)reader.BytesConsumed;
+                int consumed = (int)reader.BytesConsumed;
                 bufferOriginFileOffset += consumed;
                 remainingLen = dataEnd - consumed;
                 if (remainingLen > 0)
@@ -253,7 +253,7 @@ public static class FullAggregationScanner
 
         if (reader.TokenType is JsonTokenType.StartObject or JsonTokenType.StartArray)
         {
-            var updatedStart = currentElementStart < 0
+            long updatedStart = currentElementStart < 0
                 ? bufferOriginFileOffset + reader.TokenStartIndex
                 : currentElementStart;
             return (false, updatedStart, recordPosition);
@@ -261,8 +261,8 @@ public static class FullAggregationScanner
 
         if (reader.TokenType is JsonTokenType.EndObject or JsonTokenType.EndArray)
         {
-            var elementEnd = bufferOriginFileOffset + reader.BytesConsumed;
-            var elementBytes = FileChunkReader.ReadFileRange(mmap, currentElementStart, elementEnd);
+            long elementEnd = bufferOriginFileOffset + reader.BytesConsumed;
+            JsonRawBytes elementBytes = FileChunkReader.ReadFileRange(mmap, currentElementStart, elementEnd);
             KeyPathTraverser.ExtractRows(
                 elementBytes, keyPath, recordPosition.ToString(CultureInfo.InvariantCulture),
                 colName, colNameUtf8, rows, keyOrder, keySet, columnTypes, keyObservedCount);
@@ -270,7 +270,7 @@ public static class FullAggregationScanner
         }
 
         // Primitive element at depth 1 (number, string, bool, null).
-        var primitiveBytes = FileChunkReader.ReadFileRange(
+        JsonRawBytes primitiveBytes = FileChunkReader.ReadFileRange(
             mmap, bufferOriginFileOffset + reader.TokenStartIndex, bufferOriginFileOffset + reader.BytesConsumed);
         KeyPathTraverser.ExtractRows(
             primitiveBytes, keyPath, recordPosition.ToString(CultureInfo.InvariantCulture),

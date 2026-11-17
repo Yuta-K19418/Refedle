@@ -46,7 +46,7 @@ internal static class CliDispatcher
 
     private static async ValueTask<ExitCode> RunUpdateAsync(IAppLogger logger, IStatusReporter statusReporter, CancellationToken ct)
     {
-        using var scope = CliCancellationScope.Create(_cancelKeyPressSource, ct);
+        using CliCancellationScope scope = CliCancellationScope.Create(_cancelKeyPressSource, ct);
         return await UpdateRunner.RunAsync(logger, statusReporter, scope.Token).ConfigureAwait(false);
     }
 
@@ -61,7 +61,7 @@ internal static class CliDispatcher
                 nameof(args));
         }
 
-        using var scope = CliCancellationScope.Create(_cancelKeyPressSource, ct);
+        using CliCancellationScope scope = CliCancellationScope.Create(_cancelKeyPressSource, ct);
         return await ApplyRunner.RunAsync(applyArgs, logger, statusReporter, scope.Token).ConfigureAwait(false);
     }
 }

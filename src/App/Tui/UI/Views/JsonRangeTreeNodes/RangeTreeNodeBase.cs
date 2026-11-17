@@ -77,13 +77,13 @@ internal abstract class RangeTreeNodeBase : TreeNode
 
     private void AddNestedRangeNodes()
     {
-        var childStart = StartIndex;
-        var remaining = Count;
+        long childStart = StartIndex;
+        long remaining = Count;
         List<ITreeNode> children = [];
 
         while (remaining > 0)
         {
-            var childCount = Math.Min(remaining, RangePartitionPolicy.RangeSize);
+            long childCount = Math.Min(remaining, RangePartitionPolicy.RangeSize);
             children.Add(CreateRangeNode(childStart, childCount));
             childStart += childCount;
             remaining -= childCount;

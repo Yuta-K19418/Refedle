@@ -1,3 +1,4 @@
+using nietras.SeparatedValues;
 using Refedle.App.Cli.IO.Csv;
 using Refedle.Engine;
 using Refedle.Engine.IO.Csv;
@@ -17,7 +18,7 @@ internal readonly struct CsvRecordReaderFactory : IRecordReaderFactory<CsvRecord
         IAppLogger logger,
         CancellationToken ct)
     {
-        var sepReader = await CsvSep.FromFileAsync(inputFile, cancellationToken: ct).ConfigureAwait(false);
+        SepReader sepReader = await CsvSep.FromFileAsync(inputFile, cancellationToken: ct).ConfigureAwait(false);
         return new CsvRecordReader(sepReader, outputSchema);
     }
 }

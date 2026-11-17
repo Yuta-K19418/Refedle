@@ -53,7 +53,7 @@ public sealed class MmapService : IDisposable
 
         try
         {
-            var fileInfo = new FileInfo(filePath);
+            FileInfo fileInfo = new(filePath);
             if (!fileInfo.Exists)
             {
                 return Results.Failure<MmapService>($"File not found: {filePath}");
@@ -64,7 +64,7 @@ public sealed class MmapService : IDisposable
                 return Results.Failure<MmapService>($"File is empty: {filePath}");
             }
 
-            var mapProtection = access switch
+            MemoryMappedFileAccess mapProtection = access switch
             {
                 FileAccess.Read => MemoryMappedFileAccess.Read,
                 FileAccess.ReadWrite => MemoryMappedFileAccess.ReadWrite,
@@ -72,7 +72,7 @@ public sealed class MmapService : IDisposable
                 _ => throw new ArgumentException($"Unsupported FileAccess: {access}", nameof(access)),
             };
 
-            using var fileStream = new FileStream(
+            using FileStream fileStream = new(
                 filePath,
                 FileMode.Open,
                 access,
@@ -143,7 +143,7 @@ public sealed class MmapService : IDisposable
                 string.Create(CultureInfo.InvariantCulture, $"Range [{offset}, {offset + destination.Length}) exceeds file length {_length}"));
         }
 
-        var viewOffset = (ulong)(offset + _accessor.PointerOffset);
+        ulong viewOffset = (ulong)(offset + _accessor.PointerOffset);
         _accessor.SafeMemoryMappedViewHandle.ReadSpan(viewOffset, destination);
     }
 

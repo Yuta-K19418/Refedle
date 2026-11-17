@@ -50,7 +50,7 @@ public static class TypeInferrer
     /// <returns>True if parsing succeeded, false otherwise.</returns>
     public static bool TryParseBoolean(ReadOnlySpan<char> value, out bool result)
     {
-        var trimmed = value.Trim();
+        ReadOnlySpan<char> trimmed = value.Trim();
         return bool.TryParse(trimmed, out result);
     }
 
@@ -62,7 +62,7 @@ public static class TypeInferrer
     /// <returns>True if parsing succeeded and consumed entire value, false otherwise.</returns>
     public static bool TryParseWholeNumber(ReadOnlySpan<char> value, out long result)
     {
-        var trimmed = value.Trim();
+        ReadOnlySpan<char> trimmed = value.Trim();
         return long.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out result);
     }
 
@@ -74,7 +74,7 @@ public static class TypeInferrer
     /// <returns>True if parsing succeeded and consumed entire value, false otherwise.</returns>
     public static bool TryParseFloatingPoint(ReadOnlySpan<char> value, out double result)
     {
-        var trimmed = value.Trim();
+        ReadOnlySpan<char> trimmed = value.Trim();
         return double.TryParse(
             trimmed,
             NumberStyles.Float | NumberStyles.AllowThousands,
@@ -92,7 +92,7 @@ public static class TypeInferrer
     /// <returns>True if parsing succeeded, false otherwise.</returns>
     public static bool TryParseTimestamp(ReadOnlySpan<char> value, out DateTime result)
     {
-        var trimmed = value.Trim();
+        ReadOnlySpan<char> trimmed = value.Trim();
         return DateTime.TryParse(
             trimmed,
             CultureInfo.InvariantCulture,

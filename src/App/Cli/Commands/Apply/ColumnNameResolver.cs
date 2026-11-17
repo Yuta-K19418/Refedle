@@ -2,6 +2,7 @@ using Refedle.Engine;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Refedle.Engine.Utilities;
 
@@ -47,15 +48,15 @@ internal static class ColumnNameResolver
                 "This recipe's DrillDown path is empty, which is not valid for a JSON Object file.");
         }
 
-        var fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
-        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(
+        byte[] fileBytes = await File.ReadAllBytesAsync(inputFile, ct).ConfigureAwait(false);
+        Result<JsonRawBytes> nodeResult = KeyPathNodeResolver.ResolveSingleNode(
             Utf8BomUtility.TrimLeadingUtf8Bom(fileBytes), drillDownKeyPath);
         if (nodeResult.IsFailure)
         {
             return Results.Failure<IReadOnlyList<string>>(nodeResult.Error);
         }
 
-        var extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> extractResult = DrillDownSchemaExtractor.ExtractFromNode(nodeResult.Value, DataFormat.JsonObject);
         if (extractResult.IsFailure)
         {
             return Results.Failure<IReadOnlyList<string>>(extractResult.Error);
@@ -75,7 +76,7 @@ internal static class ColumnNameResolver
         IReadOnlyList<KeyPathSegment> drillDownKeyPath,
         CancellationToken ct)
     {
-        var scanResult = FullAggregationSchemaScanner.Scan(inputFile, format, drillDownKeyPath, ct);
+        Result<TableSchema> scanResult = FullAggregationSchemaScanner.Scan(inputFile, format, drillDownKeyPath, ct);
         if (scanResult.IsFailure)
         {
             return Results.Failure<IReadOnlyList<string>>(scanResult.Error);
@@ -87,21 +88,21 @@ internal static class ColumnNameResolver
 
     private static List<string> ResolveJsonLinesColumnNames(string inputFile, CancellationToken ct)
     {
-        var rowIndexer = new RowIndexer(inputFile);
+        RowIndexer rowIndexer = new(inputFile);
         rowIndexer.BuildIndex(ct);
 
-        using var rowReader = new RowReader(inputFile);
+        using RowReader rowReader = new(inputFile);
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var order = new List<string>();
-        var lineIndex = 0L;
+        HashSet<string> seen = new(StringComparer.Ordinal);
+        List<string> order = [];
+        long lineIndex = 0L;
 
         while (lineIndex < rowIndexer.TotalRows)
         {
             ct.ThrowIfCancellationRequested();
 
-            var (byteOffset, rowOffset) = rowIndexer.GetCheckPoint(lineIndex);
-            var lines = rowReader.ReadLines(byteOffset, rowOffset, BatchSize);
+            (long byteOffset, int rowOffset) = rowIndexer.GetCheckPoint(lineIndex);
+            IReadOnlyList<JsonRawBytes> lines = rowReader.ReadLines(byteOffset, rowOffset, BatchSize);
             if (lines.Count == 0)
             {
                 break;

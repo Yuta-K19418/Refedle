@@ -1,5 +1,6 @@
 using System.Formats.Tar;
 using System.IO.Compression;
+using System.Runtime.CompilerServices;
 using Refedle.Engine;
 
 namespace Refedle.App.Cli.Commands.Update;
@@ -16,17 +17,17 @@ internal sealed class ArchiveBinaryReplacer : IBinaryReplacer
     /// <inheritdoc/>
     public async ValueTask<Result> ReplaceAsync(string archiveFilePath, string targetFilePath, CancellationToken cancellationToken)
     {
-        var targetDirectory = Path.GetDirectoryName(Path.GetFullPath(targetFilePath));
+        string? targetDirectory = Path.GetDirectoryName(Path.GetFullPath(targetFilePath));
         if (string.IsNullOrEmpty(targetDirectory) || !Directory.Exists(targetDirectory))
         {
             return Results.Failure($"The target directory does not exist: '{targetDirectory}'.");
         }
 
         // The temp file lives in the target directory so the final rename stays on one file system.
-        var tempPath = Path.Combine(targetDirectory, $".{Path.GetFileName(targetFilePath)}.{Guid.NewGuid():N}.tmp");
+        string tempPath = Path.Combine(targetDirectory, $".{Path.GetFileName(targetFilePath)}.{Guid.NewGuid():N}.tmp");
         try
         {
-            var extractResult = await ExtractBinaryAsync(archiveFilePath, tempPath, cancellationToken).ConfigureAwait(false);
+            Result extractResult = await ExtractBinaryAsync(archiveFilePath, tempPath, cancellationToken).ConfigureAwait(false);
             if (extractResult.IsFailure)
             {
                 return Results.Failure(extractResult.Error);
@@ -68,13 +69,13 @@ internal sealed class ArchiveBinaryReplacer : IBinaryReplacer
         // A declaration-form await using on a stream cannot carry ConfigureAwait while keeping the
         // concrete type, so each disposal is split into a disposer local, declared right after
         // acquisition and disposed in reverse order at scope exit.
-        var archiveStream = new FileStream(
+        FileStream archiveStream = new(
             archiveFilePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamBufferSize, useAsync: true);
-        await using var archiveStreamDisposer = archiveStream.ConfigureAwait(false);
-        var gzipStream = new GZipStream(archiveStream, CompressionMode.Decompress);
-        await using var gzipStreamDisposer = gzipStream.ConfigureAwait(false);
-        var tarReader = new TarReader(gzipStream);
-        await using var tarReaderDisposer = tarReader.ConfigureAwait(false);
+        await using ConfiguredAsyncDisposable archiveStreamDisposer = archiveStream.ConfigureAwait(false);
+        GZipStream gzipStream = new(archiveStream, CompressionMode.Decompress);
+        await using ConfiguredAsyncDisposable gzipStreamDisposer = gzipStream.ConfigureAwait(false);
+        TarReader tarReader = new(gzipStream);
+        await using ConfiguredAsyncDisposable tarReaderDisposer = tarReader.ConfigureAwait(false);
 
         return await ExtractBinaryEntryAsync(tarReader, tempPath, cancellationToken).ConfigureAwait(false);
     }
@@ -96,9 +97,9 @@ internal sealed class ArchiveBinaryReplacer : IBinaryReplacer
                 return Results.Failure("The 'refedle' entry in the archive has no content.");
             }
 
-            var destination = new FileStream(
+            FileStream destination = new(
                 tempPath, FileMode.Create, FileAccess.Write, FileShare.None, StreamBufferSize, useAsync: true);
-            await using var destinationDisposer = destination.ConfigureAwait(false);
+            await using ConfiguredAsyncDisposable destinationDisposer = destination.ConfigureAwait(false);
             await entry.DataStream.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
 
             return Results.Success();

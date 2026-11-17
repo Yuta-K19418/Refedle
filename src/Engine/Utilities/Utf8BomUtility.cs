@@ -33,9 +33,9 @@ public static class Utf8BomUtility
     {
         ArgumentNullException.ThrowIfNull(stream);
 
-        var startPosition = stream.Position;
+        long startPosition = stream.Position;
         Span<byte> header = stackalloc byte[Length];
-        var totalRead = stream.ReadAtLeast(header, Length, throwOnEndOfStream: false);
+        int totalRead = stream.ReadAtLeast(header, Length, throwOnEndOfStream: false);
 
         if (!StartsWithUtf8Bom(header[..totalRead]))
         {

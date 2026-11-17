@@ -64,7 +64,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
         ArgumentNullException.ThrowIfNull(originalSchema);
         ArgumentNullException.ThrowIfNull(actions);
 
-        var schema = TransformedSchemaBuilder.Build(originalSchema, actions);
+        (string[] columnNames, string[] rawColumnNames, IReadOnlyList<ColumnType> columnTypes, IReadOnlyList<int> sourceColumnIndices, IReadOnlyList<string?> fillValues, IReadOnlyList<string?> formatStrings, IReadOnlyList<bool> castMarkers, IReadOnlyList<FilterSpec> filterSpecs) schema = TransformedSchemaBuilder.Build(originalSchema, actions);
 
         string[] columnNames = ["#", .. schema.columnNames];
         string[] rawColumnNames = ["#", .. schema.rawColumnNames];
@@ -119,7 +119,7 @@ internal sealed class FocusedTableTransformer : LazyTransformerBase
             }
 
             // The filtered row space is indexed by IFilterRowIndexer, which is int-based.
-            var sourceRow = _filterRowIndexer is not null
+            long sourceRow = _filterRowIndexer is not null
                 ? _filterRowIndexer.GetSourceRow((int)row)
                 : row;
 

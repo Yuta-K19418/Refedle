@@ -39,7 +39,7 @@ internal sealed class JsonObjectRangeTreeNode : RangeTreeNodeBase
     /// <returns>A tree node representing the key-value pair.</returns>
     internal static ITreeNode CreateKeyNode(string key, JsonRawBytes valueBytes)
     {
-        var prefix = $"{key}: ";
+        string prefix = $"{key}: ";
         ITreeNode invalidNode() =>
             new JsonValueTreeNode($"{prefix}[Invalid JSON]") { ValueKind = JsonValueKind.Undefined };
 
@@ -48,7 +48,7 @@ internal sealed class JsonObjectRangeTreeNode : RangeTreeNodeBase
             return invalidNode();
         }
 
-        var reader = new Utf8JsonReader(valueBytes.Span);
+        Utf8JsonReader reader = new(valueBytes.Span);
 
         try
         {
@@ -89,9 +89,9 @@ internal sealed class JsonObjectRangeTreeNode : RangeTreeNodeBase
     {
         List<ITreeNode> children = [];
 
-        for (var i = 0L; i < Count; i++)
+        for (long i = 0L; i < Count; i++)
         {
-            var entry = _entries[(int)(StartIndex + i)];
+            JsonObjectEntry entry = _entries[(int)(StartIndex + i)];
             children.Add(CreateKeyNode(entry.Key, entry.Value));
         }
 

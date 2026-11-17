@@ -31,10 +31,10 @@ public sealed class ScanProgressThrottle
             // The final position is always reported. The recorded position only ever moves
             // forward; as a safeguard, the write is made only after checking that
             // scannedRows > lastNotifiedRows still holds.
-            var recordedRows = Volatile.Read(ref _lastNotifiedRows);
+            int recordedRows = Volatile.Read(ref _lastNotifiedRows);
             while (scannedRows > recordedRows)
             {
-                var observedRows = Interlocked.CompareExchange(ref _lastNotifiedRows, scannedRows, recordedRows);
+                int observedRows = Interlocked.CompareExchange(ref _lastNotifiedRows, scannedRows, recordedRows);
                 if (observedRows == recordedRows)
                 {
                     break;
@@ -46,11 +46,11 @@ public sealed class ScanProgressThrottle
             return true;
         }
 
-        var notificationStep = totalRows / NotificationStepDivisor;
-        var lastNotifiedRows = Volatile.Read(ref _lastNotifiedRows);
+        int notificationStep = totalRows / NotificationStepDivisor;
+        int lastNotifiedRows = Volatile.Read(ref _lastNotifiedRows);
         while (scannedRows > lastNotifiedRows && scannedRows - lastNotifiedRows >= notificationStep)
         {
-            var observedRows = Interlocked.CompareExchange(ref _lastNotifiedRows, scannedRows, lastNotifiedRows);
+            int observedRows = Interlocked.CompareExchange(ref _lastNotifiedRows, scannedRows, lastNotifiedRows);
 
             // A match with the expected value means the write succeeded, so this call notifies.
             if (observedRows == lastNotifiedRows)

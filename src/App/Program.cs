@@ -1,10 +1,10 @@
 using Refedle.App.Cli;
 using Refedle.App.Tui.UI;
 
-if (CliCommandMatcher.TryMatch(args, out var cliCommand))
+if (CliCommandMatcher.TryMatch(args, out CliCommand cliCommand))
 {
-    var logger = new ConsoleAppLogger();
-    var statusReporter = new SpectreStatusReporter();
+    ConsoleAppLogger logger = new();
+    SpectreStatusReporter statusReporter = new();
     return (int)await CliDispatcher.RunAsync(cliCommand, args, logger, statusReporter, CancellationToken.None).ConfigureAwait(false);
 }
 

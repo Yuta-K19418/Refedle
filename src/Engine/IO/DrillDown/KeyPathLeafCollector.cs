@@ -25,7 +25,7 @@ internal static class KeyPathLeafCollector
         Dictionary<string, ColumnType> columnTypes,
         Dictionary<string, int> keyObservedCount)
     {
-        var reader = new Utf8JsonReader(leafBytes.Span);
+        Utf8JsonReader reader = new(leafBytes.Span);
         if (!reader.Read())
         {
             return;
@@ -34,7 +34,7 @@ internal static class KeyPathLeafCollector
         if (reader.TokenType == JsonTokenType.StartObject)
         {
             rows.Add(new FocusedTableRow(leafBytes, posHash));
-            var observedKeys = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> observedKeys = new(StringComparer.Ordinal);
             SchemaScanner.ScanObject(leafBytes.Span, keyOrder, keySet, columnTypes, observedKeys);
             SchemaScanner.IncrementObservationCounts(observedKeys, keyObservedCount);
             return;
@@ -50,7 +50,7 @@ internal static class KeyPathLeafCollector
         // JsonObjectCellExtractor can extract it without modification.
         // Note: ScanObject is NOT called here, so no type inference is performed;
         // the synthesized column always receives ColumnType.Text (Phase 2 limitation).
-        var synthBytes = SynthesizeObject(colNameUtf8, leafBytes.Span);
+        JsonRawBytes synthBytes = SynthesizeObject(colNameUtf8, leafBytes.Span);
         rows.Add(new FocusedTableRow(synthBytes, posHash));
         SchemaScanner.RegisterKeyIfNew(colName, keyOrder, keySet);
         SchemaScanner.IncrementObservationCounts(new HashSet<string>(StringComparer.Ordinal) { colName }, keyObservedCount);
@@ -65,13 +65,13 @@ internal static class KeyPathLeafCollector
         Dictionary<string, ColumnType> columnTypes,
         Dictionary<string, int> keyObservedCount)
     {
-        var reader = new Utf8JsonReader(leafBytes.Span);
+        Utf8JsonReader reader = new(leafBytes.Span);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
         {
             return;
         }
 
-        var elementIndex = 0;
+        int elementIndex = 0;
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndArray)
@@ -84,14 +84,14 @@ internal static class KeyPathLeafCollector
                 continue;
             }
 
-            var isObjectElement = reader.TokenType == JsonTokenType.StartObject;
-            var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, leafBytes);
-            var elementHash = string.Create(CultureInfo.InvariantCulture, $"{posHash}:{elementIndex}");
+            bool isObjectElement = reader.TokenType == JsonTokenType.StartObject;
+            JsonRawBytes elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, leafBytes);
+            string elementHash = string.Create(CultureInfo.InvariantCulture, $"{posHash}:{elementIndex}");
 
             if (isObjectElement)
             {
                 rows.Add(new FocusedTableRow(elementBytes, elementHash));
-                var observedKeys = new HashSet<string>(StringComparer.Ordinal);
+                HashSet<string> observedKeys = new(StringComparer.Ordinal);
                 SchemaScanner.ScanObject(elementBytes.Span, keyOrder, keySet, columnTypes, observedKeys);
                 SchemaScanner.IncrementObservationCounts(observedKeys, keyObservedCount);
                 elementIndex++;
@@ -99,7 +99,7 @@ internal static class KeyPathLeafCollector
             }
 
             // Primitive element (including null) — synthesize {"value": element}.
-            var synthBytes = SynthesizeObject("value"u8, elementBytes.Span);
+            JsonRawBytes synthBytes = SynthesizeObject("value"u8, elementBytes.Span);
             rows.Add(new FocusedTableRow(synthBytes, elementHash));
             SchemaScanner.RegisterKeyIfNew("value", keyOrder, keySet);
             SchemaScanner.IncrementObservationCounts(new HashSet<string>(StringComparer.Ordinal) { "value" }, keyObservedCount);
@@ -109,7 +109,7 @@ internal static class KeyPathLeafCollector
 
     internal static JsonRawBytes? FindValueByKey(JsonRawBytes objectBytes, string key)
     {
-        var reader = new Utf8JsonReader(objectBytes.Span);
+        Utf8JsonReader reader = new(objectBytes.Span);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
         {
             return null;
@@ -150,13 +150,13 @@ internal static class KeyPathLeafCollector
     /// </summary>
     internal static JsonRawBytes? FindArrayElementByIndex(JsonRawBytes arrayBytes, int index)
     {
-        var reader = new Utf8JsonReader(arrayBytes.Span);
+        Utf8JsonReader reader = new(arrayBytes.Span);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
         {
             return null;
         }
 
-        var elementIndex = 0;
+        int elementIndex = 0;
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndArray)
@@ -169,7 +169,7 @@ internal static class KeyPathLeafCollector
                 continue;
             }
 
-            var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
+            JsonRawBytes elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
             if (elementIndex == index)
             {
                 return elementBytes;
@@ -183,8 +183,8 @@ internal static class KeyPathLeafCollector
 
     private static JsonRawBytes SynthesizeObject(ReadOnlySpan<byte> keyUtf8, ReadOnlySpan<byte> valueBytes)
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        using var writer = new Utf8JsonWriter(buffer);
+        ArrayBufferWriter<byte> buffer = new();
+        using Utf8JsonWriter writer = new(buffer);
         writer.WriteStartObject();
         writer.WritePropertyName(keyUtf8);
         writer.WriteRawValue(valueBytes, skipInputValidation: true);

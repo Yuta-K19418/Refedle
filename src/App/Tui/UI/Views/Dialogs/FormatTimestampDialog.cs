@@ -27,19 +27,19 @@ internal sealed class FormatTimestampDialog : Dialog
     {
         Title = "Format Timestamp";
 
-        var columnLabel = new Label
+        Label columnLabel = new()
         {
             Text = $"Column: {columnName}",
             X = 0,
             Y = 0,
         };
-        var formatLabel = new Label
+        Label formatLabel = new()
         {
             Text = "Target format:",
             X = 0,
             Y = 2,
         };
-        var textField = new TextField
+        TextField textField = new()
         {
             Text = string.Empty,
             X = Pos.Right(formatLabel) + 1,
@@ -48,8 +48,10 @@ internal sealed class FormatTimestampDialog : Dialog
         };
         Add(columnLabel, formatLabel, textField);
 
-        var okButton = new Button { Text = "OK" };
-        var cancelButton = new Button { Text = "Cancel" };
+        Button okButton = new()
+        { Text = "OK" };
+        Button cancelButton = new()
+        { Text = "Cancel" };
 
         void Confirm()
         {

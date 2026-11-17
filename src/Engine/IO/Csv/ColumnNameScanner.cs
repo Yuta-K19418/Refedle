@@ -1,4 +1,5 @@
 using System.Globalization;
+using nietras.SeparatedValues;
 
 namespace Refedle.Engine.IO.Csv;
 
@@ -28,15 +29,15 @@ public static class ColumnNameScanner
     {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        using var reader = CsvSep.FromFile(filePath);
-        var header = reader.Header;
+        using SepReader reader = CsvSep.FromFile(filePath);
+        SepReaderHeader header = reader.Header;
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var names = new string[header.ColNames.Count];
-        for (var i = 0; i < header.ColNames.Count; i++)
+        HashSet<string> seen = new(StringComparer.Ordinal);
+        string[] names = new string[header.ColNames.Count];
+        for (int i = 0; i < header.ColNames.Count; i++)
         {
-            var name = header.ColNames[i];
-            var resolvedName = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}") : name;
+            string name = header.ColNames[i];
+            string resolvedName = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}") : name;
 
             if (!seen.Add(resolvedName))
             {

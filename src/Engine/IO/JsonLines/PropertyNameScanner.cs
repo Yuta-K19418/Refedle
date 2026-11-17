@@ -25,7 +25,7 @@ public static class PropertyNameScanner
         // One scratch list per batch, cleared per line, keeps the full-file scan allocation-light
         // while names still merge only after a line parses completely (transactional per line).
         List<string> lineNames = [];
-        foreach (var line in rawLines)
+        foreach (JsonRawBytes line in rawLines)
         {
             lineNames.Clear();
             ScanLine(line.Span, lineNames, seen, order);
@@ -36,7 +36,7 @@ public static class PropertyNameScanner
     {
         try
         {
-            var reader = new Utf8JsonReader(line);
+            Utf8JsonReader reader = new(line);
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
             {
                 return;
@@ -77,7 +77,7 @@ public static class PropertyNameScanner
     // values are skipped whole.
     private static void ScanProperty(ref Utf8JsonReader reader, List<string> lineNames)
     {
-        var propertyName = reader.GetString() ?? throw new UnreachableException("GetString() returned null on a PropertyName token.");
+        string propertyName = reader.GetString() ?? throw new UnreachableException("GetString() returned null on a PropertyName token.");
         lineNames.Add(propertyName);
 
         if (!reader.Read())
@@ -93,7 +93,7 @@ public static class PropertyNameScanner
 
     private static void MergeLineNames(List<string> lineNames, ISet<string> seen, IList<string> order)
     {
-        foreach (var name in lineNames)
+        foreach (string name in lineNames)
         {
             if (seen.Add(name))
             {

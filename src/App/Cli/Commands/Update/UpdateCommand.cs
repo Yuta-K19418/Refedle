@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using Refedle.Engine;
 
@@ -81,18 +82,18 @@ internal sealed class UpdateCommand(
 
     private async Task<ExitCode> RunUpdateFlowAsync(CancellationToken cancellationToken)
     {
-        if (!ReleaseVersion.TryParse(currentVersion, out var current))
+        if (!ReleaseVersion.TryParse(currentVersion, out ReleaseVersion current))
         {
             return await FailAsync($"Invalid current version: '{currentVersion}'.").ConfigureAwait(false);
         }
 
-        var tagResult = await releaseClient.GetLatestTagAsync(cancellationToken).ConfigureAwait(false);
+        Result<string> tagResult = await releaseClient.GetLatestTagAsync(cancellationToken).ConfigureAwait(false);
         if (tagResult.IsFailure)
         {
             return await FailAsync(tagResult.Error).ConfigureAwait(false);
         }
 
-        if (!ReleaseVersion.TryParse(tagResult.Value, out var latest))
+        if (!ReleaseVersion.TryParse(tagResult.Value, out ReleaseVersion latest))
         {
             return await FailAsync($"Could not parse the latest release tag: '{tagResult.Value}'.").ConfigureAwait(false);
         }
@@ -107,19 +108,19 @@ internal sealed class UpdateCommand(
             return ExitCode.Success;
         }
 
-        var ridResult = ridResolver.Resolve();
+        Result<string> ridResult = ridResolver.Resolve();
         if (ridResult.IsFailure)
         {
             return await FailAsync(ridResult.Error).ConfigureAwait(false);
         }
 
-        var archiveName = $"refedle-{tagResult.Value}-{ridResult.Value}.tar.gz";
+        string archiveName = $"refedle-{tagResult.Value}-{ridResult.Value}.tar.gz";
         await logger.WriteInfoAsync($"Downloading refedle {latest}...").ConfigureAwait(false);
 
-        var tempDirectory = Directory.CreateTempSubdirectory("refedle-update-");
+        DirectoryInfo tempDirectory = Directory.CreateTempSubdirectory("refedle-update-");
         try
         {
-            var updateResult = await _statusReporter.RunAsync(
+            Result updateResult = await _statusReporter.RunAsync(
                 "Downloading...",
                 setPhase => UpdateAsync(
                     tagResult.Value, archiveName, tempDirectory.FullName, setPhase, cancellationToken)).ConfigureAwait(false);
@@ -140,16 +141,16 @@ internal sealed class UpdateCommand(
     private async ValueTask<Result> UpdateAsync(
         string tag, string archiveName, string tempDirectoryPath, Action<string> setPhase, CancellationToken cancellationToken)
     {
-        var checksumsPath = Path.Combine(tempDirectoryPath, ChecksumsFileName);
-        var checksumsResult = await releaseClient.DownloadAssetAsync(
+        string checksumsPath = Path.Combine(tempDirectoryPath, ChecksumsFileName);
+        Result checksumsResult = await releaseClient.DownloadAssetAsync(
             tag, ChecksumsFileName, checksumsPath, cancellationToken).ConfigureAwait(false);
         if (checksumsResult.IsFailure)
         {
             return checksumsResult;
         }
 
-        var archivePath = Path.Combine(tempDirectoryPath, archiveName);
-        var archiveResult = await releaseClient.DownloadAssetAsync(
+        string archivePath = Path.Combine(tempDirectoryPath, archiveName);
+        Result archiveResult = await releaseClient.DownloadAssetAsync(
             tag, archiveName, archivePath, cancellationToken).ConfigureAwait(false);
         if (archiveResult.IsFailure)
         {
@@ -163,37 +164,37 @@ internal sealed class UpdateCommand(
         string checksumsPath, string archivePath, string archiveName, Action<string> setPhase, CancellationToken cancellationToken)
     {
         setPhase("Verifying checksum...");
-        var verifyResult = await VerifyChecksumAsync(checksumsPath, archivePath, archiveName, cancellationToken).ConfigureAwait(false);
+        Result verifyResult = await VerifyChecksumAsync(checksumsPath, archivePath, archiveName, cancellationToken).ConfigureAwait(false);
         if (verifyResult.IsFailure)
         {
             return verifyResult;
         }
 
-        var processPath = Environment.ProcessPath;
+        string? processPath = Environment.ProcessPath;
         if (string.IsNullOrEmpty(processPath))
         {
             return Results.Failure("Could not determine the path of the running binary.");
         }
 
         setPhase("Replacing binary...");
-        var replaceResult = await binaryReplacer.ReplaceAsync(archivePath, processPath, cancellationToken).ConfigureAwait(false);
+        Result replaceResult = await binaryReplacer.ReplaceAsync(archivePath, processPath, cancellationToken).ConfigureAwait(false);
         return replaceResult;
     }
 
     private static async ValueTask<Result> VerifyChecksumAsync(
         string checksumsPath, string archivePath, string archiveName, CancellationToken cancellationToken)
     {
-        var content = await File.ReadAllTextAsync(checksumsPath, cancellationToken).ConfigureAwait(false);
-        var expectedHexResult = Checksums.FindHex(content, archiveName);
+        string content = await File.ReadAllTextAsync(checksumsPath, cancellationToken).ConfigureAwait(false);
+        Result<string> expectedHexResult = Checksums.FindHex(content, archiveName);
         if (expectedHexResult.IsFailure)
         {
             return Results.Failure(expectedHexResult.Error);
         }
 
-        var archiveStream = new FileStream(
+        FileStream archiveStream = new(
             archivePath, FileMode.Open, FileAccess.Read, FileShare.Read, StreamBufferSize, useAsync: true);
-        await using var archiveStreamDisposer = archiveStream.ConfigureAwait(false);
-        var actualHex = Convert.ToHexString(await SHA256.HashDataAsync(archiveStream, cancellationToken).ConfigureAwait(false));
+        await using ConfiguredAsyncDisposable archiveStreamDisposer = archiveStream.ConfigureAwait(false);
+        string actualHex = Convert.ToHexString(await SHA256.HashDataAsync(archiveStream, cancellationToken).ConfigureAwait(false));
         return actualHex == expectedHexResult.Value
             ? Results.Success()
             : Results.Failure($"Checksum mismatch for '{archiveName}'.");

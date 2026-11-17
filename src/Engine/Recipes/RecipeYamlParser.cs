@@ -18,20 +18,20 @@ internal static class RecipeYamlParser
     /// </summary>
     public static Result<Recipe> Parse(string yaml)
     {
-        var parseState = new RecipeYamlParseState(string.Empty, null, null, ParseState.Root, DrillDownKeyPathPresent: false);
+        RecipeYamlParseState parseState = new(string.Empty, null, null, ParseState.Root, DrillDownKeyPathPresent: false);
         List<IMorphAction> actions = [];
         List<KeyPathSegment> drillDownKeyPath = [];
         Dictionary<string, string> currentItem = new(StringComparer.Ordinal);
 
-        foreach (var rawLine in yaml.Split('\n'))
+        foreach (string rawLine in yaml.Split('\n'))
         {
-            var line = rawLine.TrimEnd('\r');
+            string line = rawLine.TrimEnd('\r');
             if (IsSkippable(line))
             {
                 continue;
             }
 
-            var lineResult = ProcessLine(line, parseState, currentItem, actions, drillDownKeyPath);
+            Result<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)> lineResult = ProcessLine(line, parseState, currentItem, actions, drillDownKeyPath);
             if (lineResult.IsFailure)
             {
                 return Results.Failure<Recipe>(lineResult.Error);
@@ -40,7 +40,7 @@ internal static class RecipeYamlParser
             (parseState, currentItem) = lineResult.Value;
         }
 
-        var finalizeResult = FinalizePendingItem(parseState, currentItem, actions, drillDownKeyPath);
+        Result finalizeResult = FinalizePendingItem(parseState, currentItem, actions, drillDownKeyPath);
         if (finalizeResult.IsFailure)
         {
             return Results.Failure<Recipe>(finalizeResult.Error);
@@ -88,7 +88,7 @@ internal static class RecipeYamlParser
     {
         if (parseState.ParseState == ParseState.Root)
         {
-            var result = ProcessRootLine(line, parseState);
+            Result<RecipeYamlParseState> result = ProcessRootLine(line, parseState);
             return result.IsFailure
                 ? Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(result.Error)
                 : Results.Success((result.Value, currentItem));
@@ -127,14 +127,14 @@ internal static class RecipeYamlParser
             return Results.Success(state with { ParseState = ParseState.DrillDownKeyPathItem, DrillDownKeyPathPresent = true });
         }
 
-        var colonIdx = line.IndexOf(": ", StringComparison.Ordinal);
+        int colonIdx = line.IndexOf(": ", StringComparison.Ordinal);
         if (colonIdx < 0)
         {
             return Results.Failure<RecipeYamlParseState>($"Malformed root-level line: '{line}'");
         }
 
-        var key = line[..colonIdx];
-        var value = line[(colonIdx + 2)..];
+        string key = line[..colonIdx];
+        string value = line[(colonIdx + 2)..];
 
         return key switch
         {
@@ -162,7 +162,7 @@ internal static class RecipeYamlParser
 
     private static Result<RecipeYamlParseState> ParseLastModifiedField(string value, RecipeYamlParseState state)
     {
-        var parseResult = TryParseLastModified(value);
+        Result<DateTimeOffset> parseResult = TryParseLastModified(value);
         if (parseResult.IsFailure)
         {
             return Results.Failure<RecipeYamlParseState>(parseResult.Error);
@@ -173,7 +173,7 @@ internal static class RecipeYamlParser
 
     private static Result<DateTimeOffset> TryParseLastModified(string value)
     {
-        if (!DateTimeOffset.TryParse(StringUtility.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var dt))
+        if (!DateTimeOffset.TryParse(StringUtility.UnquoteString(value), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTimeOffset dt))
         {
             return Results.Failure<DateTimeOffset>($"Invalid lastModified value: '{value}'");
         }

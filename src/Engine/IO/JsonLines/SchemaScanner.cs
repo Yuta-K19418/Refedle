@@ -37,14 +37,14 @@ public static class SchemaScanner
             return Results.Failure<TableSchema>("No lines provided for schema inference.");
         }
 
-        var linesToProcess = System.Math.Min(rawLines.Count, initialScanCount);
+        int linesToProcess = System.Math.Min(rawLines.Count, initialScanCount);
 
         // Find first valid line to seed the initial schema
         TableSchema? schema = null;
-        var startIndex = 0;
-        for (var i = 0; i < linesToProcess; i++)
+        int startIndex = 0;
+        for (int i = 0; i < linesToProcess; i++)
         {
-            var seedResult = TrySeedSchema(rawLines[i].Span);
+            Result<TableSchema> seedResult = TrySeedSchema(rawLines[i].Span);
             if (seedResult.IsFailure)
             {
                 continue;
@@ -63,9 +63,9 @@ public static class SchemaScanner
         }
 
         // Refine schema with remaining lines
-        for (var i = startIndex; i < linesToProcess; i++)
+        for (int i = startIndex; i < linesToProcess; i++)
         {
-            var refineResult = RefineSchema(schema, rawLines[i].Span);
+            Result<TableSchema> refineResult = RefineSchema(schema, rawLines[i].Span);
             if (refineResult.IsFailure)
             {
                 continue;
@@ -93,30 +93,30 @@ public static class SchemaScanner
             return Results.Success(schema);
         }
 
-        var columnMap = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyOrder = new List<string>();
+        Dictionary<string, ColumnType> columnMap = new(StringComparer.Ordinal);
+        List<string> keyOrder = [];
 
-        foreach (var col in schema.Columns)
+        foreach (ColumnSchema col in schema.Columns)
         {
             columnMap[col.Name] = col.Type;
             keyOrder.Add(col.Name);
         }
 
-        var observedKeys = new HashSet<string>(StringComparer.Ordinal);
+        HashSet<string> observedKeys = new(StringComparer.Ordinal);
 
-        var scanResult = ScanLine(lineBytes, columnMap, keyOrder, observedKeys);
+        Result scanResult = ScanLine(lineBytes, columnMap, keyOrder, observedKeys);
         if (scanResult.IsFailure)
         {
             return Results.Success(schema);
         }
 
-        var updatedColumns = ComputeUpdatedColumns(schema, keyOrder, columnMap, observedKeys);
+        Dictionary<string, ColumnSchema> updatedColumns = ComputeUpdatedColumns(schema, keyOrder, columnMap, observedKeys);
         if (updatedColumns.Count == 0)
         {
             return Results.Success(schema);
         }
 
-        var newColumns = RebuildColumns(schema, keyOrder, updatedColumns);
+        List<ColumnSchema> newColumns = RebuildColumns(schema, keyOrder, updatedColumns);
         return Results.Success(schema with { Columns = newColumns });
     }
 
@@ -127,14 +127,14 @@ public static class SchemaScanner
         Dictionary<string, ColumnType> columnMap,
         HashSet<string> observedKeys)
     {
-        var updatedColumns = new Dictionary<string, ColumnSchema>(StringComparer.Ordinal);
+        Dictionary<string, ColumnSchema> updatedColumns = new(StringComparer.Ordinal);
 
-        for (var i = 0; i < keyOrder.Count; i++)
+        for (int i = 0; i < keyOrder.Count; i++)
         {
-            var key = keyOrder[i];
-            var type = columnMap[key];
+            string key = keyOrder[i];
+            ColumnType type = columnMap[key];
 
-            var originalCol = schema.GetColumn(key);
+            ColumnSchema? originalCol = schema.GetColumn(key);
             if (originalCol is null)
             {
                 // New column — always a change
@@ -149,7 +149,7 @@ public static class SchemaScanner
                 continue;
             }
 
-            var updated = originalCol.WithUpdatedType(type);
+            ColumnSchema updated = originalCol.WithUpdatedType(type);
             if (!observedKeys.Contains(key))
             {
                 updated = updated.WithMarkedNullable();
@@ -170,11 +170,11 @@ public static class SchemaScanner
         List<string> keyOrder,
         Dictionary<string, ColumnSchema> updatedColumns)
     {
-        var newColumns = new List<ColumnSchema>(keyOrder.Count);
-        for (var i = 0; i < keyOrder.Count; i++)
+        List<ColumnSchema> newColumns = [with(keyOrder.Count)];
+        for (int i = 0; i < keyOrder.Count; i++)
         {
-            var key = keyOrder[i];
-            if (updatedColumns.TryGetValue(key, out var updatedCol))
+            string key = keyOrder[i];
+            if (updatedColumns.TryGetValue(key, out ColumnSchema? updatedCol))
             {
                 newColumns.Add(updatedCol);
                 continue;
@@ -198,20 +198,20 @@ public static class SchemaScanner
     /// <returns>Result containing the seeded TableSchema, or an error if the line is invalid.</returns>
     private static Result<TableSchema> TrySeedSchema(ReadOnlySpan<byte> line)
     {
-        var columnMap = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyOrder = new List<string>();
-        var observedKeys = new HashSet<string>(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnMap = new(StringComparer.Ordinal);
+        List<string> keyOrder = [];
+        HashSet<string> observedKeys = new(StringComparer.Ordinal);
 
-        var scanResult = ScanLine(line, columnMap, keyOrder, observedKeys);
+        Result scanResult = ScanLine(line, columnMap, keyOrder, observedKeys);
         if (scanResult.IsFailure)
         {
             return Results.Failure<TableSchema>("Invalid JSON line.");
         }
 
-        var columns = new List<ColumnSchema>(keyOrder.Count);
-        for (var i = 0; i < keyOrder.Count; i++)
+        List<ColumnSchema> columns = [with(keyOrder.Count)];
+        for (int i = 0; i < keyOrder.Count; i++)
         {
-            var key = keyOrder[i];
+            string key = keyOrder[i];
             columns.Add(
                 new ColumnSchema
                 {
@@ -246,7 +246,7 @@ public static class SchemaScanner
     {
         try
         {
-            var reader = new Utf8JsonReader(line);
+            Utf8JsonReader reader = new(line);
 
             if (!reader.Read())
             {
@@ -270,7 +270,7 @@ public static class SchemaScanner
                     continue;
                 }
 
-                var propertyResult = ScanProperty(ref reader, columnMap, keyOrder, observedKeys);
+                Result propertyResult = ScanProperty(ref reader, columnMap, keyOrder, observedKeys);
                 if (propertyResult.IsFailure)
                 {
                     return propertyResult;
@@ -293,7 +293,7 @@ public static class SchemaScanner
         List<string> keyOrder,
         HashSet<string> observedKeys)
     {
-        var propertyName =
+        string propertyName =
             reader.GetString()
             ?? throw new UnreachableException(
                 "GetString() returned null on a PropertyName token."
@@ -316,7 +316,7 @@ public static class SchemaScanner
             return Results.Success();
         }
 
-        var inferredType = TypeInferrer.InferType(reader.TokenType, reader.ValueSpan);
+        ColumnType inferredType = TypeInferrer.InferType(reader.TokenType, reader.ValueSpan);
 
         if (
             reader.TokenType == JsonTokenType.StartObject
@@ -328,7 +328,7 @@ public static class SchemaScanner
 
         observedKeys.Add(propertyName);
 
-        if (!columnMap.TryGetValue(propertyName, out var existingType))
+        if (!columnMap.TryGetValue(propertyName, out ColumnType existingType))
         {
             columnMap[propertyName] = inferredType;
             keyOrder.Add(propertyName);

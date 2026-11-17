@@ -30,7 +30,7 @@ internal sealed class IndexTaskManager : IDisposable
             _cts?.Dispose();
 
             _cts = new CancellationTokenSource();
-            var ct = _cts.Token;
+            CancellationToken ct = _cts.Token;
 
             // Start indexing in the background. No await needed as progress/completion
             // are handled via the indexer's events.

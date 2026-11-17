@@ -62,13 +62,13 @@ internal static class JsonCellWriter
 
         static void writeNumericValue(Utf8JsonWriter writer, ReadOnlySpan<char> value)
         {
-            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+            if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long longValue))
             {
                 writer.WriteNumberValue(longValue);
                 return;
             }
 
-            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out var doubleValue))
+            if (double.TryParse(value, NumberStyles.Any, CultureInfo.InvariantCulture, out double doubleValue))
             {
                 writer.WriteNumberValue(doubleValue);
                 return;

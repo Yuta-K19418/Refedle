@@ -28,7 +28,7 @@ internal static class CellResolver
             return new ResolvedCellData(cell, string.Empty);
         }
 
-        if (!CellTransformFormatter.TryFormat(transform, cell, out var formatted, out var reason))
+        if (!CellTransformFormatter.TryFormat(transform, cell, out CellData formatted, out string reason))
         {
             return new ResolvedCellData(cell, reason);
         }

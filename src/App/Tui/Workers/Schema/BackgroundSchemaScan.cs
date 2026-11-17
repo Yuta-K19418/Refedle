@@ -26,21 +26,21 @@ internal static class BackgroundSchemaScan
         Func<TableSchema, TRow, Result<TableSchema>> refine,
         CancellationToken cancellationToken)
     {
-        var refinedSchema = currentSchema;
+        TableSchema refinedSchema = currentSchema;
 
         if (cancellationToken.IsCancellationRequested)
         {
             return refinedSchema;
         }
 
-        foreach (var row in readRows())
+        foreach (TRow? row in readRows())
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 break;
             }
 
-            var refineResult = refine(refinedSchema, row);
+            Result<TableSchema> refineResult = refine(refinedSchema, row);
             if (refineResult.IsSuccess)
             {
                 refinedSchema = refineResult.Value;

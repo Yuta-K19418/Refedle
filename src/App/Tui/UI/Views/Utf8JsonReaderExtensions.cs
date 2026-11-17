@@ -12,7 +12,7 @@ internal static class Utf8JsonReaderExtensions
         {
             JsonTokenType.String =>
                 $"\"{JsonTreeNodeHelper.EscapeString(reader.GetString() ?? string.Empty)}\"",
-            JsonTokenType.Number when reader.TryGetDecimal(out var d) =>
+            JsonTokenType.Number when reader.TryGetDecimal(out decimal d) =>
                 d.ToString(CultureInfo.InvariantCulture),
             JsonTokenType.Number => reader.GetDouble().ToString(CultureInfo.InvariantCulture),
             JsonTokenType.True => "true",

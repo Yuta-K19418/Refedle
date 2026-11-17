@@ -46,8 +46,8 @@ internal sealed class JsonLinesTreeView : RangeTreeViewBase
         ArgumentNullException.ThrowIfNull(onPathChanged);
         ArgumentNullException.ThrowIfNull(uiThreadInvoke);
 
-        var nodeGroupSize = RangePartitionPolicy.GetNodeGroupSize(indexer.FileSize);
-        var view = new JsonLinesTreeView(
+        long nodeGroupSize = RangePartitionPolicy.GetNodeGroupSize(indexer.FileSize);
+        JsonLinesTreeView view = new(
             indexer,
             new RowReader(indexer.FilePath),
             onTableModeToggle,
@@ -73,10 +73,10 @@ internal sealed class JsonLinesTreeView : RangeTreeViewBase
     /// <inheritdoc/>
     protected override void AddSmallFileNodes(long totalRows)
     {
-        var (byteOffset, rowOffset) = Indexer.GetCheckPoint(0);
-        var lines = _reader.ReadLines(byteOffset, rowOffset, (int)totalRows);
+        (long byteOffset, int rowOffset) = Indexer.GetCheckPoint(0);
+        IReadOnlyList<JsonRawBytes> lines = _reader.ReadLines(byteOffset, rowOffset, (int)totalRows);
 
-        for (var i = 0; i < lines.Count; i++)
+        for (int i = 0; i < lines.Count; i++)
         {
             if (lines[i].IsEmpty)
             {

@@ -54,7 +54,7 @@ internal sealed class FocusedTableSource : IExtendedTableSource
             }
 
             // Row count is a List count, so it always fits int after the bounds check.
-            var rowIndex = (int)row;
+            int rowIndex = (int)row;
 
             if (col < 0 || col >= Columns)
             {

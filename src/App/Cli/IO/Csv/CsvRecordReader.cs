@@ -15,18 +15,18 @@ internal struct CsvRecordReader : IRecordReader
     {
         _reader = reader;
 
-        var header = _reader.Header;
-        var sourceNameToIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var i = 0; i < header.ColNames.Count; i++)
+        SepReaderHeader header = _reader.Header;
+        Dictionary<string, int> sourceNameToIndex = new(StringComparer.Ordinal);
+        for (int i = 0; i < header.ColNames.Count; i++)
         {
             sourceNameToIndex[header.ColNames[i]] = i;
         }
 
         _outputToSourceIndexMap = new int[outputSchema.Columns.Count];
-        for (var i = 0; i < outputSchema.Columns.Count; i++)
+        for (int i = 0; i < outputSchema.Columns.Count; i++)
         {
-            var col = outputSchema.Columns[i];
-            _outputToSourceIndexMap[i] = sourceNameToIndex.TryGetValue(col.SourceName, out var idx) ? idx : -1;
+            BatchOutputColumn col = outputSchema.Columns[i];
+            _outputToSourceIndexMap[i] = sourceNameToIndex.TryGetValue(col.SourceName, out int idx) ? idx : -1;
         }
 
         _filters = outputSchema.Filters;
@@ -59,15 +59,15 @@ internal struct CsvRecordReader : IRecordReader
 
         // Current is stable for the lifetime of a row; cache it to avoid re-reading
         // the property (and a defensive struct copy) once per filter on the hot path.
-        var current = _reader.Current;
-        foreach (var filter in _filters)
+        SepReader.Row current = _reader.Current;
+        foreach (BatchFilterSpec filter in _filters)
         {
             if (filter.SourceColumnIndex >= current.ColCount)
             {
                 return false;
             }
 
-            var valueSpan = current[filter.SourceColumnIndex].Span;
+            ReadOnlySpan<char> valueSpan = current[filter.SourceColumnIndex].Span;
             if (!FilterEvaluator.EvaluateFilter(valueSpan, filter))
             {
                 return false;
@@ -85,8 +85,8 @@ internal struct CsvRecordReader : IRecordReader
             return new CellData([], CellPresence.Value);
         }
 
-        var sourceIndex = _outputToSourceIndexMap[outputColumnIndex];
-        var value = sourceIndex < 0 ? [] : _reader.Current[sourceIndex].Span;
+        int sourceIndex = _outputToSourceIndexMap[outputColumnIndex];
+        ReadOnlySpan<char> value = sourceIndex < 0 ? [] : _reader.Current[sourceIndex].Span;
         return new CellData(value, CellPresence.Value, CellEncodingClassifier.Classify(value));
     }
 

@@ -29,7 +29,7 @@ internal static class CellIssueReporter
 
         await logger.WriteWarningAsync("Some source cells could not be processed as specified:").ConfigureAwait(false);
 
-        foreach (var issue in cellIssues)
+        foreach (CellIssue issue in cellIssues)
         {
             await logger.WriteWarningAsync(FormatEntry(issue)).ConfigureAwait(false);
         }
@@ -44,7 +44,7 @@ internal static class CellIssueReporter
     // Unreadable source cells have no text to show, so the raw value is omitted there.
     private static string FormatEntry(CellIssue issue)
     {
-        var rowNumber = issue.RowNumber.ToString(CultureInfo.InvariantCulture);
+        string rowNumber = issue.RowNumber.ToString(CultureInfo.InvariantCulture);
         return issue.RawValue.Length == 0
             ? $"Row {rowNumber}, column \"{issue.ColumnName}\": {issue.Reason}"
             : $"Row {rowNumber}, column \"{issue.ColumnName}\": {issue.Reason} (\"{issue.RawValue}\")";

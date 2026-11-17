@@ -20,8 +20,8 @@ internal readonly record struct ReleaseVersion(int Major, int Minor, int Patch) 
     /// <returns><c>true</c> when the text is a valid version; otherwise <c>false</c>.</returns>
     public static bool TryParse(string text, out ReleaseVersion version)
     {
-        var body = text.StartsWith('v', StringComparison.Ordinal) ? text[1..] : text;
-        var parts = body.Split('.');
+        string body = text.StartsWith('v', StringComparison.Ordinal) ? text[1..] : text;
+        string[] parts = body.Split('.');
         if (parts.Length != 3)
         {
             version = default;
@@ -30,9 +30,9 @@ internal readonly record struct ReleaseVersion(int Major, int Minor, int Patch) 
 
         // None disallows signs and whitespace so that only plain digits are accepted.
         const NumberStyles Digits = NumberStyles.None;
-        if (!int.TryParse(parts[0], Digits, CultureInfo.InvariantCulture, out var major)
-            || !int.TryParse(parts[1], Digits, CultureInfo.InvariantCulture, out var minor)
-            || !int.TryParse(parts[2], Digits, CultureInfo.InvariantCulture, out var patch))
+        if (!int.TryParse(parts[0], Digits, CultureInfo.InvariantCulture, out int major)
+            || !int.TryParse(parts[1], Digits, CultureInfo.InvariantCulture, out int minor)
+            || !int.TryParse(parts[2], Digits, CultureInfo.InvariantCulture, out int patch))
         {
             version = default;
             return false;

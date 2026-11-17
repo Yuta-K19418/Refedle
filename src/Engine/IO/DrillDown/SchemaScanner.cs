@@ -24,7 +24,7 @@ internal static class SchemaScanner
         Dictionary<string, ColumnType> columnTypes,
         HashSet<string> observedKeys)
     {
-        var reader = new Utf8JsonReader(objectBytes);
+        Utf8JsonReader reader = new(objectBytes);
 
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
         {
@@ -64,7 +64,7 @@ internal static class SchemaScanner
         HashSet<string> observedKeys,
         Dictionary<string, int> keyObservedCount)
     {
-        foreach (var key in observedKeys)
+        foreach (string key in observedKeys)
         {
             keyObservedCount[key] = keyObservedCount.GetValueOrDefault(key) + 1;
         }
@@ -83,10 +83,10 @@ internal static class SchemaScanner
         DataFormat format)
     {
         List<ColumnSchema> columns = [];
-        for (var i = 0; i < keyOrder.Count; i++)
+        for (int i = 0; i < keyOrder.Count; i++)
         {
-            var key = keyOrder[i];
-            var observedCount = keyObservedCount.GetValueOrDefault(key);
+            string key = keyOrder[i];
+            int observedCount = keyObservedCount.GetValueOrDefault(key);
             columns.Add(new ColumnSchema
             {
                 Name = key,
@@ -111,15 +111,15 @@ internal static class SchemaScanner
             return;
         }
 
-        var key = reader.GetString() ?? string.Empty;
+        string key = reader.GetString() ?? string.Empty;
 
         if (!reader.Read())
         {
             return;
         }
 
-        var tokenType = reader.TokenType;
-        var valueSpan = reader.ValueSpan;
+        JsonTokenType tokenType = reader.TokenType;
+        ReadOnlySpan<byte> valueSpan = reader.ValueSpan;
 
         if (tokenType is JsonTokenType.StartObject or JsonTokenType.StartArray)
         {
@@ -133,7 +133,7 @@ internal static class SchemaScanner
             return;
         }
 
-        var inferredType = TypeInferrer.InferType(tokenType, valueSpan);
+        ColumnType inferredType = TypeInferrer.InferType(tokenType, valueSpan);
         observedKeys.Add(key);
         MergeColumnType(key, inferredType, columnTypes);
     }
@@ -143,7 +143,7 @@ internal static class SchemaScanner
         ColumnType inferredType,
         Dictionary<string, ColumnType> columnTypes)
     {
-        if (!columnTypes.TryGetValue(key, out var existingType))
+        if (!columnTypes.TryGetValue(key, out ColumnType existingType))
         {
             columnTypes[key] = inferredType;
             return;

@@ -34,7 +34,7 @@ public static class FilterEvaluator
     /// </summary>
     public static bool EvaluateFilter(ReadOnlySpan<char> rawValue, BatchFilterSpec spec)
     {
-        var resolvedColumnType = spec.ComparisonType switch
+        ColumnType resolvedColumnType = spec.ComparisonType switch
         {
             ComparisonType.Text => ColumnType.Text,
             // WholeNumber only when both sides are integers; otherwise a decimal threshold
@@ -83,7 +83,7 @@ public static class FilterEvaluator
         FilterOperator op
     )
     {
-        var ignoreCase = StringComparison.OrdinalIgnoreCase;
+        StringComparison ignoreCase = StringComparison.OrdinalIgnoreCase;
         return op switch
         {
             FilterOperator.Contains => rawValue.Contains(specValue, ignoreCase),
@@ -104,8 +104,8 @@ public static class FilterEvaluator
     )
     {
         if (
-            !long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var lv)
-            || !long.TryParse(specValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var ls)
+            !long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long lv)
+            || !long.TryParse(specValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long ls)
         )
         {
             return false;
@@ -132,13 +132,13 @@ public static class FilterEvaluator
                 rawValue,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
-                out var dv
+                out double dv
             )
             || !double.TryParse(
                 specValue,
                 NumberStyles.Any,
                 CultureInfo.InvariantCulture,
-                out var ds
+                out double ds
             )
         )
         {
@@ -162,8 +162,8 @@ public static class FilterEvaluator
     )
     {
         if (
-            !DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var tv)
-            || !DateTime.TryParse(specValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var ts)
+            !DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime tv)
+            || !DateTime.TryParse(specValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime ts)
         )
         {
             return false;

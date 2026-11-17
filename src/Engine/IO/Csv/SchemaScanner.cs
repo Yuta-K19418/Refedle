@@ -36,18 +36,18 @@ public static class SchemaScanner
         // Header-only CSV: infer Text/nullable schema from column names only
         if (rows.Count == 0)
         {
-            var headerOnlyColumns = columnNames.Select(static (name, idx) => new ColumnSchema
+            ColumnSchema[] headerOnlyColumns = [.. columnNames.Select(static (name, idx) => new ColumnSchema
             {
                 Name = string.IsNullOrWhiteSpace(name) ? string.Create(CultureInfo.InvariantCulture, $"Column{idx + 1}") : name,
                 Type = ColumnType.Text,
                 IsNullable = true,
                 ColumnIndex = idx,
-            }).ToArray();
+            })];
             return Results.Success(new TableSchema { Columns = headerOnlyColumns, SourceFormat = DataFormat.Csv });
         }
 
-        var actualScanCount = Math.Min(rows.Count, initialScanCount);
-        var firstRow = rows[0];
+        int actualScanCount = Math.Min(rows.Count, initialScanCount);
+        CsvDataRow firstRow = rows[0];
 
         // Ensure first row has same number of columns as column names
         if (firstRow.Count != columnNames.Count)
@@ -58,23 +58,23 @@ public static class SchemaScanner
         }
 
         // Start with schema from first row
-        var initialSchemaResult = InferColumnTypes(columnNames, firstRow);
-        var currentSchema = new TableSchema
+        ColumnSchema[] initialSchemaResult = InferColumnTypes(columnNames, firstRow);
+        TableSchema currentSchema = new()
         {
             Columns = initialSchemaResult,
             SourceFormat = DataFormat.Csv,
         };
 
         // Refine schema with remaining rows (up to initialScanCount)
-        for (var i = 1; i < actualScanCount; i++)
+        for (int i = 1; i < actualScanCount; i++)
         {
-            var row = rows[i];
+            CsvDataRow row = rows[i];
             if (row.Count != columnNames.Count)
             {
                 continue; // Skip malformed rows during initial scan
             }
 
-            var refineResult = RefineSchema(currentSchema, row);
+            Result<TableSchema> refineResult = RefineSchema(currentSchema, row);
             if (refineResult.IsSuccess)
             {
                 currentSchema = refineResult.Value;
@@ -95,23 +95,23 @@ public static class SchemaScanner
         CsvDataRow row
     )
     {
-        var columnCount = columnNames.Count;
-        var columnSchema = new ColumnSchema[columnCount];
+        int columnCount = columnNames.Count;
+        ColumnSchema[] columnSchema = new ColumnSchema[columnCount];
 
-        for (var i = 0; i < columnCount; i++)
+        for (int i = 0; i < columnCount; i++)
         {
-            var columnName = columnNames[i];
-            var columnValue = row[i];
-            var valueSpan = columnValue.Span;
+            string columnName = columnNames[i];
+            ReadOnlyMemory<char> columnValue = row[i];
+            ReadOnlySpan<char> valueSpan = columnValue.Span;
 
             // Determine nullable status (if value is empty or whitespace-only)
-            var isNullable = TypeInferrer.IsEmptyOrWhitespace(valueSpan);
+            bool isNullable = TypeInferrer.IsEmptyOrWhitespace(valueSpan);
 
             // Infer type from the value
-            var columnType = TypeInferrer.InferType(valueSpan);
+            ColumnType columnType = TypeInferrer.InferType(valueSpan);
 
             // Generate column name if empty
-            var finalColumnName = string.IsNullOrWhiteSpace(columnName)
+            string finalColumnName = string.IsNullOrWhiteSpace(columnName)
                 ? string.Create(CultureInfo.InvariantCulture, $"Column{i + 1}")
                 : columnName;
 
@@ -147,14 +147,14 @@ public static class SchemaScanner
             );
         }
 
-        var updatedColumns = new Dictionary<int, ColumnSchema>();
+        Dictionary<int, ColumnSchema> updatedColumns = [];
 
         // Process each column
-        for (var i = 0; i < schema.ColumnCount; i++)
+        for (int i = 0; i < schema.ColumnCount; i++)
         {
-            var columnSchema = schema.Columns[i];
-            var columnValue = row[i];
-            var valueSpan = columnValue.Span;
+            ColumnSchema columnSchema = schema.Columns[i];
+            ReadOnlyMemory<char> columnValue = row[i];
+            ReadOnlySpan<char> valueSpan = columnValue.Span;
 
             // Update nullable status for empty or whitespace values
             if (TypeInferrer.IsEmptyOrWhitespace(valueSpan))
@@ -165,10 +165,10 @@ public static class SchemaScanner
             }
 
             // Infer type for this value
-            var inferredType = TypeInferrer.InferType(valueSpan);
+            ColumnType inferredType = TypeInferrer.InferType(valueSpan);
 
             // Update column type using Copy-on-Write pattern
-            var updatedSchema = columnSchema.WithUpdatedType(inferredType);
+            ColumnSchema updatedSchema = columnSchema.WithUpdatedType(inferredType);
             if (!ReferenceEquals(updatedSchema, columnSchema))
             {
                 updatedColumns[i] = updatedSchema;
@@ -182,10 +182,10 @@ public static class SchemaScanner
         }
 
         // Create new column schemas with updated values
-        var newColumns = new ColumnSchema[schema.Columns.Count];
-        for (var i = 0; i < schema.ColumnCount; i++)
+        ColumnSchema[] newColumns = new ColumnSchema[schema.Columns.Count];
+        for (int i = 0; i < schema.ColumnCount; i++)
         {
-            if (updatedColumns.TryGetValue(i, out var updatedColumn))
+            if (updatedColumns.TryGetValue(i, out ColumnSchema? updatedColumn))
             {
                 newColumns[i] = updatedColumn;
                 continue;
@@ -195,7 +195,7 @@ public static class SchemaScanner
         }
 
         // Return new TableSchema with updated columns
-        var updatedTableSchema = schema with
+        TableSchema updatedTableSchema = schema with
         {
             Columns = newColumns,
         };

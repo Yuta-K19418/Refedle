@@ -29,15 +29,15 @@ internal struct CsvRecordWriter : IRecordWriter
             return;
         }
 
-        for (var i = 0; i < _outputSchema.Columns.Count; i++)
+        for (int i = 0; i < _outputSchema.Columns.Count; i++)
         {
             if (i > 0)
             {
                 await _writer.WriteAsync(",".AsMemory(), ct).ConfigureAwait(false);
             }
 
-            var col = _outputSchema.Columns[i];
-            var escaped = CsvEscaper.EscapeCsvValue(col.OutputName);
+            BatchOutputColumn col = _outputSchema.Columns[i];
+            string escaped = CsvEscaper.EscapeCsvValue(col.OutputName);
             await _writer.WriteAsync(escaped.AsMemory(), ct).ConfigureAwait(false);
         }
 

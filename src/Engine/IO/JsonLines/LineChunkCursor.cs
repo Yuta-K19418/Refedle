@@ -31,12 +31,12 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
     /// <exception cref="NotSupportedException">The line exceeds the supported size limit.</exception>
     public bool TrySkipLine()
     {
-        var lineBytes = 0L;
+        long lineBytes = 0L;
 
         while (true)
         {
-            var pending = _buffer.AsSpan(_head, _tail - _head);
-            var newlineIndex = pending.IndexOf((byte)'\n');
+            Span<byte> pending = _buffer.AsSpan(_head, _tail - _head);
+            int newlineIndex = pending.IndexOf((byte)'\n');
             if (newlineIndex != -1)
             {
                 lineBytes += newlineIndex + 1;
@@ -63,12 +63,12 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
     /// <exception cref="NotSupportedException">The line exceeds the supported size limit.</exception>
     public bool TryReadLine(out JsonRawBytes line)
     {
-        var scannedBytes = 0;
+        int scannedBytes = 0;
 
         while (true)
         {
-            var unscanned = _buffer.AsSpan(_head + scannedBytes, _tail - _head - scannedBytes);
-            var newlineIndex = unscanned.IndexOf((byte)'\n');
+            Span<byte> unscanned = _buffer.AsSpan(_head + scannedBytes, _tail - _head - scannedBytes);
+            int newlineIndex = unscanned.IndexOf((byte)'\n');
             if (newlineIndex != -1)
             {
                 line = CutLine(scannedBytes + newlineIndex + 1);
@@ -120,7 +120,7 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
 
     private JsonRawBytes CutLine(int lineLength)
     {
-        var trimmed = TrimNewline(_buffer.AsSpan(_head, lineLength));
+        ReadOnlySpan<byte> trimmed = TrimNewline(_buffer.AsSpan(_head, lineLength));
         _head += lineLength;
         return trimmed.ToArray();
     }
@@ -145,8 +145,8 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
         }
 
         // Loading a whole line moves the read position, so the remaining length is taken after making room
-        var remaining = mmap.Length - _nextFileOffset;
-        var readLength = (int)Math.Min(remaining, Math.Min(ChunkSize, _buffer.Length - _tail));
+        long remaining = mmap.Length - _nextFileOffset;
+        int readLength = (int)Math.Min(remaining, Math.Min(ChunkSize, _buffer.Length - _tail));
         mmap.Read(_nextFileOffset, _buffer.AsSpan(_tail, readLength));
         _nextFileOffset += readLength;
         _tail += readLength;
@@ -159,7 +159,7 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
     {
         if (_head > 0)
         {
-            var remainder = _buffer.AsSpan(_head, _tail - _head);
+            Span<byte> remainder = _buffer.AsSpan(_head, _tail - _head);
             remainder.CopyTo(_buffer);
             _tail -= _head;
             _head = 0;
@@ -173,8 +173,8 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
     // so an unsupported length is rejected without first allocating a buffer of that size.
     private void LoadWholeLine()
     {
-        var lineStartOffset = _nextFileOffset - (_tail - _head);
-        var lineLength = MeasureLine(lineStartOffset);
+        long lineStartOffset = _nextFileOffset - (_tail - _head);
+        long lineLength = MeasureLine(lineStartOffset);
         ThrowIfLineTooLong(lineLength);
 
         // The buffer is full without a newline and the file continues, so the line is always longer than the buffer
@@ -191,22 +191,22 @@ internal sealed class LineChunkCursor(MmapService mmap, long startOffset) : IDis
     // a line without a newline runs to the end of the file.
     private long MeasureLine(long lineStartOffset)
     {
-        var lineLength = 0L;
+        long lineLength = 0L;
 
         while (true)
         {
-            var offset = lineStartOffset + lineLength;
-            var remaining = mmap.Length - offset;
+            long offset = lineStartOffset + lineLength;
+            long remaining = mmap.Length - offset;
             if (remaining <= 0)
             {
                 return lineLength;
             }
 
-            var readLength = (int)Math.Min(remaining, _buffer.Length);
-            var scanned = _buffer.AsSpan(0, readLength);
+            int readLength = (int)Math.Min(remaining, _buffer.Length);
+            Span<byte> scanned = _buffer.AsSpan(0, readLength);
             mmap.Read(offset, scanned);
 
-            var newlineIndex = scanned.IndexOf((byte)'\n');
+            int newlineIndex = scanned.IndexOf((byte)'\n');
             if (newlineIndex != -1)
             {
                 return lineLength + newlineIndex + 1;

@@ -2,7 +2,9 @@ using System.Globalization;
 using Refedle.App.Tui.Workers;
 using Refedle.App.Tui.Workers.Schema;
 using Refedle.Engine;
+using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.Models;
 
 namespace Refedle.App.Tui.UI;
 
@@ -38,7 +40,7 @@ internal sealed class ModeController(
             return Results.Success();
         }
 
-        var rowIndexer = _state.RowIndexer;
+        IRowIndexer? rowIndexer = _state.RowIndexer;
         if (rowIndexer is null)
         {
             return Results.Success();
@@ -57,15 +59,15 @@ internal sealed class ModeController(
             return Results.Failure("No file is currently open");
         }
 
-        var scanner = _scannerFactory(_state.CurrentFilePath);
+        ISchemaScanner scanner = _scannerFactory(_state.CurrentFilePath);
         // Capture by value before the fire-and-forget scan: StartBackgroundScanAsync
         // reports cancellation as success, so the guards must detect that the CTS was
         // renewed while the scan was still running.
-        var scanToken = _state.Cts.Token;
+        CancellationToken scanToken = _state.Cts.Token;
 
         try
         {
-            var schema = await scanner.InitialScanAsync().ConfigureAwait(true);
+            TableSchema schema = await scanner.InitialScanAsync().ConfigureAwait(true);
 
             // Skip state writes for an already-cancelled scan: RenewCtsWithCancel always
             // cancels the token when a session is replaced.
@@ -76,7 +78,7 @@ internal sealed class ModeController(
 
             _state.CompleteJsonLinesSchemaScan(schema);
 
-            var indexingCompleted = IndexingCompletion.WhenCompletedAsync(rowIndexer);
+            Task indexingCompleted = IndexingCompletion.WhenCompletedAsync(rowIndexer);
             _ = BackgroundSchemaRefiner.StartAsync(
                 _state, scanner, schema, _uiThreadInvoke, indexingCompleted, scanToken);
 
@@ -115,15 +117,15 @@ internal sealed class ModeController(
     {
         ArgumentNullException.ThrowIfNull(request);
 
-        var result = DrillDownSchemaExtractor.ExtractFromNode(request.NodeBytes, request.Format);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(request.NodeBytes, request.Format);
         if (result.IsFailure)
         {
             return Results.Failure(result.Error);
         }
 
-        var children = result.Value.childRawValues;
-        var rows = new FocusedTableRow[children.Count];
-        for (var i = 0; i < children.Count; i++)
+        IReadOnlyList<JsonRawBytes> children = result.Value.childRawValues;
+        FocusedTableRow[] rows = new FocusedTableRow[children.Count];
+        for (int i = 0; i < children.Count; i++)
         {
             rows[i] = new FocusedTableRow(children[i], string.Create(CultureInfo.InvariantCulture, $"[{i}]"));
         }
@@ -145,13 +147,13 @@ internal sealed class ModeController(
 
         // The caller may be off the UI thread (recipe replay), so _state is read on the UI thread
         // and captured by value before the background scan.
-        var captured = new TaskCompletionSource<(string filePath, CancellationToken ct, ViewMode previousMode)>(
+        TaskCompletionSource<(string filePath, CancellationToken ct, ViewMode previousMode)> captured = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
         _uiThreadInvoke(() =>
             captured.SetResult((_state.CurrentFilePath, _state.Cts.Token, _state.CurrentMode)));
-        var (filePath, ct, previousMode) = await captured.Task.ConfigureAwait(false);
+        (string? filePath, CancellationToken ct, ViewMode previousMode) = await captured.Task.ConfigureAwait(false);
 
-        var result = await FullAggregationScanRunner.RunAsync(filePath, request.Format, request.KeyPath, ct)
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = await FullAggregationScanRunner.RunAsync(filePath, request.Format, request.KeyPath, ct)
             .ConfigureAwait(false);
 
         if (result.IsFailure)

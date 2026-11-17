@@ -24,7 +24,7 @@ internal static class RecipeYamlSerializer
     /// </summary>
     public static string Serialize(Recipe recipe)
     {
-        var sb = new StringBuilder();
+        StringBuilder sb = new();
         sb.Append("name: ").Append(StringUtility.QuoteString(recipe.Name)).Append(NewLine);
 
         if (recipe.Description is not null)
@@ -56,7 +56,7 @@ internal static class RecipeYamlSerializer
         }
 
         sb.Append("actions:").Append(NewLine);
-        foreach (var action in actions)
+        foreach (IMorphAction action in actions)
         {
             AppendAction(sb, action);
         }
@@ -74,10 +74,10 @@ internal static class RecipeYamlSerializer
 
         sb.Append("drillDownKeyPath:").Append(NewLine);
 
-        var i = 0;
+        int i = 0;
         while (i < segments.Count)
         {
-            var segment = segments[i];
+            KeyPathSegment segment = segments[i];
             if (segment.Kind == KeyPathSegmentKind.Key && i + 1 < segments.Count && segments[i + 1].Kind == KeyPathSegmentKind.Index)
             {
                 sb.Append("  - key: ").Append(StringUtility.QuoteString(segment.Value)).Append(NewLine);

@@ -80,33 +80,33 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
     /// <inheritdoc/>
     public async Task BuildIndexAsync(CancellationToken ct)
     {
-        var totalRows = (int)_indexer.TotalRows;
+        int totalRows = (int)_indexer.TotalRows;
 
         if (totalRows <= 0)
         {
             return;
         }
 
-        using var reader = new RowReader(_filePath);
+        using RowReader reader = new(_filePath);
 
         const int batchSize = 1000;
-        var processed = 0;
-        var sourceRow = 0;
+        int processed = 0;
+        int sourceRow = 0;
 
         while (processed < totalRows)
         {
             ct.ThrowIfCancellationRequested();
 
-            var rowsToRead = Math.Min(batchSize, totalRows - processed);
-            var (byteOffset, rowOffset) = _indexer.GetCheckPoint(sourceRow);
-            var lines = reader.ReadLines(byteOffset, rowOffset, rowsToRead);
+            int rowsToRead = Math.Min(batchSize, totalRows - processed);
+            (long byteOffset, int rowOffset) = _indexer.GetCheckPoint(sourceRow);
+            IReadOnlyList<JsonRawBytes> lines = reader.ReadLines(byteOffset, rowOffset, rowsToRead);
 
             if (lines.Count == 0)
             {
                 break;
             }
 
-            for (var i = 0; i < lines.Count; i++)
+            for (int i = 0; i < lines.Count; i++)
             {
                 if (MatchesAllFilters(lines[i].Span))
                 {
@@ -140,12 +140,12 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
 
     private bool MatchesAllFilters(ReadOnlySpan<byte> lineBytes)
     {
-        foreach (var spec in _filterSpecs)
+        foreach (FilterSpec spec in _filterSpecs)
         {
-            var colIdx = spec.SourceColumnIndex;
-            var colNameUtf8 =
+            int colIdx = spec.SourceColumnIndex;
+            ReadOnlySpan<byte> colNameUtf8 =
                 colIdx < _columnNamesUtf8.Count ? _columnNamesUtf8[colIdx].AsSpan() : ReadOnlySpan<byte>.Empty;
-            var rawValue = colNameUtf8.IsEmpty
+            ReadOnlySpan<char> rawValue = colNameUtf8.IsEmpty
                 ? []
                 : JsonObjectCellExtractor.ExtractCell(lineBytes, colNameUtf8).AsSpan();
 

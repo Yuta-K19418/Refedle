@@ -35,7 +35,7 @@ internal sealed class MainWindow : Window
     {
         _app = app;
         _state = state;
-        var modeController = new ModeController(state, app.Invoke, static path => new Workers.Schema.JsonLines.IncrementalSchemaScanner(path));
+        ModeController modeController = new(state, app.Invoke, static path => new Workers.Schema.JsonLines.IncrementalSchemaScanner(path));
 
         X = 0;
         Y = 0;
@@ -66,15 +66,15 @@ internal sealed class MainWindow : Window
 
     private void InitializeMenu()
     {
-        var openMenuItem = new MenuItem(
+        MenuItem openMenuItem = new(
             "_Open", "", async () => await _fileDialogHandler.ShowAsync().ConfigureAwait(false));
-        var saveRecipeMenuItem = new MenuItem(
+        MenuItem saveRecipeMenuItem = new(
             "_Save Recipe", "", async () => await _recipeCommandHandler.SaveAsync().ConfigureAwait(false));
-        var loadRecipeMenuItem = new MenuItem(
+        MenuItem loadRecipeMenuItem = new(
             "_Load Recipe", "", async () => await _recipeCommandHandler.LoadAsync().ConfigureAwait(false));
-        var exitMenuItem = new MenuItem("_Exit", "", () => _app.RequestStop());
-        var fileMenuBarItem = new MenuBarItem("_File", [openMenuItem, saveRecipeMenuItem, loadRecipeMenuItem, exitMenuItem]);
-        var menuBar = new MenuBar { Menus = [fileMenuBarItem] };
+        MenuItem exitMenuItem = new("_Exit", "", () => _app.RequestStop());
+        MenuBarItem fileMenuBarItem = new("_File", [openMenuItem, saveRecipeMenuItem, loadRecipeMenuItem, exitMenuItem]);
+        MenuBar menuBar = new() { Menus = [fileMenuBarItem] };
 
         // Paint the path with the File item's own colors so the label and the path read as one bar.
         _filePathBar.SetMenuAttribute(() => fileMenuBarItem.GetAttributeForRole(VisualRole.Normal));
@@ -86,7 +86,7 @@ internal sealed class MainWindow : Window
 
     private void InitializeStatusBar()
     {
-        var statusBar = new StatusBar
+        StatusBar statusBar = new()
         {
             X = 0,
             // Place at the very last line of the window

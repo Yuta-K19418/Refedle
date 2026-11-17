@@ -78,7 +78,7 @@ internal sealed class FilterScanProgressOverlay : IDisposable
             return;
         }
 
-        var fraction = totalRows > 0 ? Math.Clamp(scannedRows / (float)totalRows, 0f, 1f) : 0f;
+        float fraction = totalRows > 0 ? Math.Clamp(scannedRows / (float)totalRows, 0f, 1f) : 0f;
         _label.Text = string.Create(
             CultureInfo.InvariantCulture,
             $" Filtering… {fraction * 100:F0}%");
@@ -116,7 +116,7 @@ internal sealed class FilterScanProgressOverlay : IDisposable
         }
 
         // DarkGray background distinguishes the overlay from the TableView underneath
-        var attribute = new Attribute(ColorName16.White, ColorName16.DarkGray);
+        Attribute attribute = new(ColorName16.White, ColorName16.DarkGray);
         SchemeManager.AddScheme(SchemeName, new Scheme
         {
             Normal = attribute,

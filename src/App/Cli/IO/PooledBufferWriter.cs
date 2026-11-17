@@ -45,11 +45,11 @@ internal sealed class PooledBufferWriter : IBufferWriter<byte>, IDisposable
     {
         ObjectDisposedException.ThrowIf(_buffer is null, typeof(PooledBufferWriter));
 
-        var required = _position + Math.Max(sizeHint, 1);
+        int required = _position + Math.Max(sizeHint, 1);
         if (required > _buffer.Length)
         {
-            var newSize = Math.Max(_buffer.Length * 2, required);
-            var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+            int newSize = Math.Max(_buffer.Length * 2, required);
+            byte[] newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
             Array.Copy(_buffer, 0, newBuffer, 0, _position);
             ArrayPool<byte>.Shared.Return(_buffer);
             _buffer = newBuffer;

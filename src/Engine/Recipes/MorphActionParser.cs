@@ -17,7 +17,7 @@ internal static class MorphActionParser
     /// </summary>
     internal static Result<IMorphAction> ParseAction(Dictionary<string, string> fields)
     {
-        return fields.TryGetValue("type", out var type)
+        return fields.TryGetValue("type", out string? type)
             ? type switch
             {
                 "Rename" => ParseRenameAction(fields),
@@ -33,12 +33,12 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseRenameAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue("oldName", out var oldName))
+        if (!fields.TryGetValue("oldName", out string? oldName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'oldName' for rename action");
         }
 
-        if (!fields.TryGetValue("newName", out var newName))
+        if (!fields.TryGetValue("newName", out string? newName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'newName' for rename action");
         }
@@ -52,7 +52,7 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseDeleteAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out string? columnName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for delete action");
         }
@@ -62,17 +62,17 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseCastAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out string? columnName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for cast action");
         }
 
-        if (!fields.TryGetValue("targetType", out var targetTypeStr))
+        if (!fields.TryGetValue("targetType", out string? targetTypeStr))
         {
             return Results.Failure<IMorphAction>("Missing required field 'targetType' for cast action");
         }
 
-        if (!Enum.TryParse<ColumnType>(targetTypeStr, ignoreCase: false, out var targetType))
+        if (!Enum.TryParse<ColumnType>(targetTypeStr, ignoreCase: false, out ColumnType targetType))
         {
             return Results.Failure<IMorphAction>($"Invalid enum value for targetType: '{targetTypeStr}'");
         }
@@ -86,12 +86,12 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseFillAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out string? columnName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for fill action");
         }
 
-        if (!fields.TryGetValue("value", out var value))
+        if (!fields.TryGetValue("value", out string? value))
         {
             return Results.Failure<IMorphAction>("Missing required field 'value' for fill action");
         }
@@ -101,37 +101,37 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseFilterAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out string? columnName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for filter action");
         }
 
-        if (!fields.TryGetValue("operator", out var operatorStr))
+        if (!fields.TryGetValue("operator", out string? operatorStr))
         {
             return Results.Failure<IMorphAction>("Missing required field 'operator' for filter action");
         }
 
-        if (!fields.TryGetValue("value", out var filterValue))
+        if (!fields.TryGetValue("value", out string? filterValue))
         {
             return Results.Failure<IMorphAction>("Missing required field 'value' for filter action");
         }
 
-        if (!Enum.TryParse<FilterOperator>(operatorStr, ignoreCase: false, out var filterOperator))
+        if (!Enum.TryParse<FilterOperator>(operatorStr, ignoreCase: false, out FilterOperator filterOperator))
         {
             return Results.Failure<IMorphAction>($"Invalid enum value for operator: '{operatorStr}'");
         }
 
-        if (!fields.TryGetValue("comparisonType", out var comparisonTypeStr))
+        if (!fields.TryGetValue("comparisonType", out string? comparisonTypeStr))
         {
             return Results.Failure<IMorphAction>("Missing required field 'comparisonType' for filter action");
         }
 
-        if (!Enum.TryParse<ComparisonType>(comparisonTypeStr, ignoreCase: false, out var comparisonType))
+        if (!Enum.TryParse<ComparisonType>(comparisonTypeStr, ignoreCase: false, out ComparisonType comparisonType))
         {
             return Results.Failure<IMorphAction>($"Invalid enum value for comparisonType: '{comparisonTypeStr}'");
         }
 
-        var action = FilterAction.Create(columnName, filterOperator, comparisonType, filterValue);
+        Result<FilterAction> action = FilterAction.Create(columnName, filterOperator, comparisonType, filterValue);
         if (action.IsFailure)
         {
             return Results.Failure<IMorphAction>(action.Error);
@@ -142,12 +142,12 @@ internal static class MorphActionParser
 
     private static Result<IMorphAction> ParseFormatTimestampAction(Dictionary<string, string> fields)
     {
-        if (!fields.TryGetValue(ColumnNameKey, out var columnName))
+        if (!fields.TryGetValue(ColumnNameKey, out string? columnName))
         {
             return Results.Failure<IMorphAction>("Missing required field 'columnName' for format_timestamp action");
         }
 
-        if (!fields.TryGetValue("targetFormat", out var targetFormat))
+        if (!fields.TryGetValue("targetFormat", out string? targetFormat))
         {
             return Results.Failure<IMorphAction>("Missing required field 'targetFormat' for format_timestamp action");
         }

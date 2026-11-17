@@ -25,13 +25,13 @@ internal static class ActionsSectionParser
 
         if (line.StartsWith("  - type: ", StringComparison.Ordinal))
         {
-            var startResult = StartNewAction(line, currentAction);
+            Result<(Dictionary<string, string> newAction, IMorphAction? completedAction)> startResult = StartNewAction(line, currentAction);
             if (startResult.IsFailure)
             {
                 return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(startResult.Error);
             }
 
-            var (newCurrentAction, completedAction) = startResult.Value;
+            (Dictionary<string, string>? newCurrentAction, IMorphAction? completedAction) = startResult.Value;
             if (completedAction is not null)
             {
                 actions.Add(completedAction);
@@ -46,14 +46,14 @@ internal static class ActionsSectionParser
                 $"Unexpected line in actions context: '{line}'");
         }
 
-        var fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
+        Result<(string key, string value)> fieldResult = RecipeYamlFieldParser.ParseField(line[4..]);
         if (fieldResult.IsFailure)
         {
             return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(
                 $"Malformed action field: '{line}'");
         }
 
-        var (fieldKey, fieldValue) = fieldResult.Value;
+        (string? fieldKey, string? fieldValue) = fieldResult.Value;
         currentAction[fieldKey] = fieldValue;
         return Results.Success((parseState, currentAction));
     }
@@ -68,7 +68,7 @@ internal static class ActionsSectionParser
             return Results.Success();
         }
 
-        var actionResult = MorphActionParser.ParseAction(currentAction);
+        Result<IMorphAction> actionResult = MorphActionParser.ParseAction(currentAction);
         if (actionResult.IsFailure)
         {
             return Results.Failure(actionResult.Error);
@@ -85,7 +85,7 @@ internal static class ActionsSectionParser
         IMorphAction? completedAction = null;
         if (currentAction.ContainsKey("type"))
         {
-            var parseResult = MorphActionParser.ParseAction(currentAction);
+            Result<IMorphAction> parseResult = MorphActionParser.ParseAction(currentAction);
             if (parseResult.IsFailure)
             {
                 return Results.Failure<(Dictionary<string, string> newAction, IMorphAction? completedAction)>(parseResult.Error);
@@ -94,7 +94,7 @@ internal static class ActionsSectionParser
             completedAction = parseResult.Value;
         }
 
-        var newAction = new Dictionary<string, string>(StringComparer.Ordinal) { ["type"] = line["  - type: ".Length..] };
+        Dictionary<string, string> newAction = new(StringComparer.Ordinal) { ["type"] = line["  - type: ".Length..] };
         return Results.Success<(Dictionary<string, string> newAction, IMorphAction? completedAction)>((newAction, completedAction));
     }
 
@@ -105,7 +105,7 @@ internal static class ActionsSectionParser
         Dictionary<string, string> currentAction,
         List<IMorphAction> actions)
     {
-        var finalizeResult = FinalizePending(currentAction, actions);
+        Result finalizeResult = FinalizePending(currentAction, actions);
         if (finalizeResult.IsFailure)
         {
             return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error);
@@ -123,7 +123,7 @@ internal static class ActionsSectionParser
         Dictionary<string, string> currentAction,
         List<IMorphAction> actions)
     {
-        var finalizeResult = FinalizePending(currentAction, actions);
+        Result finalizeResult = FinalizePending(currentAction, actions);
         if (finalizeResult.IsFailure)
         {
             return Results.Failure<(RecipeYamlParseState parseState, Dictionary<string, string> currentItem)>(finalizeResult.Error);

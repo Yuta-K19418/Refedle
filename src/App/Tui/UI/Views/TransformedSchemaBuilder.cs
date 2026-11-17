@@ -32,25 +32,24 @@ internal static class TransformedSchemaBuilder
         IReadOnlyList<FilterSpec> filterSpecs
     ) Build(TableSchema originalSchema, IReadOnlyList<IMorphAction> actions)
     {
-        var working = originalSchema
+        List<WorkingColumn> working = [.. originalSchema
             .Columns.Select(static c => new WorkingColumn(
                 SourceIndex: c.ColumnIndex,
                 Name: c.Name,
                 Type: c.Type
-            ))
-            .ToList();
+            ))];
 
-        var nameToIndex = working.Select(static (w, i) => (w.Name, i)).ToDictionary(static t => t.Name, static t => t.i, StringComparer.Ordinal);
+        Dictionary<string, int> nameToIndex = working.Select(static (w, i) => (w.Name, i)).ToDictionary(static t => t.Name, static t => t.i, StringComparer.Ordinal);
         List<FilterSpec> filterSpecs = [];
 
-        foreach (var action in actions)
+        foreach (IMorphAction action in actions)
         {
             ApplyAction(action, working, nameToIndex, filterSpecs);
         }
 
         // Pre-size to avoid reallocation; collection expressions do not support capacity hints.
-        var remaining = new List<WorkingColumn>(nameToIndex.Count);
-        foreach (var idx in nameToIndex.Values.Order())
+        List<WorkingColumn> remaining = [with(nameToIndex.Count)];
+        foreach (int idx in nameToIndex.Values.Order())
         {
             remaining.Add(working[idx]);
         }
@@ -102,7 +101,7 @@ internal static class TransformedSchemaBuilder
 
     private static void ApplyRename(RenameColumnAction rename, List<WorkingColumn> working, Dictionary<string, int> nameToIndex)
     {
-        if (!nameToIndex.TryGetValue(rename.OldName, out var renameIdx))
+        if (!nameToIndex.TryGetValue(rename.OldName, out int renameIdx))
         {
             return;
         }
@@ -114,12 +113,12 @@ internal static class TransformedSchemaBuilder
 
     private static void ApplyCast(CastColumnAction cast, List<WorkingColumn> working, Dictionary<string, int> nameToIndex)
     {
-        if (!nameToIndex.TryGetValue(cast.ColumnName, out var castIdx))
+        if (!nameToIndex.TryGetValue(cast.ColumnName, out int castIdx))
         {
             return;
         }
 
-        var col = working[castIdx];
+        WorkingColumn col = working[castIdx];
         string? formatString = col.FormatString;
         if (formatString is null && cast.TargetType == ColumnType.Timestamp)
         {
@@ -139,12 +138,12 @@ internal static class TransformedSchemaBuilder
     {
         // Row-level filter: does not modify column schema.
         // Resolve column name to source index and record FilterSpec.
-        if (!nameToIndex.TryGetValue(filter.ColumnName, out var filterIdx))
+        if (!nameToIndex.TryGetValue(filter.ColumnName, out int filterIdx))
         {
             return;
         }
 
-        var col = working[filterIdx];
+        WorkingColumn col = working[filterIdx];
         filterSpecs.Add(
             new FilterSpec(
                 SourceColumnIndex: col.SourceIndex,
@@ -157,12 +156,12 @@ internal static class TransformedSchemaBuilder
 
     private static void ApplyFill(FillColumnAction fill, List<WorkingColumn> working, Dictionary<string, int> nameToIndex)
     {
-        if (!nameToIndex.TryGetValue(fill.ColumnName, out var fillIdx))
+        if (!nameToIndex.TryGetValue(fill.ColumnName, out int fillIdx))
         {
             return;
         }
 
-        var inferredType = TypeInferrer.InferType(fill.Value.AsSpan());
+        ColumnType inferredType = TypeInferrer.InferType(fill.Value.AsSpan());
         working[fillIdx] = working[fillIdx] with { FillValue = fill.Value, Type = inferredType };
     }
 
@@ -171,7 +170,7 @@ internal static class TransformedSchemaBuilder
         List<WorkingColumn> working,
         Dictionary<string, int> nameToIndex)
     {
-        if (!nameToIndex.TryGetValue(formatTs.ColumnName, out var fmtIdx))
+        if (!nameToIndex.TryGetValue(formatTs.ColumnName, out int fmtIdx))
         {
             return;
         }

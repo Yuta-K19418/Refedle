@@ -27,19 +27,19 @@ internal sealed class FillColumnDialog : Dialog
     {
         Title = "Fill Column";
 
-        var columnLabel = new Label
+        Label columnLabel = new()
         {
             Text = $"Column: {columnName}",
             X = 0,
             Y = 0,
         };
-        var valueLabel = new Label
+        Label valueLabel = new()
         {
             Text = "Value:",
             X = 0,
             Y = 2,
         };
-        var textField = new TextField
+        TextField textField = new()
         {
             Text = string.Empty,
             X = Pos.Right(valueLabel) + 1,
@@ -48,8 +48,8 @@ internal sealed class FillColumnDialog : Dialog
         };
         Add(columnLabel, valueLabel, textField);
 
-        var okButton = new Button { Text = "OK" };
-        var cancelButton = new Button { Text = "Cancel" };
+        Button okButton = new() { Text = "OK" };
+        Button cancelButton = new() { Text = "Cancel" };
 
         void Confirm()
         {

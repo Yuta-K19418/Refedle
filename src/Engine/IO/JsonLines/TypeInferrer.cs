@@ -50,7 +50,7 @@ public static class TypeInferrer
         // (e.g. "123abc"), which cannot occur for valid JSON tokens but is
         // included for correctness.
         if (
-            Utf8Parser.TryParse(valueSpan, out long _, out var bytesConsumed)
+            Utf8Parser.TryParse(valueSpan, out long _, out int bytesConsumed)
             && bytesConsumed == valueSpan.Length
         )
         {
@@ -93,11 +93,11 @@ public static class TypeInferrer
             return false;
         }
 
-        var charCount = Encoding.UTF8.GetCharCount(valueSpan);
-        var buffer = ArrayPool<char>.Shared.Rent(charCount);
+        int charCount = Encoding.UTF8.GetCharCount(valueSpan);
+        char[] buffer = ArrayPool<char>.Shared.Rent(charCount);
         try
         {
-            var charSpan = buffer.AsSpan(0, Encoding.UTF8.GetChars(valueSpan, buffer));
+            Span<char> charSpan = buffer.AsSpan(0, Encoding.UTF8.GetChars(valueSpan, buffer));
             return DateTime.TryParse(
                 charSpan.Trim(),
                 CultureInfo.InvariantCulture,

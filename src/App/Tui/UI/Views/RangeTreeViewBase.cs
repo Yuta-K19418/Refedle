@@ -77,28 +77,28 @@ internal abstract class RangeTreeViewBase : MorphTreeView
             return;
         }
 
-        var totalRangeNodes = (totalRows + _nodeGroupSize - 1) / _nodeGroupSize;
-        for (var g = 0L; g < totalRangeNodes; g++)
+        long totalRangeNodes = (totalRows + _nodeGroupSize - 1) / _nodeGroupSize;
+        for (long g = 0L; g < totalRangeNodes; g++)
         {
-            var startIndex = g * _nodeGroupSize;
-            var count = Math.Min(_nodeGroupSize, totalRows - startIndex);
+            long startIndex = g * _nodeGroupSize;
+            long count = Math.Min(_nodeGroupSize, totalRows - startIndex);
             AddObject(CreateRangeNode(startIndex, count));
         }
     }
 
     private void AddNodesBatch(bool isFinal)
     {
-        var currentRows = Indexer.TotalRows;
-        var totalSuperRangeNodes = currentRows / _nodeGroupSize;
-        var from = Volatile.Read(ref _addedSuperRangeNodeCount);
+        long currentRows = Indexer.TotalRows;
+        long totalSuperRangeNodes = currentRows / _nodeGroupSize;
+        long from = Volatile.Read(ref _addedSuperRangeNodeCount);
 
         if (from < totalSuperRangeNodes)
         {
             from = Interlocked.Exchange(ref _addedSuperRangeNodeCount, totalSuperRangeNodes);
 
-            for (var g = from; g < totalSuperRangeNodes; g++)
+            for (long g = from; g < totalSuperRangeNodes; g++)
             {
-                var startIndex = g * _nodeGroupSize;
+                long startIndex = g * _nodeGroupSize;
                 _uiThreadInvoke(() => AddObject(CreateRangeNode(startIndex, _nodeGroupSize)));
             }
         }
@@ -113,7 +113,7 @@ internal abstract class RangeTreeViewBase : MorphTreeView
             return;
         }
 
-        var remainder = currentRows % _nodeGroupSize;
+        long remainder = currentRows % _nodeGroupSize;
         if (remainder > 0)
         {
             _uiThreadInvoke(() =>

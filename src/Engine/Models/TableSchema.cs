@@ -27,8 +27,8 @@ public sealed record TableSchema
             }
 
             // Validate for duplicate column names using HashSet for O(1) lookup
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var column in value)
+            HashSet<string> seen = new(StringComparer.Ordinal);
+            foreach (ColumnSchema column in value)
             {
                 if (!seen.Add(column.Name))
                 {

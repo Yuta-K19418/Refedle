@@ -41,7 +41,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var dialog = new OpenDialog { Title = "Save Recipe" };
+        OpenDialog dialog = new() { Title = "Save Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
         // Modal dialog: the continuation reads dialog result and AppState (BuildRecipe) on the UI thread.
@@ -54,11 +54,11 @@ internal sealed class RecipeCommandHandler(
 
         // Captured with BuildRecipe (all on the UI thread) so the flag cleared on success matches
         // the scope and version that were saved, not whatever is current when the write completes.
-        var savedDrillDown = CaptureSavedDrillDownScope();
-        var savedRevision = _state.Revision;
-        var recipe = BuildRecipe();
+        DrillDownState? savedDrillDown = CaptureSavedDrillDownScope();
+        long savedRevision = _state.Revision;
+        Recipe recipe = BuildRecipe();
 
-        var result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token).ConfigureAwait(false);
+        Result result = await _recipeManager.SaveAsync(recipe, dialog.Path, _state.Cts.Token).ConfigureAwait(false);
 
         _app.Invoke(() =>
         {
@@ -79,7 +79,7 @@ internal sealed class RecipeCommandHandler(
     /// <see cref="BuildRecipe"/> so the two never drift apart.
     /// </summary>
     private DrillDownState? CaptureSavedDrillDownScope() =>
-        _state.TryGetDrillDown(out var scope) ? scope : null;
+        _state.TryGetDrillDown(out DrillDownState? scope) ? scope : null;
 
     /// <summary>
     /// Clears the unsaved-changes flag of the scope that was just saved: the DrillDown session when
@@ -95,7 +95,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        if (_state.TryGetDrillDown(out var current) && ReferenceEquals(current, savedDrillDown))
+        if (_state.TryGetDrillDown(out DrillDownState? current) && ReferenceEquals(current, savedDrillDown))
         {
             _state.MarkDrillDownSaved();
         }
@@ -108,7 +108,7 @@ internal sealed class RecipeCommandHandler(
     /// FocusedTable — captures the base table's ActionStack, with DrillDownKeyPath left unset.
     /// </summary>
     internal Recipe BuildRecipe() =>
-        _state.TryGetDrillDown(out var drillDown)
+        _state.TryGetDrillDown(out DrillDownState? drillDown)
             ? new Recipe
             {
                 Name = System.IO.Path.GetFileNameWithoutExtension(_state.CurrentFilePath),
@@ -130,7 +130,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var dialog = new OpenDialog { Title = "Load Recipe" };
+        OpenDialog dialog = new() { Title = "Load Recipe" };
         dialog.AllowedTypes.Add(new AllowedType("YAML file", ".yaml"));
 
         // Modal dialog: the continuation reads dialog result and AppState (LoadFromPathAsync prologue) on the UI thread.
@@ -152,8 +152,8 @@ internal sealed class RecipeCommandHandler(
         }
 
         // Captured before the await so the DrillDown branch never reads AppState off the UI thread.
-        var currentFilePath = _state.CurrentFilePath;
-        var result = await _recipeManager.LoadAsync(path, _state.Cts.Token).ConfigureAwait(false);
+        string currentFilePath = _state.CurrentFilePath;
+        Result<Recipe> result = await _recipeManager.LoadAsync(path, _state.Cts.Token).ConfigureAwait(false);
 
         if (result.IsFailure)
         {
@@ -161,7 +161,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var recipe = result.Value;
+        Recipe recipe = result.Value;
         if (recipe.DrillDownKeyPath is not { } keyPath)
         {
             _app.Invoke(() =>
@@ -188,14 +188,14 @@ internal sealed class RecipeCommandHandler(
     private async ValueTask LoadDrillDownRecipeAsync(
         Recipe recipe, IReadOnlyList<KeyPathSegment> keyPath, string currentFilePath)
     {
-        var formatResult = FormatDetector.DetectInputFile(currentFilePath);
+        Result<DataFormat> formatResult = FormatDetector.DetectInputFile(currentFilePath);
         if (formatResult.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(formatResult.Error));
             return;
         }
 
-        var format = formatResult.Value;
+        DataFormat format = formatResult.Value;
         if (format == DataFormat.JsonObject)
         {
             _app.Invoke(() => LoadSingleDrillDownRecipe(recipe, format, keyPath));
@@ -209,7 +209,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var request = new FullAggregationDrillDownRequest(format, keyPath, recipe.Actions);
+        FullAggregationDrillDownRequest request = new(format, keyPath, recipe.Actions);
         await _viewManager.FullAggregationDrillDownAsync(request).ConfigureAwait(false);
     }
 
@@ -221,7 +221,7 @@ internal sealed class RecipeCommandHandler(
             return;
         }
 
-        var entryResult = FindRootEntry(keyPath[0].Value);
+        Result<JsonObjectEntry> entryResult = FindRootEntry(keyPath[0].Value);
         if (entryResult.IsFailure)
         {
             _viewManager.ShowError(entryResult.Error);
@@ -229,20 +229,20 @@ internal sealed class RecipeCommandHandler(
         }
 
         IReadOnlyList<KeyPathSegment> remainingKeyPath = [.. keyPath.Skip(1)];
-        var nodeResult = KeyPathNodeResolver.ResolveSingleNode(entryResult.Value.Value, remainingKeyPath);
+        Result<JsonRawBytes> nodeResult = KeyPathNodeResolver.ResolveSingleNode(entryResult.Value.Value, remainingKeyPath);
         if (nodeResult.IsFailure)
         {
             _viewManager.ShowError(nodeResult.Error);
             return;
         }
 
-        var request = new SingleDrillDownRequest(format, nodeResult.Value, keyPath, recipe.Actions);
+        SingleDrillDownRequest request = new(format, nodeResult.Value, keyPath, recipe.Actions);
         _viewManager.DrillDown(request);
     }
 
     private Result<JsonObjectEntry> FindRootEntry(string key)
     {
-        foreach (var entry in _state.JsonObjectEntries ?? [])
+        foreach (JsonObjectEntry entry in _state.JsonObjectEntries ?? [])
         {
             if (entry.Key == key)
             {

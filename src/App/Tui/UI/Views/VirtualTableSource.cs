@@ -62,11 +62,11 @@ internal sealed class VirtualTableSource : IExtendedTableSource, IDisposable
                 return string.Empty;
             }
 
-            var rowData = ReadRow(row);
+            CsvDataRow rowData = ReadRow(row);
 
             if (col < rowData.Count)
             {
-                var memory = rowData[col];
+                ReadOnlyMemory<char> memory = rowData[col];
                 return memory.IsEmpty ? string.Empty : new string(memory.Span);
             }
 

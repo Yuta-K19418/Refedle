@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Refedle.App.Cli.Parsing;
+using Refedle.Engine;
 using Refedle.Engine.Types;
 
 namespace Refedle.App.Cli.Commands.Apply;
@@ -46,7 +47,7 @@ internal static class Runner
             return ExitCode.Failure;
         }
 
-        var deferredLogger = new DeferredAppLogger();
+        DeferredAppLogger deferredLogger = new();
         string outputFile = args.OutputFile;
 
         (BatchRunResult batchRunResult, string publishPath, string tempOutputFile)? appliedResult = null;
@@ -70,7 +71,7 @@ internal static class Runner
                 return ExitCode.Failure;
             }
 
-            var (batchRunResult, publishPath, tempOutputFile) = appliedResult.Value;
+            (BatchRunResult? batchRunResult, string? publishPath, string? tempOutputFile) = appliedResult.Value;
             if (batchRunResult.ExitCode is ExitCode.Success)
             {
                 await PublishAsync(batchRunResult, publishPath, tempOutputFile, logger).ConfigureAwait(false);
@@ -135,14 +136,14 @@ internal static class Runner
         Action<string> setPhase,
         CancellationToken ct)
     {
-        var preparationResult = await ApplyPreparer.PrepareAsync(
+        Result<ApplyPreparation> preparationResult = await ApplyPreparer.PrepareAsync(
             args.InputFile, args.RecipeFile, outputFile, logger, ct).ConfigureAwait(false);
         if (preparationResult.IsFailure)
         {
             return null;
         }
 
-        var preparation = preparationResult.Value;
+        ApplyPreparation preparation = preparationResult.Value;
         if (preparation.OutputFormat is not DataFormat outputFormat)
         {
             // Unreachable: an output file is given on this path, so PrepareAsync resolved its format.
@@ -153,14 +154,14 @@ internal static class Runner
         // resolve the final target first to keep publishing through the link. LinkTarget
         // detects broken links without following them; null means a fresh output path,
         // which ResolveLinkTarget cannot resolve (it throws on a missing path).
-        var outputInfo = new FileInfo(outputFile);
-        var publishPath = outputInfo.LinkTarget is null
+        FileInfo outputInfo = new(outputFile);
+        string publishPath = outputInfo.LinkTarget is null
             ? outputFile
             : outputInfo.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? outputFile;
 
         // The publish path is only ever touched by the rename after the batch; the batch itself
         // writes to the temp path. Unconditional overwrite matches FileMode.Create semantics.
-        var tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
+        string tempOutputFile = tempOutputPathProvider.NewPath(publishPath);
 
         return await RunBatchAsync(
             preparation, outputFormat, publishPath, tempOutputFile, args, dispatcher, logger, setPhase, ct).ConfigureAwait(false);
@@ -178,10 +179,10 @@ internal static class Runner
         CancellationToken ct)
     {
         setPhase("Converting...");
-        var keepTempFile = false;
+        bool keepTempFile = false;
         try
         {
-            var batchRunResult = await dispatcher.DispatchAsync(
+            BatchRunResult batchRunResult = await dispatcher.DispatchAsync(
                 preparation.InputFormat, outputFormat, args.InputFile, tempOutputFile,
                 preparation.Recipe.DrillDownKeyPath, preparation.ColumnNames, preparation.OutputSchema, logger, ct).ConfigureAwait(false);
 
