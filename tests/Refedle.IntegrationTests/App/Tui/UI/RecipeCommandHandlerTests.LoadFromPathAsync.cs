@@ -9,10 +9,10 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.IntegrationTests.App.Tui.Workers.Schema;
 using Terminal.Gui.ViewBase;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class RecipeCommandHandlerTests : IDisposable
 {

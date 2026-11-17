@@ -10,12 +10,12 @@ using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.IntegrationTests.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests
 {

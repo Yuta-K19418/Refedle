@@ -104,44 +104,6 @@ public sealed class ModeControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task ToggleJsonLinesModeAsync_BackgroundSchemaCompletes_RaisesSchemaRefinedOnUiThread()
-    {
-        // Arrange
-        await WriteRefinementFixtureAsync(_jsonlFilePath);
-        TaskCompletionSource<TableSchema> refined = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        int callbackThreadId = 0;
-        int uiThreadId = 0;
-        await using LivePumpTestSession<ModeController> session = await LivePumpTestSession.StartAsync((app, _) =>
-        {
-            RowIndexer indexer = new(_jsonlFilePath);
-            indexer.BuildIndex();
-            AppState state = new();
-            state.StartNewFile(_jsonlFilePath);
-            state.BeginIndexedTreeLoad(indexer);
-            state.EnterJsonLinesTree();
-            state.SetSchemaRefinedCallback(schema =>
-            {
-                callbackThreadId = Environment.CurrentManagedThreadId;
-                refined.TrySetResult(schema);
-            });
-            return new ModeController(state, app.Invoke, TestSchemaScannerFactories.JsonLines);
-        });
-
-        // Act
-        await session.InvokeAsync((_, controller) =>
-        {
-            uiThreadId = Environment.CurrentManagedThreadId;
-            return controller.ToggleJsonLinesModeAsync().AsTask();
-        });
-        TableSchema refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        // Assert
-        callbackThreadId.Should().Be(uiThreadId);
-        refinedSchema.Columns.Select(c => c.Name).Should().Contain("age");
-    }
-
-    [Fact]
     public async Task ToggleJsonLinesModeAsync_WithIndexingInProgress_StartsBackgroundScanOnlyAfterIndexingCompletes()
     {
         // Arrange

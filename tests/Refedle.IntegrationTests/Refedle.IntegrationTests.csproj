@@ -32,15 +32,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
-    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
-    <ProjectReference Include="..\Refedle.TestHelpers\Refedle.TestHelpers.csproj" />
+    <!-- Only JsonRawBytes from the shared GlobalUsings.cs is used here; the unused CsvDataRow
+         would trip IDE0005 under the zero-warning policy, so the file is excluded and the
+         one alias is declared locally. -->
+    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+    <Using Include="System.ReadOnlyMemory&lt;byte&gt;" Alias="JsonRawBytes" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- No test classes yet, so the shared engine type aliases would be unused
-         (IDE0005 under the zero-warning policy). Re-include once tests land. -->
-    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+    <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
+    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+    <ProjectReference Include="..\Refedle.TestHelpers\Refedle.TestHelpers.csproj" />
   </ItemGroup>
 
 </Project>

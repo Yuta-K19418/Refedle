@@ -6,7 +6,7 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests
 {
