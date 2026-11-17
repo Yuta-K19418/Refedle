@@ -29,17 +29,17 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync();
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
-        var initialSchema = await scanner.InitialScanAsync();
-        var refined = new TaskCompletionSource<TableSchema>(
+        IncrementalSchemaScanner scanner = new(_jsonlFilePath);
+        TableSchema initialSchema = await scanner.InitialScanAsync();
+        TaskCompletionSource<TableSchema> refined = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
         state.SetSchemaRefinedCallback(schema => refined.TrySetResult(schema));
-        var invokeCount = 0;
+        int invokeCount = 0;
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -50,7 +50,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
             },
             Task.CompletedTask,
             state.Cts.Token);
-        var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        TableSchema refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
         await continuation;
 
         // Assert
@@ -64,15 +64,15 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
-        var initialSchema = await scanner.InitialScanAsync();
-        var queuedInvokes = new List<Action>();
-        var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        IncrementalSchemaScanner scanner = new(_jsonlFilePath);
+        TableSchema initialSchema = await scanner.InitialScanAsync();
+        List<Action> queuedInvokes = [];
+        TaskCompletionSource posted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -88,7 +88,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Replace the session after the UI post was queued but before it ran; the file
         // path stays the scanned one, as in a same-file reopen.
         state.RenewCtsWithCancel();
-        var replacementSchema = new TableSchema
+        TableSchema replacementSchema = new()
         {
             Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
             SourceFormat = DataFormat.JsonLines
@@ -110,16 +110,16 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var scanner = new IncrementalSchemaScanner(_jsonlFilePath);
-        var initialSchema = await scanner.InitialScanAsync();
-        var cancelledToken = state.Cts.Token;
+        IncrementalSchemaScanner scanner = new(_jsonlFilePath);
+        TableSchema initialSchema = await scanner.InitialScanAsync();
+        CancellationToken cancelledToken = state.Cts.Token;
         state.RenewCtsWithCancel();
-        var invokeCount = 0;
+        int invokeCount = 0;
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -136,16 +136,16 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WithFaultedBackgroundScan_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(
             initialSchema,
             backgroundFailure: new InvalidOperationException("background scan failed"));
-        var invokeCount = 0;
+        int invokeCount = 0;
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -163,14 +163,14 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WithCanceledBackgroundScan_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema, backgroundCanceled: true);
-        var invokeCount = 0;
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema, backgroundCanceled: true);
+        int invokeCount = 0;
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -188,12 +188,12 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullState_ThrowsArgumentNullException()
     {
         // Arrange
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema);
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             BackgroundSchemaRefiner.StartAsync(
                 null!,
@@ -212,13 +212,13 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullScanner_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateIdSchema();
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             BackgroundSchemaRefiner.StartAsync(
                 state,
@@ -237,13 +237,13 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullInitialSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var scanner = new GatedSchemaScanner(CreateIdSchema());
+        GatedSchemaScanner scanner = new(CreateIdSchema());
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             BackgroundSchemaRefiner.StartAsync(
                 state,
@@ -262,14 +262,14 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema);
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             BackgroundSchemaRefiner.StartAsync(
                 state,
@@ -288,21 +288,21 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WithPendingIndexingCompleted_DoesNotStartBackgroundScanUntilIndexingCompletes()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema);
-        var indexingCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema);
+        TaskCompletionSource indexingCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Act
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
             action => action(),
             indexingCompleted.Task,
             state.Cts.Token);
-        var startedBeforeCompletion = scanner.BackgroundScanStarted.IsCompleted;
+        bool startedBeforeCompletion = scanner.BackgroundScanStarted.IsCompleted;
         indexingCompleted.SetResult();
         await scanner.BackgroundScanStarted.WaitAsync(TimeSpan.FromSeconds(10));
         await continuation.WaitAsync(TimeSpan.FromSeconds(10));
@@ -315,13 +315,13 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public async Task Start_WhenCancelledWhileWaitingForIndexing_CompletesWithoutInvokingUiThreadInvoke()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema);
-        var indexingCompleted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var invokeCount = 0;
-        var continuation = BackgroundSchemaRefiner.StartAsync(
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema);
+        TaskCompletionSource indexingCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        int invokeCount = 0;
+        Task continuation = BackgroundSchemaRefiner.StartAsync(
             state,
             scanner,
             initialSchema,
@@ -343,14 +343,14 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullIndexingCompleted_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var initialSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(initialSchema);
+        TableSchema initialSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             BackgroundSchemaRefiner.StartAsync(
                 state,
@@ -372,13 +372,13 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     /// </summary>
     private async Task WriteRefinementFixtureAsync()
     {
-        var initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
-        var refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
-        var content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
+        IEnumerable<string> initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
+        IEnumerable<string> refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
+        string content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
         await File.WriteAllTextAsync(_jsonlFilePath, content);
     }
 
-    private static TableSchema CreateIdSchema() => new TableSchema
+    private static TableSchema CreateIdSchema() => new()
     {
         Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
         SourceFormat = DataFormat.JsonLines

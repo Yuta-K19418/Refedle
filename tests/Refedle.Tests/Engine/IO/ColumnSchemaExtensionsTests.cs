@@ -31,7 +31,7 @@ public sealed class ColumnSchemaExtensionsTests
     )
     {
         // Arrange
-        var schema = new ColumnSchema
+        ColumnSchema schema = new()
         {
             Name = "test",
             Type = initialType,
@@ -40,7 +40,7 @@ public sealed class ColumnSchemaExtensionsTests
         };
 
         // Act
-        var updatedSchema = schema.WithUpdatedType(newType);
+        ColumnSchema updatedSchema = schema.WithUpdatedType(newType);
 
         // Assert
         updatedSchema.Type.Should().Be(expectedType, description);
@@ -59,7 +59,7 @@ public sealed class ColumnSchemaExtensionsTests
     public void WithMarkedNullable_SetsIsNullableToTrue(ColumnType columnType)
     {
         // Arrange
-        var schema = new ColumnSchema
+        ColumnSchema schema = new()
         {
             Name = "test",
             Type = columnType,
@@ -68,7 +68,7 @@ public sealed class ColumnSchemaExtensionsTests
         };
 
         // Act
-        var updatedSchema = schema.WithMarkedNullable();
+        ColumnSchema updatedSchema = schema.WithMarkedNullable();
 
         // Assert
         updatedSchema.IsNullable.Should().BeTrue();
@@ -86,7 +86,7 @@ public sealed class ColumnSchemaExtensionsTests
     public void WithMarkedNullable_Idempotent_CallingTwiceReturnsSameInstance(ColumnType columnType)
     {
         // Arrange
-        var schema = new ColumnSchema
+        ColumnSchema schema = new()
         {
             Name = "test",
             Type = columnType,
@@ -95,10 +95,10 @@ public sealed class ColumnSchemaExtensionsTests
         };
 
         // Act
-        var firstUpdated = schema.WithMarkedNullable();
-        var firstCall = firstUpdated.IsNullable;
-        var secondUpdated = firstUpdated.WithMarkedNullable();
-        var secondCall = secondUpdated.IsNullable;
+        ColumnSchema firstUpdated = schema.WithMarkedNullable();
+        bool firstCall = firstUpdated.IsNullable;
+        ColumnSchema secondUpdated = firstUpdated.WithMarkedNullable();
+        bool secondCall = secondUpdated.IsNullable;
 
         // Assert
         firstCall.Should().BeTrue();

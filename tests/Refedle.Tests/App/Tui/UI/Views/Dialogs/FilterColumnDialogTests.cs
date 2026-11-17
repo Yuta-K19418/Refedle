@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
 using Refedle.Engine.Models.Actions;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -18,10 +19,10 @@ public sealed class FilterColumnDialogTests
     public void Constructor_SetsTitle_ToFilterColumn()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FilterColumnDialog(columnName);
+        using FilterColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Title.Should().Be("Filter Column");
@@ -31,10 +32,10 @@ public sealed class FilterColumnDialogTests
     public void SelectedOperator_BeforeInteraction_IsNull()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FilterColumnDialog(columnName);
+        using FilterColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.SelectedOperator.Should().BeNull();
@@ -44,10 +45,10 @@ public sealed class FilterColumnDialogTests
     public void Value_BeforeInteraction_IsNull()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FilterColumnDialog(columnName);
+        using FilterColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Value.Should().BeNull();
@@ -57,10 +58,10 @@ public sealed class FilterColumnDialogTests
     public void Confirmed_BeforeInteraction_IsFalse()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FilterColumnDialog(columnName);
+        using FilterColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Confirmed.Should().BeFalse();
@@ -70,10 +71,10 @@ public sealed class FilterColumnDialogTests
     public void SelectedComparisonType_BeforeInteraction_IsNull()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FilterColumnDialog(columnName);
+        using FilterColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.SelectedComparisonType.Should().BeNull();
@@ -83,10 +84,10 @@ public sealed class FilterColumnDialogTests
     public void Confirm_WithUnparseableNumberValue_KeepsDialogOpenAndShowsError()
     {
         // Arrange — NaN is not a finite number, so Number validation rejects it
-        using var app = TestAppFactory.Create();
-        using var dialog = new FilterColumnDialog("Score");
-        var textField = GetTextField(dialog);
-        var comparisonTypeSelector = GetComparisonTypeSelector(dialog);
+        using IApplication app = TestAppFactory.Create();
+        using FilterColumnDialog dialog = new("Score");
+        TextField textField = GetTextField(dialog);
+        OptionSelector<ComparisonType> comparisonTypeSelector = GetComparisonTypeSelector(dialog);
         textField.Text = "NaN";
         comparisonTypeSelector.Value = ComparisonType.Number;
 
@@ -96,7 +97,7 @@ public sealed class FilterColumnDialogTests
         // Assert — the dialog stays open (not confirmed) and no selection is recorded
         dialog.Confirmed.Should().BeFalse();
         dialog.SelectedComparisonType.Should().BeNull();
-        var errorLabel = dialog.SubViews.OfType<Label>().Last();
+        Label errorLabel = dialog.SubViews.OfType<Label>().Last();
         errorLabel.Text.Should().NotBeEmpty();
     }
 
@@ -104,10 +105,10 @@ public sealed class FilterColumnDialogTests
     public void Confirm_WithValidInput_SetsSelectedComparisonType()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new FilterColumnDialog("Score");
-        var textField = GetTextField(dialog);
-        var comparisonTypeSelector = GetComparisonTypeSelector(dialog);
+        using IApplication app = TestAppFactory.Create();
+        using FilterColumnDialog dialog = new("Score");
+        TextField textField = GetTextField(dialog);
+        OptionSelector<ComparisonType> comparisonTypeSelector = GetComparisonTypeSelector(dialog);
         textField.Text = "100";
         comparisonTypeSelector.Value = ComparisonType.Number;
 

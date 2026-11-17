@@ -52,7 +52,7 @@ public class JsonObjectCellExtractorBenchmarks
     [Benchmark]
     public void ExtractCell_AllColumns()
     {
-        foreach (var column in _allColumns)
+        foreach (byte[] column in _allColumns)
         {
             _ = JsonObjectCellExtractor.ExtractCell(_jsonLine, column);
         }

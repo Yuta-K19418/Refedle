@@ -36,8 +36,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_ExistingKey_ReturnsCellValue()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -56,10 +56,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var result = source[0, 1]; // row 0, col 1 ("name")
+        object result = source[0, 1]; // row 0, col 1 ("name")
 
         // Assert
         result.Should().Be("Alice");
@@ -69,8 +69,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_MissingKey_ReturnsNullPlaceholder()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -96,10 +96,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var result = source[0, 2]; // "email" does not exist in the JSON line
+        object result = source[0, 2]; // "email" does not exist in the JSON line
 
         // Assert
         result.Should().Be("<null>");
@@ -109,8 +109,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void UpdateSchema_NewColumnAdded_IncreasesColumnCount()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var originalSchema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema originalSchema = new()
         {
             Columns =
             [
@@ -129,7 +129,7 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        var refinedSchema = new TableSchema
+        TableSchema refinedSchema = new()
         {
             Columns =
             [
@@ -155,7 +155,7 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, originalSchema);
+        using JsonLinesTableSource source = new(cache, originalSchema);
 
         // Act
         source.UpdateSchema(refinedSchema);
@@ -169,8 +169,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_NegativeRow_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -183,10 +183,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var act = () => _ = source[-1, 0];
+        Func<object> act = () => _ = source[-1, 0];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -196,8 +196,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_NegativeCol_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -210,10 +210,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var act = () => _ = source[0, -1];
+        Func<object> act = () => _ = source[0, -1];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -223,8 +223,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_RowExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -237,10 +237,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var act = () => _ = source[2, 0]; // Only 2 rows (index 0 and 1), so row 2 is out of range
+        Func<object> act = () => _ = source[2, 0]; // Only 2 rows (index 0 and 1), so row 2 is out of range
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -250,8 +250,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Indexer_ColExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -264,10 +264,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var act = () => _ = source[0, 1]; // Only 1 column (index 0), so col 1 is out of range
+        Func<object> act = () => _ = source[0, 1]; // Only 1 column (index 0), so col 1 is out of range
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -277,8 +277,8 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Rows_ReflectsCacheLineCount()
     {
         // Arrange
-        using var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        using RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns =
             [
@@ -291,10 +291,10 @@ public sealed class JsonLinesTableSourceTests : IDisposable
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        using var source = new JsonLinesTableSource(cache, schema);
+        using JsonLinesTableSource source = new(cache, schema);
 
         // Act
-        var rows = source.TotalRows;
+        long rows = source.TotalRows;
 
         // Assert
         rows.Should().Be(2); // Two lines written in test setup
@@ -304,13 +304,13 @@ public sealed class JsonLinesTableSourceTests : IDisposable
     public void Dispose_DisposesRowByteCache()
     {
         // Arrange
-        var cache = new RowByteCache(_indexer);
-        var schema = new TableSchema
+        RowByteCache cache = new(_indexer);
+        TableSchema schema = new()
         {
             Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber, ColumnIndex = 0 }],
             SourceFormat = DataFormat.JsonLines,
         };
-        var source = new JsonLinesTableSource(cache, schema);
+        JsonLinesTableSource source = new(cache, schema);
         _ = source[0, 0]; // Ensure MmapService is initialized
 
         // Act
@@ -318,7 +318,7 @@ public sealed class JsonLinesTableSourceTests : IDisposable
 
         // Assert
         // Verify indexer throws ObjectDisposedException
-        var act = () => _ = source[0, 0];
+        Func<object> act = () => _ = source[0, 0];
         act.Should().Throw<ObjectDisposedException>();
     }
 }

@@ -24,7 +24,7 @@ public sealed partial class DataRowIndexerTests : IDisposable
     public void Constructor_WithNullFilePath_ThrowsArgumentException()
     {
         // Act & Assert
-        var act = () => new DataRowIndexer(null!);
+        Func<DataRowIndexer> act = () => new DataRowIndexer(null!);
         act.Should()
             .Throw<ArgumentException>()
             .WithMessage("Value cannot be null.*")
@@ -35,7 +35,7 @@ public sealed partial class DataRowIndexerTests : IDisposable
     public void Constructor_WithEmptyFilePath_ThrowsArgumentException()
     {
         // Act & Assert
-        var act = () => new DataRowIndexer(string.Empty);
+        Func<DataRowIndexer> act = () => new DataRowIndexer(string.Empty);
         act.Should().Throw<ArgumentException>();
     }
 
@@ -43,7 +43,7 @@ public sealed partial class DataRowIndexerTests : IDisposable
     public void Constructor_WithWhitespaceFilePath_ThrowsArgumentException()
     {
         // Act & Assert
-        var act = () => new DataRowIndexer("   ");
+        Func<DataRowIndexer> act = () => new DataRowIndexer("   ");
         act.Should().Throw<ArgumentException>();
     }
 
@@ -52,7 +52,7 @@ public sealed partial class DataRowIndexerTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2");
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
 
         // Act & Assert
         indexer.TotalRows.Should().Be(0);
@@ -62,10 +62,10 @@ public sealed partial class DataRowIndexerTests : IDisposable
     public void Constructor_WithNonExistentFile_DoesNotThrow()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid()}.csv");
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid()}.csv");
 
         // Act & Assert (constructor should not throw for non-existent file)
-        var indexer = new DataRowIndexer(nonExistentPath);
+        DataRowIndexer indexer = new(nonExistentPath);
         indexer.FilePath.Should().Be(nonExistentPath);
         indexer.TotalRows.Should().Be(0);
     }

@@ -15,7 +15,7 @@ public sealed class KeyPathBuilderTests
         ITreeNode rootNode = new JsonValueTreeNode("root");
 
         // Act
-        var keyPath = KeyPathBuilder.Build(rootNode);
+        IReadOnlyList<KeyPathSegment> keyPath = KeyPathBuilder.Build(rootNode);
 
         // Assert
         keyPath.Should().BeEmpty();
@@ -25,12 +25,12 @@ public sealed class KeyPathBuilderTests
     public void Build_WithNestedObjectArraySelection_ReturnsOrderedSegmentsWithIndex()
     {
         // Arrange
-        var root = new JsonObjectTreeNode("{}"u8.ToArray());
-        var ordersArray = new JsonArrayTreeNode("[]"u8.ToArray()) { KeyName = "orders", ParentNode = root };
-        var element0 = new JsonObjectTreeNode("{}"u8.ToArray()) { KeyName = "[0]", ParentNode = ordersArray };
+        JsonObjectTreeNode root = new("{}"u8.ToArray());
+        JsonArrayTreeNode ordersArray = new("[]"u8.ToArray()) { KeyName = "orders", ParentNode = root };
+        JsonObjectTreeNode element0 = new("{}"u8.ToArray()) { KeyName = "[0]", ParentNode = ordersArray };
 
         // Act
-        var keyPath = KeyPathBuilder.Build(element0);
+        IReadOnlyList<KeyPathSegment> keyPath = KeyPathBuilder.Build(element0);
 
         // Assert
         keyPath.Should().Equal(

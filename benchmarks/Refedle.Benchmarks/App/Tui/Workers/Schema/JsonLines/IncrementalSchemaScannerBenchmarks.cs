@@ -19,7 +19,7 @@ public class IncrementalSchemaScannerBenchmarks : IncrementalSchemaScannerBenchm
     /// <inheritdoc/>
     private protected override void WriteRows(StreamWriter writer, int rowCount)
     {
-        for (var i = 0; i < rowCount; i++)
+        for (int i = 0; i < rowCount; i++)
         {
             writer.WriteLine($"{{\"id\":{i},\"name\":\"User{i}\",\"email\":\"user{i}@example.com\",\"age\":{20 + (i % 50)},\"city\":\"City{i % 100}\"}}");
         }

@@ -28,7 +28,7 @@ public class RowIndexerBenchmarks
     public void Setup()
     {
         // Create test data for benchmarks
-        var lines = Enumerable.Range(0, 100_000)
+        IEnumerable<string> lines = Enumerable.Range(0, 100_000)
             .Select(i => $"{{\"id\": {i}, \"name\": \"User{i}\", \"data\": \"This is a test string with various characters\"}}");
         File.WriteAllText(_tempFilePath, string.Join("\n", lines));
     }
@@ -51,7 +51,7 @@ public class RowIndexerBenchmarks
     [Benchmark]
     public void BuildIndex_100kRows()
     {
-        var indexer = new RowIndexer(_tempFilePath);
+        RowIndexer indexer = new(_tempFilePath);
         indexer.BuildIndex();
     }
 
@@ -61,7 +61,7 @@ public class RowIndexerBenchmarks
     [Benchmark]
     public void GetCheckPoint_FirstRow()
     {
-        var indexer = new RowIndexer(_tempFilePath);
+        RowIndexer indexer = new(_tempFilePath);
         indexer.BuildIndex();
         _ = indexer.GetCheckPoint(0);
     }
@@ -72,7 +72,7 @@ public class RowIndexerBenchmarks
     [Benchmark]
     public void GetCheckPoint_MiddleRow()
     {
-        var indexer = new RowIndexer(_tempFilePath);
+        RowIndexer indexer = new(_tempFilePath);
         indexer.BuildIndex();
         _ = indexer.GetCheckPoint(50_000);
     }
@@ -83,7 +83,7 @@ public class RowIndexerBenchmarks
     [Benchmark]
     public void GetCheckPoint_LastRow()
     {
-        var indexer = new RowIndexer(_tempFilePath);
+        RowIndexer indexer = new(_tempFilePath);
         indexer.BuildIndex();
         _ = indexer.GetCheckPoint(99_999);
     }
@@ -94,7 +94,7 @@ public class RowIndexerBenchmarks
     [Benchmark]
     public void GetCheckPoint_MultipleCalls()
     {
-        var indexer = new RowIndexer(_tempFilePath);
+        RowIndexer indexer = new(_tempFilePath);
         indexer.BuildIndex();
 
         // Simulate multiple lookups

@@ -9,8 +9,8 @@ public sealed class DeferredAppLoggerTests
     public async Task WriteAsync_BeforeFlush_DoesNotReachTarget()
     {
         // Arrange
-        var deferred = new DeferredAppLogger();
-        var target = new TestAppLogger();
+        DeferredAppLogger deferred = new();
+        TestAppLogger target = new();
 
         // Act
         await deferred.WriteInfoAsync("info");
@@ -25,8 +25,8 @@ public sealed class DeferredAppLoggerTests
     public async Task FlushToAsync_ReplaysMessagesToMatchingLevelsInWrittenOrder()
     {
         // Arrange
-        var deferred = new DeferredAppLogger();
-        var target = new OrderRecordingLogger();
+        DeferredAppLogger deferred = new();
+        OrderRecordingLogger target = new();
         await deferred.WriteInfoAsync("i1");
         await deferred.WriteErrorAsync("e1");
         await deferred.WriteWarningAsync("w1");
@@ -43,8 +43,8 @@ public sealed class DeferredAppLoggerTests
     public async Task FlushToAsync_CalledTwice_ReplaysEachMessageOnlyOnce()
     {
         // Arrange
-        var deferred = new DeferredAppLogger();
-        var target = new TestAppLogger();
+        DeferredAppLogger deferred = new();
+        TestAppLogger target = new();
         await deferred.WriteInfoAsync("only once");
 
         // Act
@@ -59,8 +59,8 @@ public sealed class DeferredAppLoggerTests
     public async Task FlushToAsync_WithNoMessages_WritesNothing()
     {
         // Arrange
-        var deferred = new DeferredAppLogger();
-        var target = new TestAppLogger();
+        DeferredAppLogger deferred = new();
+        TestAppLogger target = new();
 
         // Act
         await deferred.FlushToAsync(target);
@@ -73,10 +73,10 @@ public sealed class DeferredAppLoggerTests
     public async Task FlushToAsync_WithNullTarget_ThrowsArgumentNullException()
     {
         // Arrange
-        var deferred = new DeferredAppLogger();
+        DeferredAppLogger deferred = new();
 
         // Act
-        var act = async () => await deferred.FlushToAsync(null!);
+        Func<Task> act = async () => await deferred.FlushToAsync(null!);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -88,18 +88,17 @@ public sealed class DeferredAppLoggerTests
         // Arrange
         const int writers = 8;
         const int perWriter = 200;
-        var deferred = new DeferredAppLogger();
-        var target = new TestAppLogger();
-        using var startGate = new Barrier(writers);
+        DeferredAppLogger deferred = new();
+        TestAppLogger target = new();
+        using Barrier startGate = new(writers);
 
         // Act
-        var tasks = Enumerable.Range(0, writers)
+        Task[] tasks = [.. Enumerable.Range(0, writers)
             .Select(writer => Task.Factory.StartNew(
                 () => WriteFromWriter(deferred, startGate, writer, perWriter),
                 CancellationToken.None,
                 TaskCreationOptions.LongRunning,
-                TaskScheduler.Default))
-            .ToArray();
+                TaskScheduler.Default))];
         await Task.WhenAll(tasks);
         await deferred.FlushToAsync(target);
 
@@ -111,7 +110,7 @@ public sealed class DeferredAppLoggerTests
     private static void WriteFromWriter(DeferredAppLogger deferred, Barrier startGate, int writer, int count)
     {
         startGate.SignalAndWait();
-        for (var i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             deferred.WriteInfoAsync($"{writer}-{i}").AsTask().GetAwaiter().GetResult();
         }

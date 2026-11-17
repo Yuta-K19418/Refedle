@@ -29,7 +29,7 @@ public sealed partial class TopLevelScannerTests : IDisposable
         // Arrange — no setup required
 
         // Act
-        var act = () => TopLevelScanner.Scan(null!);
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan(null!);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -41,7 +41,7 @@ public sealed partial class TopLevelScannerTests : IDisposable
         // Arrange — no setup required
 
         // Act
-        var act = () => TopLevelScanner.Scan("   ");
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan("   ");
 
         // Assert
         act.Should().Throw<ArgumentException>();

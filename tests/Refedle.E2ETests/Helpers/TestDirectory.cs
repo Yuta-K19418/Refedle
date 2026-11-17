@@ -14,7 +14,7 @@ internal sealed class TestDirectory : IDisposable
 
     public string CreateFile(string fileName, string content)
     {
-        var filePath = System.IO.Path.Combine(Path, fileName);
+        string filePath = System.IO.Path.Combine(Path, fileName);
         File.WriteAllText(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return filePath;
     }

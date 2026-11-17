@@ -1,5 +1,6 @@
 using System.Text;
 using AwesomeAssertions;
+using Microsoft.Win32.SafeHandles;
 using Refedle.Engine.IO;
 
 namespace Refedle.Tests.Engine.IO;
@@ -37,12 +38,12 @@ public sealed class SafeFileHandleExtensionsTests() : IDisposable
     public void GetOffsetAfterUtf8Bom_VariousFiles_ReturnsExpectedOffset(byte[] content, long expectedOffset)
     {
         // Arrange
-        var filePath = Path.Combine(_testDir, Path.GetRandomFileName());
+        string filePath = Path.Combine(_testDir, Path.GetRandomFileName());
         File.WriteAllBytes(filePath, content);
-        using var handle = File.OpenHandle(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using SafeFileHandle handle = File.OpenHandle(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         // Act
-        var offset = handle.GetOffsetAfterUtf8Bom();
+        long offset = handle.GetOffsetAfterUtf8Bom();
 
         // Assert
         offset.Should().Be(expectedOffset);

@@ -10,12 +10,12 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FillColumnOnCsvTable_RendersFillValueInEveryCellOfColumn()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,email
             Alice,alice@example.com
             Bob,
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Alice", "alice@example.com");
 
@@ -36,7 +36,7 @@ public sealed partial class MainWindowTests
         // Poll for the fill's observable effect rather than a fixed delay. The dialog's own text
         // also hides "alice@example.com" while open, so its title's absence is checked too, so
         // the wait doesn't return before the confirming key actually lands.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("alice@example.com", StringComparison.Ordinal) && !line.Contains("Fill Column", StringComparison.Ordinal)),
             "dialog closed and \"alice@example.com\" replaced by the fill value");
 
@@ -50,13 +50,13 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FillColumnOnFocusedTable_RendersFillValueInEveryCellOfColumn()
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","email":"alice@example.com"},
               {"name":"Bob","email":"bob@example.com"}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -82,7 +82,7 @@ public sealed partial class MainWindowTests
         // Poll for the fill's observable effect rather than a fixed delay. The dialog's own text
         // also hides "alice@example.com" while open, so its title's absence is checked too, so
         // the wait doesn't return before the confirming key actually lands.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("alice@example.com", StringComparison.Ordinal) && !line.Contains("Fill Column", StringComparison.Ordinal)),
             "dialog closed and \"alice@example.com\" replaced by the fill value");
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AwesomeAssertions;
 using Refedle.App.Cli.IO.Factories;
+using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 
@@ -28,11 +29,11 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithNullKeyPath_ThrowsInvalidOperationException()
     {
         // Arrange — null cannot reach the factory: DrillDownRecipeValidator rejects it upstream.
-        var inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
-        var factory = new JsonArrayRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
+        JsonArrayRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(
+        Func<Task<FullAggregationRecordReader<JsonArrayBatchSourceReader>>> act = async () => await factory.CreateAsync(
             inputFile, drillDownKeyPath: null, ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -43,11 +44,11 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithEmptyKeyPath_ReturnsReaderOverWholeRecords()
     {
         // Arrange — an empty path is valid: each top-level record is itself the leaf row.
-        var inputFile = CreateTestFile("input.json", """[{"id":1},{"id":2}]""");
-        var factory = new JsonArrayRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """[{"id":1},{"id":2}]""");
+        JsonArrayRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using FullAggregationRecordReader<JsonArrayBatchSourceReader> reader = await factory.CreateAsync(
             inputFile, drillDownKeyPath: [], ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -62,13 +63,13 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithValidKeyPath_ReturnsReaderOverDrilledDownRows()
     {
         // Arrange
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.json", """[{"orders":[{"id":1,"item":"a"}]},{"orders":[{"id":2,"item":"b"}]}]""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
-        var factory = new JsonArrayRecordReaderFactory();
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+        JsonArrayRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using FullAggregationRecordReader<JsonArrayBatchSourceReader> reader = await factory.CreateAsync(
             inputFile, keyPath, ["id", "item"], BuildOutputSchema("id", "item"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -85,12 +86,12 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     {
         // Arrange — the factory does no schema resolution, so a non-matching path is not an error;
         // the traverser simply skips every record and the reader yields nothing.
-        var inputFile = CreateTestFile("input.json", """[{"other":1},{"other":2}]""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
-        var factory = new JsonArrayRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """[{"other":1},{"other":2}]""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+        JsonArrayRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using FullAggregationRecordReader<JsonArrayBatchSourceReader> reader = await factory.CreateAsync(
             inputFile, keyPath, ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -101,13 +102,13 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange — the factory forwards its token to RowIndexer.BuildIndex.
-        var inputFile = CreateTestFile("input.json", """[{"id":1}]""");
-        var factory = new JsonArrayRecordReaderFactory();
-        using var cts = new CancellationTokenSource();
+        string inputFile = CreateTestFile("input.json", """[{"id":1}]""");
+        JsonArrayRecordReaderFactory factory = new();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await factory.CreateAsync(
+        Func<Task<FullAggregationRecordReader<JsonArrayBatchSourceReader>>> act = async () => await factory.CreateAsync(
             inputFile, [], ["id"], BuildOutputSchema("id"), new TestAppLogger(), cts.Token);
 
         // Assert
@@ -118,11 +119,11 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithTruncatedJsonArray_ThrowsJsonException()
     {
         // Arrange — the index build rejects an unterminated root array.
-        var inputFile = CreateTestFile("input.json", """[{"id":1}""");
-        var factory = new JsonArrayRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """[{"id":1}""");
+        JsonArrayRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(
+        Func<Task<FullAggregationRecordReader<JsonArrayBatchSourceReader>>> act = async () => await factory.CreateAsync(
             inputFile, [], ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -134,7 +135,7 @@ public sealed class JsonArrayRecordReaderFactoryTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
     }

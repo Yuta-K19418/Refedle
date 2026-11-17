@@ -36,21 +36,21 @@ public class RowReaderBenchmarks : IDisposable
         _longLinesFilePath = Path.Combine(Path.GetTempPath(), $"rowreader_benchmark_long_{Guid.NewGuid()}.jsonl");
 
         // Roughly 80 bytes per line
-        var shortLines = new StringBuilder();
-        for (var i = 0; i < ShortLineCount; i++)
+        StringBuilder shortLines = new();
+        for (int i = 0; i < ShortLineCount; i++)
         {
-            var shortLine = $"{{\"id\":{i:D6},\"name\":\"User{i:D6}\",\"email\":\"user{i:D6}@example.com\",\"age\":{i % 100:D2}}}";
+            string shortLine = $"{{\"id\":{i:D6},\"name\":\"User{i:D6}\",\"email\":\"user{i:D6}@example.com\",\"age\":{i % 100:D2}}}";
             shortLines.Append(shortLine).Append('\n');
         }
 
         File.WriteAllText(_shortLinesFilePath, shortLines.ToString());
 
         // Roughly 10 KB per line, which exceeds the 4 KB initial search window
-        var payload = new string('x', LongLinePayloadLength);
-        var longLines = new StringBuilder();
-        for (var i = 0; i < LongLineCount; i++)
+        string payload = new('x', LongLinePayloadLength);
+        StringBuilder longLines = new();
+        for (int i = 0; i < LongLineCount; i++)
         {
-            var longLine = $"{{\"id\":{i:D6},\"payload\":\"{payload}\"}}";
+            string longLine = $"{{\"id\":{i:D6},\"payload\":\"{payload}\"}}";
             longLines.Append(longLine).Append('\n');
         }
 
@@ -66,7 +66,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines short lines (~80B), skip 50k only")]
     public int SkipShortLinesOnly()
     {
-        var lines = _shortLinesReader.ReadLines(0, ShortLineSkip, 0);
+        IReadOnlyList<JsonRawBytes> lines = _shortLinesReader.ReadLines(0, ShortLineSkip, 0);
         return lines.Count;
     }
 
@@ -76,7 +76,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines short lines (~80B), read 300 only")]
     public int ReadShortLinesOnly()
     {
-        var lines = _shortLinesReader.ReadLines(0, 0, ShortLineRead);
+        IReadOnlyList<JsonRawBytes> lines = _shortLinesReader.ReadLines(0, 0, ShortLineRead);
         return lines.Count;
     }
 
@@ -86,7 +86,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines long lines (~10KB), skip 1k only")]
     public int SkipLongLinesOnly()
     {
-        var lines = _longLinesReader.ReadLines(0, LongLineSkip, 0);
+        IReadOnlyList<JsonRawBytes> lines = _longLinesReader.ReadLines(0, LongLineSkip, 0);
         return lines.Count;
     }
 
@@ -96,7 +96,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines long lines (~10KB), read 100 only")]
     public int ReadLongLinesOnly()
     {
-        var lines = _longLinesReader.ReadLines(0, 0, LongLineRead);
+        IReadOnlyList<JsonRawBytes> lines = _longLinesReader.ReadLines(0, 0, LongLineRead);
         return lines.Count;
     }
 
@@ -106,7 +106,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines short lines (~80B), skip 50k, read 300")]
     public int ReadLinesShortLinesAfterLargeSkip()
     {
-        var lines = _shortLinesReader.ReadLines(0, ShortLineSkip, ShortLineRead);
+        IReadOnlyList<JsonRawBytes> lines = _shortLinesReader.ReadLines(0, ShortLineSkip, ShortLineRead);
         return lines.Count;
     }
 
@@ -116,7 +116,7 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "ReadLines long lines (~10KB), skip 1k, read 100")]
     public int ReadLinesLongLinesAfterLargeSkip()
     {
-        var lines = _longLinesReader.ReadLines(0, LongLineSkip, LongLineRead);
+        IReadOnlyList<JsonRawBytes> lines = _longLinesReader.ReadLines(0, LongLineSkip, LongLineRead);
         return lines.Count;
     }
 
@@ -126,8 +126,8 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "EnumerateLines short lines (~80B), all 100k lines")]
     public int EnumerateAllShortLines()
     {
-        var count = 0;
-        foreach (var line in _shortLinesReader.EnumerateLines(0))
+        int count = 0;
+        foreach (JsonRawBytes line in _shortLinesReader.EnumerateLines(0))
         {
             count += line.Length > 0 ? 1 : 0;
         }
@@ -141,8 +141,8 @@ public class RowReaderBenchmarks : IDisposable
     [Benchmark(Description = "EnumerateLines long lines (~10KB), all 2k lines")]
     public int EnumerateAllLongLines()
     {
-        var count = 0;
-        foreach (var line in _longLinesReader.EnumerateLines(0))
+        int count = 0;
+        foreach (JsonRawBytes line in _longLinesReader.EnumerateLines(0))
         {
             count += line.Length > 0 ? 1 : 0;
         }

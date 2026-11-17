@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers.Schema.Csv;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema.Csv;
@@ -25,12 +26,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithSimpleCsv_ReturnsSchema()
     {
         // Arrange
-        var csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6";
+        string csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -44,12 +45,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithHeaderOnlyFile_ReturnsDefaultSchema()
     {
         // Arrange
-        var csvContent = "Id,Name,Age\n";
+        string csvContent = "Id,Name,Age\n";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -63,9 +64,9 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithEmptyFile_ThrowsInvalidOperationException()
     {
         // Arrange
-        var csvContent = "";
+        string csvContent = "";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => scanner.InitialScanAsync());
@@ -75,12 +76,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithNumericValues_DetectsNumericTypes()
     {
         // Arrange
-        var csvContent = "Id,Salary,Bonus\n123,45.6,789\n100,200.5,300";
+        string csvContent = "Id,Salary,Bonus\n123,45.6,789\n100,200.5,300";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -93,12 +94,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithBooleanValues_DetectsBooleanTypes()
     {
         // Arrange
-        var csvContent = "IsActive,IsVerified,IsCompleted\ntrue,false,TRUE\nFALSE,true,False";
+        string csvContent = "IsActive,IsVerified,IsCompleted\ntrue,false,TRUE\nFALSE,true,False";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -111,12 +112,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithMixedValues_DetectsTextTypes()
     {
         // Arrange
-        var csvContent = "ProductId,Description,Price\n123,text,45.6\ntext,789,text";
+        string csvContent = "ProductId,Description,Price\n123,text,45.6\ntext,789,text";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -129,12 +130,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_WithMissingValues_MarksNullable()
     {
         // Arrange
-        var csvContent = "FirstName,MiddleName,LastName\n,,Doe\nJohn,,\n,,Smith";
+        string csvContent = "FirstName,MiddleName,LastName\n,,Doe\nJohn,,\n,,Smith";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.Should().NotBeNull();
@@ -147,8 +148,8 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_Constructor_WithNonexistentFile_ThrowsFileNotFoundException()
     {
         // Arrange
-        var nonexistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".csv");
-        var scanner = new IncrementalSchemaScanner(nonexistentPath);
+        string nonexistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".csv");
+        IncrementalSchemaScanner scanner = new(nonexistentPath);
 
         // Act & Assert
         await Assert.ThrowsAsync<FileNotFoundException>(() => scanner.InitialScanAsync());
@@ -158,15 +159,15 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task StartBackgroundScanAsync_WithAlreadyCancelledToken_ReturnsCanceledTask()
     {
         // Arrange
-        var csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6";
+        string csvContent = "Id,Name,Age\nvalue1,value2,value3\nvalue4,value5,value6";
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
-        using var cts = new CancellationTokenSource();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
+        Task<TableSchema> backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
         await Task.WhenAny(backgroundTask);
 
         // Assert
@@ -178,16 +179,16 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange
         // Header: "say ""hi""",Count
-        var headerLine = "\"say \"\"hi\"\"\",Count";
+        string headerLine = "\"say \"\"hi\"\"\",Count";
         // Data: value1,"12"
-        var dataLine = "value1,\"12\"";
+        string dataLine = "value1,\"12\"";
         string[] lines = [headerLine, dataLine];
-        var csvContent = string.Join("\n", lines);
+        string csvContent = string.Join("\n", lines);
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         // Expected: column 1 name is say "hi", column 2 type is WholeNumber
@@ -203,10 +204,10 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_tempFilePath, csvContent);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var act = async () => await scanner.InitialScanAsync();
+        Func<Task<TableSchema>> act = async () => await scanner.InitialScanAsync();
 
         // Assert
         await act.Should().ThrowAsync<InvalidDataException>();
@@ -219,12 +220,12 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
         string mismatchedRow)
     {
         // Arrange - 199 valid rows, then a mismatched row exactly at the 200th (InitialScanCount) row
-        var validRows = Enumerable.Repeat("1,20", 199);
+        IEnumerable<string> validRows = Enumerable.Repeat("1,20", 199);
         await File.WriteAllLinesAsync(_tempFilePath, validRows.Append(mismatchedRow).Prepend("Id,Age"));
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var act = async () => await scanner.InitialScanAsync();
+        Func<Task<TableSchema>> act = async () => await scanner.InitialScanAsync();
 
         // Assert - The 200th row is inside the initial scan's window
         await act.Should().ThrowAsync<InvalidDataException>();
@@ -234,15 +235,15 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task StartBackgroundScanAsync_WithValidRowsAfterInitialRows_RefinesSchema()
     {
         // Arrange - 200 rows for the initial scan, then a row with text to widen the schema
-        var initialRows = Enumerable.Repeat("1,20", 200);
+        IEnumerable<string> initialRows = Enumerable.Repeat("1,20", 200);
         string[] laterRows = ["3,text"];
         await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
         schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
 
         // Act
-        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        TableSchema refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert - The row beyond the initial scan refines Age to Text
         refinedSchema.Columns[1].Type.Should().Be(ColumnType.Text);
@@ -256,14 +257,14 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange - exactly 200 valid rows (initial scan), a mismatched first background row,
         // then a row that would change the types if the scan kept reading
-        var initialRows = Enumerable.Repeat("1,20", 200);
+        IEnumerable<string> initialRows = Enumerable.Repeat("1,20", 200);
         string[] laterRows = [mismatchedRow, "abc,text"];
         await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Act
-        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        TableSchema refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert - The scan succeeds and the schema is the one from the initial scan
         refinedSchema.Columns[0].Type.Should().Be(ColumnType.WholeNumber);
@@ -276,14 +277,14 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task StartBackgroundScanAsync_WhenFileIsDeletedAfterInitialScan_PropagatesFileNotFoundException()
     {
         // Arrange
-        var rows = Enumerable.Repeat("1,20", 250).Prepend("Id,Age");
+        IEnumerable<string> rows = Enumerable.Repeat("1,20", 250).Prepend("Id,Age");
         await File.WriteAllLinesAsync(_tempFilePath, rows);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
         File.Delete(_tempFilePath);
 
         // Act
-        var act = async () => await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        Func<Task<TableSchema>> act = async () => await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert - Only a column-count mismatch ends the scan quietly; I/O errors still propagate
         await act.Should().ThrowAsync<FileNotFoundException>();
@@ -297,15 +298,15 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange - 200 normal rows (initial scan), a text row that widens Age, a mismatched row,
         // then a row that would widen Id if the scan kept reading
-        var initialRows = Enumerable.Repeat("1,20", 200);
+        IEnumerable<string> initialRows = Enumerable.Repeat("1,20", 200);
         string[] laterRows = ["3,text", mismatchedRow, "abc,5"];
         await File.WriteAllLinesAsync(_tempFilePath, initialRows.Concat(laterRows).Prepend("Id,Age"));
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
         schema.Columns[1].Type.Should().Be(ColumnType.WholeNumber);
 
         // Act
-        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        TableSchema refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert - The scan ends at the mismatched row without faulting; rows after it are not reflected
         refinedSchema.Columns[1].Type.Should().Be(ColumnType.Text);

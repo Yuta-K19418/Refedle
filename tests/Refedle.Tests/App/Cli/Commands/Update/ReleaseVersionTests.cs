@@ -16,7 +16,7 @@ public sealed class ReleaseVersionTests
         // Arrange
 
         // Act
-        var parsed = ReleaseVersion.TryParse(text, out var version);
+        bool parsed = ReleaseVersion.TryParse(text, out ReleaseVersion version);
 
         // Assert
         parsed.Should().BeTrue();
@@ -40,7 +40,7 @@ public sealed class ReleaseVersionTests
         // Arrange
 
         // Act
-        var parsed = ReleaseVersion.TryParse(text, out var version);
+        bool parsed = ReleaseVersion.TryParse(text, out ReleaseVersion version);
 
         // Assert
         parsed.Should().BeFalse();
@@ -57,8 +57,8 @@ public sealed class ReleaseVersionTests
         int olderMajor, int olderMinor, int olderPatch, int newerMajor, int newerMinor, int newerPatch)
     {
         // Arrange
-        var older = new ReleaseVersion(olderMajor, olderMinor, olderPatch);
-        var newer = new ReleaseVersion(newerMajor, newerMinor, newerPatch);
+        ReleaseVersion older = new(olderMajor, olderMinor, olderPatch);
+        ReleaseVersion newer = new(newerMajor, newerMinor, newerPatch);
 
         // Act
 
@@ -74,8 +74,8 @@ public sealed class ReleaseVersionTests
     public void ComparisonOperators_WhenVersionsAreEqual_TreatEitherOrderAsUpToDate()
     {
         // Arrange
-        var left = new ReleaseVersion(1, 2, 3);
-        var right = new ReleaseVersion(1, 2, 3);
+        ReleaseVersion left = new(1, 2, 3);
+        ReleaseVersion right = new(1, 2, 3);
 
         // Act
 
@@ -91,10 +91,10 @@ public sealed class ReleaseVersionTests
     public void ToString_Always_PrependsVPrefix()
     {
         // Arrange
-        var version = new ReleaseVersion(0, 3, 0);
+        ReleaseVersion version = new(0, 3, 0);
 
         // Act
-        var text = version.ToString();
+        string text = version.ToString();
 
         // Assert
         text.Should().Be("v0.3.0");

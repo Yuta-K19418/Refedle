@@ -11,12 +11,12 @@ public sealed partial class RunnerTests
     public async Task RunAsync_OnSuccess_ReportsPreparingThenConvertingPhases()
     {
         // Arrange
-        var args = CreateStatusArgs(TestRecipeYaml);
-        var logger = new TestAppLogger();
-        var status = new TestStatusReporter();
+        Arguments args = CreateStatusArgs(TestRecipeYaml);
+        TestAppLogger logger = new();
+        TestStatusReporter status = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(
+        ExitCode exitCode = await Runner.RunAsync(
             args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), status);
 
         // Assert
@@ -28,12 +28,12 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenPreparationFails_ReportsOnlyPreparingAndStillLogsTheError()
     {
         // Arrange
-        var args = CreateStatusArgs(TestRecipeYaml) with { RecipeFile = Path.Combine(_testDir, "missing.yaml") };
-        var logger = new TestAppLogger();
-        var status = new TestStatusReporter();
+        Arguments args = CreateStatusArgs(TestRecipeYaml) with { RecipeFile = Path.Combine(_testDir, "missing.yaml") };
+        TestAppLogger logger = new();
+        TestStatusReporter status = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(
+        ExitCode exitCode = await Runner.RunAsync(
             args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), status);
 
         // Assert
@@ -46,11 +46,11 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WithNullStatusReporter_ThrowsArgumentNullException()
     {
         // Arrange
-        var args = CreateStatusArgs(TestRecipeYaml);
-        var logger = new TestAppLogger();
+        Arguments args = CreateStatusArgs(TestRecipeYaml);
+        TestAppLogger logger = new();
 
         // Act
-        var act = async () => await Runner.RunAsync(
+        Func<Task<ExitCode>> act = async () => await Runner.RunAsync(
             args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), null!);
 
         // Assert
@@ -59,8 +59,8 @@ public sealed partial class RunnerTests
 
     private Arguments CreateStatusArgs(string recipeYaml)
     {
-        var inputFile = Path.Combine(_testDir, "status-input.csv");
-        var recipeFile = Path.Combine(_testDir, "status-recipe.yaml");
+        string inputFile = Path.Combine(_testDir, "status-input.csv");
+        string recipeFile = Path.Combine(_testDir, "status-recipe.yaml");
         File.WriteAllText(inputFile, TestCsvContent);
         File.WriteAllText(recipeFile, recipeYaml);
         return new Arguments

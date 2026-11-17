@@ -9,11 +9,11 @@ public sealed class TempOutputPathProviderTests
     public void NewPath_WithOutputFile_ReturnsPathInSameDirectory()
     {
         // Arrange
-        var provider = new TempOutputPathProvider();
-        var outputFile = Path.Combine("some", "dir", "output.csv");
+        TempOutputPathProvider provider = new();
+        string outputFile = Path.Combine("some", "dir", "output.csv");
 
         // Act
-        var tempPath = provider.NewPath(outputFile);
+        string tempPath = provider.NewPath(outputFile);
 
         // Assert
         Path.GetDirectoryName(tempPath).Should().Be(Path.GetDirectoryName(outputFile));
@@ -23,12 +23,12 @@ public sealed class TempOutputPathProviderTests
     public void NewPath_CalledTwice_ReturnsDifferentPaths()
     {
         // Arrange
-        var provider = new TempOutputPathProvider();
-        var outputFile = Path.Combine("some", "dir", "output.csv");
+        TempOutputPathProvider provider = new();
+        string outputFile = Path.Combine("some", "dir", "output.csv");
 
         // Act
-        var first = provider.NewPath(outputFile);
-        var second = provider.NewPath(outputFile);
+        string first = provider.NewPath(outputFile);
+        string second = provider.NewPath(outputFile);
 
         // Assert
         second.Should().NotBe(first);

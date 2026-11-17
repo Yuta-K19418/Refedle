@@ -19,6 +19,7 @@ using Refedle.Tests.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 using CsvRowIndexer = Refedle.Engine.IO.Csv.DataRowIndexer;
 using JsonArrayRowIndexer = Refedle.Engine.IO.JsonArray.RowIndexer;
@@ -41,7 +42,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange
         // Act
-        var result = AppKeyHandler.IsGlobalShortcut(keyCode);
+        bool result = AppKeyHandler.IsGlobalShortcut(keyCode);
 
         // Assert
         result.Should().BeTrue();
@@ -56,7 +57,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange
         // Act
-        var result = AppKeyHandler.IsGlobalShortcut(keyCode);
+        bool result = AppKeyHandler.IsGlobalShortcut(keyCode);
 
         // Assert
         result.Should().BeFalse();
@@ -75,7 +76,7 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange
         // Act
-        var result = AppKeyHandler.IsGlobalShortcut(keyCode);
+        bool result = AppKeyHandler.IsGlobalShortcut(keyCode);
 
         // Assert
         // Modifier keys are ignored - only the base character is checked
@@ -86,17 +87,17 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenCurrentViewIsNotMorphTableView_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleActionMenu();
+        bool result = handler.HandleActionMenu();
 
         // Assert
         result.Should().BeFalse();
@@ -106,19 +107,19 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using var view = new TestTableView { Table = null };
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using TestTableView view = new() { Table = null };
         window.Add(view);
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleActionMenu();
+        bool result = handler.HandleActionMenu();
 
         // Assert
         result.Should().BeFalse();
@@ -128,12 +129,12 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableIsNotPagedTableSource_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using var view = new TestTableView
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using TestTableView view = new()
         {
             Table = new NonExtendedTableSource(),
             OnMorphAction = _ => { },
@@ -141,12 +142,12 @@ public sealed class AppKeyHandlerTests
             Value = new TableSelection(new Point(0, 0)),
         };
         window.Add(view);
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleActionMenu();
+        bool result = handler.HandleActionMenu();
 
         // Assert
         result.Should().BeFalse();
@@ -156,19 +157,19 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenOnMorphActionIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using var view = new TestTableView { Table = new PagedTableSource(new TestTableSource()) };
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using TestTableView view = new() { Table = new PagedTableSource(new TestTableSource()) };
         window.Add(view);
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleActionMenu();
+        bool result = handler.HandleActionMenu();
 
         // Assert
         result.Should().BeFalse();
@@ -178,24 +179,24 @@ public sealed class AppKeyHandlerTests
     public void HandleActionMenu_WhenTableValueIsNull_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using var view = new TestTableView
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using TestTableView view = new()
         {
             Table = new PagedTableSource(new TestTableSource()),
             OnMorphAction = _ => { }
         };
         view.Value = null;
         window.Add(view);
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleActionMenu();
+        bool result = handler.HandleActionMenu();
 
         // Assert
         result.Should().BeFalse();
@@ -205,17 +206,17 @@ public sealed class AppKeyHandlerTests
     public void HandleClearActions_WhenActionStackIsEmpty_ReturnsFalse()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleClearActions();
+        bool result = handler.HandleClearActions();
 
         // Assert
         result.Should().BeFalse();
@@ -227,22 +228,22 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange — base ActionStack has entries, but the active DrillDown's own stack is empty;
         // clearing from FocusedTable must consult the DrillDown's stack, not the base one
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "col1", NewName = "new_col1" });
-        var drillDown = new DrillDownState(
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleClearActions();
+        bool result = handler.HandleClearActions();
 
         // Assert
         result.Should().BeFalse();
@@ -254,10 +255,10 @@ public sealed class AppKeyHandlerTests
     {
         // Arrange — the DrillDown carried actions before an error view replaced FocusedTable;
         // clearing must consult the (empty) base stack, not those actions
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
-        var drillDown = new DrillDownState(
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             schema,
             ViewMode.JsonLinesTree,
@@ -265,15 +266,15 @@ public sealed class AppKeyHandlerTests
             ActionStack: [new RenameColumnAction { OldName = "x", NewName = "y" }]);
         state.EnterFocusedTable(drillDown);
         state.EnterPlaceholderMode();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
         // Act
-        var result = handler.HandleClearActions();
+        bool result = handler.HandleClearActions();
 
         // Assert
         result.Should().BeFalse();
@@ -287,25 +288,25 @@ public sealed class AppKeyHandlerTests
     public void OnGlobalKeyDown_BackspaceInFocusedTableWithDrillDown_CallsReturnFromDrillDown()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("id", "1"u8.ToArray())];
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile("test.json");
         state.EnterJsonObjectTree(entries);
-        var drillDown = new DrillDownState(
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
         handler.Subscribe();
 
         // Act
-        var handled = app.Keyboard.RaiseKeyDownEvent(KeyCode.Backspace);
+        bool handled = app.Keyboard.RaiseKeyDownEvent(KeyCode.Backspace);
 
         // Assert
         handled.Should().BeTrue();
@@ -317,18 +318,18 @@ public sealed class AppKeyHandlerTests
     public void OnGlobalKeyDown_BackspaceOutsideFocusedTable_ReturnsUnhandled()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
         handler.Subscribe();
 
         // Act
-        var handled = app.Keyboard.RaiseKeyDownEvent(KeyCode.Backspace);
+        bool handled = app.Keyboard.RaiseKeyDownEvent(KeyCode.Backspace);
 
         // Assert
         handled.Should().BeFalse();
@@ -338,20 +339,20 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WhenTableActionSelected_ClosesMenuBeforeActionDialogOpens()
     {
         // Arrange
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
         File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
         try
         {
-            var probe = new MenuClosedProbe();
-            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            MenuClosedProbe probe = new();
+            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var context = CreateTableMenuContext(app, window, filePath);
+                LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
                 probe.Attach(app);
                 return context;
             });
 
             // Act
-            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
             result.Should().BeTrue();
@@ -367,22 +368,22 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WhenTableMenuCancelled_RunsNoAction()
     {
         // Arrange
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
         File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
         try
         {
-            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var context = CreateTableMenuContext(app, window, filePath);
+                LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
                 ModalKeys.SendOnceOnTop(app, window, Key.Esc);
                 return context;
             });
 
             // Act
-            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
-            var actionCount = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.Count));
+            int actionCount = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.Count));
             result.Should().BeTrue();
             actionCount.Should().Be(0);
         }
@@ -406,7 +407,7 @@ public sealed class AppKeyHandlerTests
         {
             void OnIteration(object? sender, EventArgs<IApplication?> args)
             {
-                var topView = app.TopRunnableView;
+                View? topView = app.TopRunnableView;
                 if (topView is ActionMenuDialog top && _menu is null)
                 {
                     _menu = top;
@@ -429,23 +430,23 @@ public sealed class AppKeyHandlerTests
     private static LiveTestContext<AppKeyHandler> CreateTableMenuContext(
         IApplication app, Window window, string filePath)
     {
-        var state = new AppState();
+        AppState state = new();
         state.StartNewFile(filePath);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var indexer = new CsvRowIndexer(filePath);
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        CsvRowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.Csv,
             Columns = [new ColumnSchema { Name = "Col1", Type = ColumnType.Text }],
         };
         viewManager.SwitchToCsvTable(indexer, schema);
-        var view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
+        CsvTableView view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
         view.Value = new TableSelection(new Point(0, 0));
-        var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-        var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-        var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
         return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
     }
 
@@ -453,33 +454,33 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WithJsonObjectFormatAndArrayNode_DispatchesSingleDrillDown()
     {
         // Arrange
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
         try
         {
-            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var state = new AppState();
+                AppState state = new();
                 state.StartNewFile(filePath);
-                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
                 viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
-                var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
+                MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
                 treeView.SelectedObject = JsonObjectRangeTreeNode.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
-                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
                 ModalKeys.SendOnceOnTop(app, window, Key.Enter);
                 return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
             });
 
             // Act — HandleActionMenu detects JsonObject format and dispatches to HandleSingleDrillDown,
             // which runs an ActionMenuDialog confirmed here via the Enter-key pattern.
-            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
             result.Should().BeTrue();
-            var (mode, viewType) = await session.InvokeAsync((_, ctx) =>
+            (ViewMode mode, Type? viewType) = await session.InvokeAsync((_, ctx) =>
                 Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
             mode.Should().Be(ViewMode.FocusedTable);
             viewType.Should().Be<FocusedTableView>();
@@ -497,25 +498,25 @@ public sealed class AppKeyHandlerTests
         // Arrange — drive the guards indirectly through HandleActionMenu (same pattern as
         // HandleActionMenu_WhenCurrentViewIsNotMorphTableView_ReturnsFalse). The guard clauses
         // return before the ActionMenuDialog is shown, so no Enter-key confirmation is needed.
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
         try
         {
-            using var app = TestAppFactory.Create();
-            using var state = new AppState();
+            using IApplication app = TestAppFactory.Create();
+            using AppState state = new();
             state.StartNewFile(filePath);
-            using var window = new Window();
-            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+            using Window window = new();
+            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
             viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
-            var treeView = (MorphTreeView)viewManager.GetCurrentView()!;
+            MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
             treeView.SelectedObject = selectedNode;
-            var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-            var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-            using var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+            FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+            RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+            using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
             // Act
-            var result = handler.HandleActionMenu();
+            bool result = handler.HandleActionMenu();
 
             // Assert
             result.Should().BeFalse();
@@ -551,33 +552,33 @@ public sealed class AppKeyHandlerTests
         // Arrange — a range node is a paging container whose KeyPath is empty, so the action
         // menu must not open for it. Enter auto-closes the dialog if the guard ever regresses,
         // making the assertion fail instead of the test hanging on the modal loop.
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
         File.WriteAllText(filePath, "{\"id\":1}\n{\"id\":2}");
         try
         {
             // The test owns the reader behind the range node; declaring it before the session
             // makes it dispose after the session ends but before the temp file is deleted.
-            using var reader = new RowReader(filePath);
-            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            using RowReader reader = new(filePath);
+            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var state = new AppState();
+                AppState state = new();
                 state.StartNewFile(filePath);
-                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-                var indexer = new JsonLinesRowIndexer(filePath);
+                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+                JsonLinesRowIndexer indexer = new(filePath);
                 indexer.BuildIndex();
                 viewManager.SwitchToJsonLinesTree(indexer);
-                var treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonLinesTree");
+                MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonLinesTree");
                 treeView.SelectedObject = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2L);
-                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
                 ModalKeys.SendOnceOnTop(app, window, Key.Enter);
                 return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
             });
 
             // Act
-            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
             result.Should().BeFalse();
@@ -592,33 +593,33 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WhenJsonArrayRangeNodeSelected_ReturnsFalse()
     {
         // Arrange — same regression guard as the JSON Lines case, on the JSON Array tree view.
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
         File.WriteAllText(filePath, "[1,2]");
         try
         {
             // The test owns the reader behind the range node; declaring it before the session
             // makes it dispose after the session ends but before the temp file is deleted.
-            using var reader = new ElementReader(filePath);
-            await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+            using ElementReader reader = new(filePath);
+            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
             {
-                var state = new AppState();
+                AppState state = new();
                 state.StartNewFile(filePath);
-                var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-                var indexer = new JsonArrayRowIndexer(filePath);
+                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+                JsonArrayRowIndexer indexer = new(filePath);
                 indexer.BuildIndex();
                 viewManager.SwitchToJsonArrayTree(indexer);
-                var treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonArrayTree");
+                MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonArrayTree");
                 treeView.SelectedObject = new JsonArrayRangeTreeNode(indexer, reader, 0L, 2L);
-                var fileDialogHandler = new FileDialogHandler(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                var recipeCommandHandler = new RecipeCommandHandler(app, state, viewManager);
-                var handler = new AppKeyHandler(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
                 ModalKeys.SendOnceOnTop(app, window, Key.Enter);
                 return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
             });
 
             // Act
-            var result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
             // Assert
             result.Should().BeFalse();
@@ -635,7 +636,7 @@ public sealed class AppKeyHandlerTests
     /// </summary>
     private static MorphTreeView GetCurrentTreeViewOrThrow(ViewManager viewManager, string treeSwitchName)
     {
-        var currentView = viewManager.GetCurrentView();
+        View? currentView = viewManager.GetCurrentView();
         if (currentView is not MorphTreeView treeView)
         {
             throw new InvalidOperationException(

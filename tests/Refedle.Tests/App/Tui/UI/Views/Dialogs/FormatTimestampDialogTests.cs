@@ -9,10 +9,10 @@ public sealed class FormatTimestampDialogTests
     public void Constructor_SetsTitle_ToFormatTimestamp()
     {
         // Arrange
-        var columnName = "created_at";
+        string columnName = "created_at";
 
         // Act
-        using var dialog = new FormatTimestampDialog(columnName);
+        using FormatTimestampDialog dialog = new(columnName);
 
         // Assert
         dialog.Title.Should().Be("Format Timestamp");
@@ -22,10 +22,10 @@ public sealed class FormatTimestampDialogTests
     public void TargetFormat_BeforeInteraction_IsEmptyString()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FormatTimestampDialog(columnName);
+        using FormatTimestampDialog dialog = new(columnName);
 
         // Assert
         dialog.TargetFormat.Should().Be(string.Empty);
@@ -35,10 +35,10 @@ public sealed class FormatTimestampDialogTests
     public void Confirmed_BeforeInteraction_IsFalse()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FormatTimestampDialog(columnName);
+        using FormatTimestampDialog dialog = new(columnName);
 
         // Assert
         dialog.Confirmed.Should().BeFalse();

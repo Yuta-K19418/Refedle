@@ -14,7 +14,7 @@ public sealed class TuiDispatcherTests
         string[] args = ["--unknown-option"];
 
         // Act
-        var exitCode = await TuiDispatcher.RunAsync(args, CancellationToken.None);
+        ExitCode exitCode = await TuiDispatcher.RunAsync(args, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -28,7 +28,7 @@ public sealed class TuiDispatcherTests
         string[] args = ["--file", "/path/that/does/not/exist.csv"];
 
         // Act
-        var exitCode = await TuiDispatcher.RunAsync(args, CancellationToken.None);
+        ExitCode exitCode = await TuiDispatcher.RunAsync(args, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);

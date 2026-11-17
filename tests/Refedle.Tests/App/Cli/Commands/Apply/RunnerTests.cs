@@ -51,10 +51,10 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange
         Arguments? args = null;
-        var logger = new TestAppLogger();
+        TestAppLogger logger = new();
 
         // Act
-        var act = async () => await Runner.RunAsync(args!, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        Func<Task<ExitCode>> act = async () => await Runner.RunAsync(args!, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -64,20 +64,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToCsv_WithNoActions_WritesAllRowsUnchanged()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("name,age");
         output.Should().Contain("Alice");
         output.Should().Contain("Bob");
@@ -88,20 +88,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToCsv_WithRenameAction_WritesRenamedHeader()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", TestRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", TestRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().StartWith("name,new_age");
     }
 
@@ -109,20 +109,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToCsv_WithDeleteAction_OmitsColumn()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("name");
         output.Should().NotContain("age");
     }
@@ -131,20 +131,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToCsv_WithFilterAction_ExcludesNonMatchingRows()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("name");
         output.Should().Contain("Charlie");
         output.Should().NotContain("Alice");
@@ -155,20 +155,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToJsonLines_WithNoActions_WritesAllRowsUnchanged()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("Alice");
         output.Should().Contain("Bob");
         output.Should().Contain("Charlie");
@@ -178,20 +178,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToJsonLines_WithRenameAction_WritesRenamedKey()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", TestRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
+        string recipeFile = CreateTestFile("recipe.yaml", TestRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("\"new_age\"");
         output.Should().NotContain("\"age\"");
     }
@@ -200,20 +200,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToJsonLines_WithDeleteAction_OmitsKey()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Delete age\nactions:\n  - type: Delete\n    columnName: age");
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("\"name\"");
         output.Should().NotContain("\"age\"");
     }
@@ -222,20 +222,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToJsonLines_WithFilterAction_ExcludesNonMatchingRows()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Filter age\nactions:\n  - type: Filter\n    columnName: age\n    operator: GreaterThan\n    comparisonType: Number\n    value: 30");
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("Charlie");
         output.Should().NotContain("Alice");
         output.Should().NotContain("Bob");
@@ -245,20 +245,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToJsonLines_CrossFormat_WritesExpectedOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("\"name\"");
         output.Should().Contain("\"age\"");
         output.Should().Contain("Alice");
@@ -269,20 +269,20 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange — "extra" first appears at row 201, beyond the old 200-row initial-scan cap,
         // so the full-file column resolution is what surfaces it in the CSV header.
-        var lines = Enumerable.Range(0, 200).Select(_ => """{"name":"x"}""").Append("""{"name":"x","extra":"late"}""");
-        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        IEnumerable<string> lines = Enumerable.Range(0, 200).Select(_ => """{"name":"x"}""").Append("""{"name":"x","extra":"late"}""");
+        string inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().StartWith("name,extra");
         output.Should().Contain("late");
     }
@@ -291,20 +291,20 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_JsonLinesToCsv_CrossFormat_WritesExpectedOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", TestJsonLinesContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("name,age");
         output.Should().Contain("Alice");
     }
@@ -313,14 +313,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentInputPath_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = Path.Combine(_testDir, "nonexistent.csv");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = Path.Combine(_testDir, "nonexistent.csv");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -333,14 +333,14 @@ public sealed partial class RunnerTests : IDisposable
     {
         // Arrange — a zero-byte input file is rejected by input format detection,
         // aligning CLI behavior with the TUI's FormatDetector.
-        var inputFile = CreateTestFile("input.jsonl", "");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", "");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -352,14 +352,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentRecipePath_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = Path.Combine(_testDir, "nonexistent.yaml");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = Path.Combine(_testDir, "nonexistent.yaml");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -371,14 +371,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithUnsupportedInputExtension_ReturnsExitCode1()
     {
         // Arrange — .xml is an extension no phase of this feature will support.
-        var inputFile = CreateTestFile("input.xml", "[]");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.xml", "[]");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -390,14 +390,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.xml");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.xml");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -409,14 +409,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithUnknownExtension_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.unknown", "content");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.unknown", "content");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -428,16 +428,16 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithCancelledToken_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        using var cts = new CancellationTokenSource();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter(), ct: cts.Token);
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter(), ct: cts.Token);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -449,14 +449,14 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_WithMalformedRecipeFile_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "invalid: yaml: content");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "invalid: yaml: content");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -468,34 +468,34 @@ public sealed partial class RunnerTests : IDisposable
     public async Task RunAsync_CsvToCsv_WithEmptyInputFile_WritesHeaderOnly()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", "name,age\n");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", "name,age\n");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().StartWith("name,age");
         output.Should().NotContain("Alice");
     }
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return filePath;
     }
 
     private string CreateTestFileWithUtf8Bom(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllBytes(filePath, [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]);
         return filePath;
     }

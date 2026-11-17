@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.Json;
 using Refedle.Engine.Models;
@@ -15,7 +16,7 @@ public sealed class FullAggregationScannerTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var path in _tempFiles)
+        foreach (string path in _tempFiles)
         {
             if (File.Exists(path))
             {
@@ -32,12 +33,12 @@ public sealed class FullAggregationScannerTests : IDisposable
 
     private string WriteTempFile(DataFormat format, bool withUtf8Bom, string[] records)
     {
-        var extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
-        var path = Path.ChangeExtension(Path.GetTempFileName(), extension);
-        var content = format == DataFormat.JsonArray
+        string extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
+        string path = Path.ChangeExtension(Path.GetTempFileName(), extension);
+        string content = format == DataFormat.JsonArray
             ? $"[{string.Join(",", records)}]"
             : string.Join("\n", records);
-        var bytes = withUtf8Bom
+        byte[] bytes = withUtf8Bom
             ? [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]
             : Encoding.UTF8.GetBytes(content);
         File.WriteAllBytes(path, bytes);
@@ -51,7 +52,7 @@ public sealed class FullAggregationScannerTests : IDisposable
 
     private static JsonElement GetProperty(JsonRawBytes bytes, string propertyName)
     {
-        using var doc = JsonDocument.Parse(bytes);
+        using JsonDocument doc = JsonDocument.Parse(bytes);
         return doc.RootElement.GetProperty(propertyName).Clone();
     }
 
@@ -67,13 +68,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_WithUtf8BomPrefixedJsonArray_ReturnsOneRowPerRecord()
     {
         // Arrange — the ScanElements path must skip the BOM like the JSON Lines path does.
-        var path = CreateTempFileWithUtf8Bom(
+        string path = CreateTempFileWithUtf8Bom(
             DataFormat.JsonArray,
             """{"user":{"name":"Alice","age":30}}""",
             """{"user":{"name":"Bob","age":25}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -90,13 +91,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_ObjectLeafInAllRecords_ReturnsOneRowPerRecord(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":{"name":"Alice","age":30}}""",
             """{"user":{"name":"Bob","age":25}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -114,13 +115,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_ArrayOfObjectLeafInAllRecords_ReturnsOneRowPerElement(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"orders":[{"id":"A1","qty":2},{"id":"A2","qty":5}]}""",
             """{"orders":[{"id":"B1","qty":1}]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("orders"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("orders"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -137,13 +138,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_ArrayOfPrimitiveLeafInAllRecords_ReturnsRowsWithValueColumn(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"tags":["dev","ops"]}""",
             """{"tags":["dev"]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("tags"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("tags"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -161,13 +162,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_PrimitiveLeaf_ReturnsOneRowPerRecordWithKeyNamedColumn(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"score":88}""",
             """{"score":72}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("score"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("score"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -185,11 +186,11 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_IndexSegmentInPath_ProducesSameOutputAsParentArray(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"orders":[{"id":"A1"},{"id":"A2"}]}""");
+        string path = CreateTempFile(format, """{"orders":[{"id":"A1"},{"id":"A2"}]}""");
 
         // Act
-        var resultWithoutIndex = FullAggregationScanner.Scan(path, format, KeyPath("orders"));
-        var resultWithIndex = FullAggregationScanner.Scan(path, format, KeyPath("orders", "[0]"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> resultWithoutIndex = FullAggregationScanner.Scan(path, format, KeyPath("orders"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> resultWithIndex = FullAggregationScanner.Scan(path, format, KeyPath("orders", "[0]"));
 
         // Assert
         resultWithoutIndex.IsSuccess.Should().BeTrue();
@@ -206,12 +207,12 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_TwoIndexSegmentsInPath_HashHasTwoColonSeparators(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"orders":[{"tags":["urgent","gift"]},{"tags":["normal"]}]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("orders", "[0]", "tags"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("orders", "[0]", "tags"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -228,13 +229,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_KeyMissingInSomeRecords_SkipsThoseRecordsSilently(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":{"name":"Alice"}}""",
             """{"other":"x"}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -249,13 +250,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_KeySegmentFollowedByNonObjectToken_SkipsRecordSilently(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":"just a string"}""",
             """{"user":{"name":"Bob"}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user", "name"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user", "name"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -270,13 +271,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_IndexSegmentFollowedByNonArrayToken_SkipsRecordSilently(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"tags":"not an array"}""",
             """{"tags":["x","y"]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("tags", "[0]"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("tags", "[0]"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -293,10 +294,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_NoRecordsMatch_ReturnsFailureWithNoMatchingRecordsMessage(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"user":{"name":"Alice"}}""");
+        string path = CreateTempFile(format, """{"user":{"name":"Alice"}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("missing"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("missing"));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -307,10 +308,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_JsonObjectFormat_ReturnsFailure()
     {
         // Arrange
-        var path = Path.Combine(Path.GetTempPath(), "does-not-need-to-exist.json");
+        string path = Path.Combine(Path.GetTempPath(), "does-not-need-to-exist.json");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, DataFormat.JsonObject, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, DataFormat.JsonObject, KeyPath("user"));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -323,13 +324,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_AllMatchedLeafObjectsEmpty_ReturnsFailureWithNoKeysMessage(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":{}}""",
             """{"user":{}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -342,13 +343,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_VaryingKeysAcrossRecords_BuildsUnionSchemaWithNullableForMissingKeys(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":{"name":"Alice","age":30}}""",
             """{"user":{"name":"Bob"}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -365,12 +366,12 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_CancellationRequestedBeforeScanStarts_ThrowsOperationCanceledException(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"user":{"name":"Alice"}}""");
-        using var cts = new CancellationTokenSource();
+        string path = CreateTempFile(format, """{"user":{"name":"Alice"}}""");
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = () => FullAggregationScanner.Scan(path, format, KeyPath("user"), cts.Token);
+        Func<Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)>> act = () => FullAggregationScanner.Scan(path, format, KeyPath("user"), cts.Token);
 
         // Assert
         act.Should().Throw<OperationCanceledException>();
@@ -382,12 +383,12 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_NestedObjectOrArrayCellValue_RendersAsCollapsedPreview(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"user":{"name":"Alice","address":{"city":"Tokyo"},"tags":["dev","ops"]}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -402,10 +403,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_LeafValueIsNull_EmitsOneNullRow(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"score":null}""");
+        string path = CreateTempFile(format, """{"score":null}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("score"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("score"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -419,13 +420,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_EmptyArrayAtLeafPosition_ContributesZeroRowsForThatRecord(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"tags":[]}""",
             """{"tags":["x"]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("tags"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("tags"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -440,10 +441,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_MixedArrayOfObjectAndPrimitiveElements_ProducesCorrespondingRowTypes(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"items":[{"id":"A1"},"loose-string"]}""");
+        string path = CreateTempFile(format, """{"items":[{"id":"A1"},"loose-string"]}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("items"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("items"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -459,10 +460,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_Utf8MultiBytePropertyName_RoundTripsAsColumnIdentifier(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(format, """{"user":{"名前":"Alice"}}""");
+        string path = CreateTempFile(format, """{"user":{"名前":"Alice"}}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("user"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -475,10 +476,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_JsonLinesWithEmptyLineInMiddle_PreservesLineBasedRecordPosition()
     {
         // Arrange
-        var path = CreateTempFile(DataFormat.JsonLines, """{"score":1}""", "", """{"score":3}""");
+        string path = CreateTempFile(DataFormat.JsonLines, """{"score":1}""", "", """{"score":3}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, DataFormat.JsonLines, KeyPath("score"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, DataFormat.JsonLines, KeyPath("score"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -493,13 +494,13 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_EmptyKeyPath_TreatsEachRecordAsRowWithTopLevelKeysAsColumns(DataFormat format)
     {
         // Arrange
-        var path = CreateTempFile(
+        string path = CreateTempFile(
             format,
             """{"name":"Alice","age":30}""",
             """{"name":"Bob","age":25}""");
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, []);
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, []);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -515,14 +516,14 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_JsonLinesFileWithUtf8Bom_SkipsBomAndParsesFirstLine()
     {
         // Arrange
-        var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        string path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
         byte[] bom = [0xEF, 0xBB, 0xBF];
-        var content = Encoding.UTF8.GetBytes("""{"score":88}""");
+        byte[] content = Encoding.UTF8.GetBytes("""{"score":88}""");
         File.WriteAllBytes(path, [.. bom, .. content]);
         _tempFiles.Add(path);
 
         // Act
-        var result = FullAggregationScanner.Scan(path, DataFormat.JsonLines, KeyPath("score"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, DataFormat.JsonLines, KeyPath("score"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -544,7 +545,7 @@ public sealed class FullAggregationScannerTests : IDisposable
         // (asserted via the schema column name). The "[0]" segment below is built directly, not
         // via the KeyPath(...) helper, because that helper uses the same flawed '[' heuristic and
         // would silently defeat this test.
-        var path = CreateTempFile(format, """{"a":{"[0]":"hello"}}""");
+        string path = CreateTempFile(format, """{"a":{"[0]":"hello"}}""");
         IReadOnlyList<KeyPathSegment> keyPath =
         [
             new KeyPathSegment("a", KeyPathSegmentKind.Key),
@@ -552,7 +553,7 @@ public sealed class FullAggregationScannerTests : IDisposable
         ];
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, keyPath);
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, keyPath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -571,21 +572,21 @@ public sealed class FullAggregationScannerTests : IDisposable
     {
         const int remaining = 100;
         const int targetValueLength = 500;
-        var targetValue = new string('b', targetValueLength);
-        var target = "{\"note\":\"" + targetValue + "\"}";
+        string targetValue = new('b', targetValueLength);
+        string target = "{\"note\":\"" + targetValue + "\"}";
 
-        var wrapperOverhead = "{\"pad\":\"".Length + "\"}".Length;
-        var extraOverhead = format == DataFormat.JsonLines ? 1 : 2; // newline, or "[" + ","
-        var padLen = FileChunkReader.BufferSize - remaining - wrapperOverhead - extraOverhead;
-        var padElem = "{\"pad\":\"" + new string('a', padLen) + "\"}";
+        int wrapperOverhead = "{\"pad\":\"".Length + "\"}".Length;
+        int extraOverhead = format == DataFormat.JsonLines ? 1 : 2; // newline, or "[" + ","
+        int padLen = FileChunkReader.BufferSize - remaining - wrapperOverhead - extraOverhead;
+        string padElem = "{\"pad\":\"" + new string('a', padLen) + "\"}";
 
-        var content = format == DataFormat.JsonLines
+        string content = format == DataFormat.JsonLines
             ? padElem + "\n" + target
             : "[" + padElem + "," + target + "]";
-        var extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
+        string extension = format == DataFormat.JsonLines ? ".jsonl" : ".json";
 
-        var path = Path.ChangeExtension(Path.GetTempFileName(), extension);
-        var bytes = withUtf8Bom
+        string path = Path.ChangeExtension(Path.GetTempFileName(), extension);
+        byte[] bytes = withUtf8Bom
             ? [0xEF, 0xBB, 0xBF, .. Encoding.UTF8.GetBytes(content)]
             : Encoding.UTF8.GetBytes(content);
         File.WriteAllBytes(path, bytes);
@@ -601,10 +602,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     public void Scan_WhenLineSpansBufferBoundary_ParsesRecordWithoutCorruption(DataFormat format)
     {
         // Arrange
-        var (path, expectedValue) = CreateBoundaryStraddlingFile(format);
+        (string? path, string? expectedValue) = CreateBoundaryStraddlingFile(format);
 
         // Act
-        var result = FullAggregationScanner.Scan(path, format, KeyPath("note"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, format, KeyPath("note"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -617,10 +618,10 @@ public sealed class FullAggregationScannerTests : IDisposable
     {
         // Arrange — the boundary-straddling JSON Array fixture prefixed with a BOM: the shifted
         // start offset must not corrupt the multi-segment reader continuation mid-value.
-        var (path, expectedValue) = CreateBoundaryStraddlingFile(DataFormat.JsonArray, withUtf8Bom: true);
+        (string? path, string? expectedValue) = CreateBoundaryStraddlingFile(DataFormat.JsonArray, withUtf8Bom: true);
 
         // Act
-        var result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("note"));
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = FullAggregationScanner.Scan(path, DataFormat.JsonArray, KeyPath("note"));
 
         // Assert
         result.IsSuccess.Should().BeTrue();

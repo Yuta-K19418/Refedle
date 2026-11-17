@@ -34,7 +34,7 @@ public sealed class FocusedTableSourceTests
     public void Constructor_NullDrillDownState_ThrowsArgumentNullException()
     {
         // Arrange / Act
-        var act = () => new FocusedTableSource(null!);
+        Func<FocusedTableSource> act = () => new FocusedTableSource(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -44,10 +44,10 @@ public sealed class FocusedTableSourceTests
     public void Rows_ReturnsRowCount()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var rows = source.TotalRows;
+        long rows = source.TotalRows;
 
         // Assert
         rows.Should().Be(2);
@@ -57,10 +57,10 @@ public sealed class FocusedTableSourceTests
     public void Columns_ReturnsSchemaColumnCountPlusOne()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var columns = source.Columns;
+        int columns = source.Columns;
 
         // Assert
         columns.Should().Be(3);
@@ -70,10 +70,10 @@ public sealed class FocusedTableSourceTests
     public void ColumnNames_ReturnsHashFollowedByTypeLabeledSchemaColumnNames()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var columnNames = source.ColumnNames;
+        string[] columnNames = source.ColumnNames;
 
         // Assert
         columnNames.Should().Equal("#", "name (text)", "age (number)");
@@ -83,10 +83,10 @@ public sealed class FocusedTableSourceTests
     public void RawColumnNames_ReturnsHashFollowedByRawSchemaColumnNames()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var rawColumnNames = source.RawColumnNames;
+        string[] rawColumnNames = source.RawColumnNames;
 
         // Assert
         rawColumnNames.Should().Equal("#", "name", "age");
@@ -98,10 +98,10 @@ public sealed class FocusedTableSourceTests
     public void Indexer_HashColumn_ReturnsRowHashValue(int row, string expected)
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var hashCell = source[row, 0];
+        object hashCell = source[row, 0];
 
         // Assert
         hashCell.Should().Be(expected);
@@ -111,10 +111,10 @@ public sealed class FocusedTableSourceTests
     public void Indexer_NonHashColumn_DelegatesToJsonObjectCellExtractor()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var cell = source[0, 1];
+        object cell = source[0, 1];
 
         // Assert
         cell.Should().Be("Alice");
@@ -124,10 +124,10 @@ public sealed class FocusedTableSourceTests
     public void Indexer_NonHashColumn_SecondColumn_ReturnsCorrectValue()
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var cell = source[0, 2];
+        object cell = source[0, 2];
 
         // Assert
         cell.Should().Be("30");
@@ -141,10 +141,10 @@ public sealed class FocusedTableSourceTests
     public void Indexer_OutOfBounds_ThrowsArgumentOutOfRangeException(int row, int col)
     {
         // Arrange
-        var source = new FocusedTableSource(CreateState());
+        FocusedTableSource source = new(CreateState());
 
         // Act
-        var act = () => source[row, col];
+        Func<object> act = () => source[row, col];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();

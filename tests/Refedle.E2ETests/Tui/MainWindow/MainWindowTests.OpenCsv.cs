@@ -9,13 +9,13 @@ public sealed partial class MainWindowTests
     public async Task OpenKey_WithCsvFileSelectedInOpenDialog_RendersHeaderAndDataRowsOnceIndexed()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
 
         // Act: drive the real 'o'-key flow. The path field is pre-filled with the dialog's
         // current directory, so clear it (same pattern as the Save tests) before entering
@@ -28,7 +28,7 @@ public sealed partial class MainWindowTests
         Harness.SendPaste(inputFile);
         await Harness.WaitForContentsAsync("input.csv");
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("Charlie", "35");
+        string[] lines = await Harness.WaitForContentsAsync("Charlie", "35");
 
         // Assert
         // Rows 0-3 are the window border, "File" menu bar, and blank spacer above the table's

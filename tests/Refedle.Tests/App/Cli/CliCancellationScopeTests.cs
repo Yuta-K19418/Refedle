@@ -12,8 +12,8 @@ public sealed class CliCancellationScopeTests
     public void Create_WhenOuterTokenIsCancelled_CancelsScopeToken()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        using var scope = CliCancellationScope.Create(new TestCancelKeyPressSource(), cts.Token);
+        using CancellationTokenSource cts = new();
+        using CliCancellationScope scope = CliCancellationScope.Create(new TestCancelKeyPressSource(), cts.Token);
 
         // Act
         cts.Cancel();
@@ -26,11 +26,11 @@ public sealed class CliCancellationScopeTests
     public void Create_WhenCtrlCIsPressed_CancelsScopeToken()
     {
         // Arrange
-        var source = new TestCancelKeyPressSource();
-        using var scope = CliCancellationScope.Create(source, CancellationToken.None);
+        TestCancelKeyPressSource source = new();
+        using CliCancellationScope scope = CliCancellationScope.Create(source, CancellationToken.None);
 
         // Act
-        var args = source.Raise();
+        ConsoleCancelEventArgs args = source.Raise();
 
         // Assert
         scope.Token.IsCancellationRequested.Should().BeTrue();
@@ -41,11 +41,11 @@ public sealed class CliCancellationScopeTests
     public void Dispose_WhenCalledTwice_DoesNotThrow()
     {
         // Arrange
-        var scope = CliCancellationScope.Create(new TestCancelKeyPressSource(), CancellationToken.None);
+        CliCancellationScope scope = CliCancellationScope.Create(new TestCancelKeyPressSource(), CancellationToken.None);
         scope.Dispose();
 
         // Act
-        var act = scope.Dispose;
+        Action act = scope.Dispose;
 
         // Assert
         act.Should().NotThrow();
@@ -55,12 +55,12 @@ public sealed class CliCancellationScopeTests
     public void Dispose_ThenCtrlCPressed_DoesNotThrowAndSourceHasNoSubscribers()
     {
         // Arrange — a disposed scope has unsubscribed, so a later Ctrl+C press must not reach it.
-        var source = new TestCancelKeyPressSource();
-        var scope = CliCancellationScope.Create(source, CancellationToken.None);
+        TestCancelKeyPressSource source = new();
+        CliCancellationScope scope = CliCancellationScope.Create(source, CancellationToken.None);
         scope.Dispose();
 
         // Act
-        var act = source.Raise;
+        Func<ConsoleCancelEventArgs> act = source.Raise;
 
         // Assert
         act.Should().NotThrow();
@@ -73,18 +73,18 @@ public sealed class CliCancellationScopeTests
         // Arrange — the blocking subscriber is registered before the scope, so it runs first
         // and keeps the raise in flight on a worker thread while the scope's own handler has
         // not been entered yet.
-        var source = new TestCancelKeyPressSource();
-        var handlerEntered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var releaseHandler = new ManualResetEventSlim(false);
+        TestCancelKeyPressSource source = new();
+        TaskCompletionSource handlerEntered = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        using ManualResetEventSlim releaseHandler = new(false);
         source.CancelKeyPress += (_, _) =>
         {
             handlerEntered.SetResult();
             releaseHandler.Wait();
         };
-        using var scope = CliCancellationScope.Create(source, CancellationToken.None);
-        var cancelled = false;
-        using var registration = scope.Token.Register(() => cancelled = true);
-        var raiseTask = Task.Run(source.Raise);
+        using CliCancellationScope scope = CliCancellationScope.Create(source, CancellationToken.None);
+        bool cancelled = false;
+        using CancellationTokenRegistration registration = scope.Token.Register(() => cancelled = true);
+        Task<ConsoleCancelEventArgs> raiseTask = Task.Run(source.Raise);
         try
         {
             await handlerEntered.Task.WaitAsync(_waitTimeout);
@@ -111,11 +111,11 @@ public sealed class CliCancellationScopeTests
     public void Create_Dispose_Create_ThenCtrlCPressed_OnlyLiveScopeCancels_AndExactlyOneSubscriber()
     {
         // Arrange — a disposed scope must not leave its handler subscribed to the shared source.
-        var source = new TestCancelKeyPressSource();
-        var deadScope = CliCancellationScope.Create(source, CancellationToken.None);
-        var deadToken = deadScope.Token;
+        TestCancelKeyPressSource source = new();
+        CliCancellationScope deadScope = CliCancellationScope.Create(source, CancellationToken.None);
+        CancellationToken deadToken = deadScope.Token;
         deadScope.Dispose();
-        var liveScope = CliCancellationScope.Create(source, CancellationToken.None);
+        CliCancellationScope liveScope = CliCancellationScope.Create(source, CancellationToken.None);
 
         // Act
         source.Raise();
@@ -144,7 +144,7 @@ public sealed class CliCancellationScopeTests
         {
             // ConsoleCancelEventArgs is sealed with an internal constructor (only Console can
             // create it), so a zero-initialized instance stands in for the real signal payload.
-            var args = (ConsoleCancelEventArgs)RuntimeHelpers.GetUninitializedObject(typeof(ConsoleCancelEventArgs));
+            ConsoleCancelEventArgs args = (ConsoleCancelEventArgs)RuntimeHelpers.GetUninitializedObject(typeof(ConsoleCancelEventArgs));
             _handlers?.Invoke(this, args);
             return args;
         }

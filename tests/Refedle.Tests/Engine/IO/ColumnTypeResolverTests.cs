@@ -61,7 +61,7 @@ public sealed class ColumnTypeResolverTests
     )
     {
         // Act
-        var result = ColumnTypeResolver.Resolve(current, observed);
+        ColumnType result = ColumnTypeResolver.Resolve(current, observed);
 
         // Assert
         result.Should().Be(expected);

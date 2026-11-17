@@ -1,6 +1,7 @@
 using System.Runtime.Versioning;
 using AwesomeAssertions;
 using Refedle.App.Cli.Commands.Update;
+using Refedle.Engine;
 
 namespace Refedle.Tests.App.Cli.Commands.Update;
 
@@ -17,11 +18,11 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WithValidArchive_ReplacesTargetAndLeavesNoTempFile()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
-        var replacer = new ArchiveBinaryReplacer();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var result = await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
+        Result result = await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -33,14 +34,14 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WithCorruptGzip_PreservesTargetAndReturnsFailure()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithCorruptGzip();
-        var replacer = new ArchiveBinaryReplacer();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithCorruptGzip();
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
+        Func<Task<Result>> act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
 
         // Assert
-        var result = (await act.Should().NotThrowAsync()).Which;
+        Result result = (await act.Should().NotThrowAsync()).Which;
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("corrupted");
         (await File.ReadAllBytesAsync(fixture.TargetPath)).Should().Equal(UpdateArchiveFixture.OriginalTargetBytes);
@@ -51,14 +52,14 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WithoutBinaryEntry_PreservesTargetAndReturnsFailure()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithoutBinaryEntry();
-        var replacer = new ArchiveBinaryReplacer();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithoutBinaryEntry();
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
+        Func<Task<Result>> act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
 
         // Assert
-        var result = (await act.Should().NotThrowAsync()).Which;
+        Result result = (await act.Should().NotThrowAsync()).Which;
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Contain("does not contain the 'refedle' binary");
         (await File.ReadAllBytesAsync(fixture.TargetPath)).Should().Equal(UpdateArchiveFixture.OriginalTargetBytes);
@@ -69,12 +70,12 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WhenTargetDirectoryDoesNotExist_ReturnsFailure()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
-        var missingTarget = Path.Combine(fixture.RootPath, "no-such-dir", "refedle");
-        var replacer = new ArchiveBinaryReplacer();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
+        string missingTarget = Path.Combine(fixture.RootPath, "no-such-dir", "refedle");
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var result = await replacer.ReplaceAsync(fixture.ArchivePath, missingTarget, CancellationToken.None);
+        Result result = await replacer.ReplaceAsync(fixture.ArchivePath, missingTarget, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -85,13 +86,13 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_WhenCancelledBeforeMove_PreservesTargetAndThrows()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
-        using var cts = new CancellationTokenSource();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
-        var replacer = new ArchiveBinaryReplacer();
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, cts.Token);
+        Func<Task<Result>> act = async () => await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -104,11 +105,11 @@ public sealed class ArchiveBinaryReplacerTests
     public async Task ReplaceAsync_OnUnix_MarksReplacedBinaryExecutable()
     {
         // Arrange
-        using var fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
-        var replacer = new ArchiveBinaryReplacer();
+        using UpdateArchiveFixture fixture = UpdateArchiveFixture.WithBinaryEntry(_newBinaryBytes);
+        ArchiveBinaryReplacer replacer = new();
 
         // Act
-        var result = await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
+        Result result = await replacer.ReplaceAsync(fixture.ArchivePath, fixture.TargetPath, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

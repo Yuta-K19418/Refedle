@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.IO.Factories;
+using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 
@@ -27,11 +28,11 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithNullKeyPath_ThrowsInvalidOperationException()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var factory = new JsonObjectRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(inputFile, drillDownKeyPath: null, ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
+        Func<Task<JsonObjectRecordReader>> act = async () => await factory.CreateAsync(inputFile, drillDownKeyPath: null, ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -41,11 +42,11 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithEmptyKeyPath_ThrowsInvalidOperationException()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var factory = new JsonObjectRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(inputFile, drillDownKeyPath: [], ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
+        Func<Task<JsonObjectRecordReader>> act = async () => await factory.CreateAsync(inputFile, drillDownKeyPath: [], ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -55,12 +56,12 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithUnresolvableKeyPath_ThrowsInvalidOperationException()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var keyPath = new KeyPathSegment[] { new("missing", KeyPathSegmentKind.Key) };
-        var factory = new JsonObjectRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        KeyPathSegment[] keyPath = [new("missing", KeyPathSegmentKind.Key)];
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(inputFile, keyPath, ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
+        Func<Task<JsonObjectRecordReader>> act = async () => await factory.CreateAsync(inputFile, keyPath, ["id"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
 
         // Assert — the underlying resolver's error message is surfaced as-is.
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*\"missing\" was not found*");
@@ -70,12 +71,12 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WhenNodeIsNotArray_ThrowsInvalidOperationException()
     {
         // Arrange — the KeyPath resolves, but to an object rather than an array of rows.
-        var inputFile = CreateTestFile("input.json", """{"meta":{"version":1}}""");
-        var keyPath = new KeyPathSegment[] { new("meta", KeyPathSegmentKind.Key) };
-        var factory = new JsonObjectRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """{"meta":{"version":1}}""");
+        KeyPathSegment[] keyPath = [new("meta", KeyPathSegmentKind.Key)];
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        var act = async () => await factory.CreateAsync(inputFile, keyPath, ["version"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
+        Func<Task<JsonObjectRecordReader>> act = async () => await factory.CreateAsync(inputFile, keyPath, ["version"], BuildOutputSchema(), new TestAppLogger(), CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Node is not a JSON Array.");
@@ -85,15 +86,15 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithUtf8BomPrefixedInput_ReturnsReaderOverResolvedRows()
     {
         // Arrange — a UTF-8 BOM at the start of the file must not break KeyPath resolution.
-        var inputFile = Path.Combine(_testDir, "input.json");
+        string inputFile = Path.Combine(_testDir, "input.json");
         File.WriteAllBytes(
             inputFile,
             [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("""{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""")]);
         KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
-        var factory = new JsonObjectRecordReaderFactory();
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using JsonObjectRecordReader reader = await factory.CreateAsync(
             inputFile, keyPath, ["id", "item"], BuildOutputSchema("id", "item"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -109,12 +110,12 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithValidKeyPath_ReturnsReaderOverResolvedRows()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
-        var factory = new JsonObjectRecordReaderFactory();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+        JsonObjectRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using JsonObjectRecordReader reader = await factory.CreateAsync(
             inputFile, keyPath, ["id", "item"], BuildOutputSchema("id", "item"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -131,7 +132,7 @@ public sealed class JsonObjectRecordReaderFactoryTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
     }

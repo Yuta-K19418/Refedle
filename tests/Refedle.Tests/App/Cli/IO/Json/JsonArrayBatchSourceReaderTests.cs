@@ -11,7 +11,7 @@ public sealed class JsonArrayBatchSourceReaderTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var path in _tempFiles)
+        foreach (string path in _tempFiles)
         {
             if (File.Exists(path))
             {
@@ -24,14 +24,14 @@ public sealed class JsonArrayBatchSourceReaderTests : IDisposable
     public void ReadBatch_ReturnsRawElementBytesFromTheCheckpoint()
     {
         // Arrange
-        var path = CreateFile("""[{"id":1},{"id":2},{"id":3}]""");
-        var indexer = new RowIndexer(path);
+        string path = CreateFile("""[{"id":1},{"id":2},{"id":3}]""");
+        RowIndexer indexer = new(path);
         indexer.BuildIndex(CancellationToken.None);
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(0);
-        using var source = new JsonArrayBatchSourceReader(new ElementReader(path));
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(0);
+        using JsonArrayBatchSourceReader source = new(new ElementReader(path));
 
         // Act
-        var batch = source.ReadBatch(byteOffset, rowOffset, 3);
+        IReadOnlyList<JsonRawBytes> batch = source.ReadBatch(byteOffset, rowOffset, 3);
 
         // Assert
         batch.Select(b => Encoding.UTF8.GetString(b.Span))
@@ -42,11 +42,11 @@ public sealed class JsonArrayBatchSourceReaderTests : IDisposable
     public void ReadBatch_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange — disposal delegates to the wrapped ElementReader's own guard.
-        var path = CreateFile("""[{"id":1}]""");
-        var indexer = new RowIndexer(path);
+        string path = CreateFile("""[{"id":1}]""");
+        RowIndexer indexer = new(path);
         indexer.BuildIndex(CancellationToken.None);
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(0);
-        var source = new JsonArrayBatchSourceReader(new ElementReader(path));
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(0);
+        JsonArrayBatchSourceReader source = new(new ElementReader(path));
         source.ReadBatch(byteOffset, rowOffset, 1);
         source.Dispose();
 
@@ -59,7 +59,7 @@ public sealed class JsonArrayBatchSourceReaderTests : IDisposable
 
     private string CreateFile(string content)
     {
-        var path = Path.ChangeExtension(Path.GetTempFileName(), ".json");
+        string path = Path.ChangeExtension(Path.GetTempFileName(), ".json");
         File.WriteAllText(path, content);
         _tempFiles.Add(path);
         return path;

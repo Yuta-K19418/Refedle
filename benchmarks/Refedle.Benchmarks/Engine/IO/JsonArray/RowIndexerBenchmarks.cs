@@ -25,7 +25,7 @@ public class RowIndexerBenchmarks : IDisposable
     /// </summary>
     public RowIndexerBenchmarks()
     {
-        var id = Guid.NewGuid();
+        Guid id = Guid.NewGuid();
         _tempFilePath1k = Path.Combine(
             Path.GetTempPath(),
             $"jsonarray_bench_1k_{id}.json"
@@ -53,7 +53,7 @@ public class RowIndexerBenchmarks : IDisposable
     [Benchmark]
     public void BuildIndex_1kElements()
     {
-        var indexer = new RowIndexer(_tempFilePath1k);
+        RowIndexer indexer = new(_tempFilePath1k);
         indexer.BuildIndex();
     }
 
@@ -63,7 +63,7 @@ public class RowIndexerBenchmarks : IDisposable
     [Benchmark]
     public void BuildIndex_100kElements()
     {
-        var indexer = new RowIndexer(_tempFilePath100k);
+        RowIndexer indexer = new(_tempFilePath100k);
         indexer.BuildIndex();
     }
 
@@ -73,7 +73,7 @@ public class RowIndexerBenchmarks : IDisposable
     [Benchmark]
     public void BuildIndex_1mElements()
     {
-        var indexer = new RowIndexer(_tempFilePath1m);
+        RowIndexer indexer = new(_tempFilePath1m);
         indexer.BuildIndex();
     }
 
@@ -131,9 +131,9 @@ public class RowIndexerBenchmarks : IDisposable
 
     private static void WriteElements(string path, int count)
     {
-        using var writer = new StreamWriter(path);
+        using StreamWriter writer = new(path);
         writer.Write('[');
-        for (var i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             if (i > 0)
             {

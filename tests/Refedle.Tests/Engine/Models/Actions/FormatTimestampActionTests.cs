@@ -9,10 +9,10 @@ public sealed class FormatTimestampActionTests
     public void Description_Property_Returns_Correct_String()
     {
         // Arrange
-        var action = new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy-MM-dd" };
+        FormatTimestampAction action = new() { ColumnName = "CreatedAt", TargetFormat = "yyyy-MM-dd" };
 
         // Act
-        var description = action.Description;
+        string description = action.Description;
 
         // Assert
         description.Should().Be("Format timestamp column 'CreatedAt' → \"yyyy-MM-dd\"");

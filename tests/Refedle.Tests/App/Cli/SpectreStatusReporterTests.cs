@@ -9,10 +9,10 @@ public sealed class SpectreStatusReporterTests
     public async Task RunAsync_ReturnsTheWorkResult()
     {
         // Arrange
-        var reporter = new SpectreStatusReporter();
+        SpectreStatusReporter reporter = new();
 
         // Act
-        var result = await reporter.RunAsync("Working...", _ => ValueTask.FromResult(42));
+        int result = await reporter.RunAsync("Working...", _ => ValueTask.FromResult(42));
 
         // Assert
         result.Should().Be(42);
@@ -22,10 +22,10 @@ public sealed class SpectreStatusReporterTests
     public async Task RunAsync_WhenWorkChangesPhases_CompletesWithoutError()
     {
         // Arrange
-        var reporter = new SpectreStatusReporter();
+        SpectreStatusReporter reporter = new();
 
         // Act
-        var result = await reporter.RunAsync("First [with markup]...", async setPhase =>
+        string result = await reporter.RunAsync("First [with markup]...", async setPhase =>
         {
             setPhase("Second [/] phase...");
             await Task.Yield();
@@ -41,10 +41,10 @@ public sealed class SpectreStatusReporterTests
     public async Task RunAsync_WhenWorkThrows_PropagatesTheException()
     {
         // Arrange
-        var reporter = new SpectreStatusReporter();
+        SpectreStatusReporter reporter = new();
 
         // Act
-        var act = async () => await reporter.RunAsync<int>(
+        Func<Task<int>> act = async () => await reporter.RunAsync<int>(
             "Working...", _ => throw new InvalidOperationException("boom"));
 
         // Assert
@@ -55,12 +55,12 @@ public sealed class SpectreStatusReporterTests
     public async Task RunAsync_WhenWorkIsCancelled_PropagatesOperationCanceledException()
     {
         // Arrange
-        var reporter = new SpectreStatusReporter();
-        using var cts = new CancellationTokenSource();
+        SpectreStatusReporter reporter = new();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var act = async () => await reporter.RunAsync<int>(
+        Func<Task<int>> act = async () => await reporter.RunAsync<int>(
             "Working...", async _ =>
             {
                 await Task.Delay(Timeout.InfiniteTimeSpan, cts.Token);
@@ -75,10 +75,10 @@ public sealed class SpectreStatusReporterTests
     public async Task RunAsync_WithNullWork_ThrowsArgumentNullException()
     {
         // Arrange
-        var reporter = new SpectreStatusReporter();
+        SpectreStatusReporter reporter = new();
 
         // Act
-        var act = async () => await reporter.RunAsync<int>("Working...", null!);
+        Func<Task<int>> act = async () => await reporter.RunAsync<int>("Working...", null!);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();

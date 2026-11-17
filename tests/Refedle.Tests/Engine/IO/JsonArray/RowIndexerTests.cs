@@ -29,7 +29,7 @@ public sealed partial class RowIndexerTests : IDisposable
         // Arrange — no setup required
 
         // Act
-        var act = () => new RowIndexer(null!);
+        Func<RowIndexer> act = () => new RowIndexer(null!);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -41,7 +41,7 @@ public sealed partial class RowIndexerTests : IDisposable
         // Arrange — no setup required
 
         // Act
-        var act = () => new RowIndexer("   ");
+        Func<RowIndexer> act = () => new RowIndexer("   ");
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -51,10 +51,10 @@ public sealed partial class RowIndexerTests : IDisposable
     public void Constructor_WithValidFilePath_SetsFilePathProperty()
     {
         // Arrange
-        var expectedPath = "/path/to/file.json";
+        string expectedPath = "/path/to/file.json";
 
         // Act
-        var indexer = new RowIndexer(expectedPath);
+        RowIndexer indexer = new(expectedPath);
 
         // Assert
         indexer.FilePath.Should().Be(expectedPath);
@@ -65,10 +65,10 @@ public sealed partial class RowIndexerTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
-        var totalRows = indexer.TotalRows;
+        long totalRows = indexer.TotalRows;
 
         // Assert
         totalRows.Should().Be(0);

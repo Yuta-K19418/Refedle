@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI;
+using Refedle.Engine;
 
 namespace Refedle.Tests.App.Tui.UI;
 
@@ -12,7 +13,7 @@ public sealed class TuiArgumentParserTests
         string[] args = [];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -27,7 +28,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--file", "path.csv"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -42,7 +43,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--recipe", "recipe.yaml"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -57,7 +58,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--file", "path.csv", "--recipe", "recipe.yaml"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -72,7 +73,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--file"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -86,7 +87,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--recipe"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -100,7 +101,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--unknown"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -114,7 +115,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--recipe", "recipe.yaml", "--file", "path.csv"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -129,7 +130,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--file", "path1.csv", "--file", "path2.csv"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -143,7 +144,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--recipe", "r1.yaml", "--recipe", "r2.yaml"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -157,7 +158,7 @@ public sealed class TuiArgumentParserTests
         string[] args = ["--file", "my file.csv"];
 
         // Act
-        var result = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> result = TuiArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

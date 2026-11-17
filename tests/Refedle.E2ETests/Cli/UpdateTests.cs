@@ -13,7 +13,7 @@ public sealed class UpdateTests
         string[] arguments = ["update"];
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync(arguments);
 
         // Assert
         result.ExitCode.Should().Be(0);

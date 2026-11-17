@@ -35,19 +35,19 @@ public sealed class FileChunkReaderTests : IDisposable
         // Arrange — file larger than BufferSize so a follow-up FillBuffer has data to top up with,
         // mirroring FullAggregationScannerTests' 1 MiB boundary fixture.
         const int carryOverLen = 100;
-        var padding = new string('a', FileChunkReader.BufferSize);
-        var tail = new string('b', 500);
+        string padding = new('a', FileChunkReader.BufferSize);
+        string tail = new('b', 500);
         File.WriteAllText(_testFilePath, padding + tail);
-        using var mmap = MmapService.Open(_testFilePath).Value;
-        var buffer = new byte[FileChunkReader.BufferSize];
+        using MmapService mmap = MmapService.Open(_testFilePath).Value;
+        byte[] buffer = new byte[FileChunkReader.BufferSize];
         // The first carryOverLen bytes are the leftover of a line that spans the 1 MiB boundary;
         // mark them so we can prove FillBuffer preserves them in place.
         buffer.AsSpan(0, carryOverLen).Fill((byte)'X');
-        var expectedCarryOver = new byte[carryOverLen];
+        byte[] expectedCarryOver = new byte[carryOverLen];
         Array.Fill(expectedCarryOver, (byte)'X');
 
         // Act — resume at the 1 MiB boundary, carrying carryOverLen bytes forward.
-        var (dataEnd, fileOffset) = FileChunkReader.FillBuffer(
+        (int dataEnd, long fileOffset) = FileChunkReader.FillBuffer(
             mmap, buffer, carryOverLen, FileChunkReader.BufferSize, "test");
 
         // Assert — the carry-over bytes are intact and the tail is appended right after them.
@@ -62,11 +62,11 @@ public sealed class FileChunkReaderTests : IDisposable
     {
         // Arrange — the guard throws before any mmap/buffer read, so only the buffer capacity matters.
         File.WriteAllText(_testFilePath, "0123456789");
-        using var mmap = MmapService.Open(_testFilePath).Value;
-        var buffer = new byte[FileChunkReader.BufferSize];
+        using MmapService mmap = MmapService.Open(_testFilePath).Value;
+        byte[] buffer = new byte[FileChunkReader.BufferSize];
 
         // Act
-        var act = () => FileChunkReader.FillBuffer(mmap, buffer, FileChunkReader.BufferSize, 0, "test line");
+        Func<(int dataEnd, long fileOffset)> act = () => FileChunkReader.FillBuffer(mmap, buffer, FileChunkReader.BufferSize, 0, "test line");
 
         // Assert
         act.Should().Throw<NotSupportedException>().WithMessage("test line exceeds maximum supported size.");
@@ -76,10 +76,10 @@ public sealed class FileChunkReaderTests : IDisposable
     public void TrimTrailingCr_WithTrailingCarriageReturn_RemovesLastByte()
     {
         // Arrange
-        var line = "abc\r"u8;
+        ReadOnlySpan<byte> line = "abc\r"u8;
 
         // Act
-        var result = FileChunkReader.TrimTrailingCr(line);
+        ReadOnlySpan<byte> result = FileChunkReader.TrimTrailingCr(line);
 
         // Assert
         result.ToArray().Should().Equal("abc"u8.ToArray());
@@ -89,10 +89,10 @@ public sealed class FileChunkReaderTests : IDisposable
     public void TrimTrailingCr_WithoutTrailingCarriageReturn_ReturnsInputUnchanged()
     {
         // Arrange
-        var line = "abc"u8;
+        ReadOnlySpan<byte> line = "abc"u8;
 
         // Act
-        var result = FileChunkReader.TrimTrailingCr(line);
+        ReadOnlySpan<byte> result = FileChunkReader.TrimTrailingCr(line);
 
         // Assert
         result.ToArray().Should().Equal("abc"u8.ToArray());
@@ -114,10 +114,10 @@ public sealed class FileChunkReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllBytes(_testFilePath, content);
-        using var mmap = MmapService.Open(_testFilePath).Value;
+        using MmapService mmap = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var result = FileChunkReader.ReadFileRange(mmap, start, end);
+        JsonRawBytes result = FileChunkReader.ReadFileRange(mmap, start, end);
 
         // Assert
         result.ToArray().Should().Equal(expected);

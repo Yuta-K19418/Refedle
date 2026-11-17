@@ -13,10 +13,10 @@ public sealed class FillColumnActionTests
     public void Description_ReturnsExpectedFormat()
     {
         // Arrange
-        var action = new FillColumnAction { ColumnName = "Email", Value = "REDACTED" };
+        FillColumnAction action = new() { ColumnName = "Email", Value = "REDACTED" };
 
         // Act
-        var description = action.Description;
+        string description = action.Description;
 
         // Assert
         description.Should().Be("Fill column 'Email' with 'REDACTED'");

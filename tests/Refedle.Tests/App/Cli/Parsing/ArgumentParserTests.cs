@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.Parsing;
+using Refedle.Engine;
 
 namespace Refedle.Tests.App.Cli.Parsing;
 
@@ -12,7 +13,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -28,7 +29,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -42,7 +43,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -56,7 +57,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -70,7 +71,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv", "--unknown", "value"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -84,7 +85,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--cli", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -98,7 +99,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -112,7 +113,7 @@ public sealed class ArgumentParserTests
         string[] args = [];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -126,7 +127,7 @@ public sealed class ArgumentParserTests
         string[] args = ["input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -140,7 +141,7 @@ public sealed class ArgumentParserTests
         string[] args = ["version"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -154,7 +155,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--recipe", "recipe.yaml", "--output", "output.csv", "--input"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -168,7 +169,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv", "--dry-run"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -182,7 +183,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -196,7 +197,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--recipe", "recipe.yaml", "--dry-run"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -211,7 +212,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--dry-run", "--input", "input.csv", "--recipe", "recipe.yaml", "--output", "output.csv"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -228,7 +229,7 @@ public sealed class ArgumentParserTests
         string[] args = ["--input", "input.csv", "--dry-run", "--recipe", "recipe.yaml"];
 
         // Act
-        var result = ArgumentParser.Parse(args);
+        Result<Arguments> result = ArgumentParser.Parse(args);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

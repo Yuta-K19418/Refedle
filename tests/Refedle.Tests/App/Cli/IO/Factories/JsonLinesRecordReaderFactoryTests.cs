@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.IO.Factories;
+using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 
@@ -27,11 +28,11 @@ public sealed class JsonLinesRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithNullKeyPath_ReturnsBareReaderOverEveryLine()
     {
         // Arrange — a null KeyPath selects the bare (non-DrillDown) arm.
-        var inputFile = CreateTestFile("input.jsonl", "{\"id\":1}\n{\"id\":2}\n");
-        var factory = new JsonLinesRecordReaderFactory();
+        string inputFile = CreateTestFile("input.jsonl", "{\"id\":1}\n{\"id\":2}\n");
+        JsonLinesRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using JsonLinesRecordReader reader = await factory.CreateAsync(
             inputFile, drillDownKeyPath: null, ["id"], BuildOutputSchema("id"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -46,14 +47,14 @@ public sealed class JsonLinesRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithKeyPath_ReturnsFullAggregationReaderOverDrilledDownRows()
     {
         // Arrange
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.jsonl",
             "{\"orders\":[{\"id\":1,\"item\":\"a\"}]}\n{\"orders\":[{\"id\":2,\"item\":\"b\"}]}\n");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
-        var factory = new JsonLinesRecordReaderFactory();
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
+        JsonLinesRecordReaderFactory factory = new();
 
         // Act
-        using var reader = await factory.CreateAsync(
+        using JsonLinesRecordReader reader = await factory.CreateAsync(
             inputFile, keyPath, ["id", "item"], BuildOutputSchema("id", "item"), new TestAppLogger(), CancellationToken.None);
 
         // Assert
@@ -69,13 +70,13 @@ public sealed class JsonLinesRecordReaderFactoryTests : IDisposable
     public async Task CreateAsync_WithCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange — the factory forwards its token to RowIndexer.BuildIndex.
-        var inputFile = CreateTestFile("input.jsonl", "{\"id\":1}\n");
-        var factory = new JsonLinesRecordReaderFactory();
-        using var cts = new CancellationTokenSource();
+        string inputFile = CreateTestFile("input.jsonl", "{\"id\":1}\n");
+        JsonLinesRecordReaderFactory factory = new();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await factory.CreateAsync(
+        Func<Task<JsonLinesRecordReader>> act = async () => await factory.CreateAsync(
             inputFile, drillDownKeyPath: null, ["id"], BuildOutputSchema("id"), new TestAppLogger(), cts.Token);
 
         // Assert
@@ -87,7 +88,7 @@ public sealed class JsonLinesRecordReaderFactoryTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
     }

@@ -16,7 +16,7 @@ public sealed class KeyPathNodeResolverTests
 
     private static JsonElement Parse(JsonRawBytes bytes)
     {
-        using var doc = JsonDocument.Parse(bytes);
+        using JsonDocument doc = JsonDocument.Parse(bytes);
         return doc.RootElement.Clone();
     }
 
@@ -24,10 +24,10 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_EmptyRemainingKeyPath_ReturnsStartBytesUnchanged()
     {
         // Arrange
-        var bytes = Bytes("""{"name":"Alice"}""");
+        JsonRawBytes bytes = Bytes("""{"name":"Alice"}""");
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, []);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, []);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -38,11 +38,11 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_KeyOnlySegments_DescendsViaNestedObjectLookups()
     {
         // Arrange
-        var bytes = Bytes("""{"customer":{"name":"Acme Corp","address":{"city":"Metropolis"}}}""");
+        JsonRawBytes bytes = Bytes("""{"customer":{"name":"Acme Corp","address":{"city":"Metropolis"}}}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("customer"), Key("address"), Key("city")];
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -53,11 +53,11 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_KeyThenIndexSegment_SelectsSpecificArrayElementOnly()
     {
         // Arrange
-        var bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"},{"id":"A3"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"},{"id":"A3"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index("[1]")];
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -68,11 +68,11 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_MissingKey_ReturnsFailure()
     {
         // Arrange
-        var bytes = Bytes("""{"customer":"Acme Corp"}""");
+        JsonRawBytes bytes = Bytes("""{"customer":"Acme Corp"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("missing")];
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -82,11 +82,11 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_IndexSegmentAgainstNonArray_ReturnsFailure()
     {
         // Arrange
-        var bytes = Bytes("""{"tags":"not an array"}""");
+        JsonRawBytes bytes = Bytes("""{"tags":"not an array"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("tags"), Index("[0]")];
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -96,11 +96,11 @@ public sealed class KeyPathNodeResolverTests
     public void ResolveSingleNode_IndexOutOfRange_ReturnsFailure()
     {
         // Arrange
-        var bytes = Bytes("""{"orders":[{"id":"A1"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index("[5]")];
 
         // Act
-        var result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
+        Result<JsonRawBytes> result = KeyPathNodeResolver.ResolveSingleNode(bytes, keyPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -118,7 +118,7 @@ public sealed class KeyPathNodeResolverTests
     {
         // Arrange — a recipe is user-editable YAML, so a malformed "[N]" label must fail cleanly
         // instead of slicing out of bounds or being misparsed as a valid index.
-        var bytes = Bytes("""{"orders":[{"id":"A1"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index(malformedIndexLabel)];
 
         // Act

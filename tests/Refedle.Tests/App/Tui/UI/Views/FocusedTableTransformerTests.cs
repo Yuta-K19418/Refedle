@@ -26,7 +26,7 @@ public sealed class FocusedTableTransformerTests
     }
 
     private static TableSchema MakeSchema(params (string name, ColumnType type)[] cols) =>
-        new TableSchema
+        new()
         {
             Columns =
             [
@@ -51,10 +51,10 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullSource_ThrowsArgumentNullException()
     {
         // Arrange
-        var schema = MakeSchema(("name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text));
 
         // Act
-        var act = () => FocusedTableTransformer.Create(null!, schema, [], FilterRevealThreshold);
+        Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(null!, schema, [], FilterRevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -64,10 +64,10 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullOriginalSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A"]], ["#", "name"]);
+        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
 
         // Act
-        var act = () => FocusedTableTransformer.Create(source, null!, [], FilterRevealThreshold);
+        Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(source, null!, [], FilterRevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -77,11 +77,11 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullActions_ThrowsArgumentNullException()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A"]], ["#", "name"]);
-        var schema = MakeSchema(("name", ColumnType.Text));
+        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
+        TableSchema schema = MakeSchema(("name", ColumnType.Text));
 
         // Act
-        var act = () => FocusedTableTransformer.Create(source, schema, null!, FilterRevealThreshold);
+        Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(source, schema, null!, FilterRevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -95,17 +95,17 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithEmptyActions_PrependsHashColumnToLabeledSchema()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "name (text)", "val (number)");
@@ -118,13 +118,13 @@ public sealed class FocusedTableTransformerTests
     public void HashColumn_WhenActionsTargetLiteralHashName_IsSilentlySkipped()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "#", NewName = "hash" },
@@ -133,7 +133,7 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "name (text)", "val (number)");
@@ -149,18 +149,18 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithRenameAction_RenamesColumnAndKeepsValuesUnchanged()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new RenameColumnAction { OldName = "name", NewName = "label" }];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "label (text)", "val (number)");
@@ -177,18 +177,18 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithDeleteAction_RemovesColumnAndResolvesRemainingColumnsAtOffset()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "name" }];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "val (number)");
@@ -205,18 +205,18 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithCastAction_UpdatesTypeLabelAndFormatsCellValues()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1.50"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.Text));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
             [new CastColumnAction { ColumnName = "val", TargetType = ColumnType.FloatingPoint }];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "name (text)", "val (float)");
@@ -231,7 +231,7 @@ public sealed class FocusedTableTransformerTests
     public async Task Create_WithFilterAction_RowsNarrowToMatchingSourceRows()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
@@ -239,13 +239,13 @@ public sealed class FocusedTableTransformerTests
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
             [FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
-        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
         await indexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert
@@ -259,7 +259,7 @@ public sealed class FocusedTableTransformerTests
     public async Task Filter_MultipleFilterActions_CombinesWithAndSemantics()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
@@ -267,7 +267,7 @@ public sealed class FocusedTableTransformerTests
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value,
@@ -275,8 +275,8 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
-        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
         await indexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert
@@ -290,14 +290,14 @@ public sealed class FocusedTableTransformerTests
     public async Task Filter_AfterRename_UsesCurrentActionStackColumnNames()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "name", NewName = "label" },
@@ -305,8 +305,8 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
-        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
         await indexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert
@@ -318,11 +318,11 @@ public sealed class FocusedTableTransformerTests
     public void FilterRowIndexer_WithoutFilterAction_IsNull()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A"]], ["#", "name"]);
-        var schema = MakeSchema(("name", ColumnType.Text));
+        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
+        TableSchema schema = MakeSchema(("name", ColumnType.Text));
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
 
         // Assert
         transformer.FilterRowIndexer.Should().BeNull();
@@ -332,19 +332,19 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFilterAction_DoesNotScanRowsUntilIndexIsBuilt()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A"],
                 ["[1]", "B"],
             ],
             ["#", "name"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
             [FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.FilterRowIndexer.Should().NotBeNull();
@@ -359,18 +359,18 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFillAction_AllCellsOfColumnReturnFillValue()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new FillColumnAction { ColumnName = "val", Value = "N/A" }];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "name (text)", "val (text)");
@@ -386,13 +386,13 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFormatTimestampAction_ReformatsTimestampCells()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "2024-01-02T03:04:05"],
             ],
             ["#", "created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -403,7 +403,7 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer.ColumnNames.Should().Equal("#", "created_at (datetime)");
@@ -415,13 +415,13 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFormatTimestampAction_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "2024-01-15T09:30:00", "2024-03-20T14:05:33"],
             ],
             ["#", "created_at", "updated_at"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("created_at", ColumnType.Timestamp),
             ("updated_at", ColumnType.Timestamp)
         );
@@ -435,10 +435,10 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
-        var hash = transformer[0, 0];
-        var targeted = transformer[0, 1];
-        var untouched = transformer[0, 2];
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        object hash = transformer[0, 0];
+        object targeted = transformer[0, 1];
+        object untouched = transformer[0, 2];
 
         // Assert
         hash.Should().Be("[0]");
@@ -450,11 +450,11 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithCastAndDelete_FormatsOnlyTargetAfterHashColumn()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [["[0]", "discard", "007", "1.50"]],
             ["#", "drop", "count", "price"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("drop", ColumnType.Text),
             ("count", ColumnType.Text),
             ("price", ColumnType.FloatingPoint)
@@ -466,7 +466,7 @@ public sealed class FocusedTableTransformerTests
         ];
 
         // Act
-        using var transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, actions, FilterRevealThreshold);
 
         // Assert
         transformer[0, 0].Should().Be("[0]");
@@ -486,17 +486,17 @@ public sealed class FocusedTableTransformerTests
     public void Indexer_OutOfBounds_ThrowsArgumentOutOfRangeException(int row, int col)
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        using var transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
 
         // Act
-        var act = () => _ = transformer[row, col];
+        Func<object> act = () => _ = transformer[row, col];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -506,18 +506,18 @@ public sealed class FocusedTableTransformerTests
     public void Indexer_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var source = new FakeFocusedSource(
+        FakeFocusedSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        var schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
-        var transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
+        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
         transformer.Dispose();
 
         // Act
-        var act = () => _ = transformer[0, 0];
+        Func<object> act = () => _ = transformer[0, 0];
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();

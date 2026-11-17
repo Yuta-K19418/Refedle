@@ -18,15 +18,15 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherThrowsOperationCanceledMidWrite_DeletesTempFileAndNeverTouchesRealOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(new OperationCanceledException());
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(new OperationCanceledException());
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -41,15 +41,15 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherThrowsNotSupportedMidWrite_DeletesTempFileAndNeverTouchesRealOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(new NotSupportedException("format pair not supported"));
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(new NotSupportedException("format pair not supported"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -64,15 +64,15 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherThrowsGenericExceptionMidWrite_DeletesTempFileAndNeverTouchesRealOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(new InvalidOperationException("unexpected failure"));
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(new InvalidOperationException("unexpected failure"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -87,22 +87,22 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherSucceeds_PublishesTempFileContentAtRealOutputPath()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Should().BeEmpty();
         dispatcher.ReceivedOutputFile.Should().NotBe(outputFile);
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be(TestFormatDispatcher.WrittenContent);
         File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
     }
@@ -111,22 +111,22 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherReturnsFailureAfterPartialWrite_DeletesTempFileAndKeepsExistingRealOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
         File.WriteAllText(outputFile, "previous run output");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(result: ExitCode.Failure);
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(result: ExitCode.Failure);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
         File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
         File.Exists(outputFile).Should().BeTrue();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("previous run output");
         Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml", "output.csv");
     }
@@ -135,22 +135,22 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherThrowsMidWrite_KeepsExistingRealOutputContent()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
         File.WriteAllText(outputFile, "previous run output");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(new InvalidOperationException("unexpected failure"));
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(new InvalidOperationException("unexpected failure"));
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
         logger.Errors.Should().ContainSingle().Which.Should().Be("Error: unexpected failure");
         File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("previous run output");
         Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml", "output.csv");
     }
@@ -159,16 +159,16 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenPublishTargetIsADirectory_ReportsErrorAndCleansUpTempFile()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputDir = Path.Combine(_testDir, "output.csv");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputDir = Path.Combine(_testDir, "output.csv");
         Directory.CreateDirectory(outputDir);
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputDir };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher();
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputDir };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -182,24 +182,24 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WithSymlinkedOutputFile_PublishesThroughLinkToTarget()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var targetFile = Path.Combine(_testDir, "target.csv");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string targetFile = Path.Combine(_testDir, "target.csv");
         File.WriteAllText(targetFile, "old content");
-        var linkFile = Path.Combine(_testDir, "link.csv");
+        string linkFile = Path.Combine(_testDir, "link.csv");
         File.CreateSymbolicLink(linkFile, targetFile);
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = linkFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher();
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = linkFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Should().BeEmpty();
         File.ResolveLinkTarget(linkFile, returnFinalTarget: true).Should().NotBeNull();
-        var target = await File.ReadAllTextAsync(targetFile);
+        string target = await File.ReadAllTextAsync(targetFile);
         target.Should().Be(TestFormatDispatcher.WrittenContent);
         File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
         Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml", "target.csv", "link.csv");
@@ -209,23 +209,23 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WithBrokenSymlinkedOutputFile_CreatesTargetThroughLink()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var targetFile = Path.Combine(_testDir, "missing-target.csv");
-        var linkFile = Path.Combine(_testDir, "broken-link.csv");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string targetFile = Path.Combine(_testDir, "missing-target.csv");
+        string linkFile = Path.Combine(_testDir, "broken-link.csv");
         File.CreateSymbolicLink(linkFile, targetFile);
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = linkFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher();
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = linkFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Should().BeEmpty();
         File.ResolveLinkTarget(linkFile, returnFinalTarget: true).Should().NotBeNull();
-        var target = await File.ReadAllTextAsync(targetFile);
+        string target = await File.ReadAllTextAsync(targetFile);
         target.Should().Be(TestFormatDispatcher.WrittenContent);
         File.Exists(dispatcher.ReceivedOutputFile).Should().BeFalse();
         Directory.GetFiles(_testDir).Select(Path.GetFileName).Should().BeEquivalentTo("input.csv", "recipe.yaml", "missing-target.csv", "broken-link.csv");
@@ -235,15 +235,15 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenReplayingDeferredMessagesThrowsAfterSuccessfulBatch_DeletesTempFileAndNeverTouchesRealOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new WarningFailingLogger();
-        var dispatcher = new TestFormatDispatcher(loggedWarning: "warning held while the spinner runs");
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        WarningFailingLogger logger = new();
+        TestFormatDispatcher dispatcher = new(loggedWarning: "warning held while the spinner runs");
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);

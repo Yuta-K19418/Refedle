@@ -33,7 +33,7 @@ public abstract class RowIndexerProgressBenchmarksBase : IDisposable
             Path.GetTempPath(),
             $"row_indexer_progress_benchmark_{Guid.NewGuid()}{FileExtension}");
 
-        using var writer = new StreamWriter(_tempFilePath);
+        using StreamWriter writer = new(_tempFilePath);
         WriteRows(writer, RowCount);
     }
 
@@ -44,9 +44,9 @@ public abstract class RowIndexerProgressBenchmarksBase : IDisposable
     [Benchmark(Description = "BuildIndex with progress subscriber")]
     public int BuildIndexWithProgressSubscriber()
     {
-        var indexer = CreateIndexer(_tempFilePath);
-        var pendingActions = new ConcurrentQueue<Action>();
-        var notificationCount = 0;
+        IRowIndexer indexer = CreateIndexer(_tempFilePath);
+        ConcurrentQueue<Action> pendingActions = new();
+        int notificationCount = 0;
 
         indexer.ProgressChanged += (bytesRead, fileSize) =>
         {

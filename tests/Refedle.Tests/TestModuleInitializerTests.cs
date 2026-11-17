@@ -19,7 +19,7 @@ public sealed class TestModuleInitializerTests
         const string variableName = "DisableRealDriverIO";
 
         // Act
-        var value = Environment.GetEnvironmentVariable(variableName);
+        string? value = Environment.GetEnvironmentVariable(variableName);
 
         // Assert
         value.Should().Be("1");
@@ -31,7 +31,7 @@ public sealed class TestModuleInitializerTests
         // Arrange — the module initializer ran exactly once, before the first test.
 
         // Act
-        var errorWriter = Console.Error;
+        TextWriter errorWriter = Console.Error;
 
         // Assert
         errorWriter.Should().BeSameAs(TextWriter.Null);
@@ -43,7 +43,7 @@ public sealed class TestModuleInitializerTests
         // Arrange — the module initializer ran exactly once, before the first test.
 
         // Act
-        var outWriter = AnsiConsole.Console.Profile.Out.Writer;
+        TextWriter outWriter = AnsiConsole.Console.Profile.Out.Writer;
 
         // Assert
         outWriter.Should().BeSameAs(TextWriter.Null);

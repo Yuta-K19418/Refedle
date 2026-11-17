@@ -17,18 +17,18 @@ public sealed class JsonObjectRecordReaderTests
     public async Task MoveNextAsync_YieldsAllRowsInOrderThenStops()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":"a"}"""), Row("""{"value":"b"}"""), Row("""{"value":"c"}""") };
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        JsonRawBytes[] rows = [Row("""{"value":"a"}"""), Row("""{"value":"b"}"""), Row("""{"value":"c"}""")];
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
 
         // Act
-        var first = await reader.MoveNextAsync(default);
-        var firstValue = reader.GetCellData(0).Value.ToString();
-        var second = await reader.MoveNextAsync(default);
-        var secondValue = reader.GetCellData(0).Value.ToString();
-        var third = await reader.MoveNextAsync(default);
-        var thirdValue = reader.GetCellData(0).Value.ToString();
-        var fourth = await reader.MoveNextAsync(default);
+        bool first = await reader.MoveNextAsync(default);
+        string firstValue = reader.GetCellData(0).Value.ToString();
+        bool second = await reader.MoveNextAsync(default);
+        string secondValue = reader.GetCellData(0).Value.ToString();
+        bool third = await reader.MoveNextAsync(default);
+        string thirdValue = reader.GetCellData(0).Value.ToString();
+        bool fourth = await reader.MoveNextAsync(default);
 
         // Assert
         first.Should().BeTrue();
@@ -44,13 +44,13 @@ public sealed class JsonObjectRecordReaderTests
     public async Task MoveNextAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":1}""") };
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        JsonRawBytes[] rows = [Row("""{"value":1}""")];
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         reader.Dispose();
 
         // Act
-        var act = async () => await reader.MoveNextAsync(default);
+        Func<Task<bool>> act = async () => await reader.MoveNextAsync(default);
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();
@@ -61,11 +61,11 @@ public sealed class JsonObjectRecordReaderTests
     {
         // Arrange
         JsonRawBytes[] rows = [];
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
 
         // Act
-        var hasNext = await reader.MoveNextAsync(default);
+        bool hasNext = await reader.MoveNextAsync(default);
 
         // Assert
         hasNext.Should().BeFalse();
@@ -75,14 +75,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task MoveNextAsync_WithCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":1}""") };
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
-        using var cts = new CancellationTokenSource();
+        JsonRawBytes[] rows = [Row("""{"value":1}""")];
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await reader.MoveNextAsync(cts.Token);
+        Func<Task<bool>> act = async () => await reader.MoveNextAsync(cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -92,14 +92,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":1}""") };
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        JsonRawBytes[] rows = [Row("""{"value":1}""")];
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
         reader.Dispose();
 
         // Act
-        var act = () => reader.EvaluateFilters();
+        Func<bool> act = () => reader.EvaluateFilters();
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -109,9 +109,9 @@ public sealed class JsonObjectRecordReaderTests
     public void GetCellData_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":1}""") };
-        var (inputColumnNames, outputSchema) = BuildSchemas();
-        var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        JsonRawBytes[] rows = [Row("""{"value":1}""")];
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+        JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         reader.Dispose();
 
         // Act
@@ -125,14 +125,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":"hello"}""") };
+        JsonRawBytes[] rows = [Row("""{"value":"hello"}""")];
         BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "hello")];
-        var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
 
         // Act
-        var result = reader.EvaluateFilters();
+        bool result = reader.EvaluateFilters();
 
         // Assert
         result.Should().BeTrue();
@@ -142,14 +142,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_NonMatchingStringFilter_ReturnsFalse()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":"hello"}""") };
+        JsonRawBytes[] rows = [Row("""{"value":"hello"}""")];
         BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "world")];
-        var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
 
         // Act
-        var result = reader.EvaluateFilters();
+        bool result = reader.EvaluateFilters();
 
         // Assert
         result.Should().BeFalse();
@@ -160,14 +160,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_NullJsonValue_ReturnsFalse()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":null}""") };
+        JsonRawBytes[] rows = [Row("""{"value":null}""")];
         BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-        var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
 
         // Act
-        var result = reader.EvaluateFilters();
+        bool result = reader.EvaluateFilters();
 
         // Assert
         result.Should().BeFalse();
@@ -178,14 +178,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_MalformedRow_ReturnsFalse()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("not valid json") };
+        JsonRawBytes[] rows = [Row("not valid json")];
         BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-        var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
 
         // Act
-        var result = reader.EvaluateFilters();
+        bool result = reader.EvaluateFilters();
 
         // Assert
         result.Should().BeFalse();
@@ -196,14 +196,14 @@ public sealed class JsonObjectRecordReaderTests
     public async Task EvaluateFilters_FilterColumnAbsentFromInputSchema_IgnoresFilter()
     {
         // Arrange
-        var rows = new JsonRawBytes[] { Row("""{"value":1}""") };
+        JsonRawBytes[] rows = [Row("""{"value":1}""")];
         BatchFilterSpec[] filters = [new(9, ComparisonType.Text, FilterOperator.Equals, "anything")];
-        var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-        using var reader = new JsonObjectRecordReader(rows, inputColumnNames, outputSchema);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+        using JsonObjectRecordReader reader = new(rows, inputColumnNames, outputSchema);
         await reader.MoveNextAsync(default);
 
         // Act
-        var result = reader.EvaluateFilters();
+        bool result = reader.EvaluateFilters();
 
         // Assert
         result.Should().BeTrue();
@@ -219,7 +219,7 @@ public sealed class JsonObjectRecordReaderTests
         IReadOnlyList<string> columnNames,
         IReadOnlyList<BatchFilterSpec> filters)
     {
-        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
+        BatchOutputSchema outputSchema = new([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
         return (columnNames, outputSchema);
     }
 }

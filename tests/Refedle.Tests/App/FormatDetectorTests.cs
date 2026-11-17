@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App;
+using Refedle.Engine;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App;
@@ -37,7 +38,7 @@ public sealed class FormatDetectorTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var path in new[]
+        foreach (string? path in new[]
         {
             _csvFilePath, _jsonlFilePath, _jsonArrayFilePath, _unsupportedFilePath, _emptyFilePath,
             _jsonObjectFilePath, _jsonObjectWithWhitespacePath, _jsonArrayWithWhitespacePath,
@@ -57,7 +58,7 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectInputFile_WithNullOrEmptyPath_ReturnsFailure(string? path)
     {
         // Act
-        var result = FormatDetector.DetectInputFile(path!);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(path!);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -71,7 +72,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_csvFilePath, "header\ndata");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_csvFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_csvFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -85,7 +86,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonlFilePath, "{}");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonlFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonlFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -99,7 +100,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonArrayFilePath, "[1,2,3]");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonArrayFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonArrayFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -113,7 +114,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_unsupportedFilePath, "{}");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_unsupportedFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_unsupportedFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -124,7 +125,7 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectInputFile_WithNonExistentFile_ReturnsFailure()
     {
         // Act
-        var result = FormatDetector.DetectInputFile(_nonExistentFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_nonExistentFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -138,7 +139,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllBytesAsync(_emptyFilePath, []);
 
         // Act
-        var result = FormatDetector.DetectInputFile(_emptyFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_emptyFilePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -152,7 +153,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonObjectFilePath, "{\"id\":1}");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonObjectFilePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonObjectFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -166,7 +167,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonObjectWithWhitespacePath, "  \n{\"id\":1}");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonObjectWithWhitespacePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonObjectWithWhitespacePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -180,7 +181,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonArrayWithWhitespacePath, "  \n[1,2,3]");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonArrayWithWhitespacePath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonArrayWithWhitespacePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -194,7 +195,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_jsonUnknownRootPath, "\"hello\"");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonUnknownRootPath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonUnknownRootPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -208,7 +209,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllTextAsync(_whitespaceOnlyJsonPath, "   \t\r\n  ");
 
         // Act
-        var result = FormatDetector.DetectInputFile(_whitespaceOnlyJsonPath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_whitespaceOnlyJsonPath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -223,7 +224,7 @@ public sealed class FormatDetectorTests : IDisposable
         await File.WriteAllBytesAsync(_jsonObjectWithBomPath, content);
 
         // Act
-        var result = FormatDetector.DetectInputFile(_jsonObjectWithBomPath);
+        Result<DataFormat> result = FormatDetector.DetectInputFile(_jsonObjectWithBomPath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -236,7 +237,7 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectOutputFile_WithNullOrEmptyPath_ReturnsFailure(string? path)
     {
         // Act
-        var result = FormatDetector.DetectOutputFile(path!);
+        Result<DataFormat> result = FormatDetector.DetectOutputFile(path!);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -247,10 +248,10 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectOutputFile_WithNonExistentCsvPath_ReturnsCsvFormat()
     {
         // Arrange — the output file does not exist yet; only the extension is inspected.
-        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.csv");
 
         // Act
-        var result = FormatDetector.DetectOutputFile(path);
+        Result<DataFormat> result = FormatDetector.DetectOutputFile(path);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -261,10 +262,10 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectOutputFile_WithNonExistentJsonLinesPath_ReturnsJsonLinesFormat()
     {
         // Arrange
-        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
 
         // Act
-        var result = FormatDetector.DetectOutputFile(path);
+        Result<DataFormat> result = FormatDetector.DetectOutputFile(path);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -275,10 +276,10 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectOutputFile_WithNonExistentJsonPath_ReturnsJsonArrayFormat()
     {
         // Arrange — .json output is always JSON Array shaped, so no content sniffing occurs.
-        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
 
         // Act
-        var result = FormatDetector.DetectOutputFile(path);
+        Result<DataFormat> result = FormatDetector.DetectOutputFile(path);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -289,10 +290,10 @@ public sealed class FormatDetectorTests : IDisposable
     public void DetectOutputFile_WithUnsupportedExtension_ReturnsFailure()
     {
         // Arrange
-        var path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xml");
+        string path = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.xml");
 
         // Act
-        var result = FormatDetector.DetectOutputFile(path);
+        Result<DataFormat> result = FormatDetector.DetectOutputFile(path);
 
         // Assert
         result.IsFailure.Should().BeTrue();

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Microsoft.CodeAnalysis;
 using Refedle.Generators;
 
 namespace Refedle.Tests.Generators;
@@ -526,17 +527,17 @@ public sealed class FormatDispatcherGeneratorTests
             new("FactoryInterfaces.cs", FactoryInterfacesSource),
             new("Factories.cs", NestedGenericFactoriesSource),
         ];
-        var expectedSource = NestedGenericDispatchSource.ReplaceLineEndings();
+        string expectedSource = NestedGenericDispatchSource.ReplaceLineEndings();
 
         // Act
-        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
+        SourceGeneratorOutput output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
         output.GeneratorDiagnostics.Should().BeEmpty();
         output.CompilationDiagnostics.Should().BeEmpty();
-        var generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
+        GeneratedSourceResult generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
         generatedSource.HintName.Should().Be(HintName);
-        var generatedText = generatedSource.SourceText.ToString();
+        string generatedText = generatedSource.SourceText.ToString();
         generatedText.Should().Be(expectedSource);
     }
 
@@ -559,17 +560,17 @@ public sealed class FormatDispatcherGeneratorTests
             new("FactoryInterfaces.cs", FactoryInterfacesSource),
             new("Factories.cs", AllFactoriesSource),
         ];
-        var expectedSource = CurrentDispatchSource.ReplaceLineEndings();
+        string expectedSource = CurrentDispatchSource.ReplaceLineEndings();
 
         // Act
-        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
+        SourceGeneratorOutput output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
         output.GeneratorDiagnostics.Should().BeEmpty();
         output.CompilationDiagnostics.Should().BeEmpty();
-        var generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
+        GeneratedSourceResult generatedSource = output.GeneratedSources.Should().ContainSingle().Which;
         generatedSource.HintName.Should().Be(HintName);
-        var generatedText = generatedSource.SourceText.ToString();
+        string generatedText = generatedSource.SourceText.ToString();
         generatedText.Should().Be(expectedSource);
     }
 
@@ -594,7 +595,7 @@ public sealed class FormatDispatcherGeneratorTests
         ];
 
         // Act
-        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
+        SourceGeneratorOutput output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
         output.GeneratorDiagnostics.Should().BeEmpty();
@@ -623,7 +624,7 @@ public sealed class FormatDispatcherGeneratorTests
         ];
 
         // Act
-        var output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
+        SourceGeneratorOutput output = SourceGeneratorRunner.Run<FormatDispatcherGenerator>(sources);
 
         // Assert
         output.GeneratorDiagnostics.Should().BeEmpty();

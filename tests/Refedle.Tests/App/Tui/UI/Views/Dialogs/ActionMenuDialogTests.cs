@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 
 namespace Refedle.Tests.App.Tui.UI.Views.Dialogs;
@@ -12,10 +13,10 @@ public sealed class ActionMenuDialogTests
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
         string? capturedAction = null;
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        using var dialog = new ActionMenuDialog(actions, action => capturedAction = action);
+        using ActionMenuDialog dialog = new(actions, action => capturedAction = action);
 
         // Assert
         dialog.Title.Should().Be("Actions");
@@ -28,10 +29,10 @@ public sealed class ActionMenuDialogTests
         // Arrange
         string[] actions = [];
         string? capturedAction = null;
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        using var dialog = new ActionMenuDialog(actions, action => capturedAction = action);
+        using ActionMenuDialog dialog = new(actions, action => capturedAction = action);
 
         // Assert
         dialog.Title.Should().Be("Actions");
@@ -44,10 +45,10 @@ public sealed class ActionMenuDialogTests
         // Arrange
         string[] actions = ["Rename"];
         string? capturedAction = null;
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        using var dialog = new ActionMenuDialog(actions, action => capturedAction = action);
+        using ActionMenuDialog dialog = new(actions, action => capturedAction = action);
 
         // Assert
         dialog.Title.Should().Be("Actions");
@@ -60,10 +61,10 @@ public sealed class ActionMenuDialogTests
         // Arrange
         string[]? actions = null;
         string? capturedAction = null;
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => new ActionMenuDialog(actions!, action => capturedAction = action));
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => new ActionMenuDialog(actions!, action => capturedAction = action));
 
         // Assert
         exception.ParamName.Should().Be("availableActions");
@@ -74,10 +75,10 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        var exception = Assert.Throws<ArgumentNullException>(() => new ActionMenuDialog(actions, null!));
+        ArgumentNullException exception = Assert.Throws<ArgumentNullException>(() => new ActionMenuDialog(actions, null!));
 
         // Assert
         exception.ParamName.Should().Be("onConfirmed");
@@ -89,9 +90,9 @@ public sealed class ActionMenuDialogTests
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
         string? capturedAction = null;
-        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        await using LivePumpTestSession<ActionMenuDialog> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var dialog = new ActionMenuDialog(actions, action => capturedAction = action);
+            ActionMenuDialog dialog = new(actions, action => capturedAction = action);
             ModalKeys.SendOnceOnTop(app, window, Key.Enter);
             return dialog;
         });
@@ -112,9 +113,9 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
         app.Begin(dialog);
         dialog.NewKeyDownEvent(Key.Esc);
 
@@ -130,13 +131,13 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent(Key.Esc);
+        bool handled = dialog.NewKeyDownEvent(Key.Esc);
 
         // Assert
         handled.Should().BeTrue();
@@ -148,13 +149,13 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent(Key.X);
+        bool handled = dialog.NewKeyDownEvent(Key.X);
 
         // Assert
         handled.Should().BeTrue();
@@ -166,13 +167,13 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent(Key.J);
+        bool handled = dialog.NewKeyDownEvent(Key.J);
 
         // Assert
         handled.Should().BeTrue();
@@ -185,14 +186,14 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
         app.Begin(dialog);
         dialog.NewKeyDownEvent(Key.J);
 
         // Act
-        var handled = dialog.NewKeyDownEvent(Key.K);
+        bool handled = dialog.NewKeyDownEvent(Key.K);
 
         // Assert
         handled.Should().BeTrue();
@@ -205,9 +206,9 @@ public sealed class ActionMenuDialogTests
     {
         // Arrange
         string[] actions = ["Rename", "Cast", "Delete"];
-        var callbackCalled = false;
-        using var app = TestAppFactory.Create();
-        using var dialog = new ActionMenuDialog(actions, _ => callbackCalled = true);
+        bool callbackCalled = false;
+        using IApplication app = TestAppFactory.Create();
+        using ActionMenuDialog dialog = new(actions, _ => callbackCalled = true);
 
         // Act
         app.Begin(dialog);

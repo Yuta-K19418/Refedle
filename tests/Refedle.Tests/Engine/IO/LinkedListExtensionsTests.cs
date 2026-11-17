@@ -9,8 +9,8 @@ public sealed class LinkedListExtensionsTests
     public void MoveToFront_WhenNodeIsAlreadyAtHead_ListRemainsUnchanged()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var headNode = list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
+        LinkedList<CacheEntry<int>> list = new();
+        LinkedListNode<CacheEntry<int>> headNode = list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
         list.AddLast(new CacheEntry<int> { RowIndex = 2, Value = 20 });
 
         // Act
@@ -28,8 +28,8 @@ public sealed class LinkedListExtensionsTests
     public void MoveToFront_WithSingleElementList_ListRemainsUnchanged()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var onlyNode = list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
+        LinkedList<CacheEntry<int>> list = new();
+        LinkedListNode<CacheEntry<int>> onlyNode = list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
 
         // Act
         list.MoveToFront(onlyNode);
@@ -44,9 +44,9 @@ public sealed class LinkedListExtensionsTests
     public void MoveToFront_WhenNodeIsInMiddle_MovesToHead()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
+        LinkedList<CacheEntry<int>> list = new();
         list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
-        var middleNode = list.AddLast(new CacheEntry<int> { RowIndex = 2, Value = 20 });
+        LinkedListNode<CacheEntry<int>> middleNode = list.AddLast(new CacheEntry<int> { RowIndex = 2, Value = 20 });
         list.AddLast(new CacheEntry<int> { RowIndex = 3, Value = 30 });
 
         // Act
@@ -67,10 +67,10 @@ public sealed class LinkedListExtensionsTests
     public void MoveToFront_WhenNodeIsAtTail_MovesToHead()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
+        LinkedList<CacheEntry<int>> list = new();
         list.AddLast(new CacheEntry<int> { RowIndex = 1, Value = 10 });
         list.AddLast(new CacheEntry<int> { RowIndex = 2, Value = 20 });
-        var tailNode = list.AddLast(new CacheEntry<int> { RowIndex = 3, Value = 30 });
+        LinkedListNode<CacheEntry<int>> tailNode = list.AddLast(new CacheEntry<int> { RowIndex = 3, Value = 30 });
 
         // Act
         list.MoveToFront(tailNode);
@@ -88,9 +88,9 @@ public sealed class LinkedListExtensionsTests
     public void ReuseTail_WithSingleElementList_NodeIsReusedAtFront()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
-        var node1 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 1, Value = 10 });
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
+        LinkedListNode<CacheEntry<int>> node1 = new(new CacheEntry<int> { RowIndex = 1, Value = 10 });
         list.AddLast(node1);
         cache[1] = node1;
 
@@ -110,11 +110,11 @@ public sealed class LinkedListExtensionsTests
     public void ReuseTail_WithMultiElementList_EvictsTailAndMovesNewNodeToFront()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
 
-        var node1 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 1, Value = 10 });
-        var node2 = new LinkedListNode<CacheEntry<int>>(new CacheEntry<int> { RowIndex = 2, Value = 20 });
+        LinkedListNode<CacheEntry<int>> node1 = new(new CacheEntry<int> { RowIndex = 1, Value = 10 });
+        LinkedListNode<CacheEntry<int>> node2 = new(new CacheEntry<int> { RowIndex = 2, Value = 20 });
 
         list.AddLast(node1);
         list.AddLast(node2);
@@ -142,10 +142,10 @@ public sealed class LinkedListExtensionsTests
     {
         // Arrange - 2_147_483_648 (int.MaxValue + 1) must not narrow anywhere
         // in the node-reuse path.
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
         list.AddNew(cache, rowIndex: 1, rowValue: 10);
-        var rowIndex = 2_147_483_648L;
+        long rowIndex = 2_147_483_648L;
 
         // Act
         list.ReuseTail(cache, rowIndex, rowValue: 20, emptyValue: -1);
@@ -162,8 +162,8 @@ public sealed class LinkedListExtensionsTests
     public void AddNew_WithEmptyList_AddsNodeToFrontAndUpdatesDictionary()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
 
         // Act
         list.AddNew(cache, rowIndex: 1, rowValue: 10);
@@ -181,8 +181,8 @@ public sealed class LinkedListExtensionsTests
     public void AddNew_WhenListIsNotEmpty_NewNodeIsAtFront()
     {
         // Arrange
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
         list.AddNew(cache, rowIndex: 1, rowValue: 10);
 
         // Act
@@ -201,9 +201,9 @@ public sealed class LinkedListExtensionsTests
     {
         // Arrange - 2_147_483_648 (int.MaxValue + 1) must stay a long in both
         // the dictionary key and the cached entry.
-        var list = new LinkedList<CacheEntry<int>>();
-        var cache = new Dictionary<long, LinkedListNode<CacheEntry<int>>>();
-        var rowIndex = 2_147_483_648L;
+        LinkedList<CacheEntry<int>> list = new();
+        Dictionary<long, LinkedListNode<CacheEntry<int>>> cache = new();
+        long rowIndex = 2_147_483_648L;
 
         // Act
         list.AddNew(cache, rowIndex, rowValue: 10);

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
 
@@ -11,12 +12,12 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithEscKey_ReturnsTrue()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new HelpDialog();
+        using IApplication app = TestAppFactory.Create();
+        using HelpDialog dialog = new();
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent(Key.Esc);
+        bool handled = dialog.NewKeyDownEvent(Key.Esc);
 
         // Assert
         handled.Should().BeTrue();
@@ -26,12 +27,12 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithQKey_ReturnsTrue()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new HelpDialog();
+        using IApplication app = TestAppFactory.Create();
+        using HelpDialog dialog = new();
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent(Key.Q);
+        bool handled = dialog.NewKeyDownEvent(Key.Q);
 
         // Assert
         handled.Should().BeTrue();
@@ -41,12 +42,12 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithLowercaseQKey_ReturnsTrue()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new HelpDialog();
+        using IApplication app = TestAppFactory.Create();
+        using HelpDialog dialog = new();
 
         // Act
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent((Key)'q');
+        bool handled = dialog.NewKeyDownEvent((Key)'q');
 
         // Assert
         handled.Should().BeTrue();
@@ -56,13 +57,13 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithQuestionMarkKey_ReturnsTrue()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new HelpDialog();
+        using IApplication app = TestAppFactory.Create();
+        using HelpDialog dialog = new();
 
         // Act
         // '?' has implicit cast from char to Key in Terminal.Gui v2
         app.Begin(dialog);
-        var handled = dialog.NewKeyDownEvent((Key)'?');
+        bool handled = dialog.NewKeyDownEvent((Key)'?');
 
         // Assert
         handled.Should().BeTrue();
@@ -72,10 +73,10 @@ public sealed class HelpDialogTests
     public void Constructor_InitializesDialogCorrectly()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        using var dialog = new HelpDialog();
+        using HelpDialog dialog = new();
 
         // Assert
         dialog.Title.Should().Be("Help - Key Bindings");
@@ -85,13 +86,13 @@ public sealed class HelpDialogTests
     public void Constructor_HelpText_IncludesBackspaceBinding()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
 
         // Act
-        using var dialog = new HelpDialog();
+        using HelpDialog dialog = new();
 
         // Assert
-        var label = dialog.SubViews.OfType<Label>().Single();
+        Label label = dialog.SubViews.OfType<Label>().Single();
         label.Text.Should().Contain("BackSpace");
     }
 
@@ -99,8 +100,8 @@ public sealed class HelpDialogTests
     public void OnKeyDown_WithOtherKey_DoesNotCloseDialog()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var dialog = new HelpDialog();
+        using IApplication app = TestAppFactory.Create();
+        using HelpDialog dialog = new();
 
         // Act
         app.Begin(dialog);

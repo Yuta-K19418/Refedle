@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.Engine.IO;
+using Terminal.Gui.App;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
@@ -43,9 +44,9 @@ public sealed partial class MainWindowTests
     public void StartIndexing_WithProgress_ShowsOverlayWithInitialProgressText()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
         app.StopAfterFirstIteration = true;
         app.Begin(mainWindow);
 
@@ -61,12 +62,12 @@ public sealed partial class MainWindowTests
     public void ProgressChanged_WhenIndexerRaisesProgress_UpdatesOverlayText()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
         app.StopAfterFirstIteration = true;
         app.Begin(mainWindow);
-        var indexer = new ProgressIndexer(0L, OneGb);
+        ProgressIndexer indexer = new(0L, OneGb);
         mainWindow.StartIndexing(indexer);
 
         // Act
@@ -80,9 +81,9 @@ public sealed partial class MainWindowTests
     public void StartIndexing_WithProgress_PlacesOverlayOneRowAboveStatusBarOneColumnInsideStatusBarRightEdge()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
         app.StopAfterFirstIteration = true;
         app.Begin(mainWindow);
 
@@ -91,9 +92,9 @@ public sealed partial class MainWindowTests
         app.LayoutAndDraw();
 
         // Assert
-        var statusBar = mainWindow.SubViews.OfType<StatusBar>().Single();
-        var spinner = mainWindow.SubViews.OfType<SpinnerView>().Single();
-        var label = GetIndexingLabel(mainWindow);
+        StatusBar statusBar = mainWindow.SubViews.OfType<StatusBar>().Single();
+        SpinnerView spinner = mainWindow.SubViews.OfType<SpinnerView>().Single();
+        Label label = GetIndexingLabel(mainWindow);
         spinner.Frame.Y.Should().Be(statusBar.Frame.Y - 1);
         label.Frame.Y.Should().Be(statusBar.Frame.Y - 1);
         label.Frame.Right.Should().Be(statusBar.Frame.Right - 1);
@@ -103,17 +104,17 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WithOverlayShown_RemovesAndDisposesSpinnerAndLabel()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
         app.StopAfterFirstIteration = true;
         app.Begin(mainWindow);
-        var indexer = new ProgressIndexer(OneGb, 2 * OneGb);
+        ProgressIndexer indexer = new(OneGb, 2 * OneGb);
         mainWindow.StartIndexing(indexer);
-        var spinner = mainWindow.SubViews.OfType<SpinnerView>().Single();
-        var label = GetIndexingLabel(mainWindow);
-        var spinnerDisposed = false;
-        var labelDisposed = false;
+        SpinnerView spinner = mainWindow.SubViews.OfType<SpinnerView>().Single();
+        Label label = GetIndexingLabel(mainWindow);
+        bool spinnerDisposed = false;
+        bool labelDisposed = false;
         spinner.Disposing += (_, _) => spinnerDisposed = true;
         label.Disposing += (_, _) => labelDisposed = true;
 
@@ -131,9 +132,9 @@ public sealed partial class MainWindowTests
     public void StopCurrentIndexing_WithOverlayShown_RemovesSpinnerAndLabel()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
         app.StopAfterFirstIteration = true;
         app.Begin(mainWindow);
         mainWindow.StartIndexing(new ProgressIndexer(OneGb, 2 * OneGb));
@@ -152,23 +153,23 @@ public sealed partial class MainWindowTests
     public void ProgressChanged_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_DoesNotOverwriteNewIndexerText()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
-        var previous = new ProgressIndexer(0L, OneGb);
-        var current = new ProgressIndexer(0L, 2 * OneGb);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
+        ProgressIndexer previous = new(0L, OneGb);
+        ProgressIndexer current = new(0L, 2 * OneGb);
         mainWindow.StartIndexing(previous);
         previous.RaiseProgressChanged(OneGb / 2, OneGb);
         mainWindow.StartIndexing(current);
-        var labelBefore = GetIndexingLabel(mainWindow);
-        var textBefore = labelBefore.Text;
+        Label labelBefore = GetIndexingLabel(mainWindow);
+        string textBefore = labelBefore.Text;
 
         // Act
         app.StopAfterFirstIteration = true;
         app.Run(mainWindow);
 
         // Assert
-        var labelAfter = GetIndexingLabel(mainWindow);
+        Label labelAfter = GetIndexingLabel(mainWindow);
         labelAfter.Should().BeSameAs(labelBefore);
         labelAfter.Text.Should().Be(textBefore);
     }
@@ -177,15 +178,15 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WhenPreviousIndexerNotificationIsQueuedBeforeSwitch_KeepsNewIndexerOverlayShown()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
-        var previous = new ProgressIndexer(0L, OneGb);
-        var current = new ProgressIndexer(0L, 2 * OneGb);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
+        ProgressIndexer previous = new(0L, OneGb);
+        ProgressIndexer current = new(0L, 2 * OneGb);
         mainWindow.StartIndexing(previous);
         previous.RaiseBuildIndexCompleted();
         mainWindow.StartIndexing(current);
-        var labelBefore = GetIndexingLabel(mainWindow);
+        Label labelBefore = GetIndexingLabel(mainWindow);
 
         // Act
         app.StopAfterFirstIteration = true;
@@ -193,7 +194,7 @@ public sealed partial class MainWindowTests
 
         // Assert
         mainWindow.SubViews.OfType<SpinnerView>().Should().ContainSingle();
-        var labelAfter = GetIndexingLabel(mainWindow);
+        Label labelAfter = GetIndexingLabel(mainWindow);
         labelAfter.Should().BeSameAs(labelBefore);
     }
 
@@ -201,16 +202,16 @@ public sealed partial class MainWindowTests
     public void BuildIndexCompleted_WhenNotificationIsQueuedBeforeStopAndNewIndexerStarted_KeepsNewIndexerOverlayShown()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var mainWindow = new MainWindow(app, state);
-        var stopped = new ProgressIndexer(0L, OneGb);
-        var current = new ProgressIndexer(0L, 2 * OneGb);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using MainWindow mainWindow = new(app, state);
+        ProgressIndexer stopped = new(0L, OneGb);
+        ProgressIndexer current = new(0L, 2 * OneGb);
         mainWindow.StartIndexing(stopped);
         stopped.RaiseBuildIndexCompleted();
         mainWindow.StopCurrentIndexing();
         mainWindow.StartIndexing(current);
-        var labelBefore = GetIndexingLabel(mainWindow);
+        Label labelBefore = GetIndexingLabel(mainWindow);
 
         // Act
         app.StopAfterFirstIteration = true;
@@ -218,7 +219,7 @@ public sealed partial class MainWindowTests
 
         // Assert
         mainWindow.SubViews.OfType<SpinnerView>().Should().ContainSingle();
-        var labelAfter = GetIndexingLabel(mainWindow);
+        Label labelAfter = GetIndexingLabel(mainWindow);
         labelAfter.Should().BeSameAs(labelBefore);
     }
 }

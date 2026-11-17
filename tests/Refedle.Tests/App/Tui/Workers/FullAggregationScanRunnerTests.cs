@@ -1,6 +1,8 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Tui.Workers;
@@ -32,7 +34,7 @@ public sealed class FullAggregationScanRunnerTests : IDisposable
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
 
         // Act
-        var result = await FullAggregationScanRunner.RunAsync(
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = await FullAggregationScanRunner.RunAsync(
             _testFilePath, DataFormat.JsonLines, keyPath, CancellationToken.None);
 
         // Assert
@@ -46,11 +48,11 @@ public sealed class FullAggregationScanRunnerTests : IDisposable
         // Arrange
         await File.WriteAllTextAsync(_testFilePath, "{\"user\":{\"name\":\"Alice\"}}\n");
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await FullAggregationScanRunner.RunAsync(
+        Func<Task<Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)>>> act = async () => await FullAggregationScanRunner.RunAsync(
             _testFilePath, DataFormat.JsonLines, keyPath, cts.Token);
 
         // Assert
@@ -61,11 +63,11 @@ public sealed class FullAggregationScanRunnerTests : IDisposable
     public async Task RunAsync_WithJsonObjectFormat_ReturnsScannerFailureResult()
     {
         // Arrange
-        var path = Path.Combine(Path.GetTempPath(), "does-not-need-to-exist.json");
+        string path = Path.Combine(Path.GetTempPath(), "does-not-need-to-exist.json");
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
 
         // Act
-        var result = await FullAggregationScanRunner.RunAsync(
+        Result<(TableSchema schema, IReadOnlyList<FocusedTableRow> rows)> result = await FullAggregationScanRunner.RunAsync(
             path, DataFormat.JsonObject, keyPath, CancellationToken.None);
 
         // Assert

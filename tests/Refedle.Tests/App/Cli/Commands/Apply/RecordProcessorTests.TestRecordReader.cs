@@ -44,7 +44,7 @@ public sealed partial class RecordProcessorTests
 
             _currentIndex++;
 
-            var hasNext = _currentIndex < Records.Length;
+            bool hasNext = _currentIndex < Records.Length;
 
             return ValueTask.FromResult(hasNext);
         }
@@ -56,16 +56,16 @@ public sealed partial class RecordProcessorTests
                 return true;
             }
 
-            var currentRecord = Records[_currentIndex];
+            string[] currentRecord = Records[_currentIndex];
 
-            foreach (var filter in Filters)
+            foreach (FilterSpec filter in Filters)
             {
                 if (filter.SourceColumnIndex >= currentRecord.Length)
                 {
                     return false;
                 }
 
-                var valueSpan = currentRecord[filter.SourceColumnIndex].AsSpan();
+                ReadOnlySpan<char> valueSpan = currentRecord[filter.SourceColumnIndex].AsSpan();
 
                 if (!FilterEvaluator.EvaluateFilter(valueSpan, filter))
                 {
@@ -78,7 +78,7 @@ public sealed partial class RecordProcessorTests
 
         public readonly CellData GetCellData(int outputColumnIndex)
         {
-            var presence = Presences is null ? CellPresence.Value : Presences[_currentIndex][outputColumnIndex];
+            CellPresence presence = Presences is null ? CellPresence.Value : Presences[_currentIndex][outputColumnIndex];
             return new CellData(Records[_currentIndex][outputColumnIndex], presence);
         }
     }

@@ -65,11 +65,11 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_SetsInitialMinWidthToHeaderLength()
     {
         // Arrange
-        var inner = new FakeTableSource(["short", "muchLongerHeader"], []);
-        var style = new TableStyle();
+        FakeTableSource inner = new(["short", "muchLongerHeader"], []);
+        TableStyle style = new();
 
         // Act
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Assert
         style.ColumnStyles[0].MinWidth.Should().Be("short".Length);
@@ -80,12 +80,12 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_ExistingMinWidthGreaterThanHeader_PreservesExistingMinWidth()
     {
         // Arrange
-        var inner = new FakeTableSource(["a"], []);
-        var style = new TableStyle();
+        FakeTableSource inner = new(["a"], []);
+        TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MinWidth = 20;
 
         // Act
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Assert
         style.ColumnStyles[0].MinWidth.Should().Be(20);
@@ -95,12 +95,12 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_HeaderWiderThanConfiguredMaximum_ClampsInitialMinWidth()
     {
         // Arrange
-        var inner = new FakeTableSource([new string('h', 20)], []);
-        var style = new TableStyle();
+        FakeTableSource inner = new([new string('h', 20)], []);
+        TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MaxWidth = 10;
 
         // Act
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Assert
         style.ColumnStyles[0].MinWidth.Should().Be(10);
@@ -110,12 +110,12 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_ZeroColumnSource_CreatesNoColumnStylesAndDisposesSafely()
     {
         // Arrange
-        var inner = new FakeTableSource([], []);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new([], []);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
-        var act = () => source.Dispose();
+        Action act = () => source.Dispose();
 
         // Assert
         style.ColumnStyles.Should().BeEmpty();
@@ -127,9 +127,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["a"], ["muchLongerValue"]];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         _ = source[1, 0];
@@ -143,9 +143,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["muchLongerValue"], ["a"]];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
         _ = source[0, 0];
 
         // Act
@@ -160,10 +160,10 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [[new string('x', 11)]];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MaxWidth = 10;
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         _ = source[0, 0];
@@ -177,12 +177,12 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["value"]];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
-        var value = source[0, 0];
+        object value = source[0, 0];
 
         // Assert
         value.Should().Be("value");
@@ -197,9 +197,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [[cellValue]];
-        var inner = new FakeTableSource([""], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new([""], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         _ = source[0, 0];
@@ -212,11 +212,11 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_WideCjkHeader_TracksDisplayColumnsNotUtf16Length()
     {
         // Arrange — 2 CJK characters occupy 4 terminal columns but only 2 UTF-16 code units.
-        var inner = new FakeTableSource(["名前"], []);
-        var style = new TableStyle();
+        FakeTableSource inner = new(["名前"], []);
+        TableStyle style = new();
 
         // Act
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Assert
         style.ColumnStyles[0].MinWidth.Should().Be("名前".GetColumns());
@@ -229,9 +229,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         // Arrange
         const string value = "日本語テスト";
         IReadOnlyList<IReadOnlyList<object>> rows = [[value]];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         _ = source[0, 0];
@@ -245,13 +245,13 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Indexer_WhenInnerSourceAddsColumn_TracksNewColumnWithoutThrowing()
     {
         // Arrange
-        var inner = new MutableFakeTableSource(["first"], ["first"], [["a"]]);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        MutableFakeTableSource inner = new(["first"], ["first"], [["a"]]);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
         inner.Replace(["first", "second"], ["first", "second"], [["a", "expanded"]]);
 
         // Act
-        var act = () => _ = source[0, 1];
+        Func<object> act = () => _ = source[0, 1];
 
         // Assert
         act.Should().NotThrow();
@@ -262,13 +262,13 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void RawColumnNames_WhenInnerSourceGrows_ReturnsCurrentDistinctRawNames()
     {
         // Arrange
-        var inner = new MutableFakeTableSource(["first (text)"], ["first"], [["a"]]);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        MutableFakeTableSource inner = new(["first (text)"], ["first"], [["a"]]);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
         inner.Replace(["first (text)", "second (number)"], ["first", "second"], [["a", "2"]]);
 
         // Act
-        var rawColumnNames = source.RawColumnNames;
+        string[] rawColumnNames = source.RawColumnNames;
 
         // Assert
         rawColumnNames.Should().Equal("first", "second");
@@ -279,14 +279,14 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["v1", "v2"], ["v3", "v4"], ["v5", "v6"]];
-        var inner = new FakeTableSource(["a", "b"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["a", "b"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
-        var rowCount = source.TotalRows;
-        var columnCount = source.Columns;
-        var columnNames = source.ColumnNames;
+        long rowCount = source.TotalRows;
+        int columnCount = source.Columns;
+        string[] columnNames = source.ColumnNames;
 
         // Assert
         rowCount.Should().Be(3);
@@ -299,9 +299,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange — source is the sole owner of inner; it is not independently wrapped in a
         // using so this test's single Dispose() call is the only disposal that occurs.
-        var inner = new DisposableFakeTableSource();
-        var style = new TableStyle();
-        var source = new ColumnWidthStabilizingTableSource(inner, style);
+        DisposableFakeTableSource inner = new();
+        TableStyle style = new();
+        ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         source.Dispose();
@@ -314,12 +314,12 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Dispose_DoesNotThrow_WhenInnerIsNotDisposable()
     {
         // Arrange
-        var inner = new FakeTableSource(["col"], []);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
+        FakeTableSource inner = new(["col"], []);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
-        var act = () => source.Dispose();
+        Action act = () => source.Dispose();
 
         // Assert
         act.Should().NotThrow();
@@ -330,9 +330,9 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange — source is the sole owner of inner; it is not independently wrapped in a
         // using so the two explicit Dispose() calls below are the only disposals that occur.
-        var inner = new CountingDisposableFakeTableSource();
-        var style = new TableStyle();
-        var source = new ColumnWidthStabilizingTableSource(inner, style);
+        CountingDisposableFakeTableSource inner = new();
+        TableStyle style = new();
+        ColumnWidthStabilizingTableSource source = new(inner, style);
 
         // Act
         source.Dispose();
@@ -348,14 +348,14 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         // Arrange — a barrier races every task for the lock at once, stress-testing convergence
         // under contention. It does not force a specific interleaving: the lock already makes the
         // observed-width comparison and the MinWidth write one atomic section.
-        var widths = new[] { 50, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+        int[] widths = [50, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         IReadOnlyList<IReadOnlyList<object>> rows = [.. widths.Select(w => (IReadOnlyList<object>)[new string('x', w)])];
-        var inner = new FakeTableSource(["col"], rows);
-        var style = new TableStyle();
-        using var source = new ColumnWidthStabilizingTableSource(inner, style);
-        using var barrier = new Barrier(rows.Count);
+        FakeTableSource inner = new(["col"], rows);
+        TableStyle style = new();
+        using ColumnWidthStabilizingTableSource source = new(inner, style);
+        using Barrier barrier = new(rows.Count);
         // LongRunning gives each blocked task its own thread instead of draining the thread pool.
-        var accesses = Enumerable.Range(0, rows.Count).Select(i => Task.Factory.StartNew(
+        IEnumerable<Task> accesses = Enumerable.Range(0, rows.Count).Select(i => Task.Factory.StartNew(
             () =>
             {
                 barrier.SignalAndWait();

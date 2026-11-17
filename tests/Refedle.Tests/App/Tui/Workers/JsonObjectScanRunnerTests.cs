@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine.IO.JsonObject;
 
 namespace Refedle.Tests.App.Tui.Workers;
 
@@ -27,7 +28,7 @@ public sealed class JsonObjectScanRunnerTests : IDisposable
         await File.WriteAllTextAsync(_testFilePath, "{\"name\":\"Alice\",\"age\":30}");
 
         // Act
-        var entries = await JsonObjectScanRunner.RunAsync(_testFilePath, CancellationToken.None);
+        IReadOnlyList<JsonObjectEntry> entries = await JsonObjectScanRunner.RunAsync(_testFilePath, CancellationToken.None);
 
         // Assert
         entries.Select(e => e.Key).Should().Equal("name", "age");
@@ -38,11 +39,11 @@ public sealed class JsonObjectScanRunnerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_testFilePath, "{\"name\":\"Alice\"}");
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await JsonObjectScanRunner.RunAsync(_testFilePath, cts.Token);
+        Func<Task<IReadOnlyList<JsonObjectEntry>>> act = async () => await JsonObjectScanRunner.RunAsync(_testFilePath, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -52,10 +53,10 @@ public sealed class JsonObjectScanRunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentFilePath_ThrowsFileNotFoundException()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
 
         // Act
-        var act = async () => await JsonObjectScanRunner.RunAsync(nonExistentPath, CancellationToken.None);
+        Func<Task<IReadOnlyList<JsonObjectEntry>>> act = async () => await JsonObjectScanRunner.RunAsync(nonExistentPath, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<FileNotFoundException>();

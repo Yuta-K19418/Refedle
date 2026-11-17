@@ -3,6 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using Refedle.App.Tui.UI;
 using Terminal.Gui.App;
+using Terminal.Gui.Drawing;
 using Terminal.Gui.Drivers;
 
 namespace Refedle.E2ETests.Helpers;
@@ -82,9 +83,9 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     public void SendText(string text)
     {
-        foreach (var c in text)
+        foreach (char c in text)
         {
-            var keyCode = (KeyCode)c;
+            KeyCode keyCode = (KeyCode)c;
             if (char.IsUpper(c))
             {
                 keyCode |= KeyCode.ShiftMask;
@@ -120,11 +121,11 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     public async Task WaitForInputProcessedAsync()
     {
-        var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         AttachIterationPump();
         _pendingInputs.Enqueue(() => completion.TrySetResult());
 
-        using var timeoutCts = new CancellationTokenSource(_pollTimeout);
+        using CancellationTokenSource timeoutCts = new(_pollTimeout);
         try
         {
             await completion.Task.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -182,7 +183,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     public async Task WaitForExitAsync()
     {
-        using var timeoutCts = new CancellationTokenSource(_stopTimeout);
+        using CancellationTokenSource timeoutCts = new(_stopTimeout);
         try
         {
             await _runTask.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -214,26 +215,26 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     {
         // Forces Terminal.Gui's own documented headless mode instead of relying on its
         // auto-detection, which is not guaranteed to agree across 3-OS CI runners.
-        var previousDisableRealDriverIO = Environment.GetEnvironmentVariable("DisableRealDriverIO");
+        string? previousDisableRealDriverIO = Environment.GetEnvironmentVariable("DisableRealDriverIO");
         Environment.SetEnvironmentVariable("DisableRealDriverIO", "1");
 
-        var ready = new TaskCompletionSource<(IApplication App, MainWindow MainWindow)>(
+        TaskCompletionSource<(IApplication App, MainWindow MainWindow)> ready = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var stopCts = new CancellationTokenSource();
+        CancellationTokenSource stopCts = new();
 
         // The worker owns app/mainWindow disposal and DisableRealDriverIO restoration, and only
         // after RunAsync has actually returned — never the caller — so neither races the loop
         // thread. TuiApplication.Create() itself is inside the outer try so that even a failure
         // there still completes `ready` with the exception instead of hanging StartAsync forever.
-        var runTask = Task.Run(() =>
+        Task<object?> runTask = Task.Run(() =>
         {
             try
             {
-                var (app, mainWindow) = TuiApplication.Create();
+                (IApplication? app, MainWindow? mainWindow) = TuiApplication.Create();
                 try
                 {
                     app.Init(DriverRegistry.Names.ANSI);
-                    var driver = app.Driver
+                    IDriver driver = app.Driver
                         ?? throw new InvalidOperationException("IApplication.Driver was not set after Init.");
                     driver.SetScreenSize(Cols, Rows);
                     mainWindow.SubscribeKeyHandler();
@@ -266,7 +267,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
         try
         {
-            var (app, mainWindow) = await ready.Task.ConfigureAwait(false);
+            (IApplication? app, MainWindow? mainWindow) = await ready.Task.ConfigureAwait(false);
             return new TuiTestHarness(app, mainWindow, stopCts, runTask);
         }
         catch
@@ -317,10 +318,10 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     private static async Task<T> PollAsync<T>(Func<Task<T>> read, Func<T, bool> predicate, string description)
     {
-        using var timeoutCts = new CancellationTokenSource(_pollTimeout);
+        using CancellationTokenSource timeoutCts = new(_pollTimeout);
         try
         {
-            var value = await read().WaitAsync(timeoutCts.Token).ConfigureAwait(false);
+            T? value = await read().WaitAsync(timeoutCts.Token).ConfigureAwait(false);
             while (!predicate(value))
             {
                 await Task.Delay(_pollInterval, timeoutCts.Token).ConfigureAwait(false);
@@ -342,7 +343,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
         // Cancel and wait only. The worker task (see StartAsync) owns app/mainWindow disposal
         // and DisableRealDriverIO restoration in its own finally, once RunAsync actually returns,
         // so this side never races a loop thread that may still be running.
-        using var timeoutCts = new CancellationTokenSource(_stopTimeout);
+        using CancellationTokenSource timeoutCts = new(_stopTimeout);
         try
         {
             await _runTask.WaitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -372,7 +373,7 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     private Task<T> RequestUiReadAsync<T>(Func<T> read)
     {
-        var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<T> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         AttachIterationPump();
         _pendingReads.Enqueue(new UiRequest<T>(read, completion));
         return completion.Task;
@@ -398,12 +399,12 @@ internal sealed class TuiTestHarness : IAsyncDisposable
         // Deliver at most one input (key or paste) per iteration: an input that opens a modal dialog
         // blocks here inside a nested run loop, and spacing inputs one iteration apart keeps each
         // dialog step observable before the next input arrives.
-        if (_pendingInputs.TryDequeue(out var input))
+        if (_pendingInputs.TryDequeue(out Action? input))
         {
             input();
         }
 
-        while (_pendingReads.TryDequeue(out var request))
+        while (_pendingReads.TryDequeue(out UiRequest? request))
         {
             request.Complete();
         }
@@ -435,15 +436,15 @@ internal sealed class TuiTestHarness : IAsyncDisposable
 
     private string[] CaptureContents()
     {
-        var driver = _app.Driver ?? throw new InvalidOperationException("IApplication.Driver was not set after Init.");
-        var contents = driver.Contents ?? throw new InvalidOperationException("IDriver.Contents was not initialized.");
-        var rows = contents.GetLength(0);
-        var cols = contents.GetLength(1);
-        var lines = new string[rows];
-        for (var row = 0; row < rows; row++)
+        IDriver driver = _app.Driver ?? throw new InvalidOperationException("IApplication.Driver was not set after Init.");
+        Cell[,] contents = driver.Contents ?? throw new InvalidOperationException("IDriver.Contents was not initialized.");
+        int rows = contents.GetLength(0);
+        int cols = contents.GetLength(1);
+        string[] lines = new string[rows];
+        for (int row = 0; row < rows; row++)
         {
-            var builder = new StringBuilder(cols);
-            for (var col = 0; col < cols; col++)
+            StringBuilder builder = new(cols);
+            for (int col = 0; col < cols; col++)
             {
                 builder.Append(contents[row, col].Grapheme);
             }
@@ -464,18 +465,18 @@ internal sealed class TuiTestHarness : IAsyncDisposable
     /// </summary>
     private (int Row, int Col)? FindSelectedCell()
     {
-        var driver = _app.Driver ?? throw new InvalidOperationException("IApplication.Driver was not set after Init.");
-        var contents = driver.Contents ?? throw new InvalidOperationException("IDriver.Contents was not initialized.");
-        var rows = contents.GetLength(0);
-        var cols = contents.GetLength(1);
-        for (var row = 0; row < rows; row++)
+        IDriver driver = _app.Driver ?? throw new InvalidOperationException("IApplication.Driver was not set after Init.");
+        Cell[,] contents = driver.Contents ?? throw new InvalidOperationException("IDriver.Contents was not initialized.");
+        int rows = contents.GetLength(0);
+        int cols = contents.GetLength(1);
+        for (int row = 0; row < rows; row++)
         {
-            var spanCount = 0;
-            var firstSpanCol = -1;
-            var inSpan = false;
-            for (var col = 0; col < cols; col++)
+            int spanCount = 0;
+            int firstSpanCol = -1;
+            bool inSpan = false;
+            for (int col = 0; col < cols; col++)
             {
-                var isHighlighted = IsSelectionHighlight(contents[row, col].Attribute);
+                bool isHighlighted = IsSelectionHighlight(contents[row, col].Attribute);
                 if (isHighlighted && !inSpan)
                 {
                     spanCount++;

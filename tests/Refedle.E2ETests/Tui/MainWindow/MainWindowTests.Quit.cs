@@ -10,19 +10,19 @@ public sealed partial class MainWindowTests
     public async Task QuitKey_OnCsvTableWithNoPendingActions_StopsTheEventLoop()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
         // Act & Assert: an empty action stack means no confirmation dialog is shown.
         Harness.SendKey(KeyCode.Q);
-        var waitForExit = () => Harness.WaitForExitAsync();
+        Func<Task> waitForExit = () => Harness.WaitForExitAsync();
         await waitForExit.Should().NotThrowAsync();
     }
 
@@ -30,14 +30,14 @@ public sealed partial class MainWindowTests
     public async Task QuitKey_OnJsonArrayTreeWithNoPendingActions_StopsTheEventLoop()
     {
         // Arrange
-        var content = """[{"name":"Item1","age":1}]""";
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string content = """[{"name":"Item1","age":1}]""";
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
 
         // Act & Assert: an empty action stack means no confirmation dialog is shown.
         Harness.SendKey(KeyCode.Q);
-        var waitForExit = () => Harness.WaitForExitAsync();
+        Func<Task> waitForExit = () => Harness.WaitForExitAsync();
         await waitForExit.Should().NotThrowAsync();
     }
 
@@ -45,13 +45,13 @@ public sealed partial class MainWindowTests
     public async Task QuitKey_OnCsvTableWithPendingActions_ConfirmingDialogStopsTheEventLoop()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
@@ -78,7 +78,7 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("Quit anyway?");
         Harness.SendKey(KeyCode.CursorLeft);
         Harness.SendKey(KeyCode.Enter);
-        var waitForExit = () => Harness.WaitForExitAsync();
+        Func<Task> waitForExit = () => Harness.WaitForExitAsync();
         await waitForExit.Should().NotThrowAsync();
     }
 }

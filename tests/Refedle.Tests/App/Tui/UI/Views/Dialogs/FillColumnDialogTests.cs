@@ -9,10 +9,10 @@ public sealed class FillColumnDialogTests
     public void Constructor_SetsTitle_ToFillColumn()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FillColumnDialog(columnName);
+        using FillColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Title.Should().Be("Fill Column");
@@ -22,10 +22,10 @@ public sealed class FillColumnDialogTests
     public void Value_BeforeInteraction_IsEmptyString()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FillColumnDialog(columnName);
+        using FillColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Value.Should().Be(string.Empty);
@@ -35,10 +35,10 @@ public sealed class FillColumnDialogTests
     public void Confirmed_BeforeInteraction_IsFalse()
     {
         // Arrange
-        var columnName = "testColumn";
+        string columnName = "testColumn";
 
         // Act
-        using var dialog = new FillColumnDialog(columnName);
+        using FillColumnDialog dialog = new(columnName);
 
         // Assert
         dialog.Confirmed.Should().BeFalse();

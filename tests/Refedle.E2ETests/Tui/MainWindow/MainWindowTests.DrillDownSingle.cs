@@ -10,15 +10,15 @@ public sealed partial class MainWindowTests
     public async Task DrillDown_OnJsonObjectTree_RendersSingleModeFocusedTable()
     {
         // Arrange
-        var content = """{"items":[{"name":"A","val":1},{"name":"B","val":2}]}""";
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string content = """{"items":[{"name":"A","val":1},{"name":"B","val":2}]}""";
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("items", "Array: 2 items");
 
         // Act: the sole "items" root node is already selected; x opens the DrillDown menu.
         Harness.SendKey(KeyCode.X);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name (text)", "val (number)");
+        string[] lines = await Harness.WaitForContentsAsync("name (text)", "val (number)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("[0]", StringComparison.Ordinal) && line.Contains('A') && line.Contains('1'));

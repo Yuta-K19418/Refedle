@@ -26,7 +26,7 @@ public sealed class AppStateTests
 
     private static AppState CreateStateWithDrillDown(IMorphAction drillDownAction)
     {
-        var state = new AppState();
+        AppState state = new();
         state.EnterFocusedTable(CreateDrillDownState(drillDownAction));
         return state;
     }
@@ -43,7 +43,7 @@ public sealed class AppStateTests
     // actions and a DrillDown session.
     private static AppState CreatePopulatedState()
     {
-        var state = new AppState();
+        AppState state = new();
         state.StartNewFile("old.csv");
         state.CompleteCsvLoad(new AppStateTestRowIndexer("old.csv"), CreateSchema("old"));
         state.SetSchemaRefinedCallback(_ => { });
@@ -57,7 +57,7 @@ public sealed class AppStateTests
     // The populated state after its DrillDown session ended: a tree mode with no session.
     private static AppState CreatePopulatedTreeState()
     {
-        var state = CreatePopulatedState();
+        AppState state = CreatePopulatedState();
         state.ExitFocusedTable(ViewMode.JsonObjectTree);
         return state;
     }
@@ -71,8 +71,8 @@ public sealed class AppStateTests
     public void AddMorphAction_SingleAction_AddsToStack()
     {
         // Arrange
-        using var state = new AppState();
-        var action = new RenameColumnAction { OldName = "foo", NewName = "bar" };
+        using AppState state = new();
+        RenameColumnAction action = new() { OldName = "foo", NewName = "bar" };
 
         // Act
         state.AddMorphAction(action);
@@ -86,10 +86,10 @@ public sealed class AppStateTests
     public void AddMorphAction_MultipleActions_PreservesOrder()
     {
         // Arrange
-        using var state = new AppState();
-        var action1 = new RenameColumnAction { OldName = "a", NewName = "b" };
-        var action2 = new DeleteColumnAction { ColumnName = "c" };
-        var action3 = new CastColumnAction { ColumnName = "d", TargetType = ColumnType.WholeNumber };
+        using AppState state = new();
+        RenameColumnAction action1 = new() { OldName = "a", NewName = "b" };
+        DeleteColumnAction action2 = new() { ColumnName = "c" };
+        CastColumnAction action3 = new() { ColumnName = "d", TargetType = ColumnType.WholeNumber };
 
         // Act
         state.AddMorphAction(action1);
@@ -107,9 +107,9 @@ public sealed class AppStateTests
     public void AddMorphAction_DoesNotMutateOriginalList()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var originalList = state.ActionStack;
+        IReadOnlyList<IMorphAction> originalList = state.ActionStack;
 
         // Act
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "c" });
@@ -123,7 +123,7 @@ public sealed class AppStateTests
     public void ClearMorphActions_WithActions_ClearsActionStack()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "c" });
 
@@ -138,7 +138,7 @@ public sealed class AppStateTests
     public void ClearMorphActions_WithEmptyStack_StackRemainsEmpty()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
         state.ClearMorphActions();
@@ -151,9 +151,9 @@ public sealed class AppStateTests
     public void ClearMorphActions_DoesNotMutatePreviousStackReference()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var originalList = state.ActionStack;
+        IReadOnlyList<IMorphAction> originalList = state.ActionStack;
 
         // Act
         state.ClearMorphActions();
@@ -167,9 +167,9 @@ public sealed class AppStateTests
     public void SetActionStack_ReplacesEntireStack()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var replacement = new IMorphAction[] { new DeleteColumnAction { ColumnName = "c" } };
+        IMorphAction[] replacement = [new DeleteColumnAction { ColumnName = "c" }];
 
         // Act
         state.SetActionStack(replacement);
@@ -183,7 +183,7 @@ public sealed class AppStateTests
     public void SetActionStack_WithEmptyList_ClearsStack()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
 
         // Act
@@ -197,15 +197,15 @@ public sealed class AppStateTests
     public void AddMorphAction_WithActiveDrillDown_DoesNotAffectDrillDownActionStack()
     {
         // Arrange
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        using var state = CreateStateWithDrillDown(drillDownAction);
+        RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
+        using AppState state = CreateStateWithDrillDown(drillDownAction);
 
         // Act
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "c" });
 
         // Assert
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().Equal(drillDownAction);
     }
 
@@ -213,8 +213,8 @@ public sealed class AppStateTests
     public void ClearMorphActions_WithActiveDrillDown_DoesNotAffectDrillDownActionStack()
     {
         // Arrange
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        using var state = CreateStateWithDrillDown(drillDownAction);
+        RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
+        using AppState state = CreateStateWithDrillDown(drillDownAction);
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "c" });
 
         // Act
@@ -222,7 +222,7 @@ public sealed class AppStateTests
 
         // Assert
         state.ActionStack.Should().BeEmpty();
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().Equal(drillDownAction);
     }
 
@@ -230,16 +230,16 @@ public sealed class AppStateTests
     public void SetActionStack_WithActiveDrillDown_LeavesDrillDownActionStackUntouched()
     {
         // Arrange
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        using var state = CreateStateWithDrillDown(drillDownAction);
-        var replacement = new IMorphAction[] { new DeleteColumnAction { ColumnName = "base" } };
+        RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
+        using AppState state = CreateStateWithDrillDown(drillDownAction);
+        IMorphAction[] replacement = [new DeleteColumnAction { ColumnName = "base" }];
 
         // Act
         state.SetActionStack(replacement);
 
         // Assert
         state.ActionStack.Should().Equal(replacement);
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().Equal(drillDownAction);
     }
 
@@ -247,10 +247,10 @@ public sealed class AppStateTests
     public void CurrentKeyPath_Default_IsEmpty()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var result = state.CurrentKeyPath;
+        IReadOnlyList<KeyPathSegment> result = state.CurrentKeyPath;
 
         // Assert
         result.Should().BeEmpty();
@@ -260,10 +260,10 @@ public sealed class AppStateTests
     public void JsonObjectEntries_Default_IsNull()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var result = state.JsonObjectEntries;
+        IReadOnlyList<JsonObjectEntry>? result = state.JsonObjectEntries;
 
         // Assert
         result.Should().BeNull();
@@ -273,10 +273,10 @@ public sealed class AppStateTests
     public void HasUnsavedChanges_Default_IsFalse()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var result = state.HasUnsavedChanges;
+        bool result = state.HasUnsavedChanges;
 
         // Assert
         result.Should().BeFalse();
@@ -286,7 +286,7 @@ public sealed class AppStateTests
     public void AddMorphAction_SetsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
@@ -299,7 +299,7 @@ public sealed class AppStateTests
     public void ClearMorphActions_WhenSavedStackIsNonEmpty_SetsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
         state.MarkRecipeSaved();
 
@@ -314,8 +314,8 @@ public sealed class AppStateTests
     public void ClearMorphActions_WhenStackAlreadyEmpty_LeavesStateClean()
     {
         // Arrange
-        using var state = new AppState();
-        var revisionBefore = state.Revision;
+        using AppState state = new();
+        long revisionBefore = state.Revision;
 
         // Act
         state.ClearMorphActions();
@@ -329,7 +329,7 @@ public sealed class AppStateTests
     public void SetActionStack_SetsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
         state.SetActionStack([]);
@@ -342,7 +342,7 @@ public sealed class AppStateTests
     public void MarkRecipeSaved_AfterMutation_ClearsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
 
         // Act
@@ -356,10 +356,10 @@ public sealed class AppStateTests
     public void DrillDownState_WithInitialActions_DefaultsToClean()
     {
         // Arrange — the drillDownAction comes from a loaded recipe, not an unsaved edit
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
-        var hasUnsavedChanges = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which.HasUnsavedChanges;
+        bool hasUnsavedChanges = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which.HasUnsavedChanges;
 
         // Assert
         hasUnsavedChanges.Should().BeFalse();
@@ -369,9 +369,9 @@ public sealed class AppStateTests
     public void MarkRecipeSavedIfUnchanged_WhenRevisionMatches_ClearsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var savedRevision = state.Revision;
+        long savedRevision = state.Revision;
 
         // Act
         state.MarkRecipeSavedIfUnchanged(savedRevision);
@@ -384,9 +384,9 @@ public sealed class AppStateTests
     public void MarkRecipeSavedIfUnchanged_WhenStackMutatedSinceCapture_KeepsUnsavedChanges()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        var savedRevision = state.Revision;
+        long savedRevision = state.Revision;
         state.ClearMorphActions();
 
         // Act
@@ -400,7 +400,7 @@ public sealed class AppStateTests
     public void StartNewFile_WithPath_SetsCurrentFilePath()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.StartNewFile("new.jsonl");
@@ -413,7 +413,7 @@ public sealed class AppStateTests
     public void StartNewFile_AfterUnsavedEdits_EmptiesActionStackAndClearsUnsavedFlag()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.StartNewFile("new.jsonl");
@@ -427,8 +427,8 @@ public sealed class AppStateTests
     public void StartNewFile_WhenCalled_RenewsCtsAndCancelsThePreviousOne()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var previousCts = state.Cts;
+        using AppState state = CreatePopulatedState();
+        CancellationTokenSource previousCts = state.Cts;
 
         // Act
         state.StartNewFile("new.jsonl");
@@ -443,7 +443,7 @@ public sealed class AppStateTests
     public void StartNewFile_WithDrillDownSessionAndJsonObjectEntries_EndsSessionAndClearsEntries()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.StartNewFile("new.jsonl");
@@ -457,9 +457,9 @@ public sealed class AppStateTests
     public void StartNewFile_WhenCalled_LeavesModeSchemaAndRowIndexerUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var schemaBefore = state.Schema;
-        var indexerBefore = state.RowIndexer;
+        using AppState state = CreatePopulatedState();
+        TableSchema? schemaBefore = state.Schema;
+        IRowIndexer? indexerBefore = state.RowIndexer;
 
         // Act
         state.StartNewFile("new.jsonl");
@@ -474,8 +474,8 @@ public sealed class AppStateTests
     public void BeginIndexedTreeLoad_WithIndexer_StoresIndexerAndClearsSchemaAndCallback()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var indexer = new AppStateTestRowIndexer("new.jsonl");
+        using AppState state = CreatePopulatedState();
+        AppStateTestRowIndexer indexer = new("new.jsonl");
 
         // Act
         state.BeginIndexedTreeLoad(indexer);
@@ -490,7 +490,7 @@ public sealed class AppStateTests
     public void BeginIndexedTreeLoad_WithIndexer_LeavesModeFilePathAndActionStackUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.BeginIndexedTreeLoad(new AppStateTestRowIndexer("new.jsonl"));
@@ -505,7 +505,7 @@ public sealed class AppStateTests
     public void BeginJsonObjectLoad_AfterTableLoad_ClearsIndexerSchemaAndCallback()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.BeginJsonObjectLoad();
@@ -520,8 +520,8 @@ public sealed class AppStateTests
     public void BeginJsonObjectLoad_AfterTableLoad_LeavesModeFilePathActionStackAndEntriesUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var entriesBefore = state.JsonObjectEntries;
+        using AppState state = CreatePopulatedState();
+        IReadOnlyList<JsonObjectEntry>? entriesBefore = state.JsonObjectEntries;
 
         // Act
         state.BeginJsonObjectLoad();
@@ -537,9 +537,9 @@ public sealed class AppStateTests
     public void CompleteCsvLoad_WithIndexerAndSchema_StoresBothAndEntersCsvTableMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var indexer = new AppStateTestRowIndexer("new.csv");
-        var schema = CreateSchema("new");
+        using AppState state = CreatePopulatedState();
+        AppStateTestRowIndexer indexer = new("new.csv");
+        TableSchema schema = CreateSchema("new");
 
         // Act
         state.CompleteCsvLoad(indexer, schema);
@@ -554,7 +554,7 @@ public sealed class AppStateTests
     public void CompleteCsvLoad_WithIndexerAndSchema_LeavesFilePathAndActionStackUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.CompleteCsvLoad(new AppStateTestRowIndexer("new.csv"), CreateSchema("new"));
@@ -568,7 +568,7 @@ public sealed class AppStateTests
     public void EnterJsonObjectTree_WithEntries_StoresEntriesAndEntersJsonObjectTreeMode()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("orders", "[]"u8.ToArray())];
 
         // Act
@@ -583,9 +583,9 @@ public sealed class AppStateTests
     public void EnterJsonObjectTree_WithEntries_LeavesSchemaAndRowIndexerUntouched()
     {
         // Arrange
-        using var state = new AppState();
-        var indexer = new AppStateTestRowIndexer("data.csv");
-        var schema = CreateSchema();
+        using AppState state = new();
+        AppStateTestRowIndexer indexer = new("data.csv");
+        TableSchema schema = CreateSchema();
         state.CompleteCsvLoad(indexer, schema);
 
         // Act
@@ -600,8 +600,8 @@ public sealed class AppStateTests
     public void EnterJsonLinesTree_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedTreeState();
-        var before = CaptureExceptMode(state);
+        using AppState state = CreatePopulatedTreeState();
+        (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<IMorphAction>, bool, IReadOnlyList<JsonObjectEntry>?) before = CaptureExceptMode(state);
 
         // Act
         state.EnterJsonLinesTree();
@@ -615,8 +615,8 @@ public sealed class AppStateTests
     public void EnterJsonArrayTree_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedTreeState();
-        var before = CaptureExceptMode(state);
+        using AppState state = CreatePopulatedTreeState();
+        (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<IMorphAction>, bool, IReadOnlyList<JsonObjectEntry>?) before = CaptureExceptMode(state);
 
         // Act
         state.EnterJsonArrayTree();
@@ -630,8 +630,8 @@ public sealed class AppStateTests
     public void EnterJsonLinesTable_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedTreeState();
-        var before = CaptureExceptMode(state);
+        using AppState state = CreatePopulatedTreeState();
+        (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<IMorphAction>, bool, IReadOnlyList<JsonObjectEntry>?) before = CaptureExceptMode(state);
 
         // Act
         state.EnterJsonLinesTable();
@@ -645,8 +645,8 @@ public sealed class AppStateTests
     public void CompleteJsonLinesSchemaScan_WithSchema_StoresSchemaAndEntersJsonLinesTableMode()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var schema = CreateSchema("scanned");
+        using AppState state = CreatePopulatedState();
+        TableSchema schema = CreateSchema("scanned");
 
         // Act
         state.CompleteJsonLinesSchemaScan(schema);
@@ -660,8 +660,8 @@ public sealed class AppStateTests
     public void CompleteJsonLinesSchemaScan_WithSchema_LeavesRowIndexerFilePathAndActionStackUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var indexerBefore = state.RowIndexer;
+        using AppState state = CreatePopulatedState();
+        IRowIndexer? indexerBefore = state.RowIndexer;
 
         // Act
         state.CompleteJsonLinesSchemaScan(CreateSchema("scanned"));
@@ -676,8 +676,8 @@ public sealed class AppStateTests
     public void EnterPlaceholderMode_FromOtherMode_ChangesOnlyTheMode()
     {
         // Arrange
-        using var state = CreatePopulatedTreeState();
-        var before = CaptureExceptMode(state);
+        using AppState state = CreatePopulatedTreeState();
+        (string, IReadOnlyList<KeyPathSegment>, TableSchema?, IRowIndexer?, CancellationTokenSource, Action<TableSchema>?, IReadOnlyList<IMorphAction>, bool, IReadOnlyList<JsonObjectEntry>?) before = CaptureExceptMode(state);
 
         // Act
         state.EnterPlaceholderMode();
@@ -691,7 +691,7 @@ public sealed class AppStateTests
     public void EnterPlaceholderMode_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.EnterPlaceholderMode();
@@ -705,7 +705,7 @@ public sealed class AppStateTests
     public void CompleteCsvLoad_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.CompleteCsvLoad(new AppStateTestRowIndexer("data.csv"), CreateSchema());
@@ -719,7 +719,7 @@ public sealed class AppStateTests
     public void EnterJsonObjectTree_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.EnterJsonObjectTree([new JsonObjectEntry("orders", "[]"u8.ToArray())]);
@@ -733,7 +733,7 @@ public sealed class AppStateTests
     public void EnterJsonLinesTree_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.EnterJsonLinesTree();
@@ -747,7 +747,7 @@ public sealed class AppStateTests
     public void EnterJsonArrayTree_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.EnterJsonArrayTree();
@@ -761,7 +761,7 @@ public sealed class AppStateTests
     public void EnterJsonLinesTable_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.EnterJsonLinesTable();
@@ -775,7 +775,7 @@ public sealed class AppStateTests
     public void CompleteJsonLinesSchemaScan_WithDrillDownSession_EndsTheSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.CompleteJsonLinesSchemaScan(CreateSchema());
@@ -789,15 +789,15 @@ public sealed class AppStateTests
     public void EnterFocusedTable_WithSession_EntersFocusedTableModeWithThatSession()
     {
         // Arrange
-        using var state = new AppState();
-        var drillDown = CreateDrillDownState(new DeleteColumnAction { ColumnName = "c" });
+        using AppState state = new();
+        DrillDownState drillDown = CreateDrillDownState(new DeleteColumnAction { ColumnName = "c" });
 
         // Act
         state.EnterFocusedTable(drillDown);
 
         // Assert
         state.CurrentMode.Should().Be(ViewMode.FocusedTable);
-        state.TryGetDrillDown(out var session).Should().BeTrue();
+        state.TryGetDrillDown(out DrillDownState? session).Should().BeTrue();
         session.Should().BeSameAs(drillDown);
     }
 
@@ -805,9 +805,9 @@ public sealed class AppStateTests
     public void EnterFocusedTable_WithSession_LeavesSchemaRowIndexerAndActionStackUntouched()
     {
         // Arrange
-        using var state = new AppState();
-        var indexer = new AppStateTestRowIndexer("data.csv");
-        var schema = CreateSchema();
+        using AppState state = new();
+        AppStateTestRowIndexer indexer = new("data.csv");
+        TableSchema schema = CreateSchema();
         state.CompleteCsvLoad(indexer, schema);
         state.AddMorphAction(RootAction);
 
@@ -824,9 +824,9 @@ public sealed class AppStateTests
     public void ApplyRefinedSchema_WithSchema_ReplacesSchemaAndLeavesModeAndRowIndexerUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var indexerBefore = state.RowIndexer;
-        var refined = CreateSchema("refined");
+        using AppState state = CreatePopulatedState();
+        IRowIndexer? indexerBefore = state.RowIndexer;
+        TableSchema refined = CreateSchema("refined");
 
         // Act
         state.ApplyRefinedSchema(refined);
@@ -841,7 +841,7 @@ public sealed class AppStateTests
     public void SetSchemaRefinedCallback_WithCallback_StoresCallback()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         Action<TableSchema> callback = _ => { };
 
         // Act
@@ -855,8 +855,8 @@ public sealed class AppStateTests
     public void SetSchemaRefinedCallback_WithNull_ClearsCallbackAndLeavesSchemaUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
-        var schemaBefore = state.Schema;
+        using AppState state = CreatePopulatedState();
+        TableSchema? schemaBefore = state.Schema;
 
         // Act
         state.SetSchemaRefinedCallback(null);
@@ -870,7 +870,7 @@ public sealed class AppStateTests
     public void SetCurrentKeyPath_WithPath_StoresPath()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         IReadOnlyList<KeyPathSegment> path = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
 
         // Act
@@ -884,7 +884,7 @@ public sealed class AppStateTests
     public void SetCurrentKeyPath_WithEmptyPath_ClearsPathAndLeavesModeUntouched()
     {
         // Arrange
-        using var state = CreatePopulatedState();
+        using AppState state = CreatePopulatedState();
 
         // Act
         state.SetCurrentKeyPath([]);
@@ -898,15 +898,15 @@ public sealed class AppStateTests
     public void TryGetDrillDown_WhenFocusedTableWithSession_ReturnsTrueAndSession()
     {
         // Arrange
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        using var state = CreateStateWithDrillDown(drillDownAction);
+        RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
+        using AppState state = CreateStateWithDrillDown(drillDownAction);
 
         // Act
-        var found = state.TryGetDrillDown(out var drillDown);
+        bool found = state.TryGetDrillDown(out DrillDownState? drillDown);
 
         // Assert
         found.Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
+        DrillDownState actual = drillDown.Should().BeOfType<DrillDownState>().Which;
         actual.ActionStack.Should().Equal(drillDownAction);
     }
 
@@ -914,10 +914,10 @@ public sealed class AppStateTests
     public void TryGetDrillDown_WhenNoSessionStarted_ReturnsFalse()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var found = state.TryGetDrillDown(out var drillDown);
+        bool found = state.TryGetDrillDown(out DrillDownState? drillDown);
 
         // Assert
         found.Should().BeFalse();
@@ -928,11 +928,11 @@ public sealed class AppStateTests
     public void TryGetDrillDown_AfterPlaceholderModeReplacedFocusedTable_ReturnsFalse()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.EnterPlaceholderMode();
 
         // Act
-        var found = state.TryGetDrillDown(out var drillDown);
+        bool found = state.TryGetDrillDown(out DrillDownState? drillDown);
 
         // Assert
         found.Should().BeFalse();
@@ -943,7 +943,7 @@ public sealed class AppStateTests
     public void ExitFocusedTable_WithSession_RestoresGivenModeAndEndsSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.ExitFocusedTable(ViewMode.JsonLinesTree);
@@ -957,16 +957,16 @@ public sealed class AppStateTests
     public void AddDrillDownAction_WithSession_AppendsToSessionAndMarksItUnsaved()
     {
         // Arrange
-        var existing = new RenameColumnAction { OldName = "x", NewName = "y" };
-        var added = new DeleteColumnAction { ColumnName = "c" };
-        using var state = CreateStateWithDrillDown(existing);
+        RenameColumnAction existing = new() { OldName = "x", NewName = "y" };
+        DeleteColumnAction added = new() { ColumnName = "c" };
+        using AppState state = CreateStateWithDrillDown(existing);
 
         // Act
         state.AddDrillDownAction(added);
 
         // Assert
-        state.TryGetDrillDown(out var drillDown).Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
+        state.TryGetDrillDown(out DrillDownState? drillDown).Should().BeTrue();
+        DrillDownState actual = drillDown.Should().BeOfType<DrillDownState>().Which;
         actual.ActionStack.Should().Equal(existing, added);
         actual.HasUnsavedChanges.Should().BeTrue();
     }
@@ -975,7 +975,7 @@ public sealed class AppStateTests
     public void AddDrillDownAction_WithSession_LeavesRootActionStackUnsavedFlagAndModeUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
+        using AppState state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
 
         // Act
         state.AddDrillDownAction(new DeleteColumnAction { ColumnName = "c" });
@@ -990,7 +990,7 @@ public sealed class AppStateTests
     public void AddDrillDownAction_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.EnterPlaceholderMode();
 
         // Act
@@ -1005,7 +1005,7 @@ public sealed class AppStateTests
     public void AddDrillDownAction_WithoutSession_LeavesModeRootActionStackAndUnsavedFlagUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(new AppState());
+        using AppState state = CreateSavedRootState(new AppState());
         state.EnterJsonLinesTree();
 
         // Act
@@ -1022,14 +1022,14 @@ public sealed class AppStateTests
     public void ClearDrillDownActions_WithSession_EmptiesSessionStackAndMarksItUnsaved()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
 
         // Act
         state.ClearDrillDownActions();
 
         // Assert
-        state.TryGetDrillDown(out var drillDown).Should().BeTrue();
-        var actual = drillDown.Should().BeOfType<DrillDownState>().Which;
+        state.TryGetDrillDown(out DrillDownState? drillDown).Should().BeTrue();
+        DrillDownState actual = drillDown.Should().BeOfType<DrillDownState>().Which;
         actual.ActionStack.Should().BeEmpty();
         actual.HasUnsavedChanges.Should().BeTrue();
     }
@@ -1038,7 +1038,7 @@ public sealed class AppStateTests
     public void ClearDrillDownActions_WithSession_LeavesRootActionStackUnsavedFlagAndModeUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
+        using AppState state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
 
         // Act
         state.ClearDrillDownActions();
@@ -1053,7 +1053,7 @@ public sealed class AppStateTests
     public void ClearDrillDownActions_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.EnterPlaceholderMode();
 
         // Act
@@ -1068,7 +1068,7 @@ public sealed class AppStateTests
     public void ClearDrillDownActions_WithoutSession_LeavesModeRootActionStackAndUnsavedFlagUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(new AppState());
+        using AppState state = CreateSavedRootState(new AppState());
         state.EnterJsonLinesTree();
 
         // Act
@@ -1085,17 +1085,17 @@ public sealed class AppStateTests
     public void MarkDrillDownSaved_WithUnsavedSession_ClearsUnsavedFlagAndKeepsActions()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.AddDrillDownAction(new DeleteColumnAction { ColumnName = "c" });
-        state.TryGetDrillDown(out var before).Should().BeTrue();
-        var actualBefore = before.Should().BeOfType<DrillDownState>().Which;
+        state.TryGetDrillDown(out DrillDownState? before).Should().BeTrue();
+        DrillDownState actualBefore = before.Should().BeOfType<DrillDownState>().Which;
 
         // Act
         state.MarkDrillDownSaved();
 
         // Assert
-        state.TryGetDrillDown(out var after).Should().BeTrue();
-        var actualAfter = after.Should().BeOfType<DrillDownState>().Which;
+        state.TryGetDrillDown(out DrillDownState? after).Should().BeTrue();
+        DrillDownState actualAfter = after.Should().BeOfType<DrillDownState>().Which;
         actualAfter.HasUnsavedChanges.Should().BeFalse();
         actualAfter.ActionStack.Should().Equal(actualBefore.ActionStack);
     }
@@ -1104,7 +1104,7 @@ public sealed class AppStateTests
     public void MarkDrillDownSaved_WithSession_LeavesRootActionStackUnsavedFlagAndModeUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
+        using AppState state = CreateSavedRootState(CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" }));
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "again" });
 
         // Act
@@ -1120,7 +1120,7 @@ public sealed class AppStateTests
     public void MarkDrillDownSaved_AfterPlaceholderModeReplacedFocusedTable_LeavesNoSession()
     {
         // Arrange
-        using var state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
+        using AppState state = CreateStateWithDrillDown(new RenameColumnAction { OldName = "x", NewName = "y" });
         state.AddDrillDownAction(new DeleteColumnAction { ColumnName = "c" });
         state.EnterPlaceholderMode();
 
@@ -1136,7 +1136,7 @@ public sealed class AppStateTests
     public void MarkDrillDownSaved_WithoutSession_LeavesModeRootActionStackAndUnsavedFlagUntouched()
     {
         // Arrange
-        using var state = CreateSavedRootState(new AppState());
+        using AppState state = CreateSavedRootState(new AppState());
         state.AddMorphAction(new DeleteColumnAction { ColumnName = "again" });
         state.EnterJsonLinesTree();
 

@@ -21,20 +21,20 @@ public sealed partial class RunnerTests
     {
         // Arrange
         const string line = """{"id":1,"data":{"city":"café","nested":{"count":2}},"tags":["a","café","b"]}""";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var inputDoc = JsonDocument.Parse(line);
-        using var outputDoc = JsonDocument.Parse(outputLine);
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument inputDoc = JsonDocument.Parse(line);
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
         outputDoc.RootElement.GetProperty("data").GetRawText().Should().Be(inputDoc.RootElement.GetProperty("data").GetRawText());
         outputDoc.RootElement.GetProperty("tags").GetRawText().Should().Be(inputDoc.RootElement.GetProperty("tags").GetRawText());
     }
@@ -50,20 +50,20 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonLinesToJsonLines_WithNumberToken_PreservesLexicalForm(string numberLiteral)
     {
         // Arrange
-        var line = $$"""{"value":{{numberLiteral}}}""";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string line = $$"""{"value":{{numberLiteral}}}""";
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
         outputDoc.RootElement.GetProperty("value").GetRawText().Should().Be(numberLiteral);
     }
 
@@ -76,20 +76,20 @@ public sealed partial class RunnerTests
     {
         // Arrange
         const string line = """{"text":"line1\nline2 \"quoted\""}""";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var inputDoc = JsonDocument.Parse(line);
-        using var outputDoc = JsonDocument.Parse(outputLine);
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument inputDoc = JsonDocument.Parse(line);
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
         outputDoc.RootElement.GetProperty("text").GetString().Should().Be(inputDoc.RootElement.GetProperty("text").GetString());
     }
 
@@ -99,21 +99,21 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonLinesToJsonLines_WithStringLookingNumericOrBoolean_StaysJsonString(string stringLiteral)
     {
         // Arrange
-        var line = $$"""{"value":"{{stringLiteral}}"}""";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string line = $$"""{"value":"{{stringLiteral}}"}""";
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var value = outputDoc.RootElement.GetProperty("value");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement value = outputDoc.RootElement.GetProperty("value");
         value.ValueKind.Should().Be(JsonValueKind.String);
         value.GetString().Should().Be(stringLiteral);
     }
@@ -124,21 +124,21 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonLinesToJsonLines_WithSentinelLookingString_StaysLiteral(string stringLiteral)
     {
         // Arrange
-        var line = $$"""{"value":"{{stringLiteral}}"}""";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string line = $$"""{"value":"{{stringLiteral}}"}""";
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var value = outputDoc.RootElement.GetProperty("value");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement value = outputDoc.RootElement.GetProperty("value");
         value.ValueKind.Should().Be(JsonValueKind.String);
         value.GetString().Should().Be(stringLiteral);
     }
@@ -152,24 +152,24 @@ public sealed partial class RunnerTests
             {"a":3}
             {"a":4,"b":null}
             """;
-        var inputFile = CreateTestFile("input.jsonl", content);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", content);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLines = await File.ReadAllLinesAsync(outputFile);
+        string[] outputLines = await File.ReadAllLinesAsync(outputFile);
         outputLines.Should().HaveCount(3);
 
-        using var missingDoc = JsonDocument.Parse(outputLines[1]);
+        using JsonDocument missingDoc = JsonDocument.Parse(outputLines[1]);
         missingDoc.RootElement.TryGetProperty("b", out _).Should().BeFalse();
 
-        using var nullDoc = JsonDocument.Parse(outputLines[2]);
+        using JsonDocument nullDoc = JsonDocument.Parse(outputLines[2]);
         nullDoc.RootElement.GetProperty("b").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
@@ -187,29 +187,29 @@ public sealed partial class RunnerTests
             {"date":null}
             """;
         const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
-        var inputFile = CreateTestFile("input.jsonl", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLines = await File.ReadAllLinesAsync(outputFile);
+        string[] outputLines = await File.ReadAllLinesAsync(outputFile);
         outputLines.Should().HaveCount(3);
 
-        using var stringDoc = JsonDocument.Parse(outputLines[0]);
-        var stringValue = stringDoc.RootElement.GetProperty("date");
+        using JsonDocument stringDoc = JsonDocument.Parse(outputLines[0]);
+        JsonElement stringValue = stringDoc.RootElement.GetProperty("date");
         stringValue.ValueKind.Should().Be(JsonValueKind.String);
         stringValue.GetString().Should().Be("not-a-date");
 
-        using var missingDoc = JsonDocument.Parse(outputLines[1]);
+        using JsonDocument missingDoc = JsonDocument.Parse(outputLines[1]);
         missingDoc.RootElement.TryGetProperty("date", out _).Should().BeFalse();
 
-        using var nullDoc = JsonDocument.Parse(outputLines[2]);
+        using JsonDocument nullDoc = JsonDocument.Parse(outputLines[2]);
         nullDoc.RootElement.GetProperty("date").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
@@ -219,20 +219,20 @@ public sealed partial class RunnerTests
         // Arrange
         const string line = """{"date":"true"}""";
         const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
-        var inputFile = CreateTestFile("input.jsonl", line);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", line);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var date = outputDoc.RootElement.GetProperty("date");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement date = outputDoc.RootElement.GetProperty("date");
         date.ValueKind.Should().Be(JsonValueKind.String);
         date.GetString().Should().Be("true");
     }
@@ -246,20 +246,20 @@ public sealed partial class RunnerTests
     {
         // Arrange
         const string content = "id,code\n1,007\n";
-        var inputFile = CreateTestFile("input.csv", content);
-        var recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", content);
+        string recipeFile = CreateTestFile("recipe.yaml", EmptyRecipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var code = outputDoc.RootElement.GetProperty("code");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement code = outputDoc.RootElement.GetProperty("code");
         code.ValueKind.Should().Be(JsonValueKind.Number);
         code.GetRawText().Should().Be("7");
     }
@@ -270,20 +270,20 @@ public sealed partial class RunnerTests
         // Arrange
         const string content = "name,status\nAlice,active\n";
         const string recipeYaml = "name: Fill status\nactions:\n  - type: Fill\n    columnName: status\n    value: 0";
-        var inputFile = CreateTestFile("input.csv", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var status = outputDoc.RootElement.GetProperty("status");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement status = outputDoc.RootElement.GetProperty("status");
         status.ValueKind.Should().Be(JsonValueKind.Number);
         status.GetRawText().Should().Be("0");
     }
@@ -294,20 +294,20 @@ public sealed partial class RunnerTests
         // Arrange
         const string content = "date\n2024-03-15\n";
         const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyyMMdd";
-        var inputFile = CreateTestFile("input.csv", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
-        using var outputDoc = JsonDocument.Parse(outputLine);
-        var date = outputDoc.RootElement.GetProperty("date");
+        string outputLine = (await File.ReadAllLinesAsync(outputFile)).Single();
+        using JsonDocument outputDoc = JsonDocument.Parse(outputLine);
+        JsonElement date = outputDoc.RootElement.GetProperty("date");
         date.ValueKind.Should().Be(JsonValueKind.Number);
         date.GetRawText().Should().Be("20240315");
     }

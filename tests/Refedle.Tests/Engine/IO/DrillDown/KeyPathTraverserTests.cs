@@ -16,7 +16,7 @@ public sealed class KeyPathTraverserTests
 
     private static JsonElement GetProperty(JsonRawBytes bytes, string propertyName)
     {
-        using var doc = JsonDocument.Parse(bytes);
+        using JsonDocument doc = JsonDocument.Parse(bytes);
         return doc.RootElement.GetProperty(propertyName).Clone();
     }
 
@@ -24,8 +24,8 @@ public sealed class KeyPathTraverserTests
     // exercising key-segment descent to a primitive leaf.
     private static string BuildNestedObjects(int depth, string leafValue)
     {
-        var sb = new StringBuilder();
-        for (var i = 0; i < depth; i++)
+        StringBuilder sb = new();
+        for (int i = 0; i < depth; i++)
         {
             sb.Append("{\"k").Append(i).Append("\":");
         }
@@ -38,14 +38,14 @@ public sealed class KeyPathTraverserTests
     // Builds [[["leafValue"]]] — `depth` single-element arrays; each "[0]" descends one level.
     private static string BuildNestedArrays(int depth, string leafValue)
     {
-        var sb = new StringBuilder();
-        for (var i = 0; i < depth; i++)
+        StringBuilder sb = new();
+        for (int i = 0; i < depth; i++)
         {
             sb.Append('[');
         }
 
         sb.Append('"').Append(leafValue).Append('"');
-        for (var i = 0; i < depth; i++)
+        for (int i = 0; i < depth; i++)
         {
             sb.Append(']');
         }
@@ -56,7 +56,7 @@ public sealed class KeyPathTraverserTests
     private static List<KeyPathSegment> BuildKeySegments(int depth)
     {
         List<KeyPathSegment> segments = [];
-        for (var i = 0; i < depth; i++)
+        for (int i = 0; i < depth; i++)
         {
             segments.Add(Key($"k{i}"));
         }
@@ -67,7 +67,7 @@ public sealed class KeyPathTraverserTests
     private static List<KeyPathSegment> BuildIndexSegments(int depth)
     {
         List<KeyPathSegment> segments = [];
-        for (var i = 0; i < depth; i++)
+        for (int i = 0; i < depth; i++)
         {
             segments.Add(Index("[0]"));
         }
@@ -78,13 +78,13 @@ public sealed class KeyPathTraverserTests
     private static TraverseResult Traverse(
         JsonRawBytes recordBytes, IReadOnlyList<KeyPathSegment> keyPath, string posHash = "1")
     {
-        var colName = KeyPathTraverser.LastKeySegment(keyPath);
-        var colNameUtf8 = Encoding.UTF8.GetBytes(colName);
+        string colName = KeyPathTraverser.LastKeySegment(keyPath);
+        byte[] colNameUtf8 = Encoding.UTF8.GetBytes(colName);
         List<FocusedTableRow> rows = [];
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
         KeyPathTraverser.ExtractRows(
             recordBytes, keyPath, posHash, colName, colNameUtf8,
@@ -103,11 +103,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeyThenIndexThenKeySegments_ReachesNestedLeaves()
     {
         // Arrange
-        var bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index("[0]"), Key("id")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -120,11 +120,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_IndexSegmentLabelDoesNotMatchPosition_AggregatesAllElements()
     {
         // Arrange
-        var bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index("[99]"), Key("id")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -136,11 +136,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeySegmentAbsentInObject_SkipsRecordSilently()
     {
         // Arrange
-        var bytes = Bytes("""{"other":"x"}""");
+        JsonRawBytes bytes = Bytes("""{"other":"x"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("user")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().BeEmpty();
@@ -150,11 +150,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeySegmentWhenCurrentValueIsNotObject_SkipsRecordSilently()
     {
         // Arrange
-        var bytes = Bytes("""{"user":"just a string"}""");
+        JsonRawBytes bytes = Bytes("""{"user":"just a string"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("user"), Key("name")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().BeEmpty();
@@ -164,11 +164,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_IndexSegmentWhenCurrentValueIsNotArray_SkipsRecordSilently()
     {
         // Arrange
-        var bytes = Bytes("""{"tags":"not an array"}""");
+        JsonRawBytes bytes = Bytes("""{"tags":"not an array"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("tags"), Index("[0]")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().BeEmpty();
@@ -178,11 +178,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_LeafIsObject_AddsRowAndScansSchema()
     {
         // Arrange
-        var bytes = Bytes("""{"user":{"name":"Alice","age":30}}""");
+        JsonRawBytes bytes = Bytes("""{"user":{"name":"Alice","age":30}}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("user")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(1);
@@ -196,11 +196,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_LeafIsArray_CollectsRowPerArrayElement()
     {
         // Arrange
-        var bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"id":"A1"},{"id":"A2"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -212,11 +212,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_LeafIsEmptyArray_ProducesNoRows()
     {
         // Arrange
-        var bytes = Bytes("""{"tags":[]}""");
+        JsonRawBytes bytes = Bytes("""{"tags":[]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("tags")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().BeEmpty();
@@ -227,11 +227,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_LeafIsPrimitiveString_SynthesizesObjectUsingColName()
     {
         // Arrange
-        var bytes = Bytes("""{"grade":"A+"}""");
+        JsonRawBytes bytes = Bytes("""{"grade":"A+"}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("grade")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(1);
@@ -244,11 +244,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_LeafIsPrimitiveNull_SynthesizesObjectWithNullValue()
     {
         // Arrange
-        var bytes = Bytes("""{"score":null}""");
+        JsonRawBytes bytes = Bytes("""{"score":null}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("score")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(1);
@@ -260,11 +260,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeySegmentArrayLeafObjectElement_AddsRowAndScansElementSchema()
     {
         // Arrange
-        var bytes = Bytes("""{"items":[{"id":"A1","qty":2},{"id":"A2"}]}""");
+        JsonRawBytes bytes = Bytes("""{"items":[{"id":"A1","qty":2},{"id":"A2"}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("items")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -278,11 +278,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeySegmentArrayLeafPrimitiveElement_SynthesizesValueColumn()
     {
         // Arrange
-        var bytes = Bytes("""{"tags":["dev","ops"]}""");
+        JsonRawBytes bytes = Bytes("""{"tags":["dev","ops"]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("tags")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -295,11 +295,11 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_KeySegmentArrayLeafMixedElements_ProducesRowPerElementKind()
     {
         // Arrange
-        var bytes = Bytes("""{"items":[{"id":"A1"},"loose-string"]}""");
+        JsonRawBytes bytes = Bytes("""{"items":[{"id":"A1"},"loose-string"]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("items")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(2);
@@ -312,13 +312,13 @@ public sealed class KeyPathTraverserTests
     public void ExtractRows_PathEndingInIndexSegment_ProducesSameRowsAsPathWithoutIt()
     {
         // Arrange
-        var bytes = Bytes("""{"tags":["dev","ops"]}""");
+        JsonRawBytes bytes = Bytes("""{"tags":["dev","ops"]}""");
         IReadOnlyList<KeyPathSegment> pathWithoutIndex = [Key("tags")];
         IReadOnlyList<KeyPathSegment> pathWithIndex = [Key("tags"), Index("[0]")];
 
         // Act
-        var resultWithoutIndex = Traverse(bytes, pathWithoutIndex);
-        var resultWithIndex = Traverse(bytes, pathWithIndex);
+        TraverseResult resultWithoutIndex = Traverse(bytes, pathWithoutIndex);
+        TraverseResult resultWithIndex = Traverse(bytes, pathWithIndex);
 
         // Assert
         resultWithoutIndex.Rows.Select(r => r.HashValue)
@@ -334,11 +334,11 @@ public sealed class KeyPathTraverserTests
         // Arrange — depth 25 stays under Utf8JsonReader's default MaxDepth (64); the recursive
         // implementation must reach the leaf. Pins behavior the iterative rewrite must preserve.
         const int depth = 25;
-        var bytes = Bytes(BuildNestedObjects(depth, "leafKey"));
-        var keyPath = BuildKeySegments(depth);
+        JsonRawBytes bytes = Bytes(BuildNestedObjects(depth, "leafKey"));
+        List<KeyPathSegment> keyPath = BuildKeySegments(depth);
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(1);
@@ -354,12 +354,12 @@ public sealed class KeyPathTraverserTests
         // Arrange — each "[0]" descends one array level; the leaf hash accumulates ":0" per
         // segment. The iterative rewrite must reproduce this hash and aggregation exactly.
         const int depth = 25;
-        var expectedLeafHash = "1" + string.Concat(Enumerable.Repeat(":0", depth));
-        var bytes = Bytes(BuildNestedArrays(depth, "leafIndex"));
-        var keyPath = BuildIndexSegments(depth);
+        string expectedLeafHash = "1" + string.Concat(Enumerable.Repeat(":0", depth));
+        JsonRawBytes bytes = Bytes(BuildNestedArrays(depth, "leafIndex"));
+        List<KeyPathSegment> keyPath = BuildIndexSegments(depth);
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(1);
@@ -374,11 +374,11 @@ public sealed class KeyPathTraverserTests
     {
         // Arrange — orders[*].items[*].id: two index levels, each with more than one sibling,
         // pins the iterative DFS to fully visit element 0's subtree before element 1's.
-        var bytes = Bytes("""{"orders":[{"items":[{"id":"a1"},{"id":"a2"}]},{"items":[{"id":"b1"}]}]}""");
+        JsonRawBytes bytes = Bytes("""{"orders":[{"items":[{"id":"a1"},{"id":"a2"}]},{"items":[{"id":"b1"}]}]}""");
         IReadOnlyList<KeyPathSegment> keyPath = [Key("orders"), Index("[0]"), Key("items"), Index("[0]"), Key("id")];
 
         // Act
-        var result = Traverse(bytes, keyPath);
+        TraverseResult result = Traverse(bytes, keyPath);
 
         // Assert
         result.Rows.Should().HaveCount(3);
@@ -394,7 +394,7 @@ public sealed class KeyPathTraverserTests
         IReadOnlyList<KeyPathSegment> keyPath = [Key("user"), Key("name")];
 
         // Act
-        var result = KeyPathTraverser.LastKeySegment(keyPath);
+        string result = KeyPathTraverser.LastKeySegment(keyPath);
 
         // Assert
         result.Should().Be("name");
@@ -407,7 +407,7 @@ public sealed class KeyPathTraverserTests
         IReadOnlyList<KeyPathSegment> keyPath = [Key("tags"), Index("[0]")];
 
         // Act
-        var result = KeyPathTraverser.LastKeySegment(keyPath);
+        string result = KeyPathTraverser.LastKeySegment(keyPath);
 
         // Assert
         result.Should().Be("tags");
@@ -420,7 +420,7 @@ public sealed class KeyPathTraverserTests
         IReadOnlyList<KeyPathSegment> keyPath = [Index("[0]"), Index("[1]")];
 
         // Act
-        var result = KeyPathTraverser.LastKeySegment(keyPath);
+        string result = KeyPathTraverser.LastKeySegment(keyPath);
 
         // Assert
         result.Should().Be("value");
@@ -433,7 +433,7 @@ public sealed class KeyPathTraverserTests
         IReadOnlyList<KeyPathSegment> keyPath = [];
 
         // Act
-        var result = KeyPathTraverser.LastKeySegment(keyPath);
+        string result = KeyPathTraverser.LastKeySegment(keyPath);
 
         // Assert
         result.Should().Be("value");

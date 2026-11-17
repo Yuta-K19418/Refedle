@@ -15,7 +15,7 @@ public sealed class CellEncodingClassifierTests
         // Arrange
 
         // Act
-        var actual = CellEncodingClassifier.Classify(input);
+        CellEncoding actual = CellEncodingClassifier.Classify(input);
 
         // Assert
         actual.Should().Be(expectedEncoding);

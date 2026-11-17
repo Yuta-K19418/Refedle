@@ -17,7 +17,7 @@ public sealed class TypeInferrerTests
     [InlineData("  false  ", false)]
     public void TryParseBoolean_ValidValues_ReturnsTrue(string input, bool expected)
     {
-        TypeInferrer.TryParseBoolean(input.AsSpan(), out var result).Should().BeTrue();
+        TypeInferrer.TryParseBoolean(input.AsSpan(), out bool result).Should().BeTrue();
         result.Should().Be(expected);
     }
 
@@ -48,7 +48,7 @@ public sealed class TypeInferrerTests
     [InlineData("-9223372036854775808", long.MinValue)]
     public void TryParseWholeNumber_ValidValues_ReturnsTrue(string input, long expected)
     {
-        TypeInferrer.TryParseWholeNumber(input.AsSpan(), out var result).Should().BeTrue();
+        TypeInferrer.TryParseWholeNumber(input.AsSpan(), out long result).Should().BeTrue();
         result.Should().Be(expected);
     }
 
@@ -76,7 +76,7 @@ public sealed class TypeInferrerTests
     [InlineData("  3.14  ", 3.14)]
     public void TryParseFloatingPoint_ValidValues_ReturnsTrue(string input, double expected)
     {
-        TypeInferrer.TryParseFloatingPoint(input.AsSpan(), out var result).Should().BeTrue();
+        TypeInferrer.TryParseFloatingPoint(input.AsSpan(), out double result).Should().BeTrue();
         result.Should().Be(expected);
     }
 
@@ -115,8 +115,8 @@ public sealed class TypeInferrerTests
         DateTimeKind kind
     )
     {
-        TypeInferrer.TryParseTimestamp(input.AsSpan(), out var result).Should().BeTrue();
-        var expected = new DateTime(year, month, day, hour, minute, second, kind);
+        TypeInferrer.TryParseTimestamp(input.AsSpan(), out DateTime result).Should().BeTrue();
+        DateTime expected = new(year, month, day, hour, minute, second, kind);
         result.Date.Should().Be(expected.Date);
     }
 

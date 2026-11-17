@@ -10,20 +10,20 @@ public sealed partial class MainWindowTests
     public async Task HelpKey_OnCsvTable_RendersKeyBindingsOverlay()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
         // Act: the dialog is taller than the 80x24 test screen, so its title and top section
         // scroll off-screen once centered — assert on body text that stays within the viewport.
         Harness.SendKey((KeyCode)'?');
-        var lines = await Harness.WaitForContentsAsync("Navigation");
+        string[] lines = await Harness.WaitForContentsAsync("Navigation");
 
         // Assert
         lines.Should().Contain(line => line.Contains("Navigation", StringComparison.Ordinal));
@@ -39,14 +39,14 @@ public sealed partial class MainWindowTests
     public async Task HelpKey_OnJsonArrayTree_RendersKeyBindingsOverlay()
     {
         // Arrange
-        var content = """[{"name":"Item1","age":1}]""";
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string content = """[{"name":"Item1","age":1}]""";
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
 
         // Act
         Harness.SendKey((KeyCode)'?');
-        var lines = await Harness.WaitForContentsAsync("Navigation");
+        string[] lines = await Harness.WaitForContentsAsync("Navigation");
 
         // Assert
         lines.Should().Contain(line => line.Contains("Navigation", StringComparison.Ordinal));

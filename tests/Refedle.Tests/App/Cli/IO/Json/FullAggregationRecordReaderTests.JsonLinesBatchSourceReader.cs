@@ -15,11 +15,11 @@ public sealed partial class FullAggregationRecordReaderTests
     public async Task JsonLines_MoveNextAsync_IteratesEveryRowAcrossBatchBoundaryThenStops()
     {
         // Arrange — 1501 lines exceed BatchSize (1000), forcing a second ReadBatch.
-        var lines = Enumerable.Range(0, 1501).Select(i => $$"""{"id":{{i}}}""").ToArray();
+        string[] lines = [.. Enumerable.Range(0, 1501).Select(i => $$"""{"id":{{i}}}""")];
         using IRecordReader reader = BuildJsonLinesReader(lines, KeyPath(), ["id"]);
 
         // Act
-        var (count, lastId) = await DrainColumn0Async(reader);
+        (int count, string? lastId) = await DrainColumn0Async(reader);
 
         // Assert
         count.Should().Be(1501);
@@ -30,13 +30,13 @@ public sealed partial class FullAggregationRecordReaderTests
     public async Task JsonLines_GetCellData_DelegatesToTypedCellReaderByOutputColumn()
     {
         // Arrange
-        using var reader = BuildJsonLinesReader(
+        using FullAggregationRecordReader<JsonLinesBatchSourceReader> reader = BuildJsonLinesReader(
             ["""{"orders":[{"id":42,"item":"widget"}]}"""], KeyPath("orders"), ["id", "item"]);
 
         // Act
         await reader.MoveNextAsync(default);
-        var id = reader.GetCellData(0).Value.ToString();
-        var item = reader.GetCellData(1).Value.ToString();
+        string id = reader.GetCellData(0).Value.ToString();
+        string item = reader.GetCellData(1).Value.ToString();
 
         // Assert
         id.Should().Be("42");
@@ -47,10 +47,10 @@ public sealed partial class FullAggregationRecordReaderTests
     public async Task JsonLines_MoveNextAsync_PathAbsentInEveryRecord_YieldsNothing()
     {
         // Arrange
-        using var reader = BuildJsonLinesReader(["""{"other":1}""", """{"other":2}"""], KeyPath("orders"), ["id"]);
+        using FullAggregationRecordReader<JsonLinesBatchSourceReader> reader = BuildJsonLinesReader(["""{"other":1}""", """{"other":2}"""], KeyPath("orders"), ["id"]);
 
         // Act
-        var hasNext = await reader.MoveNextAsync(default);
+        bool hasNext = await reader.MoveNextAsync(default);
 
         // Assert
         hasNext.Should().BeFalse();
@@ -61,11 +61,11 @@ public sealed partial class FullAggregationRecordReaderTests
     {
         // Arrange
         BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "world")];
-        using var reader = BuildJsonLinesReader(["""{"v":"hello"}"""], KeyPath(), ["v"], filters);
+        using FullAggregationRecordReader<JsonLinesBatchSourceReader> reader = BuildJsonLinesReader(["""{"v":"hello"}"""], KeyPath(), ["v"], filters);
         await reader.MoveNextAsync(default);
 
         // Act
-        var matched = reader.EvaluateFilters();
+        bool matched = reader.EvaluateFilters();
 
         // Assert
         matched.Should().BeFalse();
@@ -75,11 +75,11 @@ public sealed partial class FullAggregationRecordReaderTests
     public async Task JsonLines_MoveNextAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var reader = BuildJsonLinesReader(["""{"id":1}"""], KeyPath(), ["id"]);
+        FullAggregationRecordReader<JsonLinesBatchSourceReader> reader = BuildJsonLinesReader(["""{"id":1}"""], KeyPath(), ["id"]);
         reader.Dispose();
 
         // Act
-        var act = async () => await reader.MoveNextAsync(default);
+        Func<Task<bool>> act = async () => await reader.MoveNextAsync(default);
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();
@@ -97,15 +97,15 @@ public sealed partial class FullAggregationRecordReaderTests
         IReadOnlyList<string> columns,
         IReadOnlyList<BatchFilterSpec> filters)
     {
-        var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        string path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
         File.WriteAllText(path, string.Join("\n", lines) + "\n");
         _tempFiles.Add(path);
 
-        var rowIndexer = new RowIndexer(path);
+        RowIndexer rowIndexer = new(path);
         rowIndexer.BuildIndex(CancellationToken.None);
-        var rowReader = new RowReader(path);
+        RowReader rowReader = new(path);
 
-        var outputSchema = new BatchOutputSchema([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
+        BatchOutputSchema outputSchema = new([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
         return new FullAggregationRecordReader<JsonLinesBatchSourceReader>(
             rowIndexer, new JsonLinesBatchSourceReader(rowReader), keyPath, columns, outputSchema);
     }

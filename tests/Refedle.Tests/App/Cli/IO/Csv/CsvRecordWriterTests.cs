@@ -21,7 +21,7 @@ public sealed class CsvRecordWriterTests
         const string value = "hello, world";
 
         // Act
-        var output = await WriteSingleCellAndReadAsync(CellPresence.Value, value);
+        string output = await WriteSingleCellAndReadAsync(CellPresence.Value, value);
 
         // Assert
         output.Should().Be("\"hello, world\"\n");
@@ -34,7 +34,7 @@ public sealed class CsvRecordWriterTests
         const CellPresence presence = CellPresence.Null;
 
         // Act
-        var output = await WriteSingleCellAndReadAsync(presence);
+        string output = await WriteSingleCellAndReadAsync(presence);
 
         // Assert
         output.Should().Be("\n");
@@ -47,7 +47,7 @@ public sealed class CsvRecordWriterTests
         const CellPresence presence = CellPresence.Missing;
 
         // Act
-        var output = await WriteSingleCellAndReadAsync(presence);
+        string output = await WriteSingleCellAndReadAsync(presence);
 
         // Assert
         output.Should().Be("\n");
@@ -60,7 +60,7 @@ public sealed class CsvRecordWriterTests
         const CellPresence presence = CellPresence.Invalid;
 
         // Act
-        var output = await WriteSingleCellAndReadAsync(presence);
+        string output = await WriteSingleCellAndReadAsync(presence);
 
         // Assert
         output.Should().Be("\n");
@@ -77,7 +77,7 @@ public sealed class CsvRecordWriterTests
         // Arrange
 
         // Act
-        var output = await WriteSingleCellAndReadAsync(CellPresence.Value, value, encoding);
+        string output = await WriteSingleCellAndReadAsync(CellPresence.Value, value, encoding);
 
         // Assert
         output.Should().Be($"{value}\n");
@@ -87,9 +87,9 @@ public sealed class CsvRecordWriterTests
     public async Task WriteFooterAsync_IsNoOp()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
-        using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        using MemoryStream stream = new();
+        using StreamWriter streamWriter = new(stream, new UTF8Encoding(false), leaveOpen: true);
+        using CsvRecordWriter writer = new(streamWriter, _outputSchema);
         await writer.WriteStartRecordAsync(default);
         writer.WriteCellData(0, new CellData("x", CellPresence.Value));
         await writer.WriteEndRecordAsync(default);
@@ -99,7 +99,7 @@ public sealed class CsvRecordWriterTests
         await writer.FlushAsync(default);
 
         // Assert — no closing frame is appended.
-        var output = Encoding.UTF8.GetString(stream.ToArray());
+        string output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("x\n");
     }
 
@@ -108,9 +108,9 @@ public sealed class CsvRecordWriterTests
     {
         // Arrange — an explicitly CRLF-configured StreamWriter proves the constructor's NewLine
         // override deterministically, independent of the host OS's Environment.NewLine.
-        using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\r\n" };
-        using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        using MemoryStream stream = new();
+        using StreamWriter streamWriter = new(stream, new UTF8Encoding(false), leaveOpen: true) { NewLine = "\r\n" };
+        using CsvRecordWriter writer = new(streamWriter, _outputSchema);
         await writer.WriteStartRecordAsync(default);
         writer.WriteCellData(0, new CellData("x", CellPresence.Value));
         await writer.WriteEndRecordAsync(default);
@@ -119,7 +119,7 @@ public sealed class CsvRecordWriterTests
         await writer.FlushAsync(default);
 
         // Assert — the record terminator is LF regardless of the injected writer's NewLine.
-        var output = Encoding.UTF8.GetString(stream.ToArray());
+        string output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("x\n");
     }
 
@@ -127,24 +127,24 @@ public sealed class CsvRecordWriterTests
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
-        var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        using MemoryStream stream = new();
+        using StreamWriter streamWriter = new(stream, new UTF8Encoding(false), leaveOpen: true);
+        CsvRecordWriter writer = new(streamWriter, _outputSchema);
         writer.Dispose();
 
         // Act
         Action act = () => writer.ThrowIfDisposed();
 
         // Assert
-        var exception = act.Should().Throw<ObjectDisposedException>().Which;
+        ObjectDisposedException exception = act.Should().Throw<ObjectDisposedException>().Which;
         exception.ObjectName.Should().Be(typeof(CsvRecordWriter).FullName);
     }
 
     private static async Task<string> WriteSingleCellAndReadAsync(CellPresence presence, string value = "", CellEncoding encoding = CellEncoding.PlainText)
     {
-        using var stream = new MemoryStream();
-        using var streamWriter = new StreamWriter(stream, new UTF8Encoding(false), leaveOpen: true);
-        using var writer = new CsvRecordWriter(streamWriter, _outputSchema);
+        using MemoryStream stream = new();
+        using StreamWriter streamWriter = new(stream, new UTF8Encoding(false), leaveOpen: true);
+        using CsvRecordWriter writer = new(streamWriter, _outputSchema);
 
         await writer.WriteStartRecordAsync(default);
         writer.WriteCellData(0, new CellData(value, presence, encoding));

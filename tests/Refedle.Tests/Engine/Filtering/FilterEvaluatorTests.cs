@@ -15,7 +15,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Equals_MatchingValue_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Equals,
@@ -23,7 +23,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("Alice".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("Alice".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -33,7 +33,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Equals_NonMatchingValue_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Equals,
@@ -41,7 +41,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("Bob".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("Bob".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -51,7 +51,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Equals_CaseInsensitive_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Equals,
@@ -59,7 +59,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("ALICE".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("ALICE".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -69,7 +69,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_NotEquals_MatchingValue_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.NotEquals,
@@ -77,7 +77,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("Alice".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("Alice".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -87,7 +87,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_NotEquals_NonMatchingValue_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.NotEquals,
@@ -95,7 +95,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("Bob".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("Bob".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -109,7 +109,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Contains_ValuePresent_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Contains,
@@ -117,7 +117,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -127,7 +127,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Contains_ValueAbsent_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Contains,
@@ -135,7 +135,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -145,7 +145,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_Contains_CaseInsensitive_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.Contains,
@@ -153,7 +153,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("APPLE".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("APPLE".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -163,7 +163,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_NotContains_ValuePresent_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.NotContains,
@@ -171,7 +171,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -181,7 +181,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_NotContains_ValueAbsent_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.NotContains,
@@ -189,7 +189,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -203,7 +203,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_StartsWith_MatchingPrefix_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.StartsWith,
@@ -211,7 +211,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -221,7 +221,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_StartsWith_NonMatchingPrefix_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.StartsWith,
@@ -229,7 +229,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -239,7 +239,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_EndsWith_MatchingSuffix_ReturnsTrue()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.EndsWith,
@@ -247,7 +247,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -257,7 +257,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_EndsWith_NonMatchingSuffix_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.EndsWith,
@@ -265,7 +265,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("apple".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -283,7 +283,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThan,
@@ -291,7 +291,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -305,7 +305,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThanOrEqual,
@@ -313,7 +313,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -327,7 +327,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.LessThan,
@@ -335,7 +335,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -349,7 +349,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.LessThanOrEqual,
@@ -357,7 +357,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -367,7 +367,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_WholeNumber_InvalidRawValue_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThan,
@@ -375,7 +375,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("abc".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("abc".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -385,7 +385,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_WholeNumber_WhitespaceValue_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThan,
@@ -393,7 +393,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(" 15 ".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(" 15 ".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -403,7 +403,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_WholeNumber_NegativeValues_WorksCorrectly()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThan,
@@ -411,7 +411,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("-5".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("-5".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -421,7 +421,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_WholeNumber_ZeroBoundary_WorksCorrectly()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.WholeNumber,
             Operator: FilterOperator.GreaterThan,
@@ -429,7 +429,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("0".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("0".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -447,7 +447,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.GreaterThan,
@@ -455,7 +455,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -469,7 +469,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.GreaterThanOrEqual,
@@ -477,7 +477,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -491,7 +491,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.LessThan,
@@ -499,7 +499,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -513,7 +513,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.LessThanOrEqual,
@@ -521,7 +521,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -531,7 +531,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_FloatingPoint_NegativeValues_WorksCorrectly()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.GreaterThan,
@@ -539,7 +539,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("-5.3".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("-5.3".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -549,7 +549,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_FloatingPoint_ScientificNotation_WorksCorrectly()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.FloatingPoint,
             Operator: FilterOperator.GreaterThan,
@@ -557,7 +557,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("2.5e2".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("2.5e2".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -575,7 +575,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Timestamp,
             Operator: FilterOperator.GreaterThan,
@@ -583,7 +583,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -597,7 +597,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Timestamp,
             Operator: FilterOperator.GreaterThanOrEqual,
@@ -605,7 +605,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -619,7 +619,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Timestamp,
             Operator: FilterOperator.LessThan,
@@ -627,7 +627,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -641,7 +641,7 @@ public sealed class FilterEvaluatorTests
         string rawValue, bool expected)
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Timestamp,
             Operator: FilterOperator.LessThanOrEqual,
@@ -649,7 +649,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -659,7 +659,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_Timestamp_InvalidRawValue_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Timestamp,
             Operator: FilterOperator.GreaterThan,
@@ -667,7 +667,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("not-a-date".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("not-a-date".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -681,7 +681,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_GreaterThan_TextColumn_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.GreaterThan,
@@ -689,7 +689,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("world".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("world".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -699,7 +699,7 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_LessThan_TextColumn_ReturnsFalse()
     {
         // Arrange
-        var spec = new FilterSpec(
+        FilterSpec spec = new(
             SourceColumnIndex: 0,
             ColumnType: ColumnType.Text,
             Operator: FilterOperator.LessThan,
@@ -707,7 +707,7 @@ public sealed class FilterEvaluatorTests
         );
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("world".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("world".AsSpan(), spec);
 
         // Assert
         result.Should().BeFalse();
@@ -721,14 +721,14 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_BatchText_Equals_MatchingValue_ReturnsTrue()
     {
         // Arrange
-        var spec = new BatchFilterSpec(
+        BatchFilterSpec spec = new(
             SourceColumnIndex: 0,
             ComparisonType: ComparisonType.Text,
             Operator: FilterOperator.Equals,
             Value: "hello");
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("hello".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("hello".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -741,14 +741,14 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_BatchNumber_ResolvesTypePerRow(string rawValue, bool expected)
     {
         // Arrange
-        var spec = new BatchFilterSpec(
+        BatchFilterSpec spec = new(
             SourceColumnIndex: 0,
             ComparisonType: ComparisonType.Number,
             Operator: FilterOperator.GreaterThan,
             Value: "40");
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);
@@ -759,14 +759,14 @@ public sealed class FilterEvaluatorTests
     {
         // Arrange — regression: an integer row value compared against a fractional threshold
         // must still compare (as double), not fail by forcing the threshold into whole-number parsing.
-        var spec = new BatchFilterSpec(
+        BatchFilterSpec spec = new(
             SourceColumnIndex: 0,
             ComparisonType: ComparisonType.Number,
             Operator: FilterOperator.GreaterThan,
             Value: "40.5");
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter("42".AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter("42".AsSpan(), spec);
 
         // Assert
         result.Should().BeTrue();
@@ -778,14 +778,14 @@ public sealed class FilterEvaluatorTests
     public void EvaluateFilter_BatchTimestamp_OrdersChronologically(string rawValue, bool expected)
     {
         // Arrange
-        var spec = new BatchFilterSpec(
+        BatchFilterSpec spec = new(
             SourceColumnIndex: 0,
             ComparisonType: ComparisonType.Timestamp,
             Operator: FilterOperator.GreaterThan,
             Value: "2024-01-01");
 
         // Act
-        var result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
+        bool result = FilterEvaluator.EvaluateFilter(rawValue.AsSpan(), spec);
 
         // Assert
         result.Should().Be(expected);

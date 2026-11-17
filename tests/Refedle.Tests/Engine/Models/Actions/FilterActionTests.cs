@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.Models.Actions;
 
 namespace Refedle.Tests.Engine.Models.Actions;
@@ -13,10 +14,10 @@ public sealed class FilterActionTests
     public void Description_ReturnsExpectedFormat()
     {
         // Arrange
-        var action = FilterAction.Create("Price", FilterOperator.GreaterThan, ComparisonType.Number, "100").Value;
+        FilterAction action = FilterAction.Create("Price", FilterOperator.GreaterThan, ComparisonType.Number, "100").Value;
 
         // Act
-        var description = action.Description;
+        string description = action.Description;
 
         // Assert
         description.Should().Be("Filter 'Price' GreaterThan '100'");
@@ -49,7 +50,7 @@ public sealed class FilterActionTests
         FilterOperator op, ComparisonType comparisonType, string value)
     {
         // Act
-        var result = FilterAction.Validate(op, comparisonType, value);
+        Result result = FilterAction.Validate(op, comparisonType, value);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -76,7 +77,7 @@ public sealed class FilterActionTests
         FilterOperator op, ComparisonType comparisonType)
     {
         // Act
-        var result = FilterAction.Validate(op, comparisonType, "ignored");
+        Result result = FilterAction.Validate(op, comparisonType, "ignored");
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -95,7 +96,7 @@ public sealed class FilterActionTests
     public void Validate_NumberWithUnparseableOrNonFiniteValue_ReturnsFailure(string value)
     {
         // Act
-        var result = FilterAction.Validate(FilterOperator.GreaterThan, ComparisonType.Number, value);
+        Result result = FilterAction.Validate(FilterOperator.GreaterThan, ComparisonType.Number, value);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -106,7 +107,7 @@ public sealed class FilterActionTests
     public void Validate_TimestampWithUnparseableValue_ReturnsFailure()
     {
         // Act
-        var result = FilterAction.Validate(FilterOperator.GreaterThan, ComparisonType.Timestamp, "not-a-date");
+        Result result = FilterAction.Validate(FilterOperator.GreaterThan, ComparisonType.Timestamp, "not-a-date");
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -121,7 +122,7 @@ public sealed class FilterActionTests
     public void Create_WithInvalidCombination_ReturnsFailure()
     {
         // Act
-        var result = FilterAction.Create("col", FilterOperator.Contains, ComparisonType.Number, "1");
+        Result<FilterAction> result = FilterAction.Create("col", FilterOperator.Contains, ComparisonType.Number, "1");
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -131,11 +132,11 @@ public sealed class FilterActionTests
     public void Create_WithValidCombination_ReturnsActionWithAllFields()
     {
         // Act
-        var result = FilterAction.Create("col", FilterOperator.GreaterThan, ComparisonType.Number, "10");
+        Result<FilterAction> result = FilterAction.Create("col", FilterOperator.GreaterThan, ComparisonType.Number, "10");
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value;
+        FilterAction action = result.Value;
         action.ColumnName.Should().Be("col");
         action.Operator.Should().Be(FilterOperator.GreaterThan);
         action.ComparisonType.Should().Be(ComparisonType.Number);
@@ -146,7 +147,7 @@ public sealed class FilterActionTests
     public void Validate_UndefinedComparisonType_ReturnsFailure()
     {
         // Act — (ComparisonType)999 is not a defined enum value
-        var result = FilterAction.Validate(FilterOperator.GreaterThan, (ComparisonType)999, "10");
+        Result result = FilterAction.Validate(FilterOperator.GreaterThan, (ComparisonType)999, "10");
 
         // Assert
         result.IsFailure.Should().BeTrue();

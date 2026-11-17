@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
@@ -11,13 +12,13 @@ public sealed class MorphActionParserTests
     public void ParseAction_WithMissingTypeField_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "columnName", "Age" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -28,14 +29,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_WithUnknownType_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "explode" },
             { "columnName", "Age" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -46,14 +47,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_RenameAction_WithMissingOldName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Rename" },
             { "newName", "NewAge" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -64,14 +65,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_RenameAction_WithMissingNewName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Rename" },
             { "oldName", "Age" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -82,7 +83,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_ValidRenameAction_ReturnsSuccess()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Rename" },
             { "oldName", "Age" },
@@ -90,11 +91,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<RenameColumnAction>().Subject;
+        RenameColumnAction action = result.Value.Should().BeOfType<RenameColumnAction>().Subject;
         action.OldName.Should().Be("Age");
         action.NewName.Should().Be("years");
     }
@@ -103,18 +104,18 @@ public sealed class MorphActionParserTests
     public void ParseAction_ValidDeleteAction_ReturnsSuccess()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Delete" },
             { "columnName", "Age" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<DeleteColumnAction>().Subject;
+        DeleteColumnAction action = result.Value.Should().BeOfType<DeleteColumnAction>().Subject;
         action.ColumnName.Should().Be("Age");
     }
 
@@ -122,10 +123,10 @@ public sealed class MorphActionParserTests
     public void ParseAction_DeleteAction_WithMissingColumnName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string> { { "type", "Delete" } };
+        Dictionary<string, string> fields = new() { { "type", "Delete" } };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -136,7 +137,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_ValidCastAction_ReturnsSuccess()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Cast" },
             { "columnName", "Age" },
@@ -144,11 +145,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<CastColumnAction>().Subject;
+        CastColumnAction action = result.Value.Should().BeOfType<CastColumnAction>().Subject;
         action.ColumnName.Should().Be("Age");
         action.TargetType.Should().Be(ColumnType.WholeNumber);
     }
@@ -157,7 +158,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_CastAction_WithInvalidTargetType_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Cast" },
             { "columnName", "Age" },
@@ -165,7 +166,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -176,7 +177,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_CastAction_WithWrongCaseTargetType_ReturnsFailure()
     {
         // Arrange — targetType is case-sensitive; "wholenumber" is not a valid value
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Cast" },
             { "columnName", "Age" },
@@ -184,7 +185,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -206,7 +207,7 @@ public sealed class MorphActionParserTests
         string operatorStr, FilterOperator expectedOp, ComparisonType comparisonType)
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -216,11 +217,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<FilterAction>().Subject;
+        FilterAction action = result.Value.Should().BeOfType<FilterAction>().Subject;
         action.ColumnName.Should().Be("Age");
         action.Operator.Should().Be(expectedOp);
         action.ComparisonType.Should().Be(comparisonType);
@@ -231,7 +232,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithInvalidOperator_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -240,7 +241,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -251,7 +252,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithWrongCaseOperator_ReturnsFailure()
     {
         // Arrange — operator is case-sensitive; "equals" is not a valid value
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -261,7 +262,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -272,7 +273,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithMissingValue_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -280,7 +281,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -291,7 +292,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_ValidFillAction_ReturnsSuccess()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Fill" },
             { "columnName", "Email" },
@@ -299,11 +300,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<FillColumnAction>().Subject;
+        FillColumnAction action = result.Value.Should().BeOfType<FillColumnAction>().Subject;
         action.ColumnName.Should().Be("Email");
         action.Value.Should().Be("REDACTED");
     }
@@ -312,14 +313,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_FillAction_WithMissingColumnName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Fill" },
             { "value", "REDACTED" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -330,14 +331,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_FillAction_WithMissingValue_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Fill" },
             { "columnName", "Email" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -348,7 +349,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FillAction_WithEmptyValue_ReturnsSuccess()
     {
         // Arrange — empty string is a valid fill value (e.g., blank-out a column)
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Fill" },
             { "columnName", "Email" },
@@ -356,11 +357,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<FillColumnAction>().Subject;
+        FillColumnAction action = result.Value.Should().BeOfType<FillColumnAction>().Subject;
         action.Value.Should().Be("");
     }
 
@@ -368,7 +369,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_ValidFormatTimestampAction_ReturnsSuccess()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
@@ -376,11 +377,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<FormatTimestampAction>().Subject;
+        FormatTimestampAction action = result.Value.Should().BeOfType<FormatTimestampAction>().Subject;
         action.ColumnName.Should().Be("CreatedAt");
         action.TargetFormat.Should().Be("yyyy/MM/dd");
     }
@@ -389,14 +390,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_FormatTimestampAction_WithMissingColumnName_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "FormatTimestamp" },
             { "targetFormat", "yyyy/MM/dd" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -407,14 +408,14 @@ public sealed class MorphActionParserTests
     public void ParseAction_FormatTimestampAction_WithMissingTargetFormat_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -425,7 +426,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FormatTimestampAction_WithEmptyTargetFormat_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "FormatTimestamp" },
             { "columnName", "CreatedAt" },
@@ -433,7 +434,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -445,7 +446,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithMissingComparisonType_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -454,7 +455,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -465,7 +466,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithInvalidComparisonType_ReturnsFailure()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -475,7 +476,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -486,7 +487,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithWrongCaseComparisonType_ReturnsFailure()
     {
         // Arrange — comparisonType is case-sensitive; "text" is not a valid value
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -496,7 +497,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -507,7 +508,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithInvalidOperatorCombination_ReturnsFailure()
     {
         // Arrange — Contains is not valid for a Number comparison type
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -517,7 +518,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -527,7 +528,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithUnparseableValue_ReturnsFailure()
     {
         // Arrange — GreaterThan/Number requires a parseable numeric value
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -537,7 +538,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -547,7 +548,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithValidComparisonType_PreservesComparisonType()
     {
         // Arrange
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -557,11 +558,11 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var action = result.Value.Should().BeOfType<FilterAction>().Subject;
+        FilterAction action = result.Value.Should().BeOfType<FilterAction>().Subject;
         action.ComparisonType.Should().Be(ComparisonType.Timestamp);
     }
 
@@ -569,7 +570,7 @@ public sealed class MorphActionParserTests
     public void ParseAction_FilterAction_WithNumericComparisonType_ReturnsFailure()
     {
         // Arrange — '999' parses as a number to an undefined ComparisonType value
-        var fields = new Dictionary<string, string>
+        Dictionary<string, string> fields = new()
         {
             { "type", "Filter" },
             { "columnName", "Age" },
@@ -579,7 +580,7 @@ public sealed class MorphActionParserTests
         };
 
         // Act
-        var result = MorphActionParser.ParseAction(fields);
+        Result<IMorphAction> result = MorphActionParser.ParseAction(fields);
 
         // Assert
         result.IsFailure.Should().BeTrue();

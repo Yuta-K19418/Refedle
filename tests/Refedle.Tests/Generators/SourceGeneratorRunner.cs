@@ -30,21 +30,21 @@ internal static class SourceGeneratorRunner
     public static SourceGeneratorOutput Run<TGenerator>(IReadOnlyList<SourceFile> sources)
         where TGenerator : IIncrementalGenerator, new()
     {
-        var parseOptions = CSharpParseOptions.Default;
+        CSharpParseOptions parseOptions = CSharpParseOptions.Default;
         SyntaxTree[] syntaxTrees =
         [
             .. sources.Select(source => CSharpSyntaxTree.ParseText(source.Content, parseOptions, source.Path)),
         ];
-        var compilationOptions = new CSharpCompilationOptions(
+        CSharpCompilationOptions compilationOptions = new(
             OutputKind.DynamicallyLinkedLibrary,
             nullableContextOptions: NullableContextOptions.Enable);
-        var compilation = CSharpCompilation.Create(AssemblyName, syntaxTrees, FrameworkReferences, compilationOptions);
+        CSharpCompilation compilation = CSharpCompilation.Create(AssemblyName, syntaxTrees, FrameworkReferences, compilationOptions);
 
-        var generator = new TGenerator().AsSourceGenerator();
+        ISourceGenerator generator = new TGenerator().AsSourceGenerator();
         GeneratorDriver driver = CSharpGeneratorDriver.Create([generator], parseOptions: parseOptions);
-        var updatedDriver = driver.RunGeneratorsAndUpdateCompilation(compilation, out var outputCompilation, out _);
-        var driverRunResult = updatedDriver.GetRunResult();
-        var generatorRunResult = driverRunResult.Results.Single();
+        GeneratorDriver updatedDriver = driver.RunGeneratorsAndUpdateCompilation(compilation, out Compilation? outputCompilation, out _);
+        GeneratorDriverRunResult driverRunResult = updatedDriver.GetRunResult();
+        GeneratorRunResult generatorRunResult = driverRunResult.Results.Single();
 
         ImmutableArray<Diagnostic> compilationDiagnostics =
         [
@@ -66,8 +66,8 @@ internal static class SourceGeneratorRunner
             throw new InvalidOperationException("TRUSTED_PLATFORM_ASSEMBLIES is not available in this runtime.");
         }
 
-        var frameworkDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location);
-        var assemblyPaths = trustedPlatformAssemblies.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
+        string? frameworkDirectory = Path.GetDirectoryName(typeof(object).Assembly.Location);
+        string[] assemblyPaths = trustedPlatformAssemblies.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
 
         return
         [

@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.Engine.IO.JsonLines;
@@ -20,11 +22,11 @@ public sealed partial class SchemaScannerTests
     )
     {
         // Arrange
-        var json = $"{{\"a\": {value}}}";
+        string json = $"{{\"a\": {value}}}";
         JsonRawBytes[] lines = [Line(json)];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -43,12 +45,12 @@ public sealed partial class SchemaScannerTests
     )
     {
         // Arrange
-        var json1 = $"{{\"a\": {val1}}}";
-        var json2 = $"{{\"a\": {val2}}}";
+        string json1 = $"{{\"a\": {val1}}}";
+        string json2 = $"{{\"a\": {val2}}}";
         JsonRawBytes[] lines = [Line(json1), Line(json2)];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -66,7 +68,7 @@ public sealed partial class SchemaScannerTests
         ];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -86,7 +88,7 @@ public sealed partial class SchemaScannerTests
         ];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -100,7 +102,7 @@ public sealed partial class SchemaScannerTests
         JsonRawBytes[] lines = [Line("{\"a\": 1}"), Line("{\"a\": 2, \"b\": \"text\"}")];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -115,7 +117,7 @@ public sealed partial class SchemaScannerTests
         JsonRawBytes[] lines = [Line("{\"a\": 1}"), Line("{\"a\": null}")];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -126,10 +128,10 @@ public sealed partial class SchemaScannerTests
     public void ScanSchema_EmptyInput_ReturnsFailure()
     {
         // Arrange
-        var lines = Array.Empty<JsonRawBytes>();
+        JsonRawBytes[] lines = [];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -146,7 +148,7 @@ public sealed partial class SchemaScannerTests
         ];
 
         // Act
-        var result = SchemaScanner.ScanSchema(lines);
+        Result<TableSchema> result = SchemaScanner.ScanSchema(lines);
 
         // Assert
         result.IsFailure.Should().BeTrue();

@@ -10,18 +10,18 @@ public sealed partial class MainWindowTests
     public async Task ToggleViewKey_OnJsonLinesTree_TogglesBetweenTreeAndTableViews()
     {
         // Arrange
-        var content = """
+        string content = """
             {"name":"Alice","age":30}
             {"name":"Bob","age":25}
             """;
-        var inputFile = _testDirectory.CreateFile("input.jsonl", content);
+        string inputFile = _testDirectory.CreateFile("input.jsonl", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
-        var treeLines = await Harness.WaitForContentsAsync("Line 1");
+        string[] treeLines = await Harness.WaitForContentsAsync("Line 1");
         treeLines.Should().Contain(line => line.Contains("Line 1", StringComparison.Ordinal));
 
         // Act: 't' switches the JSON Lines view to table mode.
         Harness.SendKey(KeyCode.T);
-        var tableLines = await Harness.WaitForContentsAsync("name (text)", "age (number)");
+        string[] tableLines = await Harness.WaitForContentsAsync("name (text)", "age (number)");
 
         // Assert: the tree rendering is replaced by the table rendering.
         tableLines.Should().Contain(line => line.Contains("name (text)", StringComparison.Ordinal));
@@ -33,7 +33,7 @@ public sealed partial class MainWindowTests
         // cell being rendered is the observable signal that the table view is fully up.
         await Harness.WaitForSelectedCellAsync(cell => cell is not null);
         Harness.SendKey(KeyCode.T);
-        var roundTripLines = await Harness.WaitForContentsAsync("Line 1");
+        string[] roundTripLines = await Harness.WaitForContentsAsync("Line 1");
 
         // Assert: the table rendering is replaced by the original tree rendering.
         roundTripLines.Should().Contain(line => line.Contains("Line 1", StringComparison.Ordinal));

@@ -35,10 +35,10 @@ public sealed class DryRunnerTests : IDisposable
     {
         // Arrange
         Arguments? args = null;
-        var logger = new TestAppLogger();
+        TestAppLogger logger = new();
 
         // Act
-        var act = async () => await DryRunner.RunAsync(args!, logger, new TestStatusReporter());
+        Func<Task<ExitCode>> act = async () => await DryRunner.RunAsync(args!, logger, new TestStatusReporter());
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -48,15 +48,15 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithCancelledToken_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
-        using var cts = new CancellationTokenSource();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter(), cts.Token);
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter(), cts.Token);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -67,16 +67,16 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithOutput_PrintsSummaryWithoutWritingOutput()
     {
         // Arrange — rename + fill + filter resolve to renamed output columns, a transform and a filter line
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile(
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile(
             "recipe.yaml",
             "name: Rich\nactions:\n  - type: Rename\n    oldName: age\n    newName: years\n  - type: Fill\n    columnName: name\n    value: REDACTED\n  - type: Filter\n    columnName: years\n    operator: GreaterThanOrEqual\n    comparisonType: Number\n    value: 30");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -100,13 +100,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithoutOutput_PrintsAllApplicableSummaryLines()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", "id,name\n1,Alice\n");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", "id,name\n1,Alice\n");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the no-output path omits the Output format line and the empty Filters section
         exitCode.Should().Be(ExitCode.Success);
@@ -127,13 +127,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithDrillDownScopedRecipe_PrintsKeyPath()
     {
         // Arrange — a JSON Lines full-aggregation scope resolves the drilled-down columns
-        var inputFile = CreateTestFile("input.jsonl", "{\"orders\":[{\"id\":1}]}\n");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DD\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", "{\"orders\":[{\"id\":1}]}\n");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DD\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -145,15 +145,15 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithTimestampFormatAction_PrintsTransformSuffix()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", "created_at\n2020-01-01\n");
-        var recipeFile = CreateTestFile(
+        string inputFile = CreateTestFile("input.csv", "created_at\n2020-01-01\n");
+        string recipeFile = CreateTestFile(
             "recipe.yaml",
             "name: Format\nactions:\n  - type: FormatTimestamp\n    columnName: created_at\n    targetFormat: yyyy-MM-dd");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -164,13 +164,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithDeleteAction_OmitsDeletedColumnFromOutputSchema()
     {
         // Arrange — city is deleted, so only name and age appear in the output schema
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Delete city\nactions:\n  - type: Delete\n    columnName: city");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Delete city\nactions:\n  - type: Delete\n    columnName: city");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — no output-schema line may represent the deleted source column
         exitCode.Should().Be(ExitCode.Success);
@@ -183,13 +183,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentRecipePath_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = Path.Combine(_testDir, "nonexistent.yaml");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = Path.Combine(_testDir, "nonexistent.yaml");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the same wording the normal Runner path reports
         exitCode.Should().Be(ExitCode.Failure);
@@ -200,13 +200,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentInputPath_ReturnsExitCode1()
     {
         // Arrange
-        var inputFile = Path.Combine(_testDir, "nonexistent.csv");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = Path.Combine(_testDir, "nonexistent.csv");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -217,13 +217,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithJsonArrayInputAndBaseTableRecipe_ReturnsExitCode1()
     {
         // Arrange — JSON Array input requires a DrillDown-scoped recipe
-        var inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Base\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Base\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert — the same wording the normal Runner path reports
         exitCode.Should().Be(ExitCode.Failure);
@@ -235,19 +235,19 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithUnsupportedOutputExtension_ReturnsExitCode1()
     {
         // Arrange — --output is honored when given: its format is detected and must be supported
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new()
         {
             InputFile = inputFile,
             RecipeFile = recipeFile,
             OutputFile = Path.Combine(_testDir, "output.xml"),
             IsDryRun = true,
         };
-        var logger = new TestAppLogger();
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -258,13 +258,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithUnresolvableDrillDownKeyPath_ReturnsExitCode1()
     {
         // Arrange — the recipe's DrillDown key does not exist in the JSON Object input
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DD\nactions: []\ndrillDownKeyPath:\n  - key: missing");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DD\nactions: []\ndrillDownKeyPath:\n  - key: missing");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -275,14 +275,14 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_OnSuccess_ReportsValidatingPhaseAndStillPrintsSummary()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
-        var status = new TestStatusReporter();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
+        TestStatusReporter status = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, status);
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, status);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -294,18 +294,18 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WhenPreparationFails_ReportsValidatingPhaseAndStillLogsTheError()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var args = new Arguments
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        Arguments args = new()
         {
             InputFile = inputFile,
             RecipeFile = Path.Combine(_testDir, "missing.yaml"),
             IsDryRun = true,
         };
-        var logger = new TestAppLogger();
-        var status = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter status = new();
 
         // Act
-        var exitCode = await DryRunner.RunAsync(args, logger, status);
+        ExitCode exitCode = await DryRunner.RunAsync(args, logger, status);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -317,13 +317,13 @@ public sealed class DryRunnerTests : IDisposable
     public async Task RunAsync_WithNullStatusReporter_ThrowsArgumentNullException()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, IsDryRun = true };
+        TestAppLogger logger = new();
 
         // Act
-        var act = async () => await DryRunner.RunAsync(args, logger, null!);
+        Func<Task<ExitCode>> act = async () => await DryRunner.RunAsync(args, logger, null!);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -331,7 +331,7 @@ public sealed class DryRunnerTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return filePath;
     }

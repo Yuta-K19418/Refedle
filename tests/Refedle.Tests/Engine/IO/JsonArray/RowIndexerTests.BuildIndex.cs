@@ -13,7 +13,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         WriteTestFileWithUtf8Bom("[{\"a\":1},{\"a\":2},{\"a\":3}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -28,7 +28,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         WriteTestFileWithUtf8Bom("[{\"a\":1},{\"a\":2}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -42,7 +42,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         WriteTestFileWithUtf8Bom(string.Empty);
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -56,7 +56,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange — a BOM-only file has no JSON content to index.
         WriteTestFileWithUtf8Bom(string.Empty);
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -70,7 +70,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -84,8 +84,8 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[]");
-        var indexer = new RowIndexer(_testFilePath);
-        var buildIndexCompletedFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool buildIndexCompletedFired = false;
         indexer.BuildIndexCompleted += () => buildIndexCompletedFired = true;
 
         // Act
@@ -100,7 +100,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[42]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -114,7 +114,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[{\"a\":1}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -128,7 +128,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange — 2-byte leading whitespace before '['
         File.WriteAllText(_testFilePath, "  [{\"a\":1}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -142,7 +142,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[{}, [], 1, \"s\", null, true]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -156,7 +156,7 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[{\"a\":{\"b\":{\"c\":1}}}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -169,9 +169,9 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_With1001Elements_IndexesAllElements()
     {
         // Arrange
-        var elements = Enumerable.Range(0, 1001).Select(i => $"{{\"id\":{i}}}");
+        IEnumerable<string> elements = Enumerable.Range(0, 1001).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -184,10 +184,10 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_With1001Elements_FirstCheckpointReachedFiresOnce()
     {
         // Arrange
-        var elements = Enumerable.Range(0, 1001).Select(i => $"{{\"id\":{i}}}");
+        IEnumerable<string> elements = Enumerable.Range(0, 1001).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var fireCount = 0;
+        RowIndexer indexer = new(_testFilePath);
+        int fireCount = 0;
         indexer.FirstCheckpointReached += () => Interlocked.Increment(ref fireCount);
 
         // Act
@@ -202,9 +202,9 @@ public sealed partial class RowIndexerTests
     {
         // Arrange — object with many small fields so the total exceeds 1 MB
         // without any single JSON string token exceeding the buffer
-        var fields = string.Join(",", Enumerable.Range(0, 90_000).Select(i => $"\"f{i}\":{i}"));
+        string fields = string.Join(",", Enumerable.Range(0, 90_000).Select(i => $"\"f{i}\":{i}"));
         File.WriteAllText(_testFilePath, $"[{{{fields}}}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();
@@ -217,12 +217,12 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_StringValueExceedsBufferSize_ThrowsNotSupportedException()
     {
         // Arrange — string value larger than 1 MB buffer
-        var oversizedString = new string('a', 1024 * 1024 + 1);
+        string oversizedString = new('a', 1024 * 1024 + 1);
         File.WriteAllText(_testFilePath, $"[\"{oversizedString}\"]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
-        var act = () => indexer.BuildIndex();
+        Action act = () => indexer.BuildIndex();
 
         // Assert
         act.Should().Throw<NotSupportedException>();
@@ -232,15 +232,15 @@ public sealed partial class RowIndexerTests
     public async Task BuildIndex_WhenCancelled_ThrowsOperationCanceledException()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         // Use enough elements to exceed 1 MB buffer to ensure multiple outer loop iterations
-        var elements = Enumerable.Range(0, 100_000).Select(i => $"{{\"id\":{i}}}");
+        IEnumerable<string> elements = Enumerable.Range(0, 100_000).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
         indexer.ProgressChanged += (_, _) => cts.Cancel();
 
         // Act
-        var task = Task.Run(() => indexer.BuildIndex(cts.Token));
+        Task task = Task.Run(() => indexer.BuildIndex(cts.Token));
 
         // Assert
         Func<Task> act = () => task;
@@ -251,16 +251,16 @@ public sealed partial class RowIndexerTests
     public async Task BuildIndex_WhenCancelled_BuildIndexCompletedStillFires()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        var elements = Enumerable.Range(0, 100_000).Select(i => $"{{\"id\":{i}}}");
+        using CancellationTokenSource cts = new();
+        IEnumerable<string> elements = Enumerable.Range(0, 100_000).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var buildIndexCompletedFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool buildIndexCompletedFired = false;
         indexer.BuildIndexCompleted += () => buildIndexCompletedFired = true;
         indexer.ProgressChanged += (_, _) => cts.Cancel();
 
         // Act
-        var task = Task.Run(() => indexer.BuildIndex(cts.Token));
+        Task task = Task.Run(() => indexer.BuildIndex(cts.Token));
 
         // Assert
         Func<Task> act = () => task;
@@ -273,8 +273,8 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[{\"a\":1},{\"b\":2},{\"c\":3}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var firstCheckpointFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool firstCheckpointFired = false;
         indexer.FirstCheckpointReached += () => firstCheckpointFired = true;
 
         // Act
@@ -289,8 +289,8 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[]");
-        var indexer = new RowIndexer(_testFilePath);
-        var firstCheckpointFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool firstCheckpointFired = false;
         indexer.FirstCheckpointReached += () => firstCheckpointFired = true;
 
         // Act
@@ -304,16 +304,16 @@ public sealed partial class RowIndexerTests
     public async Task BuildIndex_RaisesFirstCheckpointReached_WhenCancelledBeforeCheckpoint()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        var elements = Enumerable.Range(0, 10).Select(i => $"{{\"id\":{i}}}");
+        using CancellationTokenSource cts = new();
+        IEnumerable<string> elements = Enumerable.Range(0, 10).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var firstCheckpointFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool firstCheckpointFired = false;
         indexer.FirstCheckpointReached += () => firstCheckpointFired = true;
         cts.Cancel();
 
         // Act
-        var task = Task.Run(() => indexer.BuildIndex(cts.Token));
+        Task task = Task.Run(() => indexer.BuildIndex(cts.Token));
 
         // Assert
         Func<Task> act = () => task;
@@ -325,10 +325,10 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_WithMultipleCheckpoints_RaisesProgressChangedAtLeastOnce()
     {
         // Arrange
-        var elements = Enumerable.Range(0, 2500).Select(i => $"{{\"id\":{i}}}");
+        IEnumerable<string> elements = Enumerable.Range(0, 2500).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var progressCount = 0;
+        RowIndexer indexer = new(_testFilePath);
+        int progressCount = 0;
         indexer.ProgressChanged += (_, _) => Interlocked.Increment(ref progressCount);
 
         // Act
@@ -343,8 +343,8 @@ public sealed partial class RowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "[{\"id\":1},{\"id\":2}]");
-        var indexer = new RowIndexer(_testFilePath);
-        var buildIndexCompletedFired = false;
+        RowIndexer indexer = new(_testFilePath);
+        bool buildIndexCompletedFired = false;
         indexer.BuildIndexCompleted += () => buildIndexCompletedFired = true;
 
         // Act
@@ -358,9 +358,9 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_BytesRead_IncreasesMonotonically()
     {
         // Arrange
-        var elements = Enumerable.Range(0, 300_000).Select(i => $"{{\"id\":{i}}}");
+        IEnumerable<string> elements = Enumerable.Range(0, 300_000).Select(i => $"{{\"id\":{i}}}");
         File.WriteAllText(_testFilePath, $"[{string.Join(",", elements)}]");
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
         List<long> progressEvents = [];
         indexer.ProgressChanged += (bytesRead, _) => progressEvents.Add(bytesRead);
 
@@ -377,10 +377,10 @@ public sealed partial class RowIndexerTests
     public void BuildIndex_FileSize_MatchesActualFileLength()
     {
         // Arrange
-        var content = "[{\"id\":1},{\"id\":2},{\"id\":3}]";
+        string content = "[{\"id\":1},{\"id\":2},{\"id\":3}]";
         File.WriteAllText(_testFilePath, content);
-        var expectedFileSize = new FileInfo(_testFilePath).Length;
-        var indexer = new RowIndexer(_testFilePath);
+        long expectedFileSize = new FileInfo(_testFilePath).Length;
+        RowIndexer indexer = new(_testFilePath);
 
         // Act
         indexer.BuildIndex();

@@ -23,7 +23,7 @@ public sealed class SlidingWindowLruCacheTests
 
         public (long byteOffset, int rowOffset) GetCheckPoint(long targetRow)
         {
-            var byteOffset = targetRow * 10L;
+            long byteOffset = targetRow * 10L;
             return (byteOffset, 0);
         }
     }
@@ -44,7 +44,7 @@ public sealed class SlidingWindowLruCacheTests
             int rowsToFetch)
         {
             LoadCalls.Add((byteOffset, rowOffsetToSkip, rowsToFetch));
-            var startRow = (int)(byteOffset / 10);
+            int startRow = (int)(byteOffset / 10);
             return Enumerable.Range(startRow, rowsToFetch);
         }
     }
@@ -64,7 +64,7 @@ public sealed class SlidingWindowLruCacheTests
             int rowOffsetToSkip,
             int rowsToFetch)
         {
-            var startRow = byteOffset / 10 + rowOffsetToSkip;
+            long startRow = byteOffset / 10 + rowOffsetToSkip;
             return Enumerable.Range(0, rowsToFetch).Select(i => startRow + i);
         }
     }
@@ -73,16 +73,16 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_OnCacheMiss_LoadsPrefetchWindow()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 4);
 
         // Act
-        var result = cache.GetRow(10);
+        int result = cache.GetRow(10);
 
         // Assert
         result.Should().Be(10);
         cache.LoadCalls.Should().HaveCount(1);
-        var (byteOffset, rowOffset, rows) = cache.LoadCalls[0];
+        (long byteOffset, int rowOffset, int rows) = cache.LoadCalls[0];
         byteOffset.Should().Be(80);
         rowOffset.Should().Be(0);
         rows.Should().Be(4);
@@ -92,12 +92,12 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_OnCacheHit_UpdatesLruWithoutIo()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 4);
         cache.GetRow(10);
 
         // Act
-        var result = cache.GetRow(10);
+        int result = cache.GetRow(10);
 
         // Assert
         result.Should().Be(10);
@@ -108,15 +108,15 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_WindowAtFileStart_ClampsPrefetchWindowToStart()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 4);
 
         // Act
-        var result = cache.GetRow(0);
+        int result = cache.GetRow(0);
 
         // Assert
         result.Should().Be(0);
-        var (byteOffset, rowOffset, rows) = cache.LoadCalls[0];
+        (long byteOffset, int rowOffset, int rows) = cache.LoadCalls[0];
         byteOffset.Should().Be(0);
         rowOffset.Should().Be(0);
         rows.Should().Be(4);
@@ -126,15 +126,15 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_WindowAtFileEnd_ClampsPrefetchWindowToEnd()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 4);
 
         // Act
-        var result = cache.GetRow(99);
+        int result = cache.GetRow(99);
 
         // Assert
         result.Should().Be(99);
-        var (_, _, rows) = cache.LoadCalls[0];
+        (long _, int _, int rows) = cache.LoadCalls[0];
         rows.Should().Be(4);
         cache.GetRow(96).Should().Be(96);
         cache.GetRow(99).Should().Be(99);
@@ -144,12 +144,12 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_WhenCacheFull_EvictsLruTail()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 2);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 2);
         WarmupCache(cache, Enumerable.Range(0, 5).Select(i => i * 2));
 
         // Act
-        var result = cache.GetRow(10);
+        int result = cache.GetRow(10);
 
         // Assert
         result.Should().Be(10);
@@ -162,12 +162,12 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_AlreadyCachedRowInPrefetchWindow_UpdatesLruWithoutDuplicate()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 10, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 10, prefetchWindow: 4);
         cache.GetRow(10);
 
         // Act
-        var result = cache.GetRow(11);
+        int result = cache.GetRow(11);
 
         // Assert
         result.Should().Be(11);
@@ -178,8 +178,8 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_FileSmallerThanCapacity_NoExcessAllocations()
     {
         // Arrange
-        var indexer = new MockIndexer(10);
-        var cache = new TestRowCache(indexer, capacity: 20, prefetchWindow: 4);
+        MockIndexer indexer = new(10);
+        TestRowCache cache = new(indexer, capacity: 20, prefetchWindow: 4);
 
         // Act
         WarmupCache(cache, Enumerable.Range(0, 10));
@@ -192,11 +192,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_OutOfRangeIndex_ReturnsDefaultValue()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer);
 
         // Act
-        var result = cache.GetRow(100);
+        int result = cache.GetRow(100);
 
         // Assert
         result.Should().Be(-1);
@@ -206,11 +206,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_WhenTotalRowsIsZero_ReturnsDefaultValue()
     {
         // Arrange
-        var indexer = new MockIndexer(0);
-        var cache = new TestRowCache(indexer);
+        MockIndexer indexer = new(0);
+        TestRowCache cache = new(indexer);
 
         // Act
-        var result = cache.GetRow(0);
+        int result = cache.GetRow(0);
 
         // Assert
         result.Should().Be(-1);
@@ -220,11 +220,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_CapacitySmallerThanPrefetchWindow_RequestedRowIsNotEvicted()
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer, capacity: 2, prefetchWindow: 4);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer, capacity: 2, prefetchWindow: 4);
 
         // Act
-        var result = cache.GetRow(10);
+        int result = cache.GetRow(10);
 
         // Assert
         result.Should().Be(10);
@@ -239,11 +239,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_NegativeIndex_ReturnsDefaultValue(long negativeIndex)
     {
         // Arrange
-        var indexer = new MockIndexer(100);
-        var cache = new TestRowCache(indexer);
+        MockIndexer indexer = new(100);
+        TestRowCache cache = new(indexer);
 
         // Act
-        var result = cache.GetRow(negativeIndex);
+        int result = cache.GetRow(negativeIndex);
 
         // Assert
         result.Should().Be(-1);
@@ -253,11 +253,11 @@ public sealed class SlidingWindowLruCacheTests
     public void TotalRows_WhenCountExceedsIntMaxValue_ReturnsExactCount()
     {
         // Arrange
-        var indexer = new MockIndexer(3_000_000_000);
-        var cache = new LongRowCache(indexer);
+        MockIndexer indexer = new(3_000_000_000);
+        LongRowCache cache = new(indexer);
 
         // Act
-        var totalRows = cache.TotalRows;
+        long totalRows = cache.TotalRows;
 
         // Assert
         totalRows.Should().Be(3_000_000_000L);
@@ -267,11 +267,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_IndexExceedingIntMaxValue_ReturnsCorrectRow()
     {
         // Arrange
-        var indexer = new MockIndexer(3_000_000_000);
-        var cache = new LongRowCache(indexer);
+        MockIndexer indexer = new(3_000_000_000);
+        LongRowCache cache = new(indexer);
 
         // Act
-        var result = cache.GetRow(2_500_000_000);
+        long result = cache.GetRow(2_500_000_000);
 
         // Assert
         result.Should().Be(2_500_000_000L);
@@ -281,11 +281,11 @@ public sealed class SlidingWindowLruCacheTests
     public void GetRow_LastRowExceedsIntMaxValue_ReturnsCorrectRow()
     {
         // Arrange
-        var indexer = new MockIndexer(3_000_000_000);
-        var cache = new LongRowCache(indexer);
+        MockIndexer indexer = new(3_000_000_000);
+        LongRowCache cache = new(indexer);
 
         // Act
-        var result = cache.GetRow(2_999_999_999);
+        long result = cache.GetRow(2_999_999_999);
 
         // Assert
         result.Should().Be(2_999_999_999L);
@@ -296,13 +296,13 @@ public sealed class SlidingWindowLruCacheTests
     {
         // Arrange - 4_294_967_297 (2^32 + 1) truncates to 1 as int; the two rows
         // must remain distinct LRU entries keyed by their full long index.
-        var indexer = new MockIndexer(4_294_967_298);
-        var cache = new LongRowCache(indexer, capacity: 10, prefetchWindow: 1);
+        MockIndexer indexer = new(4_294_967_298);
+        LongRowCache cache = new(indexer, capacity: 10, prefetchWindow: 1);
 
         // Act
-        var first = cache.GetRow(1);
-        var second = cache.GetRow(4_294_967_297);
-        var reloadedFirst = cache.GetRow(1);
+        long first = cache.GetRow(1);
+        long second = cache.GetRow(4_294_967_297);
+        long reloadedFirst = cache.GetRow(1);
 
         // Assert
         first.Should().Be(1L);
@@ -327,7 +327,7 @@ public sealed class SlidingWindowLruCacheTests
     public void Constructor_WithZeroCapacity_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var indexer = new MockIndexer(10);
+        MockIndexer indexer = new(10);
 
         // Act
         Action act = () => _ = new TestRowCache(indexer, capacity: 0, prefetchWindow: 5);
@@ -340,7 +340,7 @@ public sealed class SlidingWindowLruCacheTests
     public void Constructor_WithZeroPrefetchWindow_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var indexer = new MockIndexer(10);
+        MockIndexer indexer = new(10);
 
         // Act
         Action act = () => _ = new TestRowCache(indexer, capacity: 10, prefetchWindow: 0);
@@ -351,7 +351,7 @@ public sealed class SlidingWindowLruCacheTests
 
     private static void WarmupCache(TestRowCache cache, IEnumerable<int> rows)
     {
-        foreach (var row in rows)
+        foreach (int row in rows)
         {
             cache.GetRow(row);
         }

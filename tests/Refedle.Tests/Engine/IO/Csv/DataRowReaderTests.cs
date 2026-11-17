@@ -22,8 +22,8 @@ public sealed class DataRowReaderTests : IDisposable
 
     private static string[] ToStringArray(CsvDataRow row)
     {
-        var result = new string[row.Count];
-        for (var i = 0; i < row.Count; i++)
+        string[] result = new string[row.Count];
+        for (int i = 0; i < row.Count; i++)
         {
             result[i] = row[i].IsEmpty ? string.Empty : new string(row[i].Span);
         }
@@ -33,7 +33,7 @@ public sealed class DataRowReaderTests : IDisposable
 
     private static List<string> DrainFirstColumns(IEnumerator<CsvDataRow> enumerator)
     {
-        var values = new List<string>();
+        List<string> values = [];
         while (enumerator.MoveNext())
         {
             values.Add(ToStringArray(enumerator.Current)[0]);
@@ -46,13 +46,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithValidData_ReturnsCorrectRows()
     {
         // Arrange
-        var csvContent = "col1,col2,col3\nval1,val2,val3\nval4,val5,val6\nval7,val8,val9";
+        string csvContent = "col1,col2,col3\nval1,val2,val3\nval4,val5,val6\nval7,val8,val9";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 3);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 3);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act - Skip header by using offset, then start reading data rows
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
         rows.Count.Should().Be(2);
@@ -64,13 +64,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithNegativeByteOffset_ReturnsEmptyList()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act - Use offset after header for consistency, but negative offset should still return empty
-        var rows = reader.ReadRows(byteOffset: -1, rowsToSkip: 0, rowsToRead: 1);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: -1, rowsToSkip: 0, rowsToRead: 1);
 
         // Assert
         rows.Should().BeEmpty();
@@ -80,13 +80,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithZeroRowsToRead_ReturnsEmptyList()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 0);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 0);
 
         // Assert
         rows.Should().BeEmpty();
@@ -105,11 +105,11 @@ public sealed class DataRowReaderTests : IDisposable
         // Arrange
         ArgumentNullException.ThrowIfNull(csvContent);
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        Func<IReadOnlyList<CsvDataRow>> act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
         act.Should().Throw<InvalidDataException>()
@@ -120,16 +120,16 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WhenSepRejectsWindowRow_WrapsSepExceptionAsInner()
     {
         // Arrange - Sep compares each row with the first row it read, so the third row is rejected by Sep
-        var csvContent = "col1,col2\nval1,val2\nval3,val4,val5";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4,val5";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        Func<IReadOnlyList<CsvDataRow>> act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
-        var exception = act.Should().Throw<InvalidDataException>().Which;
+        InvalidDataException exception = act.Should().Throw<InvalidDataException>().Which;
         exception.Message.Should().Be("A row does not have the same number of columns as the header (2).");
         exception.InnerException.Should().BeOfType<InvalidDataException>();
     }
@@ -138,13 +138,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WhenWindowRowDiffersFromHeaderButMatchesOtherRows_ThrowsWithoutInnerException()
     {
         // Arrange - every row has 3 columns, so Sep is satisfied and the reader's own check rejects them
-        var csvContent = "col1,col2\nval1,val2,val3\nval4,val5,val6";
+        string csvContent = "col1,col2\nval1,val2,val3\nval4,val5,val6";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        Func<IReadOnlyList<CsvDataRow>> act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
         act.Should().Throw<InvalidDataException>().Which.InnerException.Should().BeNull();
@@ -154,13 +154,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WhenRowsOutsideWindowAreRagged_ReturnsOnlyWindowRows()
     {
         // Arrange - the ragged row is past the requested window
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
         rows.Count.Should().Be(2);
@@ -181,11 +181,11 @@ public sealed class DataRowReaderTests : IDisposable
         // Arrange
         ArgumentNullException.ThrowIfNull(csvContent);
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip, rowsToRead);
+        Func<IReadOnlyList<CsvDataRow>> act = () => reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip, rowsToRead);
 
         // Assert
         act.Should().Throw<InvalidDataException>()
@@ -196,13 +196,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithNonZeroByteOffset_ReadsFromCorrectPosition()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act - When reading from offset after header, the first line at that offset is treated as data (HasHeader = false)
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 2);
 
         // Assert
         rows.Count.Should().Be(2);
@@ -214,13 +214,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithRowsToSkip_SkipsCorrectNumberOfRows()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6\nval7,val8";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6\nval7,val8";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act - Skip header by using offset, then skip additional rows
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 1, rowsToRead: 2);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 1, rowsToRead: 2);
 
         // Assert
         rows.Count.Should().Be(2);
@@ -232,10 +232,10 @@ public sealed class DataRowReaderTests : IDisposable
     public void Constructor_WhenFileDoesNotExist_ThrowsFileNotFoundException()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid()}.csv");
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid()}.csv");
 
         // Act
-        var act = () => new DataRowReader(nonExistentPath, columnCount: 2);
+        Func<DataRowReader> act = () => new DataRowReader(nonExistentPath, columnCount: 2);
 
         // Assert
         act.Should().Throw<FileNotFoundException>();
@@ -245,13 +245,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_WithMoreRowsRequestedThanAvailable_ReturnsAvailableRows()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act - Request 100 rows but only 2 data rows available
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 100);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 100);
 
         // Assert
         rows.Count.Should().Be(2);
@@ -263,9 +263,9 @@ public sealed class DataRowReaderTests : IDisposable
     public void Dispose_ReleasesFileStream()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        DataRowReader reader = new(_testFilePath, columnCount: 2);
         reader.ReadRows(0, 0, 1);
 
         // Act
@@ -273,7 +273,7 @@ public sealed class DataRowReaderTests : IDisposable
 
         // Assert
         // Try opening file with FileShare.None - should succeed if stream was released
-        using var stream = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using FileStream stream = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
         stream.Should().NotBeNull();
     }
 
@@ -281,13 +281,13 @@ public sealed class DataRowReaderTests : IDisposable
     public void ReadRows_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
         reader.Dispose();
 
         // Act
-        var act = () => reader.ReadRows(0, 0, 1);
+        Func<IReadOnlyList<CsvDataRow>> act = () => reader.ReadRows(0, 0, 1);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -298,17 +298,17 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         // Header: col1,col2
-        var headerLine = "col1,col2";
+        string headerLine = "col1,col2";
         // Data: "say ""hi""",val2
-        var dataLine = "\"say \"\"hi\"\"\",val2";
+        string dataLine = "\"say \"\"hi\"\"\",val2";
         string[] lines = [headerLine, dataLine];
-        var csvContent = string.Join("\n", lines);
+        string csvContent = string.Join("\n", lines);
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        int offsetAfterHeader = csvContent.IndexOf('\n', StringComparison.Ordinal) + 1;
 
         // Act
-        var rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 1);
+        IReadOnlyList<CsvDataRow> rows = reader.ReadRows(byteOffset: offsetAfterHeader, rowsToSkip: 0, rowsToRead: 1);
 
         // Assert
         // Expected: say "hi", val2
@@ -319,12 +319,12 @@ public sealed class DataRowReaderTests : IDisposable
     public void EnumerateRows_WithValidData_YieldsAllDataRows()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 0).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0)];
 
         // Assert - The header row is skipped
         rows.Count.Should().Be(2);
@@ -336,12 +336,12 @@ public sealed class DataRowReaderTests : IDisposable
     public void EnumerateRows_WithQuotedCommaEscapedQuoteEmbeddedCrlfAndUnicode_ReturnsExactValues()
     {
         // Arrange - A quoted comma, an escaped quote, an embedded CRLF, and Unicode values
-        var csvContent = "col1,col2\n\"a,b\",\"say \"\"hi\"\"\"\n\"line1\r\nline2\",\"日本語\"";
+        string csvContent = "col1,col2\n\"a,b\",\"say \"\"hi\"\"\"\n\"line1\r\nline2\",\"日本語\"";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 0).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0)];
 
         // Assert
         rows.Count.Should().Be(2);
@@ -356,10 +356,10 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var act = () => reader.EnumerateRows(rowsToSkip: 0).ToList();
+        Func<List<CsvDataRow>> act = () => [.. reader.EnumerateRows(rowsToSkip: 0)];
 
         // Assert
         act.Should().Throw<InvalidDataException>();
@@ -372,10 +372,10 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange - The mismatched row is inside the rows-to-skip range
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var act = () => reader.EnumerateRows(rowsToSkip: 2).ToList();
+        Func<List<CsvDataRow>> act = () => [.. reader.EnumerateRows(rowsToSkip: 2)];
 
         // Assert
         act.Should().Throw<InvalidDataException>();
@@ -386,10 +386,10 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4\nval5");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 0).Take(2).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0).Take(2)];
 
         // Assert
         rows.Count.Should().Be(2);
@@ -399,12 +399,12 @@ public sealed class DataRowReaderTests : IDisposable
     public void EnumerateRows_WithRowsToSkip_SkipsCorrectNumberOfRows()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 1).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 1)];
 
         // Assert
         rows.Count.Should().Be(2);
@@ -418,12 +418,12 @@ public sealed class DataRowReaderTests : IDisposable
     public void EnumerateRows_WithSkipCountNotLessThanDataRows_YieldsNothing(int rowsToSkip)
     {
         // Arrange - 2 data rows; the skip count is at (2) or beyond (100) the data row count
-        var csvContent = "col1,col2\nval1,val2\nval3,val4";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4";
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip)];
 
         // Assert
         rows.Should().BeEmpty();
@@ -434,10 +434,10 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\n");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 0).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0)];
 
         // Assert
         rows.Should().BeEmpty();
@@ -448,10 +448,10 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange - No header row at all
         File.WriteAllText(_testFilePath, string.Empty);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act
-        var rows = reader.EnumerateRows(rowsToSkip: 0).ToList();
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0)];
 
         // Assert
         rows.Should().BeEmpty();
@@ -462,11 +462,11 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
         reader.Dispose();
 
         // Act
-        var act = () => reader.EnumerateRows(rowsToSkip: 0);
+        Func<IEnumerable<CsvDataRow>> act = () => reader.EnumerateRows(rowsToSkip: 0);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -483,12 +483,12 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, csvContent);
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var rows = reader.EnumerateRows(rowsToSkip);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        IEnumerable<CsvDataRow> rows = reader.EnumerateRows(rowsToSkip);
 
         // Act
         reader.Dispose();
-        var act = () => rows.ToList();
+        Func<List<CsvDataRow>> act = () => [.. rows];
 
         // Assert - Starting the deferred sequence after disposal throws, even when the
         // enumeration would otherwise end without reading a data row
@@ -500,13 +500,13 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange - A single data row, already yielded when the reader is disposed
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        using var enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        using IEnumerator<CsvDataRow> enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumerator.MoveNext().Should().BeTrue();
 
         // Act
         reader.Dispose();
-        var act = () => enumerator.MoveNext();
+        Func<bool> act = () => enumerator.MoveNext();
 
         // Assert - The advance after the final row observes the disposal instead of ending silently
         act.Should().Throw<ObjectDisposedException>();
@@ -517,13 +517,13 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4\nval5,val6");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        using var enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        using IEnumerator<CsvDataRow> enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumerator.MoveNext().Should().BeTrue();
 
         // Act
         reader.Dispose();
-        var act = () => enumerator.MoveNext();
+        Func<bool> act = () => enumerator.MoveNext();
 
         // Assert - Disposal between yields surfaces on the next MoveNext of the same enumeration
         act.Should().Throw<ObjectDisposedException>();
@@ -534,19 +534,19 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4\nval5,val6");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        using var enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        using IEnumerator<CsvDataRow> enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumerator.MoveNext().Should().BeTrue();
-        var openExclusively = () =>
+        Action openExclusively = () =>
         {
             // Dispose an unexpectedly opened stream so a failing check does not leak the handle
-            using var opened = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using FileStream opened = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
         };
 
         // Act - Confirm the active enumeration holds its handle, then dispose the reader and advance
         openExclusively.Should().Throw<IOException>();
         reader.Dispose();
-        var advance = () => enumerator.MoveNext();
+        Func<bool> advance = () => enumerator.MoveNext();
 
         // Assert - The exceptional advance itself releases the enumeration's dedicated stream,
         // before any explicit enumerator disposal
@@ -558,26 +558,26 @@ public sealed class DataRowReaderTests : IDisposable
     public void EnumerateRows_WithInterleavedReaders_PreservesAllRows()
     {
         // Arrange - 1000 distinct rows of ~100 chars, well beyond the reader buffers
-        var expectedPadding = new string('x', 90);
-        var expectedFirstColumns = Enumerable.Range(1, 1000).Select(static i => $"value{i:D4}").ToList();
+        string expectedPadding = new('x', 90);
+        List<string> expectedFirstColumns = [.. Enumerable.Range(1, 1000).Select(static i => $"value{i:D4}")];
         File.WriteAllText(
             _testFilePath,
             "col1,col2\n" + string.Join(
                 "\n",
                 Enumerable.Range(1, 1000).Select(i => $"value{i:D4},{expectedPadding}")));
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
 
         // Act - Start A, interleave ReadRows, then start and advance B before draining A
-        using var enumeratorA = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using IEnumerator<CsvDataRow> enumeratorA = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumeratorA.MoveNext().Should().BeTrue();
-        var aFirst = ToStringArray(enumeratorA.Current)[0];
-        var readRowsResult = reader.ReadRows(byteOffset: 0, rowsToSkip: 1, rowsToRead: 2);
-        using var enumeratorB = reader.EnumerateRows(rowsToSkip: 500).GetEnumerator();
+        string aFirst = ToStringArray(enumeratorA.Current)[0];
+        IReadOnlyList<CsvDataRow> readRowsResult = reader.ReadRows(byteOffset: 0, rowsToSkip: 1, rowsToRead: 2);
+        using IEnumerator<CsvDataRow> enumeratorB = reader.EnumerateRows(rowsToSkip: 500).GetEnumerator();
         enumeratorB.MoveNext().Should().BeTrue();
-        var bFirst = ToStringArray(enumeratorB.Current);
-        var remainingColumnsFromA = DrainFirstColumns(enumeratorA);
+        string[] bFirst = ToStringArray(enumeratorB.Current);
+        List<string> remainingColumnsFromA = DrainFirstColumns(enumeratorA);
         enumeratorB.MoveNext().Should().BeTrue();
-        var bSecond = ToStringArray(enumeratorB.Current);
+        string[] bSecond = ToStringArray(enumeratorB.Current);
 
         // Assert - A yields the exact complete sequence; B continues at its own position
         string[] allColumnsFromA = [aFirst, .. remainingColumnsFromA];
@@ -593,12 +593,12 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        var rows = reader.EnumerateRows(rowsToSkip: 0).ToList();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        List<CsvDataRow> rows = [.. reader.EnumerateRows(rowsToSkip: 0)];
         reader.Dispose();
 
         // Act - Exclusive access succeeds only when the enumeration's stream is closed too
-        using var stream = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using FileStream stream = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
 
         // Assert
         rows.Count.Should().Be(1);
@@ -610,8 +610,8 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        using var enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        using IEnumerator<CsvDataRow> enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumerator.MoveNext().Should().BeTrue();
 
         // Act - Abandon the enumeration midway and dispose both the enumerator and the reader
@@ -619,7 +619,7 @@ public sealed class DataRowReaderTests : IDisposable
         reader.Dispose();
 
         // Assert - Exclusive access succeeds only when the abandoned enumeration's stream is closed
-        using var stream = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using FileStream stream = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
         stream.Should().NotBeNull();
     }
 
@@ -628,16 +628,16 @@ public sealed class DataRowReaderTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4");
-        using var reader = new DataRowReader(_testFilePath, columnCount: 2);
-        using var enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
+        using DataRowReader reader = new(_testFilePath, columnCount: 2);
+        using IEnumerator<CsvDataRow> enumerator = reader.EnumerateRows(rowsToSkip: 0).GetEnumerator();
         enumerator.MoveNext().Should().BeTrue();
 
         // Act - Dispose the reader while the enumeration keeps its own handle
         reader.Dispose();
-        var act = () =>
+        Action act = () =>
         {
             // Dispose an unexpectedly opened stream so a failing check does not leak the handle
-            using var opened = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+            using FileStream opened = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
         };
 
         // Assert - The active enumeration's dedicated stream is still open

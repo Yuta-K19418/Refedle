@@ -25,7 +25,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     {
         // Small file: 1,000 rows (~50 KB)
         _smallFilePath = Path.Combine(Path.GetTempPath(), $"bench_csv_small_{Guid.NewGuid()}.csv");
-        var smallLines = new List<string> { "id,name,email,age,city" };
+        List<string> smallLines = ["id,name,email,age,city"];
         smallLines.AddRange(
             Enumerable
                 .Range(0, 1_000)
@@ -38,7 +38,7 @@ public class DataRowIndexerBenchmarks : IDisposable
             Path.GetTempPath(),
             $"bench_csv_medium_{Guid.NewGuid()}.csv"
         );
-        var mediumLines = new List<string> { "id,name,email,age,city" };
+        List<string> mediumLines = ["id,name,email,age,city"];
         mediumLines.AddRange(
             Enumerable
                 .Range(0, 100_000)
@@ -48,7 +48,7 @@ public class DataRowIndexerBenchmarks : IDisposable
 
         // Large file: 1,000,000 rows (~50 MB)
         _largeFilePath = Path.Combine(Path.GetTempPath(), $"bench_csv_large_{Guid.NewGuid()}.csv");
-        var largeLines = new List<string> { "id,name,email,age,city" };
+        List<string> largeLines = ["id,name,email,age,city"];
         largeLines.AddRange(
             Enumerable
                 .Range(0, 1_000_000)
@@ -61,7 +61,7 @@ public class DataRowIndexerBenchmarks : IDisposable
             Path.GetTempPath(),
             $"bench_csv_complex_{Guid.NewGuid()}.csv"
         );
-        var complexLines = new List<string> { "id,name,address,notes" };
+        List<string> complexLines = ["id,name,address,notes"];
         complexLines.AddRange(
             Enumerable
                 .Range(0, 10_000)
@@ -80,7 +80,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "Small CSV (1K rows, ~50KB)")]
     public void IndexSmallCsv()
     {
-        var indexer = new DataRowIndexer(_smallFilePath);
+        DataRowIndexer indexer = new(_smallFilePath);
         indexer.BuildIndex();
     }
 
@@ -90,7 +90,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "Medium CSV (100K rows, ~5MB)")]
     public void IndexMediumCsv()
     {
-        var indexer = new DataRowIndexer(_mediumFilePath);
+        DataRowIndexer indexer = new(_mediumFilePath);
         indexer.BuildIndex();
     }
 
@@ -100,7 +100,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "Large CSV (1M rows, ~50MB)")]
     public void IndexLargeCsv()
     {
-        var indexer = new DataRowIndexer(_largeFilePath);
+        DataRowIndexer indexer = new(_largeFilePath);
         indexer.BuildIndex();
     }
 
@@ -110,7 +110,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "Complex CSV with quoted fields (10K rows)")]
     public void IndexComplexCsvWithQuotedFields()
     {
-        var indexer = new DataRowIndexer(_complexFilePath);
+        DataRowIndexer indexer = new(_complexFilePath);
         indexer.BuildIndex();
     }
 
@@ -120,7 +120,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "GetCheckPoint for row 50,000")]
     public void GetCheckpointMediumFile()
     {
-        var indexer = new DataRowIndexer(_mediumFilePath);
+        DataRowIndexer indexer = new(_mediumFilePath);
         indexer.BuildIndex();
         _ = indexer.GetCheckPoint(50_000);
     }
@@ -131,7 +131,7 @@ public class DataRowIndexerBenchmarks : IDisposable
     [Benchmark(Description = "GetCheckPoint for row 500,000")]
     public void GetCheckpointLargeFile()
     {
-        var indexer = new DataRowIndexer(_largeFilePath);
+        DataRowIndexer indexer = new(_largeFilePath);
         indexer.BuildIndex();
         _ = indexer.GetCheckPoint(500_000);
     }

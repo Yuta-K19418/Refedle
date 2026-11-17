@@ -35,7 +35,7 @@ public abstract class IncrementalSchemaScannerBenchmarksBase : IDisposable
             Path.GetTempPath(),
             $"incremental_schema_scan_benchmark_{Guid.NewGuid()}{FileExtension}");
 
-        using (var writer = new StreamWriter(_tempFilePath))
+        using (StreamWriter writer = new(_tempFilePath))
         {
             WriteRows(writer, RowCount);
         }

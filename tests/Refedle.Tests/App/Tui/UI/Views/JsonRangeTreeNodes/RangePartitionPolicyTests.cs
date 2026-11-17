@@ -12,7 +12,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 50_000;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert
         result.Should().Be(1_000);
@@ -25,7 +25,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 50_000_000;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert
         result.Should().Be(1_000);
@@ -38,7 +38,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 100_000_000;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert
         result.Should().Be(1_000);
@@ -51,7 +51,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 100_000_200;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert — rangesCount=1001, superFactor=2, superRangeSize=2000
         result.Should().Be(2_000);
@@ -64,7 +64,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 1_073_741_824;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert — rangesCount=10738, superFactor=11, superRangeSize=11000
         result.Should().Be(11_000);
@@ -77,7 +77,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 10_737_418_240;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert — rangesCount=107375, superFactor=108, superRangeSize=108000
         result.Should().Be(108_000);
@@ -90,7 +90,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 107_374_182_400;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert — rangesCount=1073742, superFactor=1074, superRangeSize=1074000
         result.Should().Be(1_074_000);
@@ -103,7 +103,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 0;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert
         result.Should().Be(1_000);
@@ -116,7 +116,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 1;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert
         result.Should().Be(1_000);
@@ -130,7 +130,7 @@ public sealed class RangePartitionPolicyTests
         const long fileSize = 100_000;
 
         // Act
-        var result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
+        long result = RangePartitionPolicy.GetNodeGroupSize(fileSize);
 
         // Assert — boundary exactly at estimatedRows=1,000
         result.Should().Be(1_000);

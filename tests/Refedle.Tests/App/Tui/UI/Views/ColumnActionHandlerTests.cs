@@ -15,7 +15,7 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         // Act
-        var actions = ColumnActionHandler.GetAvailableActions();
+        string[] actions = ColumnActionHandler.GetAvailableActions();
 
         // Assert
         actions.Should().HaveCount(6);
@@ -26,10 +26,10 @@ public sealed class ColumnActionHandlerTests
     public void ExecuteAction_WithUnknownAction_DoesNotCallOnMorphAction()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
-        var actionCalled = false;
-        var handler = new ColumnActionHandler(
+        using IApplication app = TestAppFactory.Create();
+        TableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
+        bool actionCalled = false;
+        ColumnActionHandler handler = new(
             app, table, 0,
             _ => actionCalled = true,
             DataFormat.Csv);
@@ -57,16 +57,16 @@ public sealed class ColumnActionHandlerTests
     public void ExecuteAction_WithEachValidAction_DoesNotThrow(string action, DataFormat format)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var table = new TableSource(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
-        var handler = new ColumnActionHandler(
+        using IApplication app = TestAppFactory.Create();
+        TableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
+        ColumnActionHandler handler = new(
             app, table, 0,
             _ => { },
             format);
         app.StopAfterFirstIteration = true;
 
         // Act
-        var exception = Record.Exception(() => handler.ExecuteAction(action));
+        Exception exception = Record.Exception(() => handler.ExecuteAction(action));
 
         // Assert
         exception.Should().BeNull();
@@ -77,10 +77,10 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         IMorphAction? capturedAction = null;
-        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var table = new TableSource(["amount (number)"], ["amount"]);
-            var handler = new ColumnActionHandler(
+            TableSource table = new(["amount (number)"], ["amount"]);
+            ColumnActionHandler handler = new(
                 app, table, 0,
                 action => capturedAction = action,
                 DataFormat.Csv);
@@ -103,13 +103,13 @@ public sealed class ColumnActionHandlerTests
     public async Task ExecuteAction_WhenFilterAndRowIndexIncomplete_ShowsErrorDialogWithoutAction()
     {
         // Arrange
-        var actionCalled = false;
+        bool actionCalled = false;
         string? shownTitle = null;
         string? shownBody = null;
-        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var table = new TableSource(["Col1"], ["Col1"]);
-            var handler = new ColumnActionHandler(
+            TableSource table = new(["Col1"], ["Col1"]);
+            ColumnActionHandler handler = new(
                 app, table, 0,
                 _ => actionCalled = true,
                 DataFormat.Csv,
@@ -136,10 +136,10 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         string? shownTitle = null;
-        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var table = new TableSource(["Col1"], ["Col1"]);
-            var handler = new ColumnActionHandler(app, table, 0, _ => { }, DataFormat.Csv, () => true);
+            TableSource table = new(["Col1"], ["Col1"]);
+            ColumnActionHandler handler = new(app, table, 0, _ => { }, DataFormat.Csv, () => true);
             CaptureTopDialogThenSend(app, (t, _) => shownTitle = t, Key.Esc);
             return handler;
         });
@@ -160,10 +160,10 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         string? shownTitle = null;
-        await using var session = await LivePumpTestSession.StartAsync((app, window) =>
+        await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            var table = new TableSource(["Col1"], ["Col1"]);
-            var handler = new ColumnActionHandler(app, table, 0, _ => { }, DataFormat.Csv);
+            TableSource table = new(["Col1"], ["Col1"]);
+            ColumnActionHandler handler = new(app, table, 0, _ => { }, DataFormat.Csv);
             CaptureTopDialogThenSend(app, (t, _) => shownTitle = t, Key.Esc);
             return handler;
         });

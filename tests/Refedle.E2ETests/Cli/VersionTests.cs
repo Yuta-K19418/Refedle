@@ -14,7 +14,7 @@ public sealed class VersionTests
         // Arrange
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync([argument]);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync([argument]);
 
         // Assert
         AssertVersionOutput(result);
@@ -27,7 +27,7 @@ public sealed class VersionTests
         string[] arguments = ["apply", "--version"];
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync(arguments);
 
         // Assert
         AssertVersionOutput(result);

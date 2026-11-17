@@ -2,7 +2,9 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.Csv;
+using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
+using Terminal.Gui.App;
 
 namespace Refedle.Tests.App.Tui.UI;
 
@@ -12,17 +14,17 @@ public sealed partial class ViewManagerTests
     public void SwitchToCsvTable_IsRowIndexComplete_FollowsIndexerCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var indexer = new DataRowIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), null);
+        using IApplication app = TestAppFactory.Create();
+        DataRowIndexer indexer = new(CreateTempFile(".csv", "col1\na\nb\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), null);
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
-        var isCompleteDelegate = view.IsRowIndexComplete;
+        CsvTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
+        Func<bool>? isCompleteDelegate = view.IsRowIndexComplete;
 
         // Act
-        var beforeBuild = isCompleteDelegate?.Invoke();
+        bool? beforeBuild = isCompleteDelegate?.Invoke();
         indexer.BuildIndex();
-        var afterBuild = isCompleteDelegate?.Invoke();
+        bool? afterBuild = isCompleteDelegate?.Invoke();
 
         // Assert
         isCompleteDelegate.Should().NotBeNull();
@@ -34,17 +36,17 @@ public sealed partial class ViewManagerTests
     public void SwitchToJsonLinesTableView_IsRowIndexComplete_FollowsIndexerCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var indexer = new Refedle.Engine.IO.JsonLines.RowIndexer(CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), null);
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), null);
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Which;
-        var isCompleteDelegate = view.IsRowIndexComplete;
+        JsonLinesTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Which;
+        Func<bool>? isCompleteDelegate = view.IsRowIndexComplete;
 
         // Act
-        var beforeBuild = isCompleteDelegate?.Invoke();
+        bool? beforeBuild = isCompleteDelegate?.Invoke();
         indexer.BuildIndex();
-        var afterBuild = isCompleteDelegate?.Invoke();
+        bool? afterBuild = isCompleteDelegate?.Invoke();
 
         // Assert
         isCompleteDelegate.Should().NotBeNull();

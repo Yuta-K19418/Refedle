@@ -16,19 +16,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_NumberToken_ReturnsValueRaw()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":1.50}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -45,19 +45,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_ObjectToken_ReturnsValueRaw()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":{"a":1}}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -74,19 +74,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_ArrayToken_ReturnsValueRaw()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":[1,2,3]}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -103,19 +103,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_StringToken_ReturnsValuePlainText()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":"hello"}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -132,19 +132,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_BooleanToken_ReturnsValueBoolean()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":true}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -161,19 +161,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_FalseToken_ReturnsValueBoolean()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":false}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -190,19 +190,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_NullToken_ReturnsNullPresence()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":null}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Null);
@@ -217,19 +217,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_MissingProperty_ReturnsMissingPresence()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"other":1}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Missing);
@@ -244,19 +244,19 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task GetCellData_MalformedJson_ReturnsInvalidPresence()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, "not valid json");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var cell = reader.GetCellData(0);
+            CellData cell = reader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Invalid);
@@ -271,22 +271,22 @@ public sealed class BareJsonLinesRecordReaderTests
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":1.50}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             reader.Dispose();
 
             // Act
             Action act = () => reader.ThrowIfDisposed();
 
             // Assert
-            var exception = act.Should().Throw<ObjectDisposedException>().Which;
+            ObjectDisposedException exception = act.Should().Throw<ObjectDisposedException>().Which;
             exception.ObjectName.Should().Be(typeof(BareJsonLinesRecordReader).FullName);
         }
         finally
@@ -300,20 +300,20 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task EvaluateFilters_NullJsonValue_ReturnsFalse()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":null}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
+            using RowReader rowReader = new(filePath);
             BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var result = reader.EvaluateFilters();
+            bool result = reader.EvaluateFilters();
 
             // Assert
             result.Should().BeFalse();
@@ -329,20 +329,20 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task EvaluateFilters_MalformedJsonValue_ReturnsFalse()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, "not valid json");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
+            using RowReader rowReader = new(filePath);
             BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var result = reader.EvaluateFilters();
+            bool result = reader.EvaluateFilters();
 
             // Assert
             result.Should().BeFalse();
@@ -358,20 +358,20 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task EvaluateFilters_FilterColumnAbsentFromInputSchema_IgnoresFilter()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":1}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
+            using RowReader rowReader = new(filePath);
             BatchFilterSpec[] filters = [new(9, ComparisonType.Text, FilterOperator.Equals, "anything")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var result = reader.EvaluateFilters();
+            bool result = reader.EvaluateFilters();
 
             // Assert
             result.Should().BeTrue();
@@ -386,20 +386,20 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, """{"value":"hello"}""");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
+            using RowReader rowReader = new(filePath);
             BatchFilterSpec[] filters = [new(0, ComparisonType.Text, FilterOperator.Equals, "hello")];
-            var (inputColumnNames, outputSchema) = BuildSchemas([ColumnName], filters);
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas([ColumnName], filters);
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
             await reader.MoveNextAsync(default);
 
             // Act
-            var result = reader.EvaluateFilters();
+            bool result = reader.EvaluateFilters();
 
             // Assert
             result.Should().BeTrue();
@@ -416,18 +416,18 @@ public sealed class BareJsonLinesRecordReaderTests
     public async Task MoveNextAsync_LeadingEmptyAndWhitespaceLines_SkipsToFirstObject()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             File.WriteAllText(filePath, "\n \t\n{\"value\":1}\n");
-            var rowIndexer = new RowIndexer(filePath);
+            RowIndexer rowIndexer = new(filePath);
             rowIndexer.BuildIndex();
-            using var rowReader = new RowReader(filePath);
-            var (inputColumnNames, outputSchema) = BuildSchemas();
-            using var reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
+            using RowReader rowReader = new(filePath);
+            (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
+            using BareJsonLinesRecordReader reader = new(rowIndexer, rowReader, inputColumnNames, outputSchema);
 
             // Act
-            var hasObject = await reader.MoveNextAsync(default);
+            bool hasObject = await reader.MoveNextAsync(default);
 
             // Assert
             hasObject.Should().BeTrue();
@@ -449,7 +449,7 @@ public sealed class BareJsonLinesRecordReaderTests
         IReadOnlyList<string> columnNames,
         IReadOnlyList<BatchFilterSpec> filters)
     {
-        var outputSchema = new BatchOutputSchema([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
+        BatchOutputSchema outputSchema = new([.. columnNames.Select(name => new BatchOutputColumn(name, name))], filters);
         return (columnNames, outputSchema);
     }
 }

@@ -16,10 +16,10 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
 
         // Assert
         lines.Should().Equal("{\"a\":1}", "{\"b\":2}", "{\"c\":3}");
@@ -32,10 +32,10 @@ public sealed partial class RowReaderTests
         WriteTestContent(
             "{\"id\":1}\n{\"id\":2}\n",
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
 
         // Assert
         lines.Should().Equal("{\"id\":1}", "{\"id\":2}");
@@ -48,10 +48,10 @@ public sealed partial class RowReaderTests
         WriteTestContent(
             "{\"id\":1}\n{\"id\":2}\n{\"id\":3}\n",
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 1));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 1));
 
         // Assert
         lines.Should().Equal("{\"id\":2}", "{\"id\":3}");
@@ -62,10 +62,10 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n{\"d\":4}\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 2));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 2));
 
         // Assert
         lines.Should().Equal("{\"c\":3}", "{\"d\":4}");
@@ -78,10 +78,10 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent($"{{\"a\":1}}{newline}{{\"b\":2}}{newline}");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
 
         // Assert
         lines.Should().Equal("{\"a\":1}", "{\"b\":2}");
@@ -92,10 +92,10 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n{\"b\":2}");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
 
         // Assert
         lines.Should().Equal("{\"a\":1}", "{\"b\":2}");
@@ -108,10 +108,10 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n{\"b\":2}\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip));
 
         // Assert
         lines.Should().BeEmpty();
@@ -122,13 +122,13 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n{\"b\":2}\n");
-        var reader = new RowReader(_testFilePath);
-        using var enumerator = reader.EnumerateLines(linesToSkip: 0).GetEnumerator();
-        var hasFirstLine = enumerator.MoveNext();
+        RowReader reader = new(_testFilePath);
+        using IEnumerator<JsonRawBytes> enumerator = reader.EnumerateLines(linesToSkip: 0).GetEnumerator();
+        bool hasFirstLine = enumerator.MoveNext();
         reader.Dispose();
 
         // Act
-        var act = () => enumerator.MoveNext();
+        Func<bool> act = () => enumerator.MoveNext();
 
         // Assert
         hasFirstLine.Should().BeTrue();
@@ -140,12 +140,12 @@ public sealed partial class RowReaderTests
     {
         // Arrange
         WriteTestContent("{\"a\":1}\n");
-        var reader = new RowReader(_testFilePath);
-        var lines = reader.EnumerateLines(linesToSkip: 0);
+        RowReader reader = new(_testFilePath);
+        IEnumerable<JsonRawBytes> lines = reader.EnumerateLines(linesToSkip: 0);
         reader.Dispose();
 
         // Act
-        var act = () => DecodeLines(lines);
+        Func<string[]> act = () => DecodeLines(lines);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();

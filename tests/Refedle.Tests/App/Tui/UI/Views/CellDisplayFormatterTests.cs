@@ -15,7 +15,7 @@ public sealed class CellDisplayFormatterTests
         // Arrange — the raw value and column type are the complete input
 
         // Act
-        var result = CellDisplayFormatter.FormatCellValue(rawValue, type, formatString: null);
+        string result = CellDisplayFormatter.FormatCellValue(rawValue, type, formatString: null);
 
         // Assert
         result.Should().Be(rawValue);
@@ -29,7 +29,7 @@ public sealed class CellDisplayFormatterTests
         // Arrange — the raw value and column type are the complete input
 
         // Act
-        var result = CellDisplayFormatter.FormatCellValue(rawValue, ColumnType.Boolean, formatString: null);
+        string result = CellDisplayFormatter.FormatCellValue(rawValue, ColumnType.Boolean, formatString: null);
 
         // Assert
         result.Should().Be(expected);
@@ -45,7 +45,7 @@ public sealed class CellDisplayFormatterTests
         const string RawTimestamp = "2024-03-20T14:05:33";
 
         // Act
-        var result = CellDisplayFormatter.FormatCellValue(RawTimestamp, ColumnType.Timestamp, formatString);
+        string result = CellDisplayFormatter.FormatCellValue(RawTimestamp, ColumnType.Timestamp, formatString);
 
         // Assert
         result.Should().Be(expected);
