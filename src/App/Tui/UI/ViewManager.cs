@@ -341,7 +341,7 @@ internal sealed class ViewManager : IDisposable
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
         view.SetFocus();
-        StartLazyFilterScan(source, view);
+        StartLazyFilterScan(source, view, indexer);
     }
 
     /// <summary>
@@ -453,15 +453,20 @@ internal sealed class ViewManager : IDisposable
         SetInitialSelectionWhenReady(view, indexer);
         SwapView(view);
         view.SetFocus();
-        StartLazyFilterScan(tableSource, view);
+        StartLazyFilterScan(tableSource, view, indexer);
     }
 
-    private void StartLazyFilterScan(IExtendedTableSource source, MorphTableView view)
+    private void StartLazyFilterScan(IExtendedTableSource source, MorphTableView view, IRowIndexer rowIndexer)
     {
-        // Started before the refresh so the label stays hidden until the scan completes.
+        // Started before the refresh so the label stays hidden until the scan completes. The
+        // scan itself waits for the row index via the injected completion task.
         if (source is Views.LazyTransformer { FilterRowIndexer: { } filterIndexer })
         {
-            _lazyFilterScanTracker.StartScan(filterIndexer, view);
+            // The discarded task is the deferred start; its outcome re-enters via the tracker.
+            _ = _lazyFilterScanTracker.StartScanAsync(
+                filterIndexer,
+                view,
+                IndexingCompletion.WhenCompletedAsync(rowIndexer));
         }
 
         RefreshStatusBarHints();

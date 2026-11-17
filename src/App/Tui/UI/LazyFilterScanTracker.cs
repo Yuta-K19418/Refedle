@@ -9,8 +9,11 @@ namespace Refedle.App.Tui.UI;
 /// Owns the lazy filter scan attached to a CSV / JSON Lines table view: the progress overlay
 /// on the stable overlay host, the per-tick row refreshes while the scan runs, the item-count
 /// refresh when it completes, and the error view shown when it faults. <see cref="ViewManager"/>
-/// drives it through <see cref="StartScan"/>, <see cref="Detach"/> and <see cref="Dispose"/>;
-/// which scan is current stays private to this class. Unlike the FocusedTable scan, the
+/// drives it through <see cref="StartScanAsync"/>, <see cref="Detach"/> and <see cref="Dispose"/>;
+/// which scan is current stays private to this class. The scan starts only after the row index
+/// finished building — the filter indexer captures the row count when the build starts, so an
+/// earlier start would silently miss rows indexed afterwards — and until then it keeps the
+/// item count label hidden without showing the overlay. Unlike the FocusedTable scan, the
 /// background build observes only the file-session token — replacing the content view retires
 /// the presentation (overlay and subscription) but does not cancel the build itself.
 /// </summary>
@@ -57,13 +60,25 @@ internal sealed class LazyFilterScanTracker(
         _activeScan is { } scan && ReferenceEquals(_getCurrentView(), scan.ScanView);
 
     /// <summary>
-    /// Starts the lazy scan for <paramref name="view"/>: subscribes the indexer's progress,
-    /// shows the overlay on the overlay host and runs the background build. Replaces any scan
-    /// still attached from a previous view. Runs on the UI thread, after the view became the
-    /// current content view.
+    /// Starts the lazy scan for <paramref name="view"/> once <paramref name="indexingCompleted"/>
+    /// fires: subscribes the indexer's progress, shows the overlay on the overlay host and runs
+    /// the background build. Until then the scan keeps the item count label hidden without
+    /// showing the overlay. Replaces any scan still attached from a previous view. Runs on the
+    /// UI thread, after the view became the current content view.
     /// </summary>
-    internal void StartScan(IFilterRowIndexer indexer, MorphTableView view)
+    /// <param name="indexer">The filter row indexer whose build the scan runs.</param>
+    /// <param name="view">The table view the scan is attached to.</param>
+    /// <param name="indexingCompleted">
+    /// Completes when the underlying row index finished building; the scan starts only after it.
+    /// </param>
+    /// <returns>
+    /// A <see cref="Task"/> that completes once the start callback has been handed to the
+    /// UI-thread dispatcher, or the wait was abandoned by a file-session cancellation.
+    /// </returns>
+    internal Task StartScanAsync(IFilterRowIndexer indexer, MorphTableView view, Task indexingCompleted)
     {
+        ArgumentNullException.ThrowIfNull(indexingCompleted);
+
         Detach();
 
         // Captured by value: loading another file cancels this token, which marks the
@@ -79,14 +94,11 @@ internal sealed class LazyFilterScanTracker(
         Action<int, int> progressHandler = (scannedRows, totalRows) =>
             _uiThreadInvoke(() => HandleProgress(isScanCurrent, view, scannedRows, totalRows));
 
+        // Attached before the wait so the item count label stays hidden while indexing runs.
         var scan = new ActiveScan(indexer, view, progressHandler);
         _activeScan = scan;
-        indexer.ProgressChanged += progressHandler;
-        // The host's content size is its viewport, so the anchored overlay stays in the visible
-        // area; on the table view it would follow the row count and leave the viewport.
-        _overlay.Show(_overlayHost);
 
-        _ = RunScanAsync(scan, isScanCurrent, sessionToken);
+        return StartScanAfterIndexingAsync(scan, isScanCurrent, indexingCompleted, sessionToken);
     }
 
     /// <summary>
@@ -106,6 +118,51 @@ internal sealed class LazyFilterScanTracker(
 
         scan.Indexer.ProgressChanged -= scan.ProgressHandler;
         _overlay.Dismiss();
+    }
+
+    /// <summary>
+    /// Waits for the row index to finish building, then queues the scan start on the UI thread.
+    /// A wait ended by a file-session cancellation abandons the scan without presentation.
+    /// The returned task completes once the start is queued or the wait is abandoned.
+    /// </summary>
+    private async Task StartScanAfterIndexingAsync(
+        ActiveScan scan,
+        Func<bool> isScanCurrent,
+        Task indexingCompleted,
+        CancellationToken sessionToken)
+    {
+        try
+        {
+            await indexingCompleted.WaitAsync(sessionToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // The file session was replaced while waiting for indexing; nothing to scan.
+            return;
+        }
+
+        _uiThreadInvoke(() => BeginScan(scan, isScanCurrent, sessionToken));
+    }
+
+    /// <summary>
+    /// Presents and starts the scan on the UI thread: the indexer's progress is subscribed and
+    /// the overlay shown only here, once all rows the build will scan are known. A scan that is
+    /// no longer current — the view was replaced, the file session ended, or the tracker was
+    /// disposed while waiting — is abandoned without overlay or build.
+    /// </summary>
+    private void BeginScan(ActiveScan scan, Func<bool> isScanCurrent, CancellationToken sessionToken)
+    {
+        if (!isScanCurrent())
+        {
+            return;
+        }
+
+        scan.Indexer.ProgressChanged += scan.ProgressHandler;
+        // The host's content size is its viewport, so the anchored overlay stays in the visible
+        // area; on the table view it would follow the row count and leave the viewport.
+        _overlay.Show(_overlayHost);
+
+        _ = RunScanAsync(scan, isScanCurrent, sessionToken);
     }
 
     /// <summary>
