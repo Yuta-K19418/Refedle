@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Text.Json;
+using Microsoft.Win32.SafeHandles;
 
 namespace Refedle.Engine.IO.JsonArray;
 
@@ -67,30 +68,30 @@ public sealed class RowIndexer : RowIndexerBase
     /// </summary>
     public override void BuildIndex(CancellationToken ct = default)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
 
         try
         {
             FileSize = new FileInfo(_filePath).Length;
 
-            using var handle = File.OpenHandle(
+            using SafeFileHandle handle = File.OpenHandle(
                 _filePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read
             );
 
-            var state = default(JsonReaderState);
+            JsonReaderState state = default(JsonReaderState);
             // Both offsets start after a leading UTF-8 BOM so checkpoints remain absolute
             // file offsets that ElementReader can read back from the memory map directly.
-            var dataOffset = handle.GetOffsetAfterUtf8Bom();
+            long dataOffset = handle.GetOffsetAfterUtf8Bom();
             // Count the skipped BOM once so a completed scan reports BytesRead == FileSize.
             Interlocked.Add(ref _bytesRead, dataOffset);
-            var bufferOriginFileOffset = dataOffset;
-            var fileReadOffset = dataOffset;
-            var remainingLen = 0;
-            var elementCount = 0L;
-            var currentElementStart = -1L;
+            long bufferOriginFileOffset = dataOffset;
+            long fileReadOffset = dataOffset;
+            int remainingLen = 0;
+            long elementCount = 0L;
+            long currentElementStart = -1L;
 
             while (true)
             {
@@ -103,7 +104,7 @@ public sealed class RowIndexer : RowIndexerBase
                     );
                 }
 
-                var bytesRead = RandomAccess.Read(
+                int bytesRead = RandomAccess.Read(
                     handle,
                     buffer.AsSpan(remainingLen, BufferSize - remainingLen),
                     fileReadOffset
@@ -115,17 +116,17 @@ public sealed class RowIndexer : RowIndexerBase
                 }
 
                 fileReadOffset += bytesRead;
-                var dataEnd = remainingLen + bytesRead;
-                var isFinalBlock = fileReadOffset >= FileSize;
+                int dataEnd = remainingLen + bytesRead;
+                bool isFinalBlock = fileReadOffset >= FileSize;
                 Interlocked.Add(ref _bytesRead, bytesRead);
 
-                var reader = new Utf8JsonReader(
+                Utf8JsonReader reader = new(
                     buffer.AsSpan(0, dataEnd),
                     isFinalBlock,
                     state
                 );
 
-                var scanResult = ScanBufferForElements(ref reader, bufferOriginFileOffset, currentElementStart, elementCount);
+                (bool rootArrayComplete, long currentElementStart, long elementCount) scanResult = ScanBufferForElements(ref reader, bufferOriginFileOffset, currentElementStart, elementCount);
                 currentElementStart = scanResult.currentElementStart;
                 elementCount = scanResult.elementCount;
 
@@ -137,7 +138,7 @@ public sealed class RowIndexer : RowIndexerBase
                 ct.ThrowIfCancellationRequested();
 
                 state = reader.CurrentState;
-                var consumed = (int)reader.BytesConsumed;
+                int consumed = (int)reader.BytesConsumed;
                 bufferOriginFileOffset += consumed;
                 remainingLen = dataEnd - consumed;
                 buffer.AsSpan(consumed, remainingLen).CopyTo(buffer);
@@ -255,15 +256,15 @@ public sealed class RowIndexer : RowIndexerBase
                 return (-1L, 0);
             }
 
-            var idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
-            var actualCheckPointIndex = Math.Clamp(
+            int idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
+            int actualCheckPointIndex = Math.Clamp(
                 idealCheckPointIndex,
                 0,
                 _checkpoints.Count - 1
             );
-            var byteOffset = _checkpoints[actualCheckPointIndex];
-            var actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
-            var rowOffset = (int)(targetRow - actualCheckPointRow);
+            long byteOffset = _checkpoints[actualCheckPointIndex];
+            long actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
+            int rowOffset = (int)(targetRow - actualCheckPointRow);
 
             return (byteOffset, rowOffset);
         }

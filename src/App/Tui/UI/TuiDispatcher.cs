@@ -1,3 +1,6 @@
+using Refedle.Engine;
+using Terminal.Gui.App;
+
 namespace Refedle.App.Tui.UI;
 
 /// <summary>
@@ -13,24 +16,24 @@ internal static class TuiDispatcher
     /// <returns>The exit code for the process.</returns>
     public static async ValueTask<ExitCode> RunAsync(string[] args, CancellationToken ct)
     {
-        var parseTuiResult = TuiArgumentParser.Parse(args);
+        Result<TuiStartupOptions> parseTuiResult = TuiArgumentParser.Parse(args);
         if (parseTuiResult.IsFailure)
         {
             await Console.Error.WriteLineAsync(parseTuiResult.Error, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 
-        var tuiOptions = parseTuiResult.Value;
-        var missingFileError = tuiOptions.FindMissingFileError();
+        TuiStartupOptions tuiOptions = parseTuiResult.Value;
+        string? missingFileError = tuiOptions.FindMissingFileError();
         if (missingFileError is not null)
         {
             await Console.Error.WriteLineAsync(missingFileError, CancellationToken.None).ConfigureAwait(false);
             return ExitCode.Failure;
         }
 
-        var result = TuiApplication.Create();
-        using var app = result.app;
-        using var mainWindow = result.mainWindow;
+        (IApplication app, MainWindow mainWindow) result = TuiApplication.Create();
+        using IApplication app = result.app;
+        using MainWindow mainWindow = result.mainWindow;
 
         app.Init();
         mainWindow.SubscribeKeyHandler();

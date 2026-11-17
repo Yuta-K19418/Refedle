@@ -1,4 +1,5 @@
 using System.Buffers;
+using Microsoft.Win32.SafeHandles;
 
 namespace Refedle.Engine.IO.JsonLines;
 
@@ -56,28 +57,28 @@ public sealed class RowIndexer : RowIndexerBase
     /// </summary>
     public override void BuildIndex(CancellationToken ct = default)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
 
         try
         {
             FileSize = new FileInfo(_filePath).Length;
 
-            using var handle = File.OpenHandle(
+            using SafeFileHandle handle = File.OpenHandle(
                 _filePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read
             );
 
-            var fileOffset = 0L;
-            var rowCount = 0L;
-            var lastByteRead = (byte)0;
+            long fileOffset = 0L;
+            long rowCount = 0L;
+            byte lastByteRead = 0;
 
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var bytesRead = RandomAccess.Read(handle, buffer.AsSpan(0, BufferSize), fileOffset);
+                int bytesRead = RandomAccess.Read(handle, buffer.AsSpan(0, BufferSize), fileOffset);
 
                 if (bytesRead <= 0)
                 {
@@ -87,7 +88,7 @@ public sealed class RowIndexer : RowIndexerBase
                 Interlocked.Add(ref _bytesRead, bytesRead);
                 lastByteRead = buffer[bytesRead - 1];
 
-                var span = buffer.AsSpan(0, bytesRead);
+                Span<byte> span = buffer.AsSpan(0, bytesRead);
                 rowCount = ProcessBuffer(span, fileOffset, rowCount);
                 fileOffset += bytesRead;
             }
@@ -133,14 +134,14 @@ public sealed class RowIndexer : RowIndexerBase
 
         lock (_lock)
         {
-            var idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
+            int idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
             // Clamp to the last available checkpoint (handles partial indexing or beyond-EOF requests)
-            var actualCheckPointIndex = Math.Clamp(idealCheckPointIndex, 0, _checkpoints.Count - 1);
-            var byteOffset = _checkpoints[actualCheckPointIndex];
+            int actualCheckPointIndex = Math.Clamp(idealCheckPointIndex, 0, _checkpoints.Count - 1);
+            long byteOffset = _checkpoints[actualCheckPointIndex];
             // Calculate the row number that the actual checkpoint represents
-            var actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
+            long actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
             // Calculate how many rows to skip from the actual checkpoint to reach the target row
-            var rowOffset = (int)(targetRow - actualCheckPointRow);
+            int rowOffset = (int)(targetRow - actualCheckPointRow);
 
             return (byteOffset, rowOffset);
         }
@@ -152,11 +153,11 @@ public sealed class RowIndexer : RowIndexerBase
         long rowCount
     )
     {
-        var position = 0;
+        int position = 0;
 
         while (position < buffer.Length)
         {
-            var index = buffer[position..].IndexOf((byte)'\n');
+            int index = buffer[position..].IndexOf((byte)'\n');
             if (index == -1)
             {
                 break;
@@ -169,7 +170,7 @@ public sealed class RowIndexer : RowIndexerBase
             {
                 Interlocked.Exchange(ref _totalRows, rowCount);
 
-                var checkpointOffset = fileOffset + position;
+                long checkpointOffset = fileOffset + position;
                 lock (_lock)
                 {
                     _checkpoints.Add(checkpointOffset);

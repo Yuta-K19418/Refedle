@@ -51,24 +51,24 @@ internal static class ApplyPreparer
         IAppLogger logger,
         CancellationToken ct)
     {
-        var recipeResult = await new RecipeManager().LoadAsync(recipeFile, ct).ConfigureAwait(false);
+        Result<Recipe> recipeResult = await new RecipeManager().LoadAsync(recipeFile, ct).ConfigureAwait(false);
         if (recipeResult.IsFailure)
         {
             return await LogAndFailAsync(logger, $"Error loading recipe: {recipeResult.Error}").ConfigureAwait(false);
         }
 
-        var recipe = recipeResult.Value;
+        Recipe recipe = recipeResult.Value;
 
-        var inputFormatResult = FormatDetector.DetectInputFile(inputFile);
+        Result<DataFormat> inputFormatResult = FormatDetector.DetectInputFile(inputFile);
         if (inputFormatResult.IsFailure)
         {
             return await LogAndFailAsync(logger, $"Error detecting input format: {inputFormatResult.Error}").ConfigureAwait(false);
         }
 
-        var inputFormat = inputFormatResult.Value;
+        DataFormat inputFormat = inputFormatResult.Value;
 
         // JSON Object/Array input requires a DrillDown-scoped recipe
-        var validationResult = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+        Result validationResult = DrillDownRecipeValidator.Validate(inputFormat, recipe);
         if (validationResult.IsFailure)
         {
             return await LogAndFailAsync(logger, $"Error validating recipe: {validationResult.Error}").ConfigureAwait(false);
@@ -77,7 +77,7 @@ internal static class ApplyPreparer
         DataFormat? outputFormat = null;
         if (outputFile is not null)
         {
-            var outputFormatResult = FormatDetector.DetectOutputFile(outputFile);
+            Result<DataFormat> outputFormatResult = FormatDetector.DetectOutputFile(outputFile);
             if (outputFormatResult.IsFailure)
             {
                 return await LogAndFailAsync(logger, $"Error detecting output format: {outputFormatResult.Error}").ConfigureAwait(false);
@@ -88,16 +88,16 @@ internal static class ApplyPreparer
 
         // Resolve the full input column name set (no type inference), scoped to the recipe's
         // DrillDown location when it has one (null for a base-table recipe).
-        var columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> columnNamesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             inputFormat, inputFile, recipe.DrillDownKeyPath, ct).ConfigureAwait(false);
         if (columnNamesResult.IsFailure)
         {
             return await LogAndFailAsync(logger, $"Error resolving columns: {columnNamesResult.Error}").ConfigureAwait(false);
         }
 
-        var columnNames = columnNamesResult.Value;
+        IReadOnlyList<string> columnNames = columnNamesResult.Value;
 
-        var outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
+        Result<BatchOutputSchema> outputSchemaResult = ActionApplier.BuildOutputSchema(columnNames, recipe.Actions);
         if (outputSchemaResult.IsFailure)
         {
             return await LogAndFailAsync(logger, $"Error building output schema: {outputSchemaResult.Error}").ConfigureAwait(false);

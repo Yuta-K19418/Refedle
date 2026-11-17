@@ -56,7 +56,7 @@ internal sealed class VimKeyTranslator
         // Second 'g' while pending — check timeout
         if (keyCode == KeyCode.G && _pendingG)
         {
-            var elapsed = Stopwatch.GetElapsedTime(_pendingGTimestamp, _timestampProvider());
+            TimeSpan elapsed = Stopwatch.GetElapsedTime(_pendingGTimestamp, _timestampProvider());
             _pendingG = false;
 
             if (elapsed.TotalMilliseconds <= _timeoutMs)

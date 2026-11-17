@@ -25,15 +25,15 @@ internal static class TuiArgumentParser
         string? inputFile = null;
         string? recipeFile = null;
 
-        var argsIndex = 0;
+        int argsIndex = 0;
         while (argsIndex < args.Count)
         {
-            var arg = args[argsIndex];
+            string arg = args[argsIndex];
 
             if (arg == FileFlag)
             {
                 argsIndex++;
-                var consumeResult = ConsumeValue(args, argsIndex, FileFlag, inputFile);
+                Result consumeResult = ConsumeValue(args, argsIndex, FileFlag, inputFile);
                 if (consumeResult.IsFailure)
                 {
                     return Results.Failure<TuiStartupOptions>(consumeResult.Error);
@@ -46,7 +46,7 @@ internal static class TuiArgumentParser
             if (arg == RecipeFlag)
             {
                 argsIndex++;
-                var consumeResult = ConsumeValue(args, argsIndex, RecipeFlag, recipeFile);
+                Result consumeResult = ConsumeValue(args, argsIndex, RecipeFlag, recipeFile);
                 if (consumeResult.IsFailure)
                 {
                     return Results.Failure<TuiStartupOptions>(consumeResult.Error);

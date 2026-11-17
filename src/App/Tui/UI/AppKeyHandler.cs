@@ -2,10 +2,13 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.Dialogs;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
+using Refedle.Engine;
+using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Refedle.App.Tui.UI;
@@ -30,7 +33,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key is a global shortcut; <c>false</c> otherwise.</returns>
     internal static bool IsGlobalShortcut(KeyCode keyCode)
     {
-        var baseKey = keyCode & ~(KeyCode.ShiftMask | KeyCode.CtrlMask | KeyCode.AltMask);
+        KeyCode baseKey = keyCode & ~(KeyCode.ShiftMask | KeyCode.CtrlMask | KeyCode.AltMask);
         return baseKey is KeyCode.O or KeyCode.S or KeyCode.Q or KeyCode.T or KeyCode.X or KeyCode.C or KeyCode.Backspace or (KeyCode)'?';
     }
 
@@ -62,7 +65,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleQuit()
     {
-        var hasUnsavedChanges = _state.TryGetDrillDown(out var drillDown)
+        bool hasUnsavedChanges = _state.TryGetDrillDown(out DrillDownState? drillDown)
             ? drillDown.HasUnsavedChanges
             : _state.HasUnsavedChanges;
 
@@ -72,7 +75,7 @@ internal sealed class AppKeyHandler : IDisposable
             return true;
         }
 
-        var result = MessageBox.Query(
+        int? result = MessageBox.Query(
             _app,
             "Quit",
             "You have unsaved changes in your recipe. Quit anyway?",
@@ -93,7 +96,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     private bool HandleHelp()
     {
-        var dialog = new HelpDialog();
+        HelpDialog dialog = new();
         _app.Run(dialog);
         return true;
     }
@@ -135,7 +138,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
+        Result<DataFormat> format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsSuccess && format.Value == DataFormat.JsonLines)
         {
             _ = _viewManager.ToggleJsonLinesModeAsync().ContinueWith(
@@ -156,7 +159,7 @@ internal sealed class AppKeyHandler : IDisposable
 
     internal bool HandleActionMenu()
     {
-        var currentView = _viewManager.GetCurrentView();
+        View? currentView = _viewManager.GetCurrentView();
 
         if (currentView is MorphTableView mt)
         {
@@ -179,19 +182,19 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
+        Result<DataFormat> format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(format.Error));
             return false;
         }
 
-        var handler = new ColumnActionHandler(
+        ColumnActionHandler handler = new(
             _app, paged.Inner, mt.Value.SelectedCell.X,
             mt.OnMorphAction, format.Value, mt.IsRowIndexComplete);
 
         string? selectedAction = null;
-        var dialog = new ActionMenuDialog(ColumnActionHandler.GetAvailableActions(), action => selectedAction = action);
+        ActionMenuDialog dialog = new(ColumnActionHandler.GetAvailableActions(), action => selectedAction = action);
         _app.Run(dialog);
 
         // Run after the menu is closed so the action's dialogs do not stack on top of it.
@@ -217,7 +220,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var treeFormat = FormatDetector.DetectInputFile(_state.CurrentFilePath);
+        Result<DataFormat> treeFormat = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (treeFormat.IsFailure)
         {
             _app.Invoke(() => _viewManager.ShowError(treeFormat.Error));
@@ -243,7 +246,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var children = arrayNode.Children;
+        IList<ITreeNode> children = arrayNode.Children;
         if (children.Count == 0)
         {
             return false;
@@ -254,7 +257,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             Format: format,
             NodeBytes: arrayNode.RawJson,
             KeyPath: KeyPathBuilder.Build(selectedNode),
@@ -262,7 +265,7 @@ internal sealed class AppKeyHandler : IDisposable
 
         void onDrillDownConfirmed(string actionName) => _viewManager.DrillDown(request);
 
-        var dialog = new ActionMenuDialog(["DrillDown"], onDrillDownConfirmed);
+        ActionMenuDialog dialog = new(["DrillDown"], onDrillDownConfirmed);
         _app.Run(dialog);
         return true;
     }
@@ -272,8 +275,8 @@ internal sealed class AppKeyHandler : IDisposable
     /// </summary>
     private bool HandleFullAggregationDrillDown(ITreeNode selectedNode, DataFormat format)
     {
-        var keyPath = KeyPathBuilder.Build(selectedNode);
-        var request = new FullAggregationDrillDownRequest(
+        IReadOnlyList<KeyPathSegment> keyPath = KeyPathBuilder.Build(selectedNode);
+        FullAggregationDrillDownRequest request = new(
             Format: format,
             KeyPath: keyPath,
             InitialActionStack: []);
@@ -283,7 +286,7 @@ internal sealed class AppKeyHandler : IDisposable
                 .AsTask()
                 .ContinueWith(HandleTaskError, TaskScheduler.Default);
 
-        var dialog = new ActionMenuDialog(["DrillDown"], onDrillDownConfirmed);
+        ActionMenuDialog dialog = new(["DrillDown"], onDrillDownConfirmed);
         _app.Run(dialog);
         return true;
     }
@@ -307,7 +310,7 @@ internal sealed class AppKeyHandler : IDisposable
     /// <returns><c>true</c> if the key was handled; <c>false</c> otherwise.</returns>
     internal bool HandleClearActions()
     {
-        var currentActionCount = _state.TryGetDrillDown(out var drillDown)
+        int currentActionCount = _state.TryGetDrillDown(out DrillDownState? drillDown)
             ? drillDown.ActionStack.Count
             : _state.ActionStack.Count;
 
@@ -316,7 +319,7 @@ internal sealed class AppKeyHandler : IDisposable
             return false;
         }
 
-        var result = MessageBox.Query(
+        int? result = MessageBox.Query(
             _app,
             "Clear Actions",
             "Clear all actions from the stack?",
@@ -393,11 +396,11 @@ internal sealed class AppKeyHandler : IDisposable
     // (e.g. its internal cursor/selection handling), not the TextField itself.
     private bool IsTextFieldFocused()
     {
-        var focused = _app.Navigation?.GetFocused() ?? _app.TopRunnableView?.MostFocused;
-        var current = focused;
+        View? focused = _app.Navigation?.GetFocused() ?? _app.TopRunnableView?.MostFocused;
+        View? current = focused;
         while (current is not null)
         {
-            var type = current.GetType();
+            Type type = current.GetType();
             if (current is TextField || type.Name == "TextField" || type.FullName == "Terminal.Gui.Views.TextField")
             {
                 return true;

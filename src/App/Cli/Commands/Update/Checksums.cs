@@ -17,15 +17,15 @@ internal static partial class Checksums
     /// <returns>The lower-case hex digest on success, or a failure describing the problem.</returns>
     public static Result<string> FindHex(string content, string fileName)
     {
-        foreach (var rawLine in content.Split('\n'))
+        foreach (string rawLine in content.Split('\n'))
         {
-            var line = rawLine.TrimEnd('\r');
+            string line = rawLine.TrimEnd('\r');
             if (line.Length == 0)
             {
                 continue;
             }
 
-            var match = ChecksumLineRegex().Match(line);
+            Match match = ChecksumLineRegex().Match(line);
             if (!match.Success)
             {
                 return Results.Failure<string>($"Invalid checksums line: '{line}'");

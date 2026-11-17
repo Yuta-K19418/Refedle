@@ -32,19 +32,19 @@ internal sealed class CastColumnDialog : Dialog
     {
         Title = "Cast Column Type";
 
-        var colLabel = new Label
+        Label colLabel = new()
         {
             Text = $"Column: {columnName}",
             X = 0,
             Y = 0,
         };
-        var typeLabel = new Label
+        Label typeLabel = new()
         {
             Text = $"Current type: {currentType}",
             X = 0,
             Y = 1,
         };
-        var selector = new OptionSelector<ColumnType>
+        OptionSelector<ColumnType> selector = new()
         {
             X = 0,
             Y = 3,
@@ -53,7 +53,7 @@ internal sealed class CastColumnDialog : Dialog
         };
         selector.EnableAutoSelectAndVimKeys();
 
-        var errorLabel = new Label
+        Label errorLabel = new()
         {
             Text = "Selected type is not supported for this format.",
             X = 0,
@@ -64,14 +64,14 @@ internal sealed class CastColumnDialog : Dialog
 
         Add(colLabel, typeLabel, selector, errorLabel);
 
-        var okButton = new Button { Text = "OK" };
-        var cancelButton = new Button { Text = "Cancel" };
+        Button okButton = new() { Text = "OK" };
+        Button cancelButton = new() { Text = "Cancel" };
 
-        var validTypes = format.GetValidCastTargets();
+        IReadOnlySet<ColumnType> validTypes = format.GetValidCastTargets();
 
         void updateErrorState(ColumnType? selected)
         {
-            var isValid = selected is not null && validTypes.Contains(selected.Value);
+            bool isValid = selected is not null && validTypes.Contains(selected.Value);
             errorLabel.Visible = !isValid;
             okButton.Enabled = isValid;
         }
@@ -79,7 +79,7 @@ internal sealed class CastColumnDialog : Dialog
         // Initial state
         updateErrorState(currentType);
 
-        foreach (var cb in selector.SubViews.OfType<CheckBox>())
+        foreach (CheckBox cb in selector.SubViews.OfType<CheckBox>())
         {
             cb.HasFocusChanged += (_, _) =>
             {
@@ -93,7 +93,7 @@ internal sealed class CastColumnDialog : Dialog
 
         void confirm()
         {
-            var selected = selector.Value;
+            ColumnType? selected = selector.Value;
             if (selected is null || selected == currentType)
             {
                 return;

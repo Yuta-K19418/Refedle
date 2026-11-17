@@ -19,9 +19,9 @@ internal static class TuiApplication
     /// </remarks>
     public static (IApplication app, MainWindow mainWindow) Create()
     {
-        var app = Application.Create();
-        var state = new AppState();
-        var mainWindow = new MainWindow(app, state);
+        IApplication app = Application.Create();
+        AppState state = new();
+        MainWindow mainWindow = new(app, state);
 
         return (app, mainWindow);
     }

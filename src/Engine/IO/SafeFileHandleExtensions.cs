@@ -16,7 +16,7 @@ internal static class SafeFileHandleExtensions
     public static long GetOffsetAfterUtf8Bom(this SafeFileHandle handle)
     {
         Span<byte> header = stackalloc byte[Utf8BomUtility.Length];
-        var headerRead = RandomAccess.Read(handle, header, 0);
+        int headerRead = RandomAccess.Read(handle, header, 0);
         return Utf8BomUtility.StartsWithUtf8Bom(header[..headerRead]) ? Utf8BomUtility.Length : 0L;
     }
 }

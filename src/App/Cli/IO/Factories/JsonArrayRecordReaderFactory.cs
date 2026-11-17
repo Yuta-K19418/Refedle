@@ -37,7 +37,7 @@ internal readonly struct JsonArrayRecordReaderFactory
         RowIndexer rowIndexer = new(inputFile);
         rowIndexer.BuildIndex(ct);
 
-        var elementReader = new ElementReader(inputFile);
+        ElementReader elementReader = new(inputFile);
         return new(new FullAggregationRecordReader<JsonArrayBatchSourceReader>(
             rowIndexer, new JsonArrayBatchSourceReader(elementReader), drillDownKeyPath, inputColumnNames, outputSchema));
     }

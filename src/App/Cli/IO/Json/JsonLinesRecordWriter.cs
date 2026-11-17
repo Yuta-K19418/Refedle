@@ -75,12 +75,12 @@ internal struct JsonLinesRecordWriter : IRecordWriter
         _jsonWriter.Flush();
 
         // Add newline (using \n as standard for JSONL across platforms)
-        var span = _bufferWriter.GetSpan(1);
+        Span<byte> span = _bufferWriter.GetSpan(1);
         span[0] = (byte)'\n';
         _bufferWriter.Advance(1);
 
         // Write to stream
-        var memory = _bufferWriter.WrittenMemory;
+        JsonRawBytes memory = _bufferWriter.WrittenMemory;
         if (memory.Length > 0)
         {
             await _stream.WriteAsync(memory, ct).ConfigureAwait(false);

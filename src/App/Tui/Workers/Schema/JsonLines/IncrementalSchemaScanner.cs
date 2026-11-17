@@ -1,3 +1,4 @@
+using Refedle.Engine;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 
@@ -24,13 +25,13 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
     /// <inheritdoc/>
     protected override TableSchema ExecuteInitialScan()
     {
-        using var reader = new RowReader(FilePath);
-        var lines = reader.ReadLines(
+        using RowReader reader = new(FilePath);
+        IReadOnlyList<JsonRawBytes> lines = reader.ReadLines(
             byteOffset: 0,
             linesToSkip: 0,
             linesToRead: InitialScanCount
         );
-        var scanResult = SchemaScanner.ScanSchema(lines, InitialScanCount);
+        Result<TableSchema> scanResult = SchemaScanner.ScanSchema(lines, InitialScanCount);
 
         if (scanResult.IsFailure)
         {
@@ -55,8 +56,8 @@ internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
 
     private IEnumerable<JsonRawBytes> ReadRemainingLines()
     {
-        using var reader = new RowReader(FilePath);
-        foreach (var line in reader.EnumerateLines(linesToSkip: InitialScanCount))
+        using RowReader reader = new(FilePath);
+        foreach (JsonRawBytes line in reader.EnumerateLines(linesToSkip: InitialScanCount))
         {
             yield return line;
         }

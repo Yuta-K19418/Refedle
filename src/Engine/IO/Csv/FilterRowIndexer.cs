@@ -73,15 +73,15 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
     /// <inheritdoc/>
     public async Task BuildIndexAsync(CancellationToken ct)
     {
-        var totalRows = (int)_indexer.TotalRows;
+        int totalRows = (int)_indexer.TotalRows;
 
         if (totalRows <= 0)
         {
             return;
         }
 
-        using var reader = new DataRowReader(_indexer.FilePath, _sourceColumnCount);
-        var (startByteOffset, startRowOffset) = _indexer.GetCheckPoint(0);
+        using DataRowReader reader = new(_indexer.FilePath, _sourceColumnCount);
+        (long startByteOffset, int startRowOffset) = _indexer.GetCheckPoint(0);
 
         if (startByteOffset < 0)
         {
@@ -89,24 +89,24 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
         }
 
         const int batchSize = 1000;
-        var processed = 0;
-        var readOffset = startByteOffset;
-        var rowsToSkip = startRowOffset;
-        var sourceRow = 0;
+        int processed = 0;
+        long readOffset = startByteOffset;
+        int rowsToSkip = startRowOffset;
+        int sourceRow = 0;
 
         while (processed < totalRows)
         {
             ct.ThrowIfCancellationRequested();
 
-            var rowsToRead = Math.Min(batchSize, totalRows - processed);
-            var rows = reader.ReadRows(readOffset, rowsToSkip, rowsToRead);
+            int rowsToRead = Math.Min(batchSize, totalRows - processed);
+            IReadOnlyList<CsvDataRow> rows = reader.ReadRows(readOffset, rowsToSkip, rowsToRead);
 
             if (rows.Count == 0)
             {
                 break;
             }
 
-            for (var i = 0; i < rows.Count; i++)
+            for (int i = 0; i < rows.Count; i++)
             {
                 if (MatchesAllFilters(rows[i]))
                 {
@@ -122,7 +122,7 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
             sourceRow += rows.Count;
 
             // Advance to next batch using checkpoint for the next batch start row
-            var (nextByteOffset, nextRowOffset) = _indexer.GetCheckPoint(sourceRow);
+            (long nextByteOffset, int nextRowOffset) = _indexer.GetCheckPoint(sourceRow);
             readOffset = nextByteOffset;
             rowsToSkip = nextRowOffset;
 
@@ -145,10 +145,10 @@ public sealed class FilterRowIndexer : IFilterRowIndexer
 
     private bool MatchesAllFilters(CsvDataRow csvRow)
     {
-        foreach (var spec in _filterSpecs)
+        foreach (FilterSpec spec in _filterSpecs)
         {
-            var colIdx = spec.SourceColumnIndex;
-            var rawValue =
+            int colIdx = spec.SourceColumnIndex;
+            ReadOnlySpan<char> rawValue =
                 colIdx < csvRow.Count && !csvRow[colIdx].IsEmpty
                     ? csvRow[colIdx].Span
                     : [];

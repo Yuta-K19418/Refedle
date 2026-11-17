@@ -59,15 +59,15 @@ internal sealed class FilterScanManager(
     /// </summary>
     internal void StartScan(FocusedTableTransformer source, FocusedTableFilterRowIndexer indexer, TableStyle style)
     {
-        var loadingView = LoadingView.Create("Filtering rows…");
+        LoadingView loadingView = LoadingView.Create("Filtering rows…");
         _swapView(loadingView);
 
         // Created after the view swap so the swap's cancellation of the previous scan
         // cannot touch this scan's token source.
-        var cts = CancellationTokenSource.CreateLinkedTokenSource(_parentToken());
+        CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(_parentToken());
         Action<int, int> progressHandler = (scannedRows, totalRows) =>
             _uiThreadInvoke(() => HandleProgress(isProgressCurrent, scannedRows, totalRows));
-        var session = new FilterScanSession(cts, indexer, source, style, progressHandler);
+        FilterScanSession session = new(cts, indexer, source, style, progressHandler);
         // Evaluated when a queued UI callback runs, not when it is created. Cancellation keeps
         // IsCancellationRequested readable after the CTS is disposed.
         bool isProgressCurrent() => ReferenceEquals(_session?.Cts, cts) && !cts.IsCancellationRequested;
@@ -116,12 +116,12 @@ internal sealed class FilterScanManager(
             return;
         }
 
-        var indexer = session.Indexer;
-        var token = session.Cts.Token;
+        FocusedTableFilterRowIndexer indexer = session.Indexer;
+        CancellationToken token = session.Cts.Token;
 
         try
         {
-            var scanTask = _filterScanRunner.RunAsync(indexer, token);
+            Task scanTask = _filterScanRunner.RunAsync(indexer, token);
             await Task.WhenAny(indexer.ThresholdReached, scanTask).ConfigureAwait(false);
             if (indexer.ThresholdReached.IsCompletedSuccessfully)
             {
@@ -199,7 +199,7 @@ internal sealed class FilterScanManager(
 
     private void ShowTableView(IExtendedTableSource source, TableStyle style)
     {
-        var tableView = _createFocusedTableView(source, style);
+        FocusedTableView tableView = _createFocusedTableView(source, style);
         tableView.SetSelection(0, 0, false);
         tableView.Update();
         _tableView = tableView;
@@ -249,7 +249,7 @@ internal sealed class FilterScanManager(
     /// </summary>
     private void CancelScan()
     {
-        var session = _session;
+        FilterScanSession? session = _session;
         _session = null;
         _tableView = null;
         _overlay.Dismiss();

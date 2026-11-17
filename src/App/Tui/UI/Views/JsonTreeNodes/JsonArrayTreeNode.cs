@@ -57,7 +57,7 @@ internal sealed class JsonArrayTreeNode : TreeNode
     {
         List<ITreeNode> children = [];
 
-        var reader = new Utf8JsonReader(_rawJson.Span);
+        Utf8JsonReader reader = new(_rawJson.Span);
 
         bool isValidArrayStart;
         try
@@ -81,7 +81,7 @@ internal sealed class JsonArrayTreeNode : TreeNode
             return;
         }
 
-        var elementIndex = 0;
+        int elementIndex = 0;
         while (reader.Read())
         {
             if (reader.TokenType == JsonTokenType.EndArray)
@@ -89,7 +89,7 @@ internal sealed class JsonArrayTreeNode : TreeNode
                 break;
             }
 
-            var elementNode = JsonTreeNodeHelper.CreateChildNode(
+            ITreeNode? elementNode = JsonTreeNodeHelper.CreateChildNode(
                 ref reader,
                 string.Create(CultureInfo.InvariantCulture, $"[{elementIndex}]"),
                 _rawJson,
@@ -109,7 +109,7 @@ internal sealed class JsonArrayTreeNode : TreeNode
 
     private string FormatDisplayText()
     {
-        var reader = new Utf8JsonReader(_rawJson.Span);
+        Utf8JsonReader reader = new(_rawJson.Span);
 
         bool isValidArrayStart;
         try

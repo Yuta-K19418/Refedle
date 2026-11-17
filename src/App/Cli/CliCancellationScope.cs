@@ -31,7 +31,7 @@ internal sealed class CliCancellationScope : IDisposable
     /// <param name="ct">The outer cancellation token to link to.</param>
     public static CliCancellationScope Create(ICancelKeyPressSource source, CancellationToken ct)
     {
-        var scope = new CliCancellationScope(CancellationTokenSource.CreateLinkedTokenSource(ct), source);
+        CliCancellationScope scope = new(CancellationTokenSource.CreateLinkedTokenSource(ct), source);
         source.CancelKeyPress += scope._handler;
         return scope;
     }

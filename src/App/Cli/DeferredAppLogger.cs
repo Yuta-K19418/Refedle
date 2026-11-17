@@ -41,9 +41,9 @@ internal sealed class DeferredAppLogger : IAppLogger
             _messages.Clear();
         }
 
-        foreach (var (level, message) in snapshot)
+        foreach ((Level level, string? message) in snapshot)
         {
-            var write = level switch
+            ValueTask write = level switch
             {
                 Level.Warning => target.WriteWarningAsync(message),
                 Level.Error => target.WriteErrorAsync(message),

@@ -1,8 +1,10 @@
 using System.Diagnostics;
+using System.Drawing;
 using System.Globalization;
 using System.Text;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
@@ -116,7 +118,7 @@ internal sealed class ViewManager : IDisposable
     {
         RemoveItemCountLabel();
 
-        var statusBar = GetCurrentStatusBar();
+        StatusBar? statusBar = GetCurrentStatusBar();
         if (statusBar is null)
         {
             return;
@@ -143,7 +145,7 @@ internal sealed class ViewManager : IDisposable
         AddTreeToggleHint(hints);
         AddMenuHint(hints);
 
-        var currentActionCount = _state.TryGetDrillDown(out var drillDown)
+        int currentActionCount = _state.TryGetDrillDown(out DrillDownState? drillDown)
             ? drillDown.ActionStack.Count
             : _state.ActionStack.Count;
 
@@ -160,7 +162,7 @@ internal sealed class ViewManager : IDisposable
 
     private void AddTreeToggleHint(List<string> hints)
     {
-        var format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
+        Result<DataFormat> format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
         if (format.IsSuccess
             && format.Value is DataFormat.JsonLines or DataFormat.JsonArray
             && _state.CurrentMode != ViewMode.FocusedTable)
@@ -171,7 +173,7 @@ internal sealed class ViewManager : IDisposable
 
     private void AddMenuHint(List<string> hints)
     {
-        var currentView = GetCurrentView();
+        View? currentView = GetCurrentView();
         if ((currentView is MorphTableView && _state.CurrentMode != ViewMode.FocusedTable)
             || currentView is MorphTreeView)
         {
@@ -182,8 +184,8 @@ internal sealed class ViewManager : IDisposable
     private static void PopulateShortcuts(StatusBar statusBar, List<string> hints)
     {
         // Populate shortcuts with Key.Empty to suppress key indicator
-        var shortcuts = hints.Select(static hint => new Shortcut { Key = Key.Empty, HelpText = hint }).ToList();
-        foreach (var shortcut in shortcuts)
+        List<Shortcut> shortcuts = [.. hints.Select(static hint => new Shortcut { Key = Key.Empty, HelpText = hint })];
+        foreach (Shortcut shortcut in shortcuts)
         {
             statusBar.Add(shortcut);
         }
@@ -197,7 +199,7 @@ internal sealed class ViewManager : IDisposable
         }
 
         // A displayed table reports its own (possibly filtered) count; other views fall back to the file total.
-        var rowCount = _currentView is MorphTableView { Table: Views.PagedTableSource paged }
+        long rowCount = _currentView is MorphTableView { Table: Views.PagedTableSource paged }
             ? paged.TotalRows
             : _state.RowIndexer.TotalRows;
 
@@ -247,7 +249,7 @@ internal sealed class ViewManager : IDisposable
     /// <returns>A task representing the asynchronous operation.</returns>
     internal async Task ToggleJsonLinesModeAsync()
     {
-        var result = await _modeController.ToggleJsonLinesModeAsync().ConfigureAwait(false);
+        Result result = await _modeController.ToggleJsonLinesModeAsync().ConfigureAwait(false);
 
         _uiThreadInvoke(() =>
         {
@@ -312,12 +314,12 @@ internal sealed class ViewManager : IDisposable
         // Assigned below; the queued error callback compares it with the then-current view.
         // The token marks the callback stale once another file session has started.
         Views.CsvTableView? view = null;
-        var sessionToken = _state.Cts.Token;
+        CancellationToken sessionToken = _state.Cts.Token;
         IExtendedTableSource rawSource = new Views.VirtualTableSource(
             indexer,
             schema,
             message => _uiThreadInvoke(() => ShowRowReadError(view, message, sessionToken)));
-        var source = _state.ActionStack.Count > 0
+        IExtendedTableSource source = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
                 rawSource,
                 schema,
@@ -330,7 +332,7 @@ internal sealed class ViewManager : IDisposable
             )
             : rawSource;
 
-        var style = new TableStyle { AlwaysShowHeaders = true };
+        TableStyle style = new() { AlwaysShowHeaders = true };
         view = new Views.CsvTableView
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
@@ -353,7 +355,7 @@ internal sealed class ViewManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(indexer);
 
-        var view = Views.JsonLinesTreeView.Create(
+        JsonLinesTreeView view = Views.JsonLinesTreeView.Create(
             indexer,
             () => _ = ToggleJsonLinesModeAsync(),
             path => UpdateBreadcrumb(path, collapseIndices: false),
@@ -372,7 +374,7 @@ internal sealed class ViewManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(indexer);
 
-        var view = Views.JsonArrayTreeView.Create(
+        JsonArrayTreeView view = Views.JsonArrayTreeView.Create(
             indexer,
             () => _ = ToggleJsonArrayModeAsync(),
             path => UpdateBreadcrumb(path, collapseIndices: false),
@@ -394,7 +396,7 @@ internal sealed class ViewManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
         ArgumentNullException.ThrowIfNull(entries);
-        var view = Views.JsonObjectTreeView.Create(
+        JsonObjectTreeView view = Views.JsonObjectTreeView.Create(
             entries,
             static () => { },
             path => UpdateBreadcrumb(path, collapseIndices: false));
@@ -417,8 +419,8 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        var cache = new RowByteCache(indexer);
-        var source = new Views.JsonLinesTableSource(cache, schema);
+        RowByteCache cache = new(indexer);
+        Views.JsonLinesTableSource source = new(cache, schema);
 
         IExtendedTableSource tableSource = _state.ActionStack.Count > 0
             ? Views.LazyTransformer.Create(
@@ -434,8 +436,8 @@ internal sealed class ViewManager : IDisposable
             )
             : source;
 
-        var style = new TableStyle { AlwaysShowHeaders = true };
-        var view = new Views.JsonLinesTableView
+        TableStyle style = new() { AlwaysShowHeaders = true };
+        Views.JsonLinesTableView view = new()
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(tableSource, style)),
             Style = style,
@@ -488,16 +490,16 @@ internal sealed class ViewManager : IDisposable
             return;
         }
 
-        var pageNumber = oldPaged.CurrentPageNumber;
-        var selection = view.Value?.SelectedCell;
-        var rowOffset = view.RowOffset;
-        var columnOffset = view.ColumnOffset;
+        long pageNumber = oldPaged.CurrentPageNumber;
+        Point? selection = view.Value?.SelectedCell;
+        int rowOffset = view.RowOffset;
+        int columnOffset = view.ColumnOffset;
 
         Func<IReadOnlyList<FilterSpec>, IFilterRowIndexer>? reuseFilterIndexer =
             current.FilterRowIndexer is { } filterIndexer ? _ => filterIndexer : null;
         IExtendedTableSource rebuilt = Views.LazyTransformer.Create(source, refined, _state.ActionStack, reuseFilterIndexer);
         view.Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(rebuilt, view.Style));
-        var newPaged = (Views.PagedTableSource)view.Table;
+        Views.PagedTableSource newPaged = (Views.PagedTableSource)view.Table;
         newPaged.CurrentPageNumber = pageNumber;
 
         if (selection is { } cell)
@@ -530,7 +532,7 @@ internal sealed class ViewManager : IDisposable
                 SwitchToJsonLinesTableView(_state.RowIndexer, _state.Schema);
                 break;
 
-            case ViewMode.FocusedTable when _state.TryGetDrillDown(out var drillDown):
+            case ViewMode.FocusedTable when _state.TryGetDrillDown(out DrillDownState? drillDown):
                 SwitchToFocusedTable(drillDown);
                 break;
 
@@ -570,7 +572,7 @@ internal sealed class ViewManager : IDisposable
         ArgumentException.ThrowIfNullOrEmpty(message);
 
         _state.EnterPlaceholderMode();
-        var view = Views.PlaceholderView.Create(_state);
+        PlaceholderView view = Views.PlaceholderView.Create(_state);
         view.Text = message;
         SwapView(view);
     }
@@ -679,7 +681,7 @@ internal sealed class ViewManager : IDisposable
     /// </summary>
     internal void DrillDown(SingleDrillDownRequest request)
     {
-        var result = _modeController.DrillDown(request);
+        Result result = _modeController.DrillDown(request);
 
         _uiThreadInvoke(() =>
         {
@@ -689,7 +691,7 @@ internal sealed class ViewManager : IDisposable
                 return;
             }
 
-            if (!_state.TryGetDrillDown(out var drillDown))
+            if (!_state.TryGetDrillDown(out DrillDownState? drillDown))
             {
                 throw new UnreachableException(
                     "ModeController.DrillDown must set DrillDown state on success.");
@@ -706,7 +708,7 @@ internal sealed class ViewManager : IDisposable
     /// </summary>
     internal async ValueTask FullAggregationDrillDownAsync(FullAggregationDrillDownRequest request)
     {
-        var result = await _modeController.FullAggregationDrillDownAsync(request).ConfigureAwait(false);
+        Result<DrillDownState> result = await _modeController.FullAggregationDrillDownAsync(request).ConfigureAwait(false);
         _uiThreadInvoke(() =>
         {
             // Fail fast before any state mutation: if the ViewManager was disposed between the
@@ -739,7 +741,7 @@ internal sealed class ViewManager : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         IExtendedTableSource rawSource = new Views.FocusedTableSource(drillDown);
-        var source = drillDown.ActionStack.Count > 0
+        IExtendedTableSource source = drillDown.ActionStack.Count > 0
             ? Views.FocusedTableTransformer.Create(
                 rawSource,
                 drillDown.Schema,
@@ -747,7 +749,7 @@ internal sealed class ViewManager : IDisposable
                 FilterScanInitialTableRows)
             : rawSource;
 
-        var style = new TableStyle { AlwaysShowHeaders = true };
+        TableStyle style = new() { AlwaysShowHeaders = true };
         _state.SetSchemaRefinedCallback(null);
 
         if (source is Views.FocusedTableTransformer
@@ -759,7 +761,7 @@ internal sealed class ViewManager : IDisposable
             return;
         }
 
-        var view = CreateFocusedTableView(source, style);
+        FocusedTableView view = CreateFocusedTableView(source, style);
         view.SetSelection(0, 0, false);
         view.Update();
         SwapView(view);
@@ -769,7 +771,7 @@ internal sealed class ViewManager : IDisposable
 
     private Views.FocusedTableView CreateFocusedTableView(IExtendedTableSource source, TableStyle style)
     {
-        var view = new Views.FocusedTableView
+        Views.FocusedTableView view = new()
         {
             Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
             Style = style,
@@ -787,7 +789,7 @@ internal sealed class ViewManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        if (!_state.TryGetDrillDown(out var drillDown))
+        if (!_state.TryGetDrillDown(out DrillDownState? drillDown))
         {
             return;
         }

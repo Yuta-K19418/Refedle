@@ -15,8 +15,8 @@ internal static class RecordProcessor
     {
         await writer.WriteHeaderAsync(ct).ConfigureAwait(false);
 
-        var issues = new CellIssueCollector();
-        var rowNumber = 0;
+        CellIssueCollector issues = new();
+        int rowNumber = 0;
 
         while (await reader.MoveNextAsync(ct).ConfigureAwait(false))
         {
@@ -30,10 +30,10 @@ internal static class RecordProcessor
 
             await writer.WriteStartRecordAsync(ct).ConfigureAwait(false);
 
-            for (var i = 0; i < columns.Count; i++)
+            for (int i = 0; i < columns.Count; i++)
             {
-                var cell = reader.GetCellData(i);
-                var resolvedCell = CellResolver.ResolveCell(columns[i].Transform, cell);
+                CellData cell = reader.GetCellData(i);
+                ResolvedCellData resolvedCell = CellResolver.ResolveCell(columns[i].Transform, cell);
                 if (resolvedCell.HasIssue)
                 {
                     issues.Add(rowNumber, columns[i].SourceName, resolvedCell.Cell.Value, resolvedCell.Reason);

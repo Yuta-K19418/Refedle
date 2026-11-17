@@ -32,11 +32,10 @@ public static class ActionApplier
         ArgumentNullException.ThrowIfNull(actions);
 
         // Build working columns copy for tracking state changes
-        var workingColumns = columnNames
-            .Select(static (name, index) => (Name: name, ColumnIndex: index, OutputName: name))
-            .ToList();
-        var nameToWorkingIndex = new Dictionary<string, int>(StringComparer.Ordinal);
-        for (var i = 0; i < workingColumns.Count; i++)
+        List<(string Name, int ColumnIndex, string OutputName)> workingColumns = [.. columnNames
+            .Select(static (name, index) => (Name: name, ColumnIndex: index, OutputName: name))];
+        Dictionary<string, int> nameToWorkingIndex = new(StringComparer.Ordinal);
+        for (int i = 0; i < workingColumns.Count; i++)
         {
             nameToWorkingIndex[workingColumns[i].Name] = i;
         }
@@ -44,16 +43,16 @@ public static class ActionApplier
         List<BatchFilterSpec> filterSpecs = [];
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex = [];
 
-        foreach (var action in actions)
+        foreach (IMorphAction action in actions)
         {
-            var result = ApplyAction(action, workingColumns, nameToWorkingIndex, filterSpecs, transformsByWorkingIndex);
+            Result result = ApplyAction(action, workingColumns, nameToWorkingIndex, filterSpecs, transformsByWorkingIndex);
             if (result.IsFailure)
             {
                 return Results.Failure<BatchOutputSchema>(result.Error);
             }
         }
 
-        var outputColumns = BuildOutputColumns(workingColumns, nameToWorkingIndex, transformsByWorkingIndex);
+        List<BatchOutputColumn> outputColumns = BuildOutputColumns(workingColumns, nameToWorkingIndex, transformsByWorkingIndex);
         return Results.Success(new BatchOutputSchema(outputColumns, filterSpecs));
     }
 
@@ -82,12 +81,12 @@ public static class ActionApplier
         Dictionary<string, int> nameToWorkingIndex
     )
     {
-        if (!nameToWorkingIndex.TryGetValue(rename.OldName, out var idx))
+        if (!nameToWorkingIndex.TryGetValue(rename.OldName, out int idx))
         {
             return Results.Success();
         }
 
-        var (name, columnIndex, _) = workingColumns[idx];
+        (string? name, int columnIndex, string _) = workingColumns[idx];
         workingColumns[idx] = (name, columnIndex, rename.NewName);
         nameToWorkingIndex.Remove(rename.OldName);
         nameToWorkingIndex[rename.NewName] = idx;
@@ -107,12 +106,12 @@ public static class ActionApplier
         List<BatchFilterSpec> filterSpecs
     )
     {
-        if (!nameToWorkingIndex.TryGetValue(filter.ColumnName, out var idx))
+        if (!nameToWorkingIndex.TryGetValue(filter.ColumnName, out int idx))
         {
             return Results.Success();
         }
 
-        var (_, columnIndex, _) = workingColumns[idx];
+        (string _, int columnIndex, string _) = workingColumns[idx];
         filterSpecs.Add(
             new BatchFilterSpec(
                 SourceColumnIndex: columnIndex,
@@ -130,7 +129,7 @@ public static class ActionApplier
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex
     )
     {
-        if (!nameToWorkingIndex.TryGetValue(fill.ColumnName, out var idx))
+        if (!nameToWorkingIndex.TryGetValue(fill.ColumnName, out int idx))
         {
             return Results.Success();
         }
@@ -145,7 +144,7 @@ public static class ActionApplier
         Dictionary<int, CellTransformSpec> transformsByWorkingIndex
     )
     {
-        if (!nameToWorkingIndex.TryGetValue(formatTimestamp.ColumnName, out var idx))
+        if (!nameToWorkingIndex.TryGetValue(formatTimestamp.ColumnName, out int idx))
         {
             return Results.Success();
         }
@@ -162,10 +161,10 @@ public static class ActionApplier
     )
     {
         List<BatchOutputColumn> outputColumns = [];
-        foreach (var kvp in nameToWorkingIndex.OrderBy(static kvp => kvp.Value))
+        foreach (KeyValuePair<string, int> kvp in nameToWorkingIndex.OrderBy(static kvp => kvp.Value))
         {
-            var (name, _, outputName) = workingColumns[kvp.Value];
-            var transform = transformsByWorkingIndex.GetValueOrDefault(kvp.Value);
+            (string? name, int _, string? outputName) = workingColumns[kvp.Value];
+            CellTransformSpec? transform = transformsByWorkingIndex.GetValueOrDefault(kvp.Value);
             outputColumns.Add(new BatchOutputColumn(SourceName: name, OutputName: outputName, Transform: transform));
         }
 

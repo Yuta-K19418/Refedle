@@ -32,12 +32,12 @@ internal static partial class ArgumentParser
             return Results.Failure<Arguments>("No arguments provided");
         }
 
-        var result = new ArgumentsParseResult();
-        var i = 0;
+        ArgumentsParseResult result = new();
+        int i = 0;
 
         while (i < args.Count)
         {
-            var stepResult = ParseNextToken(args, i, result);
+            Result<int> stepResult = ParseNextToken(args, i, result);
             if (stepResult.IsFailure)
             {
                 return Results.Failure<Arguments>(stepResult.Error);

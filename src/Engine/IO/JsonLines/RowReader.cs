@@ -18,7 +18,7 @@ public sealed class RowReader : IDisposable
     {
         ArgumentNullException.ThrowIfNull(filePath);
 
-        var mmapResult = MmapService.Open(filePath);
+        Result<MmapService> mmapResult = MmapService.Open(filePath);
         if (!mmapResult.IsSuccess)
         {
             throw new InvalidOperationException(
@@ -48,9 +48,9 @@ public sealed class RowReader : IDisposable
 
         List<JsonRawBytes> result = [];
         result.EnsureCapacity(linesToRead);
-        var currentOffset = SkipBomIfAtStart(byteOffset);
+        long currentOffset = SkipBomIfAtStart(byteOffset);
 
-        using var cursor = new LineChunkCursor(_mmap, currentOffset);
+        using LineChunkCursor cursor = new(_mmap, currentOffset);
         if (!SkipLines(cursor, linesToSkip))
         {
             // No more data to skip - when trying to skip beyond EOF, there are no lines to read
@@ -72,8 +72,8 @@ public sealed class RowReader : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        var currentOffset = SkipBomIfAtStart(0);
-        using var cursor = new LineChunkCursor(_mmap, currentOffset);
+        long currentOffset = SkipBomIfAtStart(0);
+        using LineChunkCursor cursor = new(_mmap, currentOffset);
         if (!SkipLines(cursor, linesToSkip))
         {
             yield break;
@@ -83,7 +83,7 @@ public sealed class RowReader : IDisposable
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            if (!cursor.TryReadLine(out var line))
+            if (!cursor.TryReadLine(out JsonRawBytes line))
             {
                 yield break;
             }
@@ -105,7 +105,7 @@ public sealed class RowReader : IDisposable
 
     private static bool SkipLines(LineChunkCursor cursor, int linesToSkip)
     {
-        var skipped = 0;
+        int skipped = 0;
 
         while (skipped < linesToSkip)
         {
@@ -122,9 +122,9 @@ public sealed class RowReader : IDisposable
 
     private static void ReadRequestedLines(LineChunkCursor cursor, int linesToRead, List<JsonRawBytes> result)
     {
-        var linesRead = 0;
+        int linesRead = 0;
 
-        while (linesRead < linesToRead && cursor.TryReadLine(out var line))
+        while (linesRead < linesToRead && cursor.TryReadLine(out JsonRawBytes line))
         {
             result.Add(line);
             linesRead++;

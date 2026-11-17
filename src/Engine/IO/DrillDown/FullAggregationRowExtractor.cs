@@ -24,16 +24,16 @@ public static class FullAggregationRowExtractor
         ArgumentNullException.ThrowIfNull(recordBatch);
         ArgumentNullException.ThrowIfNull(keyPath);
 
-        var colName = KeyPathTraverser.LastKeySegment(keyPath);
-        var colNameUtf8 = Encoding.UTF8.GetBytes(colName);
+        string colName = KeyPathTraverser.LastKeySegment(keyPath);
+        byte[] colNameUtf8 = Encoding.UTF8.GetBytes(colName);
 
         List<FocusedTableRow> rows = [];
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
-        for (var i = 0; i < recordBatch.Count; i++)
+        for (int i = 0; i < recordBatch.Count; i++)
         {
             KeyPathTraverser.ExtractRows(
                 recordBatch[i], keyPath, (i + 1).ToString(CultureInfo.InvariantCulture),

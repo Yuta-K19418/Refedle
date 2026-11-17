@@ -33,9 +33,9 @@ internal static class KeyPathTraverser
     {
         Stack<TraversalFrame> stack = [];
         stack.Push(TraversalFrame.Descend(recordBytes, 0, posHash));
-        while (stack.TryPop(out var frame))
+        while (stack.TryPop(out TraversalFrame frame))
         {
-            var (next, deferred) = ProcessFrame(
+            (TraversalFrame? next, TraversalFrame? deferred) = ProcessFrame(
                 frame, keyPath, colName, colNameUtf8,
                 rows, keyOrder, keySet, columnTypes, keyObservedCount);
             if (deferred is { } d)
@@ -57,7 +57,7 @@ internal static class KeyPathTraverser
     /// </summary>
     public static string LastKeySegment(IReadOnlyList<KeyPathSegment> keyPath)
     {
-        for (var i = keyPath.Count - 1; i >= 0; i--)
+        for (int i = keyPath.Count - 1; i >= 0; i--)
         {
             if (keyPath[i].Kind == KeyPathSegmentKind.Key)
             {
@@ -104,7 +104,7 @@ internal static class KeyPathTraverser
     {
         if (frame.Kind == FrameKind.ContinueArray)
         {
-            var reader = new Utf8JsonReader(frame.Bytes.Span, isFinalBlock: true, frame.ReaderState);
+            Utf8JsonReader reader = new(frame.Bytes.Span, isFinalBlock: true, frame.ReaderState);
             return ScanOneArrayElement(ref reader, frame.Bytes, frame.SegmentIndex, frame.ElementIndex, frame.PosHash);
         }
 
@@ -115,13 +115,13 @@ internal static class KeyPathTraverser
             return (null, null);
         }
 
-        var segment = keyPath[frame.SegmentIndex];
+        KeyPathSegment segment = keyPath[frame.SegmentIndex];
         if (segment.Kind == KeyPathSegmentKind.Index)
         {
             return ExpandIndexSegment(frame, keyPath, rows, keyOrder, keySet, columnTypes, keyObservedCount);
         }
 
-        var valueBytes = KeyPathLeafCollector.FindValueByKey(frame.Bytes, segment.Value);
+        JsonRawBytes? valueBytes = KeyPathLeafCollector.FindValueByKey(frame.Bytes, segment.Value);
         if (valueBytes is null)
         {
             return (null, null); // Key absent, or current value is not an object — skip record silently.
@@ -139,7 +139,7 @@ internal static class KeyPathTraverser
         Dictionary<string, ColumnType> columnTypes,
         Dictionary<string, int> keyObservedCount)
     {
-        var reader = new Utf8JsonReader(frame.Bytes.Span);
+        Utf8JsonReader reader = new(frame.Bytes.Span);
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
         {
             return (null, null); // Wrong type at this path position — skip record silently.
@@ -177,14 +177,14 @@ internal static class KeyPathTraverser
                 continue;
             }
 
-            var elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
-            var remainder = arrayBytes.Slice((int)reader.BytesConsumed);
-            var next = TraversalFrame.Descend(
+            JsonRawBytes elementBytes = JsonByteExtractor.ExtractValueBytes(ref reader, arrayBytes);
+            JsonRawBytes remainder = arrayBytes.Slice((int)reader.BytesConsumed);
+            TraversalFrame next = TraversalFrame.Descend(
                 elementBytes,
                 segmentIndex + 1,
                 string.Create(CultureInfo.InvariantCulture, $"{posHash}:{elementIndex}")
             );
-            var deferred = new TraversalFrame(
+            TraversalFrame deferred = new(
                 FrameKind.ContinueArray, remainder, segmentIndex, elementIndex + 1, posHash, reader.CurrentState);
             return (next, deferred);
         }

@@ -24,8 +24,8 @@ public static class JsonByteExtractor
         ref Utf8JsonReader reader,
         JsonRawBytes rawJson)
     {
-        var startPosition = (int)reader.TokenStartIndex;
-        var depth = 1;
+        int startPosition = (int)reader.TokenStartIndex;
+        int depth = 1;
 
         while (depth > 0 && reader.Read())
         {
@@ -40,7 +40,7 @@ public static class JsonByteExtractor
             }
         }
 
-        var endPosition = (int)reader.TokenStartIndex + 1;
+        int endPosition = (int)reader.TokenStartIndex + 1;
         return rawJson.Slice(startPosition, endPosition - startPosition);
     }
 
@@ -56,8 +56,8 @@ public static class JsonByteExtractor
             return ExtractNestedBytes(ref reader, containingBytes);
         }
 
-        var start = (int)reader.TokenStartIndex;
-        var end = (int)reader.BytesConsumed;
+        int start = (int)reader.TokenStartIndex;
+        int end = (int)reader.BytesConsumed;
         return containingBytes.Slice(start, end - start);
     }
 
@@ -68,8 +68,8 @@ public static class JsonByteExtractor
     /// </summary>
     public static int CountObjectProperties(ref Utf8JsonReader reader)
     {
-        var propertyCount = 0;
-        var depth = 1;
+        int propertyCount = 0;
+        int depth = 1;
 
         while (depth > 0 && reader.Read())
         {
@@ -100,8 +100,8 @@ public static class JsonByteExtractor
     /// </summary>
     public static int CountArrayElements(ref Utf8JsonReader reader)
     {
-        var elementCount = 0;
-        var depth = 1;
+        int elementCount = 0;
+        int depth = 1;
 
         while (depth > 0 && reader.Read())
         {
@@ -131,7 +131,7 @@ public static class JsonByteExtractor
     /// </summary>
     public static string FormatObjectPreview(ref Utf8JsonReader reader)
     {
-        var propertyCount = CountObjectProperties(ref reader);
+        int propertyCount = CountObjectProperties(ref reader);
         return string.Create(CultureInfo.InvariantCulture, $"{{Object: {propertyCount:N0} properties}}");
     }
 
@@ -141,7 +141,7 @@ public static class JsonByteExtractor
     /// </summary>
     public static string FormatArrayPreview(ref Utf8JsonReader reader)
     {
-        var elementCount = CountArrayElements(ref reader);
+        int elementCount = CountArrayElements(ref reader);
         return string.Create(CultureInfo.InvariantCulture, $"[Array: {elementCount:N0} items]");
     }
 }

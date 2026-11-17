@@ -21,7 +21,7 @@ internal sealed class HelpDialog : Dialog
         Width = Dim.Absolute(54);
         Height = Dim.Absolute(37);
 
-        var helpText = new Label
+        Label helpText = new()
         {
             X = 0,
             Y = 0,
@@ -32,7 +32,8 @@ internal sealed class HelpDialog : Dialog
 
         Add(helpText);
 
-        var closeButton = new Button { Text = "Close", IsDefault = true };
+        Button closeButton = new()
+        { Text = "Close", IsDefault = true };
         closeButton.Accepting += (s, e) => App?.RequestStop();
         AddButton(closeButton);
     }
@@ -72,8 +73,8 @@ internal sealed class HelpDialog : Dialog
     /// <inheritdoc/>
     protected override bool OnKeyDown(Key key)
     {
-        var baseKey = (char)(key.KeyCode & KeyCode.CharMask);
-        var baseKeyLower = char.ToLowerInvariant(baseKey);
+        char baseKey = (char)(key.KeyCode & KeyCode.CharMask);
+        char baseKeyLower = char.ToLowerInvariant(baseKey);
 
         if (key.KeyCode == KeyCode.Esc || baseKeyLower == 'q' || baseKeyLower == '?')
         {

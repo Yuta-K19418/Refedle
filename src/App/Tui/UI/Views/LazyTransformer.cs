@@ -66,8 +66,8 @@ internal sealed class LazyTransformer : LazyTransformerBase
         ArgumentNullException.ThrowIfNull(originalSchema);
         ArgumentNullException.ThrowIfNull(actions);
 
-        var schema = TransformedSchemaBuilder.Build(originalSchema, actions);
-        var filterRowIndexer = schema.filterSpecs.Count > 0 && filterRowIndexerFactory is not null
+        (string[] columnNames, string[] rawColumnNames, IReadOnlyList<ColumnType> columnTypes, IReadOnlyList<int> sourceColumnIndices, IReadOnlyList<string?> fillValues, IReadOnlyList<string?> formatStrings, IReadOnlyList<bool> castMarkers, IReadOnlyList<FilterSpec> filterSpecs) schema = TransformedSchemaBuilder.Build(originalSchema, actions);
+        IFilterRowIndexer? filterRowIndexer = schema.filterSpecs.Count > 0 && filterRowIndexerFactory is not null
             ? filterRowIndexerFactory(schema.filterSpecs)
             : null;
 
@@ -118,7 +118,7 @@ internal sealed class LazyTransformer : LazyTransformerBase
             }
 
             // The filtered row space is indexed by IFilterRowIndexer, which is int-based.
-            var sourceRow = _filterRowIndexer is not null
+            long sourceRow = _filterRowIndexer is not null
                 ? _filterRowIndexer.GetSourceRow((int)row)
                 : row;
 

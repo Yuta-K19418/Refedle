@@ -40,7 +40,7 @@ public static class JsonObjectCellExtractor
 
         try
         {
-            var reader = new Utf8JsonReader(lineBytes);
+            Utf8JsonReader reader = new(lineBytes);
 
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
             {

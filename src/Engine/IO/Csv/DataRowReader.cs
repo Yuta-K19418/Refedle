@@ -52,14 +52,14 @@ public sealed class DataRowReader : IDisposable
             return [];
         }
 
-        var rows = new List<CsvDataRow>(rowsToRead);
+        List<CsvDataRow> rows = [with(rowsToRead)];
 
         try
         {
             _fileStream.Seek(byteOffset, SeekOrigin.Begin);
 
-            using var streamReader = new StreamReader(_fileStream, Encoding.UTF8, leaveOpen: true);
-            using var reader = CsvSep.From(streamReader, hasHeader: false);
+            using StreamReader streamReader = new(_fileStream, Encoding.UTF8, leaveOpen: true);
+            using SepReader reader = CsvSep.From(streamReader, hasHeader: false);
 
             SkipRows(reader, rowsToSkip);
             ReadRowsInto(reader, rowsToRead, rows);
@@ -100,9 +100,9 @@ public sealed class DataRowReader : IDisposable
         ObjectDisposedException.ThrowIf(_disposed, this);
 
         // Open a dedicated stream per enumeration so it never moves the shared stream's position
-        using var fileStream = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
-        using var streamReader = new StreamReader(fileStream, Encoding.UTF8);
-        using var reader = CsvSep.From(streamReader, hasHeader: true);
+        using FileStream fileStream = new(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using StreamReader streamReader = new(fileStream, Encoding.UTF8);
+        using SepReader reader = CsvSep.From(streamReader, hasHeader: true);
 
         // Checking disposal before every advance keeps it observable even after the final row,
         // where the underlying reader would otherwise just report the end of input.
@@ -112,7 +112,7 @@ public sealed class DataRowReader : IDisposable
             return reader.MoveNext();
         }
 
-        var skipped = 0;
+        int skipped = 0;
         while (skipped < rowsToSkip && advance())
         {
             skipped++;
@@ -153,7 +153,7 @@ public sealed class DataRowReader : IDisposable
     // Skipped rows do not go through ParseRow, so they are checked against the header here
     private void SkipRows(SepReader reader, int rowsToSkip)
     {
-        var skipped = 0;
+        int skipped = 0;
         while (skipped < rowsToSkip && MoveNext(reader))
         {
             if (reader.Current.ColCount != _columnCount)
@@ -167,10 +167,10 @@ public sealed class DataRowReader : IDisposable
 
     private void ReadRowsInto(SepReader reader, int rowsToRead, List<CsvDataRow> rows)
     {
-        var readCount = 0;
+        int readCount = 0;
         while (readCount < rowsToRead && MoveNext(reader))
         {
-            var record = reader.Current;
+            SepReader.Row record = reader.Current;
             rows.Add(ParseRow(in record));
             readCount++;
         }
@@ -180,25 +180,25 @@ public sealed class DataRowReader : IDisposable
     // avoids one allocation per column.
     private ReadOnlyMemory<char>[] ParseRow(in SepReader.Row record)
     {
-        var columnCount = record.ColCount;
+        int columnCount = record.ColCount;
         if (columnCount != _columnCount)
         {
             throw ColumnCountMismatch();
         }
 
-        var totalLength = 0;
-        for (var i = 0; i < columnCount; i++)
+        int totalLength = 0;
+        for (int i = 0; i < columnCount; i++)
         {
             totalLength += record[i].Span.Length;
         }
 
-        var buffer = new char[totalLength];
-        var columns = new ReadOnlyMemory<char>[columnCount];
-        var bufferPos = 0;
+        char[] buffer = new char[totalLength];
+        ReadOnlyMemory<char>[] columns = new ReadOnlyMemory<char>[columnCount];
+        int bufferPos = 0;
 
-        for (var i = 0; i < columnCount; i++)
+        for (int i = 0; i < columnCount; i++)
         {
-            var colSpan = record[i].Span;
+            ReadOnlySpan<char> colSpan = record[i].Span;
             colSpan.CopyTo(buffer.AsSpan(bufferPos, colSpan.Length));
             columns[i] = new ReadOnlyMemory<char>(buffer, bufferPos, colSpan.Length);
             bufferPos += colSpan.Length;

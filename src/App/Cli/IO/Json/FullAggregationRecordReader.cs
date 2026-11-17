@@ -48,7 +48,7 @@ internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
             .Select(static c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
 
         _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
-        for (var i = 0; i < inputColumnNames.Count; i++)
+        for (int i = 0; i < inputColumnNames.Count; i++)
         {
             _filterIndexToNameBytes[i] = Encoding.UTF8.GetBytes(inputColumnNames[i]).AsMemory();
         }
@@ -83,9 +83,9 @@ internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
 
             ct.ThrowIfCancellationRequested();
 
-            var (byteOffset, rowOffset) = _rowIndexer.GetCheckPoint(_batchStart);
-            var recordsToFetch = (int)Math.Min(BatchSize, _rowIndexer.TotalRows - _batchStart);
-            var recordBatch = _batchSource.ReadBatch(byteOffset, rowOffset, recordsToFetch);
+            (long byteOffset, int rowOffset) = _rowIndexer.GetCheckPoint(_batchStart);
+            int recordsToFetch = (int)Math.Min(BatchSize, _rowIndexer.TotalRows - _batchStart);
+            IReadOnlyList<JsonRawBytes> recordBatch = _batchSource.ReadBatch(byteOffset, rowOffset, recordsToFetch);
             _currentRows = FullAggregationRowExtractor.ExtractRows(recordBatch, _keyPath);
             _batchStart += recordsToFetch;
             _rowIndex = -1;
@@ -96,14 +96,14 @@ internal struct FullAggregationRecordReader<TBatchSourceReader> : IRecordReader
     {
         ThrowIfDisposed();
 
-        foreach (var filter in _filters)
+        foreach (BatchFilterSpec filter in _filters)
         {
-            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out var sourceColNameBytes))
+            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out JsonRawBytes sourceColNameBytes))
             {
                 continue;
             }
 
-            var value = JsonObjectCellExtractor.ExtractCell(_currentRowBytes.Span, sourceColNameBytes.Span);
+            string value = JsonObjectCellExtractor.ExtractCell(_currentRowBytes.Span, sourceColNameBytes.Span);
 
             if (value == "<null>" || value == "<error>")
             {

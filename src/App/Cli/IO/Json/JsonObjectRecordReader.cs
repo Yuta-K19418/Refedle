@@ -33,7 +33,7 @@ internal struct JsonObjectRecordReader : IRecordReader
             .Select(static c => Encoding.UTF8.GetBytes(c.SourceName).AsMemory())];
 
         _filterIndexToNameBytes = new Dictionary<int, ReadOnlyMemory<byte>>(inputColumnNames.Count);
-        for (var i = 0; i < inputColumnNames.Count; i++)
+        for (int i = 0; i < inputColumnNames.Count; i++)
         {
             _filterIndexToNameBytes[i] = Encoding.UTF8.GetBytes(inputColumnNames[i]).AsMemory();
         }
@@ -65,14 +65,14 @@ internal struct JsonObjectRecordReader : IRecordReader
     {
         ThrowIfDisposed();
 
-        foreach (var filter in _filters)
+        foreach (BatchFilterSpec filter in _filters)
         {
-            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out var sourceColNameBytes))
+            if (!_filterIndexToNameBytes.TryGetValue(filter.SourceColumnIndex, out JsonRawBytes sourceColNameBytes))
             {
                 continue;
             }
 
-            var value = JsonObjectCellExtractor.ExtractCell(_currentRowBytes.Span, sourceColNameBytes.Span);
+            string value = JsonObjectCellExtractor.ExtractCell(_currentRowBytes.Span, sourceColNameBytes.Span);
 
             if (value == "<null>" || value == "<error>")
             {

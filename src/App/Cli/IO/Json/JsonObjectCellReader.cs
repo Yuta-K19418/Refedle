@@ -25,7 +25,7 @@ internal static class JsonObjectCellReader
     {
         try
         {
-            var reader = new Utf8JsonReader(objectBytes.Span);
+            Utf8JsonReader reader = new(objectBytes.Span);
 
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
             {
@@ -88,24 +88,24 @@ internal static class JsonObjectCellReader
     // JSON escapes both use more source bytes than the chars they resolve to.
     private static CellData NumberToCellData(Utf8JsonReader reader, PooledValueBuffer valueBuffer)
     {
-        var bytes = reader.ValueSpan;
-        var buffer = valueBuffer.Reserve(bytes.Length);
-        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        ReadOnlySpan<byte> bytes = reader.ValueSpan;
+        char[] buffer = valueBuffer.Reserve(bytes.Length);
+        int charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
         return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
     }
 
     private static CellData ObjectOrArrayToCellData(Utf8JsonReader reader, JsonRawBytes containingBytes, PooledValueBuffer valueBuffer)
     {
-        var bytes = JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span;
-        var buffer = valueBuffer.Reserve(bytes.Length);
-        var charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
+        ReadOnlySpan<byte> bytes = JsonByteExtractor.ExtractValueBytes(ref reader, containingBytes).Span;
+        char[] buffer = valueBuffer.Reserve(bytes.Length);
+        int charsWritten = Encoding.UTF8.GetChars(bytes, buffer);
         return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.Raw);
     }
 
     private static CellData StringToCellData(Utf8JsonReader reader, PooledValueBuffer valueBuffer)
     {
-        var buffer = valueBuffer.Reserve(reader.ValueSpan.Length);
-        var charsWritten = reader.CopyString(buffer);
+        char[] buffer = valueBuffer.Reserve(reader.ValueSpan.Length);
+        int charsWritten = reader.CopyString(buffer);
         return new CellData(buffer.AsSpan(0, charsWritten), CellPresence.Value, CellEncoding.PlainText);
     }
 }

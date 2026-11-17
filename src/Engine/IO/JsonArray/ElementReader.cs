@@ -25,7 +25,7 @@ public sealed class ElementReader : IDisposable
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        var mmapResult = MmapService.Open(filePath);
+        Result<MmapService> mmapResult = MmapService.Open(filePath);
         if (mmapResult.IsFailure)
         {
             throw new InvalidOperationException(
@@ -63,7 +63,7 @@ public sealed class ElementReader : IDisposable
         List<JsonRawBytes> result = [];
         result.EnsureCapacity(elementsToFetch);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
         try
         {
             FetchElements(buffer, byteOffset, elementsToSkip, elementsToFetch, result);
@@ -83,14 +83,14 @@ public sealed class ElementReader : IDisposable
         int elementsToFetch,
         List<JsonRawBytes> result)
     {
-        var state = default(JsonReaderState);
+        JsonReaderState state = default(JsonReaderState);
         // bufferOriginFileOffset maps buffer[0] → virtual file offset (byteOffset - 1 for synthetic '[').
-        var bufferOriginFileOffset = byteOffset - 1L;
-        var fileReadOffset = byteOffset;
-        var remainingLen = 0;
-        var elementsEncountered = 0;
-        var currentElementStartFile = -1L;
-        var firstFill = true;
+        long bufferOriginFileOffset = byteOffset - 1L;
+        long fileReadOffset = byteOffset;
+        int remainingLen = 0;
+        int elementsEncountered = 0;
+        long currentElementStartFile = -1L;
+        bool firstFill = true;
 
         while (result.Count < elementsToFetch)
         {
@@ -99,19 +99,19 @@ public sealed class ElementReader : IDisposable
                 throw new NotSupportedException("JSON element exceeds maximum supported size.");
             }
 
-            var (dataEnd, newFileReadOffset) = FillBuffer(buffer, fileReadOffset, remainingLen, firstFill);
+            (int dataEnd, long newFileReadOffset) = FillBuffer(buffer, fileReadOffset, remainingLen, firstFill);
             fileReadOffset = newFileReadOffset;
             firstFill = false;
 
-            var isFinalBlock = fileReadOffset >= _mmap.Length;
+            bool isFinalBlock = fileReadOffset >= _mmap.Length;
 
             if (dataEnd == 0)
             {
                 break;
             }
 
-            var reader = new Utf8JsonReader(buffer.AsSpan(0, dataEnd), isFinalBlock, state);
-            var scanResult = ScanBufferForElements(
+            Utf8JsonReader reader = new(buffer.AsSpan(0, dataEnd), isFinalBlock, state);
+            (bool rootDone, long currentElementStartFile, int elementsEncountered) scanResult = ScanBufferForElements(
                 ref reader, bufferOriginFileOffset, currentElementStartFile, elementsEncountered,
                 elementsToSkip, elementsToFetch, result);
             currentElementStartFile = scanResult.currentElementStartFile;
@@ -123,7 +123,7 @@ public sealed class ElementReader : IDisposable
             }
 
             state = reader.CurrentState;
-            var consumed = (int)reader.BytesConsumed;
+            int consumed = (int)reader.BytesConsumed;
             bufferOriginFileOffset += consumed;
             remainingLen = dataEnd - consumed;
 
@@ -141,8 +141,8 @@ public sealed class ElementReader : IDisposable
         if (firstFill)
         {
             buffer[0] = (byte)'[';
-            var available = _mmap.Length - fileReadOffset;
-            var toRead = (int)Math.Min(BufferSize - 1, Math.Max(0L, available));
+            long available = _mmap.Length - fileReadOffset;
+            int toRead = (int)Math.Min(BufferSize - 1, Math.Max(0L, available));
             if (toRead > 0)
             {
                 _mmap.Read(fileReadOffset, buffer.AsSpan(1, toRead));
@@ -151,8 +151,8 @@ public sealed class ElementReader : IDisposable
             return (1 + toRead, fileReadOffset + toRead);
         }
 
-        var availableRest = _mmap.Length - fileReadOffset;
-        var toReadRest = (int)Math.Min(BufferSize - remainingLen, Math.Max(0L, availableRest));
+        long availableRest = _mmap.Length - fileReadOffset;
+        int toReadRest = (int)Math.Min(BufferSize - remainingLen, Math.Max(0L, availableRest));
         if (toReadRest > 0)
         {
             _mmap.Read(fileReadOffset, buffer.AsSpan(remainingLen, toReadRest));
@@ -209,13 +209,13 @@ public sealed class ElementReader : IDisposable
 
         if (reader.TokenType is JsonTokenType.EndObject or JsonTokenType.EndArray)
         {
-            var endFile = bufferOriginFileOffset + reader.BytesConsumed;
-            var updatedEncountered = AppendElement(currentElementStartFile, endFile, elementsEncountered, elementsToSkip, result);
+            long endFile = bufferOriginFileOffset + reader.BytesConsumed;
+            int updatedEncountered = AppendElement(currentElementStartFile, endFile, elementsEncountered, elementsToSkip, result);
             return (-1L, updatedEncountered);
         }
 
         // Primitive element at depth 1 (number, string, bool, null).
-        var encounteredAfterPrimitive = AppendElement(
+        int encounteredAfterPrimitive = AppendElement(
             bufferOriginFileOffset + reader.TokenStartIndex,
             bufferOriginFileOffset + reader.BytesConsumed,
             elementsEncountered, elementsToSkip, result);
@@ -235,13 +235,13 @@ public sealed class ElementReader : IDisposable
             return encountered;
         }
 
-        var length = (int)(endFile - startFile);
+        int length = (int)(endFile - startFile);
         if (length <= 0)
         {
             return encountered;
         }
 
-        var bytes = new byte[length];
+        byte[] bytes = new byte[length];
         _mmap.Read(startFile, bytes);
         result.Add(bytes.AsMemory());
         return encountered;

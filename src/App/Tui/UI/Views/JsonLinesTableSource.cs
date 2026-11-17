@@ -63,7 +63,7 @@ internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
                 throw new ArgumentOutOfRangeException(nameof(col));
             }
 
-            var lineBytes = _cache.GetRow(row);
+            JsonRawBytes lineBytes = _cache.GetRow(row);
             if (lineBytes.IsEmpty)
             {
                 return "<null>";
@@ -83,9 +83,9 @@ internal sealed class JsonLinesTableSource : IExtendedTableSource, IDisposable
     public void UpdateSchema(TableSchema schema)
     {
         ArgumentNullException.ThrowIfNull(schema);
-        var newColumnNames = BuildColumnNames(schema);
-        var newRawColumnNames = BuildRawColumnNames(schema);
-        var newColumnNameUtf8 = BuildColumnNamesUtf8(schema);
+        string[] newColumnNames = BuildColumnNames(schema);
+        string[] newRawColumnNames = BuildRawColumnNames(schema);
+        byte[][] newColumnNameUtf8 = BuildColumnNamesUtf8(schema);
         _columnNames = newColumnNames;
         _rawColumnNames = newRawColumnNames;
         _columnNameUtf8 = newColumnNameUtf8;

@@ -20,7 +20,7 @@ internal sealed class DeleteColumnDialog : Dialog
     {
         Title = "Delete Column";
 
-        var label = new Label
+        Label label = new()
         {
             Text = $"Delete column '{columnName}'?",
             X = 0,
@@ -28,8 +28,8 @@ internal sealed class DeleteColumnDialog : Dialog
         };
         Add(label);
 
-        var yesButton = new Button { Text = "Yes" };
-        var noButton = new Button { Text = "No" };
+        Button yesButton = new() { Text = "Yes" };
+        Button noButton = new() { Text = "No" };
 
         yesButton.Accepting += (sender, e) =>
         {

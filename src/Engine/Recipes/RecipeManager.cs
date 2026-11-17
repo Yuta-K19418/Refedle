@@ -20,7 +20,7 @@ public sealed class RecipeManager : IRecipeManager
 
         try
         {
-            var yaml = await File.ReadAllTextAsync(filePath, Encoding.UTF8, ct).ConfigureAwait(false);
+            string yaml = await File.ReadAllTextAsync(filePath, Encoding.UTF8, ct).ConfigureAwait(false);
             return RecipeYamlParser.Parse(yaml);
         }
         catch (IOException ex)
@@ -35,7 +35,7 @@ public sealed class RecipeManager : IRecipeManager
         ArgumentNullException.ThrowIfNull(recipe);
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        var yaml = RecipeYamlSerializer.Serialize(recipe);
+        string yaml = RecipeYamlSerializer.Serialize(recipe);
 
         try
         {

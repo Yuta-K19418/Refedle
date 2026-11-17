@@ -2,6 +2,7 @@ using System.Collections.Frozen;
 using System.Diagnostics;
 using Refedle.App.Cli.Parsing;
 using Refedle.Engine;
+using Refedle.Engine.Filtering;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
@@ -33,7 +34,7 @@ internal static class DryRunner
         try
         {
             // Messages are held while the spinner owns the terminal, then replayed in order.
-            var deferredLogger = new DeferredAppLogger();
+            DeferredAppLogger deferredLogger = new();
             Result<ApplyPreparation> preparationResult;
             try
             {
@@ -88,7 +89,7 @@ internal static class DryRunner
             $"  Resolved input columns ({preparation.ColumnNames.Count}): {string.Join(", ", preparation.ColumnNames)}").ConfigureAwait(false);
 
         await logger.WriteInfoAsync("  Output schema:").ConfigureAwait(false);
-        foreach (var column in preparation.OutputSchema.Columns)
+        foreach (BatchOutputColumn column in preparation.OutputSchema.Columns)
         {
             await logger.WriteInfoAsync(
                 $"    {column.SourceName} -> {column.OutputName}{DescribeTransform(column.Transform)}").ConfigureAwait(false);
@@ -100,7 +101,7 @@ internal static class DryRunner
         }
 
         await logger.WriteInfoAsync("  Filters:").ConfigureAwait(false);
-        foreach (var filter in preparation.OutputSchema.Filters)
+        foreach (BatchFilterSpec filter in preparation.OutputSchema.Filters)
         {
             await logger.WriteInfoAsync(
                 $"    {preparation.ColumnNames[filter.SourceColumnIndex]} {_operatorSymbols[filter.Operator]} {filter.Value}").ConfigureAwait(false);

@@ -34,18 +34,18 @@ internal static class CellDisplayFormatter
         };
 
     private static string FormatWholeNumber(string rawValue) =>
-        long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var l)
+        long.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out long l)
             ? l.ToString(CultureInfo.InvariantCulture)
             : ParseFailureLabel;
 
     private static string FormatFloatingPoint(string rawValue) =>
-        double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out var d)
+        double.TryParse(rawValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double d)
             ? d.ToString(CultureInfo.InvariantCulture)
             : ParseFailureLabel;
 
     private static string FormatBoolean(string rawValue)
     {
-        if (!bool.TryParse(rawValue, out var b))
+        if (!bool.TryParse(rawValue, out bool b))
         {
             return ParseFailureLabel;
         }
@@ -55,12 +55,12 @@ internal static class CellDisplayFormatter
 
     private static string FormatTimestamp(string rawValue, string? formatString)
     {
-        if (!DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt))
+        if (!DateTime.TryParse(rawValue, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
         {
             return ParseFailureLabel;
         }
 
-        var format = string.IsNullOrEmpty(formatString) ? DefaultTimestampFormat : formatString;
+        string format = string.IsNullOrEmpty(formatString) ? DefaultTimestampFormat : formatString;
         return dt.ToString(format, CultureInfo.InvariantCulture);
     }
 }

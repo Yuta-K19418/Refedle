@@ -50,10 +50,10 @@ public static class FullAggregationSchemaScanner
         IReadOnlyList<KeyPathSegment> keyPath,
         CancellationToken ct)
     {
-        var rowIndexer = new RowIndexer(filePath);
+        RowIndexer rowIndexer = new(filePath);
         rowIndexer.BuildIndex(ct);
 
-        using var elementReader = new ElementReader(filePath);
+        using ElementReader elementReader = new(filePath);
         return ScanBatches(rowIndexer, elementReader.ReadElements, format, keyPath, ct);
     }
 
@@ -63,10 +63,10 @@ public static class FullAggregationSchemaScanner
         IReadOnlyList<KeyPathSegment> keyPath,
         CancellationToken ct)
     {
-        var rowIndexer = new JsonLines.RowIndexer(filePath);
+        JsonLines.RowIndexer rowIndexer = new(filePath);
         rowIndexer.BuildIndex(ct);
 
-        using var rowReader = new JsonLines.RowReader(filePath);
+        using JsonLines.RowReader rowReader = new(filePath);
         return ScanBatches(rowIndexer, rowReader.ReadLines, format, keyPath, ct);
     }
 
@@ -80,27 +80,27 @@ public static class FullAggregationSchemaScanner
         IReadOnlyList<KeyPathSegment> keyPath,
         CancellationToken ct)
     {
-        var colName = KeyPathTraverser.LastKeySegment(keyPath);
-        var colNameUtf8 = Encoding.UTF8.GetBytes(colName);
+        string colName = KeyPathTraverser.LastKeySegment(keyPath);
+        byte[] colNameUtf8 = Encoding.UTF8.GetBytes(colName);
 
         List<FocusedTableRow> scratchRows = [];
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
-        var totalRows = 0;
-        var batchStart = 0L;
+        int totalRows = 0;
+        long batchStart = 0L;
         while (batchStart < rowIndexer.TotalRows)
         {
             ct.ThrowIfCancellationRequested();
 
-            var (byteOffset, rowOffset) = rowIndexer.GetCheckPoint(batchStart);
-            var recordsToRead = (int)Math.Min(BatchSize, rowIndexer.TotalRows - batchStart);
-            var batch = readBatch(byteOffset, rowOffset, recordsToRead);
+            (long byteOffset, int rowOffset) = rowIndexer.GetCheckPoint(batchStart);
+            int recordsToRead = (int)Math.Min(BatchSize, rowIndexer.TotalRows - batchStart);
+            IReadOnlyList<JsonRawBytes> batch = readBatch(byteOffset, rowOffset, recordsToRead);
 
             scratchRows.Clear();
-            for (var i = 0; i < batch.Count; i++)
+            for (int i = 0; i < batch.Count; i++)
             {
                 KeyPathTraverser.ExtractRows(
                     batch[i], keyPath, (i + 1).ToString(CultureInfo.InvariantCulture),

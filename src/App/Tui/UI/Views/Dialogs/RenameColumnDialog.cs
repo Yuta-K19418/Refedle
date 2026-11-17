@@ -29,19 +29,19 @@ internal sealed class RenameColumnDialog : Dialog
     {
         Title = "Rename Column";
 
-        var currentLabel = new Label
+        Label currentLabel = new()
         {
             Text = $"Current: {currentName}",
             X = 0,
             Y = 0,
         };
-        var newNameLabel = new Label
+        Label newNameLabel = new()
         {
             Text = "New name:",
             X = 0,
             Y = 2,
         };
-        var textField = new TextField
+        TextField textField = new()
         {
             Text = currentName,
             X = Pos.Right(newNameLabel) + 1,
@@ -50,12 +50,14 @@ internal sealed class RenameColumnDialog : Dialog
         };
         Add(currentLabel, newNameLabel, textField);
 
-        var okButton = new Button { Text = "OK" };
-        var cancelButton = new Button { Text = "Cancel" };
+        Button okButton = new()
+        { Text = "OK" };
+        Button cancelButton = new()
+        { Text = "Cancel" };
 
         void Confirm()
         {
-            var name = textField.Text;
+            string name = textField.Text;
             if (string.IsNullOrEmpty(name) || name == currentName)
             {
                 return;

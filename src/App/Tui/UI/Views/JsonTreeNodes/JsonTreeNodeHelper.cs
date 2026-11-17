@@ -87,7 +87,7 @@ internal static class JsonTreeNodeHelper
         ITreeNode? parentNode
     )
     {
-        var objectBytes = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes objectBytes = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
         return new JsonObjectTreeNode(objectBytes, $"{label}: ")
         {
             KeyName = label,
@@ -104,7 +104,7 @@ internal static class JsonTreeNodeHelper
         ITreeNode? parentNode
     )
     {
-        var arrayBytes = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes arrayBytes = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
         return new JsonArrayTreeNode(arrayBytes, $"{label}: ")
         {
             KeyName = label,
@@ -115,7 +115,7 @@ internal static class JsonTreeNodeHelper
 
     private static JsonValueTreeNode CreateNumberNode(ref Utf8JsonReader reader, string label, ITreeNode? parentNode)
     {
-        if (reader.TryGetDecimal(out var decimalValue))
+        if (reader.TryGetDecimal(out decimal decimalValue))
         {
             return new JsonValueTreeNode(string.Create(CultureInfo.InvariantCulture, $"{label}: {decimalValue}"))
             {
@@ -125,7 +125,7 @@ internal static class JsonTreeNodeHelper
             };
         }
 
-        var doubleValue = reader.GetDouble();
+        double doubleValue = reader.GetDouble();
         return new JsonValueTreeNode(string.Create(CultureInfo.InvariantCulture, $"{label}: {doubleValue}"))
         {
             ValueKind = JsonValueKind.Number,

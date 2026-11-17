@@ -28,8 +28,8 @@ internal static class KeyPathFormatter
             return "root";
         }
 
-        var builder = new StringBuilder();
-        foreach (var segment in path)
+        StringBuilder builder = new();
+        foreach (KeyPathSegment segment in path)
         {
             if (segment.Kind == KeyPathSegmentKind.Index)
             {

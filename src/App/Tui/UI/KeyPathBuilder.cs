@@ -22,11 +22,11 @@ internal static class KeyPathBuilder
     internal static IReadOnlyList<KeyPathSegment> Build(ITreeNode node)
     {
         List<KeyPathSegment> segments = [];
-        var current = node;
+        ITreeNode? current = node;
 
         while (current is JsonObjectTreeNode or JsonArrayTreeNode or JsonValueTreeNode)
         {
-            var (keyName, parent) = current switch
+            (string? keyName, ITreeNode? parent) = current switch
             {
                 JsonObjectTreeNode obj => (obj.KeyName, obj.ParentNode),
                 JsonArrayTreeNode arr => (arr.KeyName, arr.ParentNode),
@@ -39,7 +39,7 @@ internal static class KeyPathBuilder
                 // An array element's parent is the JsonArrayTreeNode that labeled it "[n]"; every
                 // other node is an object property. Tagging by parent type — not by the label text —
                 // keeps a literal object key such as "[0]" from colliding with an index marker.
-                var kind = parent is JsonArrayTreeNode ? KeyPathSegmentKind.Index : KeyPathSegmentKind.Key;
+                KeyPathSegmentKind kind = parent is JsonArrayTreeNode ? KeyPathSegmentKind.Index : KeyPathSegmentKind.Key;
                 segments.Add(new KeyPathSegment(keyName, kind));
             }
 

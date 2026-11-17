@@ -14,7 +14,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Collect all reader and writer declarations in a single pass
-        var allDeclarations = context
+        IncrementalValueProvider<List<FormatInfo>> allDeclarations = context
             .SyntaxProvider.CreateSyntaxProvider(
                 predicate: static (s, _) => HasAttributes(s),
                 transform: static (ctx, _) => GetFormatAndType(ctx)
@@ -35,7 +35,7 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
     private static List<FormatInfo> FilterNulls(ImmutableArray<FormatInfo?> array)
     {
         List<FormatInfo> result = [];
-        foreach (var item in array)
+        foreach (FormatInfo? item in array)
         {
             if (item is null)
             {
@@ -65,11 +65,11 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
 
     private static FormatInfo? GetFormatAndType(GeneratorSyntaxContext context)
     {
-        var typeDecl = (TypeDeclarationSyntax)context.Node;
+        TypeDeclarationSyntax typeDecl = (TypeDeclarationSyntax)context.Node;
 
-        foreach (var attribute in typeDecl.AttributeLists.SelectMany(al => al.Attributes))
+        foreach (AttributeSyntax? attribute in typeDecl.AttributeLists.SelectMany(al => al.Attributes))
         {
-            if (TryExtractFormatInfo(context, typeDecl, attribute, out var formatInfo))
+            if (TryExtractFormatInfo(context, typeDecl, attribute, out FormatInfo? formatInfo))
             {
                 return formatInfo;
             }
@@ -86,28 +86,28 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
     )
     {
         formatInfo = null;
-        var name = attribute.Name.ToString();
+        string name = attribute.Name.ToString();
         if (!name.Contains("RecordReader") && !name.Contains("RecordWriter"))
         {
             return false;
         }
 
-        var arg = attribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
+        string? arg = attribute.ArgumentList?.Arguments.FirstOrDefault()?.Expression.ToString();
 
         if (arg is not null)
         {
-            var formatValue = arg; // e.g. "DataFormat.Csv"
+            string formatValue = arg; // e.g. "DataFormat.Csv"
             if (formatValue.StartsWith("DataFormat.", StringComparison.Ordinal))
             {
                 formatValue = formatValue.Substring("DataFormat.".Length);
             }
 
-            var createdType = ExtractCreatedType(typeDecl);
+            string createdType = ExtractCreatedType(typeDecl);
 
-            var typeName = context.SemanticModel.GetDeclaredSymbol(typeDecl) is INamedTypeSymbol declaredSymbol
+            string typeName = context.SemanticModel.GetDeclaredSymbol(typeDecl) is INamedTypeSymbol declaredSymbol
                 ? declaredSymbol.Name
                 : string.Empty;
-            var isReader = name.Contains("RecordReader");
+            bool isReader = name.Contains("RecordReader");
 
             if (!string.IsNullOrEmpty(typeName) && !string.IsNullOrEmpty(createdType))
             {
@@ -126,9 +126,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
             return "";
         }
 
-        foreach (var baseType in typeDecl.BaseList.Types)
+        foreach (BaseTypeSyntax baseType in typeDecl.BaseList.Types)
         {
-            var baseStr = baseType.Type.ToString();
+            string baseStr = baseType.Type.ToString();
             if (
                 !baseStr.Contains("IRecordReaderFactory<")
                 && !baseStr.Contains("IRecordWriterFactory<")
@@ -137,11 +137,11 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
                 continue;
             }
 
-            var startIndex = baseStr.IndexOf('<') + 1;
+            int startIndex = baseStr.IndexOf('<') + 1;
             // LastIndexOf, not IndexOf: a nested generic reader type (e.g.
             // IRecordReaderFactory<FullAggregationRecordReader<JsonArrayBatchSourceReader>>)
             // must be sliced at the outermost '>' so the closed type stays intact.
-            var endIndex = baseStr.LastIndexOf('>');
+            int endIndex = baseStr.LastIndexOf('>');
             if (startIndex > 0 && endIndex > startIndex)
             {
                 return baseStr.Substring(startIndex, endIndex - startIndex);
@@ -157,15 +157,15 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
     )
     {
         // Extract readers and writers separately
-        var readers = allItems.Where(i => i.IsReader).ToList();
-        var writers = allItems.Where(i => !i.IsReader).ToList();
+        List<FormatInfo> readers = [.. allItems.Where(i => i.IsReader)];
+        List<FormatInfo> writers = [.. allItems.Where(i => !i.IsReader)];
 
         if (readers.Count == 0 || writers.Count == 0)
         {
             return;
         }
 
-        var sb = new StringBuilder();
+        StringBuilder sb = new();
         sb.AppendLine("// <auto-generated/>");
         sb.AppendLine("#nullable enable");
         sb.AppendLine("using System;");
@@ -198,9 +198,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("        return (inputFormat, outputFormat) switch");
         sb.AppendLine("        {");
 
-        foreach (var reader in readers)
+        foreach (FormatInfo? reader in readers)
         {
-            foreach (var writer in writers)
+            foreach (FormatInfo? writer in writers)
             {
                 sb.AppendLine(
                     $"            (DataFormat.{reader.FormatName}, DataFormat.{writer.FormatName}) =>"
@@ -217,9 +217,9 @@ public class FormatDispatcherGenerator : IIncrementalGenerator
         sb.AppendLine("        };");
         sb.AppendLine("    }");
 
-        foreach (var reader in readers)
+        foreach (FormatInfo? reader in readers)
         {
-            foreach (var writer in writers)
+            foreach (FormatInfo? writer in writers)
             {
                 sb.AppendLine();
                 sb.AppendLine(

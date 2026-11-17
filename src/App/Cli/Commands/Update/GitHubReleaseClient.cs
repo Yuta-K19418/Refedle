@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Refedle.Engine;
 
@@ -34,7 +35,7 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
     /// <returns><c>true</c> when a tag could be extracted; otherwise <c>false</c>.</returns>
     public static bool TryExtractTag(string location, out string tag)
     {
-        var match = TagRegex().Match(location);
+        Match match = TagRegex().Match(location);
         if (match.Success)
         {
             tag = match.Groups["tag"].Value;
@@ -48,18 +49,18 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
     /// <inheritdoc/>
     public async ValueTask<Result<string>> GetLatestTagAsync(CancellationToken cancellationToken)
     {
-        using var response = await _latestClient.GetAsync(_latestReleaseUri, cancellationToken)
+        using HttpResponseMessage response = await _latestClient.GetAsync(_latestReleaseUri, cancellationToken)
             .ConfigureAwait(false);
 
-        var location = response.Headers.Location?.ToString();
+        string? location = response.Headers.Location?.ToString();
         if ((int)response.StatusCode is >= 300 and < 400
             && location is not null
-            && TryExtractTag(location, out var tag))
+            && TryExtractTag(location, out string tag))
         {
             return Results.Success(tag);
         }
 
-        var message = string.Create(
+        string message = string.Create(
             CultureInfo.InvariantCulture, $"Could not resolve the latest release tag (status: {(int)response.StatusCode}).");
         return Results.Failure<string>(message);
     }
@@ -67,22 +68,22 @@ internal sealed partial class GitHubReleaseClient : IReleaseClient, IDisposable
     /// <inheritdoc/>
     public async ValueTask<Result> DownloadAssetAsync(string tag, string fileName, string destinationPath, CancellationToken cancellationToken)
     {
-        var url = new Uri($"{BaseUrl}/releases/download/{tag}/{fileName}");
-        using var response = await _downloadClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+        Uri url = new($"{BaseUrl}/releases/download/{tag}/{fileName}");
+        using HttpResponseMessage response = await _downloadClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
             .ConfigureAwait(false);
 
         if (!response.IsSuccessStatusCode)
         {
-            var message = string.Create(
+            string message = string.Create(
                 CultureInfo.InvariantCulture, $"Could not download '{fileName}' (status: {(int)response.StatusCode} {response.StatusCode}).");
             return Results.Failure(message);
         }
 
-        var source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-        await using var sourceDisposer = source.ConfigureAwait(false);
-        var destination = new FileStream(
+        Stream source = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+        await using ConfiguredAsyncDisposable sourceDisposer = source.ConfigureAwait(false);
+        FileStream destination = new(
             destinationPath, FileMode.Create, FileAccess.Write, FileShare.None, bufferSize: 8192, useAsync: true);
-        await using var destinationDisposer = destination.ConfigureAwait(false);
+        await using ConfiguredAsyncDisposable destinationDisposer = destination.ConfigureAwait(false);
         await source.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
 
         return Results.Success();

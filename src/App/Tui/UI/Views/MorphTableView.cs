@@ -1,3 +1,4 @@
+using System.Drawing;
 using Refedle.Engine.Models.Actions;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
@@ -52,9 +53,9 @@ internal abstract class MorphTableView : TableView
             return base.OnKeyDown(key);
         }
 
-        var action = _vimKeys.Translate(key.KeyCode);
+        VimAction action = _vimKeys.Translate(key.KeyCode);
 
-        var command = MapCommand(action);
+        Command? command = MapCommand(action);
         if (command.HasValue)
         {
             InvokeCommand(command.Value);
@@ -109,7 +110,7 @@ internal abstract class MorphTableView : TableView
     // We need to preserve the current column while moving rows.
     private void MoveToRow(long row)
     {
-        var selection = Value;
+        TableSelection? selection = Value;
         if (selection is null)
         {
             return;
@@ -134,10 +135,10 @@ internal abstract class MorphTableView : TableView
         try
         {
             RefreshContentSize();
-            var localRow = (int)(absoluteRow - paged.WindowStart);
+            int localRow = (int)(absoluteRow - paged.WindowStart);
             SetSelection(col: column, row: localRow, extendExistingSelection: false);
             // Put the target row at the bottom edge of the viewport (offset 0 for the first row).
-            var visibleRows = Math.Max(1, Viewport.Height - CurrentHeaderHeightVisible());
+            int visibleRows = Math.Max(1, Viewport.Height - CurrentHeaderHeightVisible());
             RowOffset = Math.Max(0, localRow - visibleRows + 1);
             Update();
         }
@@ -156,9 +157,9 @@ internal abstract class MorphTableView : TableView
             return;
         }
 
-        var cell = selection.SelectedCell;
-        var pageBeforeSwitch = paged.CurrentPageNumber;
-        var windowShift = paged.SwitchPageFor(paged.WindowStart + cell.Y);
+        Point cell = selection.SelectedCell;
+        long pageBeforeSwitch = paged.CurrentPageNumber;
+        long windowShift = paged.SwitchPageFor(paged.WindowStart + cell.Y);
         // Entering an adjacent page keeps the window start but grows or shrinks its
         // row span, so every page change still needs the refresh sequence below.
         if (windowShift == 0 && paged.CurrentPageNumber == pageBeforeSwitch)

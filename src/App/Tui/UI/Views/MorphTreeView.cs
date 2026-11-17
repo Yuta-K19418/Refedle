@@ -29,7 +29,7 @@ internal abstract class MorphTreeView : TreeView
 
     private void OnAccepted(object? sender, CommandEventArgs e)
     {
-        var node = SelectedObject;
+        ITreeNode? node = SelectedObject;
         if (node is null)
         {
             return;
@@ -53,7 +53,7 @@ internal abstract class MorphTreeView : TreeView
             return true;
         }
 
-        var action = _vimKeys.Translate(key.KeyCode);
+        VimAction action = _vimKeys.Translate(key.KeyCode);
 
         if (TrySelectionMove(action))
         {
@@ -74,13 +74,13 @@ internal abstract class MorphTreeView : TreeView
     // Groups the four selection-offset moves so OnKeyDown's dispatch stays under the complexity cap.
     private bool TrySelectionMove(VimAction action)
     {
-        var offset = action switch
+        int? offset = action switch
         {
             VimAction.MoveDown => 1,
             VimAction.MoveUp => -1,
             VimAction.PageDown => Viewport.Height,
             VimAction.PageUp => -Viewport.Height,
-            _ => (int?)null,
+            _ => null,
         };
 
         if (offset is null)

@@ -107,13 +107,13 @@ internal abstract class LazyTransformerBase(
     /// <param name="sourceCol">Column index into <see cref="Source"/> for this output column.</param>
     protected string ResolveDisplayValue(int col, long sourceRow, int sourceCol)
     {
-        var fillValue = FillValues[col];
+        string? fillValue = FillValues[col];
         if (fillValue is not null)
         {
             return fillValue;
         }
 
-        var rawValue = Convert.ToString(Source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
+        string rawValue = Convert.ToString(Source[sourceRow, sourceCol], CultureInfo.InvariantCulture) ?? string.Empty;
         return ShouldFormat(col)
             ? CellDisplayFormatter.FormatCellValue(rawValue, ColumnTypes[col], FormatStrings[col])
             : rawValue;

@@ -63,7 +63,7 @@ public sealed record FilterAction : IMorphAction
     public static Result<FilterAction> Create(
         string columnName, FilterOperator op, ComparisonType comparisonType, string value)
     {
-        var result = Validate(op, comparisonType, value);
+        Result result = Validate(op, comparisonType, value);
         if (result.IsFailure)
         {
             return Results.Failure<FilterAction>(result.Error);
@@ -112,7 +112,7 @@ public sealed record FilterAction : IMorphAction
             ComparisonType.Text => true,
             // TryParse accepts NaN/Infinity; comparisons against them are never meaningful.
             ComparisonType.Number => double.TryParse(
-                value, NumberStyles.Any, CultureInfo.InvariantCulture, out var parsed)
+                value, NumberStyles.Any, CultureInfo.InvariantCulture, out double parsed)
                 && double.IsFinite(parsed),
             ComparisonType.Timestamp => DateTime.TryParse(
                 value, CultureInfo.InvariantCulture, DateTimeStyles.None, out _),

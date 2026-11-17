@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Diagnostics;
 using System.Text.Json;
+using Microsoft.Win32.SafeHandles;
 
 namespace Refedle.Engine.IO.JsonObject;
 
@@ -25,21 +26,21 @@ public static class TopLevelScanner
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
-        var buffer = ArrayPool<byte>.Shared.Rent(InitialBufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(InitialBufferSize);
 
         try
         {
-            using var handle = File.OpenHandle(
+            using SafeFileHandle handle = File.OpenHandle(
                 filePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read
             );
-            var fileSize = RandomAccess.GetLength(handle);
-            var state = new JsonScanState(fileSize, handle.GetOffsetAfterUtf8Bom());
-            var rootCompleted = false;
+            long fileSize = RandomAccess.GetLength(handle);
+            JsonScanState state = new(fileSize, handle.GetOffsetAfterUtf8Bom());
+            bool rootCompleted = false;
             List<JsonObjectEntry> result = [];
-            var keyIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+            Dictionary<string, int> keyIndex = new(StringComparer.Ordinal);
 
             while (true)
             {
@@ -47,7 +48,7 @@ public static class TopLevelScanner
 
                 EnsureBufferCapacity(ref buffer, state.Buffer.RemainingLen);
 
-                var bytesRead = RandomAccess.Read(
+                int bytesRead = RandomAccess.Read(
                     handle,
                     buffer.AsSpan(
                         state.Buffer.RemainingLen,
@@ -63,7 +64,7 @@ public static class TopLevelScanner
 
                 state.Buffer.RecordBytesRead(bytesRead);
 
-                var reader = new Utf8JsonReader(
+                Utf8JsonReader reader = new(
                     buffer.AsSpan(0, state.Buffer.RemainingLen),
                     state.Buffer.IsFinalBlock,
                     state.Checkpoint
@@ -91,7 +92,7 @@ public static class TopLevelScanner
                     ? state.RollbackCheckpoint
                     : reader.CurrentState;
 
-                var safeConsumed = state.Entry.IsNested
+                int safeConsumed = state.Entry.IsNested
                     ? (int)(state.Entry.ValueStart - state.Buffer.BufferOffset)
                     : (int)reader.BytesConsumed;
                 state.Buffer.ShiftConsumed(safeConsumed, buffer);
@@ -113,7 +114,7 @@ public static class TopLevelScanner
         Dictionary<string, int> keyIndex
     )
     {
-        var depth = reader.CurrentDepth;
+        int depth = reader.CurrentDepth;
 
         if (depth == 0 && reader.TokenType == JsonTokenType.EndObject)
         {
@@ -138,7 +139,7 @@ public static class TopLevelScanner
     {
         if (reader.TokenType == JsonTokenType.PropertyName)
         {
-            var key =
+            string key =
                 reader.GetString()
                 ?? throw new UnreachableException(
                     "PropertyName token returned a null key; this is unreachable for well-formed JSON."
@@ -164,7 +165,7 @@ public static class TopLevelScanner
 
         if (reader.TokenType is JsonTokenType.EndObject or JsonTokenType.EndArray)
         {
-            var valueBufferOffset = (int)(state.Entry.ValueStart - state.Buffer.BufferOffset);
+            int valueBufferOffset = (int)(state.Entry.ValueStart - state.Buffer.BufferOffset);
             RecordEntry(
                 key: state.Entry.CurrentKey,
                 buffer: buffer,
@@ -198,7 +199,7 @@ public static class TopLevelScanner
         Dictionary<string, int> keyIndex
     )
     {
-        var copy = new byte[length];
+        byte[] copy = new byte[length];
         Buffer.BlockCopy(
             src: buffer,
             srcOffset: bufferOffset,
@@ -206,9 +207,9 @@ public static class TopLevelScanner
             dstOffset: 0,
             count: length
         );
-        var mem = new JsonRawBytes(copy);
+        JsonRawBytes mem = new(copy);
 
-        if (keyIndex.TryGetValue(key, out var idx))
+        if (keyIndex.TryGetValue(key, out int idx))
         {
             result[idx] = new JsonObjectEntry(key, mem);
             return;
@@ -237,7 +238,7 @@ public static class TopLevelScanner
 
     private static void GrowBuffer(ref byte[] buffer, int remainingLen)
     {
-        var newBuffer = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
+        byte[] newBuffer = ArrayPool<byte>.Shared.Rent(buffer.Length * 2);
         try
         {
             Buffer.BlockCopy(
@@ -254,7 +255,7 @@ public static class TopLevelScanner
             throw;
         }
 
-        var oldBuffer = buffer;
+        byte[] oldBuffer = buffer;
         buffer = newBuffer;
         ArrayPool<byte>.Shared.Return(oldBuffer);
     }

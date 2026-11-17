@@ -1,6 +1,9 @@
 using Refedle.App.Tui.Workers;
 using Refedle.App.Tui.Workers.Schema;
+using Refedle.Engine;
 using Refedle.Engine.IO;
+using Refedle.Engine.IO.JsonObject;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
@@ -31,7 +34,7 @@ internal sealed class FileDialogHandler(
 
     internal async Task ShowAsync()
     {
-        var dialog = new OpenDialog { Title = "Open File" };
+        OpenDialog dialog = new() { Title = "Open File" };
         dialog.AllowedTypes.Add(new AllowedType("CSV file", ".csv"));
         dialog.AllowedTypes.Add(new AllowedType("JSON file", ".json"));
         dialog.AllowedTypes.Add(new AllowedType("JSON Lines file", ".jsonl"));
@@ -50,14 +53,14 @@ internal sealed class FileDialogHandler(
 
     internal async Task HandleFileSelectedAsync(string path)
     {
-        var detectionResult = FormatDetector.DetectInputFile(path);
+        Result<DataFormat> detectionResult = FormatDetector.DetectInputFile(path);
         if (detectionResult.IsFailure)
         {
             _viewManager.ShowError(detectionResult.Error);
             return;
         }
 
-        var format = detectionResult.Value;
+        DataFormat format = detectionResult.Value;
 
         // Reset state for new file
         _state.StartNewFile(path);
@@ -72,7 +75,7 @@ internal sealed class FileDialogHandler(
         }
 
         // Create indexer from factory
-        var indexer = RowIndexerFactory.Create(format, path);
+        IRowIndexer indexer = RowIndexerFactory.Create(format, path);
 
         // SwitchToView(format)
         if (format == DataFormat.Csv)
@@ -101,10 +104,10 @@ internal sealed class FileDialogHandler(
         _stopIndexing();
         _state.BeginJsonObjectLoad();
 
-        var ct = _state.Cts.Token;
+        CancellationToken ct = _state.Cts.Token;
         try
         {
-            var entries = await JsonObjectScanRunner.RunAsync(path, ct).ConfigureAwait(false);
+            IReadOnlyList<JsonObjectEntry> entries = await JsonObjectScanRunner.RunAsync(path, ct).ConfigureAwait(false);
             _app.Invoke(() =>
             {
                 _state.EnterJsonObjectTree(entries);
@@ -121,13 +124,13 @@ internal sealed class FileDialogHandler(
 
     private async Task LoadCsvAsync(string path, IRowIndexer indexer)
     {
-        var schemaScanner = _scannerFactory(path);
+        ISchemaScanner schemaScanner = _scannerFactory(path);
         // Capture by value before the scans: RenewCtsWithCancel cancels the CTS when
         // another file loads, and the staleness check needs the token from scan start.
-        var scanToken = _state.Cts.Token;
+        CancellationToken scanToken = _state.Cts.Token;
         try
         {
-            var schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);
+            TableSchema schema = await schemaScanner.InitialScanAsync().ConfigureAwait(false);
 
             // Skip UI posts for an already-cancelled scan; the posted callback re-checks
             // the token because the session can be replaced between posting and execution.
@@ -154,7 +157,7 @@ internal sealed class FileDialogHandler(
 
                 _viewManager.SwitchToCsvTable(indexer, schema);
 
-                var indexingCompleted = IndexingCompletion.WhenCompletedAsync(indexer);
+                Task indexingCompleted = IndexingCompletion.WhenCompletedAsync(indexer);
                 _ = BackgroundSchemaRefiner.StartAsync(
                     _state, schemaScanner, schema, _app.Invoke, indexingCompleted, scanToken);
 
@@ -189,7 +192,7 @@ internal sealed class FileDialogHandler(
         {
             _state.BeginIndexedTreeLoad(indexer);
 
-            var tcs = new TaskCompletionSource(
+            TaskCompletionSource tcs = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             indexer.FirstCheckpointReached += () => tcs.TrySetResult();
 
@@ -214,7 +217,7 @@ internal sealed class FileDialogHandler(
         {
             _state.BeginIndexedTreeLoad(indexer);
 
-            var tcs = new TaskCompletionSource(
+            TaskCompletionSource tcs = new(
                 TaskCreationOptions.RunContinuationsAsynchronously);
             indexer.FirstCheckpointReached += () => tcs.TrySetResult();
 

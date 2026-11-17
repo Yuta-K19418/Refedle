@@ -15,7 +15,7 @@ public static class CsvSep
     /// <returns>The reader over the file.</returns>
     public static SepReader FromFile(string filePath, bool hasHeader = true)
     {
-        var options = CreateOptions(hasHeader);
+        SepReaderOptions options = CreateOptions(hasHeader);
         return options.FromFile(filePath);
     }
 
@@ -31,7 +31,7 @@ public static class CsvSep
         bool hasHeader = true,
         CancellationToken cancellationToken = default)
     {
-        var options = CreateOptions(hasHeader);
+        SepReaderOptions options = CreateOptions(hasHeader);
         return options.FromFileAsync(filePath, cancellationToken);
     }
 
@@ -43,7 +43,7 @@ public static class CsvSep
     /// <returns>The reader over the stream.</returns>
     public static SepReader From(StreamReader streamReader, bool hasHeader = true)
     {
-        var options = CreateOptions(hasHeader);
+        SepReaderOptions options = CreateOptions(hasHeader);
         return options.From(streamReader);
     }
 

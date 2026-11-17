@@ -16,8 +16,8 @@ internal static class UpdateRunner
     /// <returns>Exit code: <see cref="ExitCode.Success"/> on success, <see cref="ExitCode.Failure"/> on any failure.</returns>
     public static async ValueTask<ExitCode> RunAsync(IAppLogger logger, IStatusReporter statusReporter, CancellationToken ct)
     {
-        using var releaseClient = new GitHubReleaseClient();
-        var command = new UpdateCommand(
+        using GitHubReleaseClient releaseClient = new();
+        UpdateCommand command = new(
             BuildInfo.Version,
             releaseClient,
             new ArchiveBinaryReplacer(),

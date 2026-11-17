@@ -67,8 +67,8 @@ internal sealed class PagedTableSource : ITableSource, IDisposable
     {
         get
         {
-            var windowSpan = (LastPageNumber - FirstPageNumber + 1) * _pageSize;
-            var remaining = _inner.TotalRows - WindowStart;
+            long windowSpan = (LastPageNumber - FirstPageNumber + 1) * _pageSize;
+            long remaining = _inner.TotalRows - WindowStart;
             return (int)Math.Min(remaining, windowSpan);
         }
     }
@@ -89,7 +89,7 @@ internal sealed class PagedTableSource : ITableSource, IDisposable
     /// </summary>
     internal long SwitchPageFor(long absoluteRow)
     {
-        var previousWindowStart = WindowStart;
+        long previousWindowStart = WindowStart;
         CurrentPageNumber = Math.Clamp(absoluteRow / _pageSize + 1, 1L, Math.Max(1L, PageCount));
         return WindowStart - previousWindowStart;
     }

@@ -18,13 +18,13 @@ internal static class OptionSelectorExtensions
     internal static void EnableAutoSelectAndVimKeys<TEnum>(this OptionSelector<TEnum> selector)
         where TEnum : struct, Enum
     {
-        foreach (var cb in selector.SubViews.OfType<CheckBox>())
+        foreach (CheckBox cb in selector.SubViews.OfType<CheckBox>())
         {
             cb.HasFocusChanged += (_, _) =>
             {
                 if (cb.HasFocus)
                 {
-                    var value = selector.GetCheckBoxValue(cb);
+                    int value = selector.GetCheckBoxValue(cb);
                     ((SelectorBase)selector).Value = value;
                 }
             };
@@ -34,7 +34,7 @@ internal static class OptionSelectorExtensions
         {
             if (key == Key.J)
             {
-                var maxCount = selector.SubViews.OfType<CheckBox>().Count();
+                int maxCount = selector.SubViews.OfType<CheckBox>().Count();
                 if (selector.FocusedItem < maxCount - 1)
                 {
                     selector.FocusedItem++;

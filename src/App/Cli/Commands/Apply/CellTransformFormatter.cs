@@ -51,14 +51,14 @@ internal static class CellTransformFormatter
             return true;
         }
 
-        if (!DateTime.TryParse(cell.Value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed))
+        if (!DateTime.TryParse(cell.Value, CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime parsed))
         {
             result = cell;
             reason = "not recognized as a timestamp";
             return false;
         }
 
-        var formatted = parsed.ToString(fmt.TargetFormat, CultureInfo.InvariantCulture);
+        string formatted = parsed.ToString(fmt.TargetFormat, CultureInfo.InvariantCulture);
         result = new CellData(formatted, CellPresence.Value, CellEncodingClassifier.Classify(formatted));
         reason = string.Empty;
         return true;

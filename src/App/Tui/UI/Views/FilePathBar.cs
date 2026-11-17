@@ -58,7 +58,7 @@ internal sealed class FilePathBar : View
 
     private void UpdateText()
     {
-        var width = Viewport.Width;
+        int width = Viewport.Width;
         if (width <= 0 || _path.GetColumns() <= width)
         {
             Text = _path;
@@ -81,11 +81,11 @@ internal sealed class FilePathBar : View
         }
 
         SetAttribute(_menuAttribute());
-        var width = Viewport.Width;
-        var col = 0;
-        foreach (var rune in Text.EnumerateRunes())
+        int width = Viewport.Width;
+        int col = 0;
+        foreach (Rune rune in Text.EnumerateRunes())
         {
-            var columns = rune.GetColumns();
+            int columns = rune.GetColumns();
             if (col + columns > width)
             {
                 break;
@@ -108,14 +108,14 @@ internal sealed class FilePathBar : View
     // only on text-element (grapheme) boundaries so surrogate pairs are never split.
     private static string TakeTailThatFits(string text, int maxColumns)
     {
-        var elementStarts = StringInfo.ParseCombiningCharacters(text);
-        var usedColumns = 0;
-        var tailStart = text.Length;
+        int[] elementStarts = StringInfo.ParseCombiningCharacters(text);
+        int usedColumns = 0;
+        int tailStart = text.Length;
 
-        for (var i = elementStarts.Length - 1; i >= 0; i--)
+        for (int i = elementStarts.Length - 1; i >= 0; i--)
         {
-            var elementEnd = i + 1 < elementStarts.Length ? elementStarts[i + 1] : text.Length;
-            var element = text[elementStarts[i]..elementEnd];
+            int elementEnd = i + 1 < elementStarts.Length ? elementStarts[i + 1] : text.Length;
+            string element = text[elementStarts[i]..elementEnd];
             usedColumns += element.GetColumns();
             if (usedColumns > maxColumns)
             {

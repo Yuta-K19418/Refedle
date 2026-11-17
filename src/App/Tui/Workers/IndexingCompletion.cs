@@ -20,7 +20,7 @@ internal static class IndexingCompletion
     {
         ArgumentNullException.ThrowIfNull(indexer);
 
-        var indexingCompleted = new TaskCompletionSource(
+        TaskCompletionSource indexingCompleted = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
         // Subscribe first, then check, so completion is never missed; whichever of the two

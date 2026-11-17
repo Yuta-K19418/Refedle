@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Refedle.App.Tui.UI.Views.Dialogs;
+using Refedle.Engine;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Terminal.Gui.App;
@@ -46,8 +47,8 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleRenameColumn()
     {
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new RenameColumnDialog(rawName);
+        string rawName = table.RawColumnNames[selectedColumn];
+        using RenameColumnDialog dialog = new(rawName);
         app.Run(dialog);
 
         if (!dialog.Confirmed || dialog.NewName is null)
@@ -61,9 +62,9 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleDeleteColumn()
     {
-        var displayName = table.ColumnNames[selectedColumn];
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new DeleteColumnDialog(displayName);
+        string displayName = table.ColumnNames[selectedColumn];
+        string rawName = table.RawColumnNames[selectedColumn];
+        using DeleteColumnDialog dialog = new(displayName);
         app.Run(dialog);
 
         if (!dialog.Confirmed)
@@ -77,9 +78,9 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleCastColumn()
     {
-        var displayName = table.ColumnNames[selectedColumn];
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new CastColumnDialog(displayName, ColumnType.Text, format);
+        string displayName = table.ColumnNames[selectedColumn];
+        string rawName = table.RawColumnNames[selectedColumn];
+        using CastColumnDialog dialog = new(displayName, ColumnType.Text, format);
         app.Run(dialog);
 
         if (!dialog.Confirmed || dialog.SelectedType is null)
@@ -101,9 +102,9 @@ internal sealed class ColumnActionHandler(
             return true;
         }
 
-        var displayName = table.ColumnNames[selectedColumn];
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new FilterColumnDialog(displayName);
+        string displayName = table.ColumnNames[selectedColumn];
+        string rawName = table.RawColumnNames[selectedColumn];
+        using FilterColumnDialog dialog = new(displayName);
         app.Run(dialog);
 
         if (!dialog.Confirmed || dialog.SelectedOperator is null
@@ -112,7 +113,7 @@ internal sealed class ColumnActionHandler(
             return true;
         }
 
-        var action = FilterAction.Create(
+        Result<FilterAction> action = FilterAction.Create(
             rawName, dialog.SelectedOperator.Value, dialog.SelectedComparisonType.Value, dialog.Value);
         if (action.IsFailure)
         {
@@ -126,9 +127,9 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleFillColumn()
     {
-        var displayName = table.ColumnNames[selectedColumn];
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new FillColumnDialog(displayName);
+        string displayName = table.ColumnNames[selectedColumn];
+        string rawName = table.RawColumnNames[selectedColumn];
+        using FillColumnDialog dialog = new(displayName);
         app.Run(dialog);
 
         if (!dialog.Confirmed)
@@ -142,9 +143,9 @@ internal sealed class ColumnActionHandler(
 
     private bool HandleFormatTimestamp()
     {
-        var displayName = table.ColumnNames[selectedColumn];
-        var rawName = table.RawColumnNames[selectedColumn];
-        using var dialog = new FormatTimestampDialog(displayName);
+        string displayName = table.ColumnNames[selectedColumn];
+        string rawName = table.RawColumnNames[selectedColumn];
+        using FormatTimestampDialog dialog = new(displayName);
         app.Run(dialog);
 
         if (!dialog.Confirmed || string.IsNullOrEmpty(dialog.TargetFormat))

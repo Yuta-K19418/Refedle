@@ -1,4 +1,5 @@
 using System.Buffers;
+using Microsoft.Win32.SafeHandles;
 
 namespace Refedle.Engine.IO.Csv;
 
@@ -58,29 +59,29 @@ public sealed class DataRowIndexer : RowIndexerBase
     /// </summary>
     public override void BuildIndex(CancellationToken ct = default)
     {
-        var buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
+        byte[] buffer = ArrayPool<byte>.Shared.Rent(BufferSize);
 
         try
         {
             FileSize = new FileInfo(_filePath).Length;
 
-            using var handle = File.OpenHandle(
+            using SafeFileHandle handle = File.OpenHandle(
                 _filePath,
                 FileMode.Open,
                 FileAccess.Read,
                 FileShare.Read
             );
-            var fileOffset = 0L;
-            var rowCount = 0L;
-            var inQuotes = false;
-            var lastByteRead = (byte)0;
-            var headerSkipped = false;
+            long fileOffset = 0L;
+            long rowCount = 0L;
+            bool inQuotes = false;
+            byte lastByteRead = 0;
+            bool headerSkipped = false;
 
             while (true)
             {
                 ct.ThrowIfCancellationRequested();
 
-                var bytesRead = RandomAccess.Read(handle, buffer.AsSpan(0, BufferSize), fileOffset);
+                int bytesRead = RandomAccess.Read(handle, buffer.AsSpan(0, BufferSize), fileOffset);
 
                 if (bytesRead <= 0)
                 {
@@ -90,7 +91,7 @@ public sealed class DataRowIndexer : RowIndexerBase
                 Interlocked.Add(ref _bytesRead, bytesRead);
                 lastByteRead = buffer[bytesRead - 1];
 
-                var span = buffer.AsSpan(0, bytesRead);
+                Span<byte> span = buffer.AsSpan(0, bytesRead);
                 ProcessBuffer(span, ref fileOffset, ref rowCount, ref inQuotes, ref headerSkipped);
 
                 fileOffset += bytesRead;
@@ -140,14 +141,14 @@ public sealed class DataRowIndexer : RowIndexerBase
                 return (-1, 0);
             }
 
-            var idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
+            int idealCheckPointIndex = (int)(targetRow / CheckPointInterval);
             // Clamp to the last available checkpoint (handles partial indexing or beyond-EOF requests)
-            var actualCheckPointIndex = Math.Clamp(idealCheckPointIndex, 0, _checkpoints.Count - 1);
-            var byteOffset = _checkpoints[actualCheckPointIndex];
+            int actualCheckPointIndex = Math.Clamp(idealCheckPointIndex, 0, _checkpoints.Count - 1);
+            long byteOffset = _checkpoints[actualCheckPointIndex];
             // Calculate the row number that the actual checkpoint represents
-            var actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
+            long actualCheckPointRow = (long)actualCheckPointIndex * CheckPointInterval;
             // Calculate how many rows to skip from the actual checkpoint to reach the target row
-            var rowOffset = (int)(targetRow - actualCheckPointRow);
+            int rowOffset = (int)(targetRow - actualCheckPointRow);
 
             return (byteOffset, rowOffset);
         }
@@ -161,20 +162,20 @@ public sealed class DataRowIndexer : RowIndexerBase
         ref bool headerSkipped
     )
     {
-        var position = 0;
+        int position = 0;
 
         while (position < buffer.Length)
         {
-            var searchStart = buffer[position..];
-            var foundIndex = searchStart.IndexOfAny(_newlineAndQuote);
+            ReadOnlySpan<byte> searchStart = buffer[position..];
+            int foundIndex = searchStart.IndexOfAny(_newlineAndQuote);
 
             if (foundIndex == -1)
             {
                 break;
             }
 
-            var absoluteIndex = position + foundIndex;
-            var currentByte = buffer[absoluteIndex];
+            int absoluteIndex = position + foundIndex;
+            byte currentByte = buffer[absoluteIndex];
 
             position = absoluteIndex + 1;
 
@@ -189,7 +190,7 @@ public sealed class DataRowIndexer : RowIndexerBase
             {
                 headerSkipped = true;
                 // Add first checkpoint after header
-                var headerCheckpointOffset = fileOffset + position;
+                long headerCheckpointOffset = fileOffset + position;
                 _checkpoints.Add(headerCheckpointOffset);
                 continue;
             }
@@ -211,7 +212,7 @@ public sealed class DataRowIndexer : RowIndexerBase
             Interlocked.Exchange(ref _totalRows, rowCount);
 
             // Store checkpoint every N rows
-            var checkpointOffset = fileOffset + position;
+            long checkpointOffset = fileOffset + position;
             lock (_lock)
             {
                 _checkpoints.Add(checkpointOffset);

@@ -7,7 +7,7 @@ internal static class CsvEscaper
 {
     internal static string EscapeCsvValue(ReadOnlySpan<char> value)
     {
-        var needsQuoting =
+        bool needsQuoting =
             value.IsEmpty
             || value.Contains('"')
             || value.Contains(',')
@@ -19,9 +19,9 @@ internal static class CsvEscaper
             return value.ToString();
         }
 
-        var sb = new StringBuilder(value.Length + 2);
+        StringBuilder sb = new(value.Length + 2);
         sb.Append('"');
-        for (var i = 0; i < value.Length; i++)
+        for (int i = 0; i < value.Length; i++)
         {
             if (value[i] == '"')
             {
@@ -38,7 +38,7 @@ internal static class CsvEscaper
 
     internal static void EscapeCsvValueToBuilder(ReadOnlySpan<char> value, StringBuilder sb)
     {
-        var needsQuoting =
+        bool needsQuoting =
             value.IsEmpty
             || value.Contains('"')
             || value.Contains(',')
@@ -52,7 +52,7 @@ internal static class CsvEscaper
         }
 
         sb.Append('"');
-        for (var i = 0; i < value.Length; i++)
+        for (int i = 0; i < value.Length; i++)
         {
             if (value[i] == '"')
             {

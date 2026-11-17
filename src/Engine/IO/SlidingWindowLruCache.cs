@@ -58,14 +58,14 @@ public abstract class SlidingWindowLruCache<TRow>
             return EmptyValue;
         }
 
-        if (_cache.TryGetValue(index, out var node))
+        if (_cache.TryGetValue(index, out LinkedListNode<CacheEntry<TRow>>? node))
         {
             _lruList.MoveToFront(node);
             return node.ValueRef.Value;
         }
 
         Prefetch(index);
-        return _cache.TryGetValue(index, out var fetchedNode)
+        return _cache.TryGetValue(index, out LinkedListNode<CacheEntry<TRow>>? fetchedNode)
             ? fetchedNode.ValueRef.Value
             : EmptyValue;
     }
@@ -77,27 +77,27 @@ public abstract class SlidingWindowLruCache<TRow>
     /// <param name="requestedRow">The row that was requested.</param>
     private void Prefetch(long requestedRow)
     {
-        var halfWindow = _prefetchWindow / 2;
-        var maxStart = TotalRows - _prefetchWindow;
-        var windowStart = Math.Max(0, Math.Min(requestedRow - halfWindow, maxStart));
-        var windowEnd = Math.Min(windowStart + _prefetchWindow - 1, TotalRows - 1);
+        int halfWindow = _prefetchWindow / 2;
+        long maxStart = TotalRows - _prefetchWindow;
+        long windowStart = Math.Max(0, Math.Min(requestedRow - halfWindow, maxStart));
+        long windowEnd = Math.Min(windowStart + _prefetchWindow - 1, TotalRows - 1);
 
-        (var byteOffset, var rowOffsetToSkip) = _indexer.GetCheckPoint(windowStart);
+        (long byteOffset, int rowOffsetToSkip) = _indexer.GetCheckPoint(windowStart);
         if (byteOffset < 0)
         {
             return;
         }
 
         // Window length never exceeds the int-sized prefetch window.
-        var rows = LoadRows(byteOffset, rowOffsetToSkip, (int)(windowEnd - windowStart + 1));
-        var rowsArray = rows.ToArray();
+        IEnumerable<TRow> rows = LoadRows(byteOffset, rowOffsetToSkip, (int)(windowEnd - windowStart + 1));
+        TRow[] rowsArray = [.. rows];
 
-        var requestedIndex = requestedRow - windowStart;
+        long requestedIndex = requestedRow - windowStart;
 
         // Add non-requested rows first, then the requested row last.
         // This guarantees the requested row is the MRU entry after prefetch,
         // preventing self-eviction when prefetchWindow exceeds capacity.
-        for (var i = 0; i < rowsArray.Length; i++)
+        for (int i = 0; i < rowsArray.Length; i++)
         {
             if (i != requestedIndex)
             {
@@ -113,7 +113,7 @@ public abstract class SlidingWindowLruCache<TRow>
 
     private void AddOrUpdateCache(long rowIndex, TRow rowValue)
     {
-        if (_cache.TryGetValue(rowIndex, out var node))
+        if (_cache.TryGetValue(rowIndex, out LinkedListNode<CacheEntry<TRow>>? node))
         {
             _lruList.MoveToFront(node);
             return;

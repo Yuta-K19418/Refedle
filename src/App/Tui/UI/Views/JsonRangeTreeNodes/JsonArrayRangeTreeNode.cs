@@ -35,7 +35,7 @@ internal sealed class JsonArrayRangeTreeNode : RangeTreeNodeBase
     /// </summary>
     internal static ITreeNode CreateElementNode(JsonRawBytes bytes, long index)
     {
-        var prefix = string.Create(CultureInfo.InvariantCulture, $"[{index:N0}]: ");
+        string prefix = string.Create(CultureInfo.InvariantCulture, $"[{index:N0}]: ");
         ITreeNode invalidNode() =>
             new JsonValueTreeNode($"{prefix}[Invalid JSON]") { ValueKind = JsonValueKind.Undefined };
 
@@ -44,7 +44,7 @@ internal sealed class JsonArrayRangeTreeNode : RangeTreeNodeBase
             return invalidNode();
         }
 
-        var reader = new Utf8JsonReader(bytes.Span);
+        Utf8JsonReader reader = new(bytes.Span);
 
         try
         {
@@ -84,11 +84,11 @@ internal sealed class JsonArrayRangeTreeNode : RangeTreeNodeBase
     /// </remarks>
     protected override void AddDirectChildren()
     {
-        var (byteOffset, rowOffset) = _indexer.GetCheckPoint(StartIndex);
-        var elements = _reader.ReadElements(byteOffset, rowOffset, (int)Count);
+        (long byteOffset, int rowOffset) = _indexer.GetCheckPoint(StartIndex);
+        IReadOnlyList<JsonRawBytes> elements = _reader.ReadElements(byteOffset, rowOffset, (int)Count);
         List<ITreeNode> children = [];
 
-        for (var i = 0; i < elements.Count; i++)
+        for (int i = 0; i < elements.Count; i++)
         {
             if (elements[i].IsEmpty)
             {

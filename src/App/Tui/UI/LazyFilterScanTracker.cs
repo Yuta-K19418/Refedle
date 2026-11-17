@@ -83,7 +83,7 @@ internal sealed class LazyFilterScanTracker(
 
         // Captured by value: loading another file cancels this token, which marks the
         // outcome stale before its completion callback runs.
-        var sessionToken = _parentToken();
+        CancellationToken sessionToken = _parentToken();
         bool isScanCurrent() =>
             !_disposed
             && !sessionToken.IsCancellationRequested
@@ -95,7 +95,7 @@ internal sealed class LazyFilterScanTracker(
             _uiThreadInvoke(() => HandleProgress(isScanCurrent, view, scannedRows, totalRows));
 
         // Attached before the wait so the item count label stays hidden while indexing runs.
-        var scan = new ActiveScan(indexer, view, progressHandler);
+        ActiveScan scan = new(indexer, view, progressHandler);
         _activeScan = scan;
 
         return StartScanAfterIndexingAsync(scan, isScanCurrent, indexingCompleted, sessionToken);
@@ -108,7 +108,7 @@ internal sealed class LazyFilterScanTracker(
     /// </summary>
     internal void Detach()
     {
-        var scan = _activeScan;
+        ActiveScan? scan = _activeScan;
         _activeScan = null;
 
         if (scan is null)
@@ -172,12 +172,12 @@ internal sealed class LazyFilterScanTracker(
     /// </summary>
     private async Task RunScanAsync(ActiveScan scan, Func<bool> isScanCurrent, CancellationToken sessionToken)
     {
-        var scanTask = _filterScanRunner.RunAsync(scan.Indexer, sessionToken);
+        Task scanTask = _filterScanRunner.RunAsync(scan.Indexer, sessionToken);
 
         // WhenAny never throws, so a canceled or faulted scan is observed without a catch-all.
         await Task.WhenAny(scanTask).ConfigureAwait(false);
-        var succeeded = scanTask.IsCompletedSuccessfully;
-        var failureMessage = scanTask.Exception?.GetBaseException().Message;
+        bool succeeded = scanTask.IsCompletedSuccessfully;
+        string? failureMessage = scanTask.Exception?.GetBaseException().Message;
 
         _uiThreadInvoke(() => CompleteScan(scan, isScanCurrent, succeeded, failureMessage));
     }

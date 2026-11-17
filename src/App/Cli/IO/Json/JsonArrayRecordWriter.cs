@@ -94,7 +94,7 @@ internal struct JsonArrayRecordWriter : IRecordWriter
         _jsonWriter.WriteEndObject();
         _jsonWriter.Flush();
 
-        var memory = _bufferWriter.WrittenMemory;
+        JsonRawBytes memory = _bufferWriter.WrittenMemory;
         if (memory.Length > 0)
         {
             await _stream.WriteAsync(memory, ct).ConfigureAwait(false);
@@ -172,7 +172,7 @@ internal struct JsonArrayRecordWriter : IRecordWriter
 
     private static void WriteByte(PooledBufferWriter bufferWriter, byte value)
     {
-        var span = bufferWriter.GetSpan(1);
+        Span<byte> span = bufferWriter.GetSpan(1);
         span[0] = value;
         bufferWriter.Advance(1);
     }

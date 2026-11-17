@@ -25,10 +25,10 @@ public static class KeyPathNodeResolver
     {
         ArgumentNullException.ThrowIfNull(remainingKeyPath);
 
-        var currentBytes = startBytes;
-        foreach (var segment in remainingKeyPath)
+        JsonRawBytes currentBytes = startBytes;
+        foreach (KeyPathSegment segment in remainingKeyPath)
         {
-            var nextResult = segment.Kind == KeyPathSegmentKind.Key
+            Result<JsonRawBytes> nextResult = segment.Kind == KeyPathSegmentKind.Key
                 ? ResolveKeySegment(currentBytes, segment)
                 : ResolveIndexSegment(currentBytes, segment);
 
@@ -45,7 +45,7 @@ public static class KeyPathNodeResolver
 
     private static Result<JsonRawBytes> ResolveKeySegment(JsonRawBytes currentBytes, KeyPathSegment segment)
     {
-        var valueBytes = KeyPathLeafCollector.FindValueByKey(currentBytes, segment.Value);
+        JsonRawBytes? valueBytes = KeyPathLeafCollector.FindValueByKey(currentBytes, segment.Value);
         return valueBytes is { } bytes
             ? Results.Success(bytes)
             : Results.Failure<JsonRawBytes>($"DrillDown path key \"{segment.Value}\" was not found.");
@@ -62,12 +62,12 @@ public static class KeyPathNodeResolver
         }
 
         if (!int.TryParse(
-            value.AsSpan(1, value.Length - 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
+            value.AsSpan(1, value.Length - 2), NumberStyles.Integer, CultureInfo.InvariantCulture, out int index))
         {
             return Results.Failure<JsonRawBytes>($"DrillDown path index \"{segment.Value}\" is not a valid integer.");
         }
 
-        var elementBytes = KeyPathLeafCollector.FindArrayElementByIndex(currentBytes, index);
+        JsonRawBytes? elementBytes = KeyPathLeafCollector.FindArrayElementByIndex(currentBytes, index);
         return elementBytes is { } bytes
             ? Results.Success(bytes)
             : Results.Failure<JsonRawBytes>(

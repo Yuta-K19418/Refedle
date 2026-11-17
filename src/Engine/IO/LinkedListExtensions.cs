@@ -32,7 +32,7 @@ internal static class LinkedListExtensions
         TRow emptyValue
     )
     {
-        var node = list.Last ?? throw new UnreachableException("LRU list must be non-empty.");
+        LinkedListNode<CacheEntry<TRow>> node = list.Last ?? throw new UnreachableException("LRU list must be non-empty.");
         list.Remove(node);
 
         // Remove old entry from cache dictionary
@@ -59,7 +59,7 @@ internal static class LinkedListExtensions
         TRow rowValue
     )
     {
-        var node = new LinkedListNode<CacheEntry<TRow>>(
+        LinkedListNode<CacheEntry<TRow>> node = new(
             new CacheEntry<TRow> { RowIndex = rowIndex, Value = rowValue }
         );
         list.AddFirst(node);

@@ -72,7 +72,7 @@ internal sealed class FocusedTableFilterRowIndexer(
     {
         try
         {
-            var totalRows = (int)_source.TotalRows;
+            int totalRows = (int)_source.TotalRows;
             await ScanBatchesAsync(totalRows, ct).ConfigureAwait(false);
 
             // The final check also covers the empty source, where the loop body never runs.
@@ -88,17 +88,17 @@ internal sealed class FocusedTableFilterRowIndexer(
 
     private async Task ScanBatchesAsync(int totalRows, CancellationToken ct)
     {
-        for (var batchStart = 0; batchStart < totalRows; batchStart += BatchSize)
+        for (int batchStart = 0; batchStart < totalRows; batchStart += BatchSize)
         {
             ct.ThrowIfCancellationRequested();
-            var batchEnd = Math.Min(batchStart + BatchSize, totalRows);
+            int batchEnd = Math.Min(batchStart + BatchSize, totalRows);
             await ScanBatchAsync(batchStart, batchEnd, totalRows, ct).ConfigureAwait(false);
         }
     }
 
     private async Task ScanBatchAsync(int batchStart, int batchEnd, int totalRows, CancellationToken ct)
     {
-        for (var row = batchStart; row < batchEnd; row++)
+        for (int row = batchStart; row < batchEnd; row++)
         {
             RecordRowIfMatch(row);
         }
@@ -145,9 +145,9 @@ internal sealed class FocusedTableFilterRowIndexer(
 
     private bool MatchesAllFilters(int row)
     {
-        foreach (var spec in _filterSpecs)
+        foreach (FilterSpec spec in _filterSpecs)
         {
-            var rawValue = Convert.ToString(
+            string rawValue = Convert.ToString(
                 _source[row, spec.SourceColumnIndex + 1],
                 CultureInfo.InvariantCulture
             ) ?? string.Empty;

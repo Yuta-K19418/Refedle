@@ -21,13 +21,13 @@ public static class DrillDownSchemaExtractor
     public static Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)>
         ExtractFromNode(JsonRawBytes nodeBytes, DataFormat format)
     {
-        var childrenResult = ExtractChildren(nodeBytes);
+        Result<List<JsonRawBytes>> childrenResult = ExtractChildren(nodeBytes);
         if (childrenResult.IsFailure)
         {
             return Results.Failure<(TableSchema, IReadOnlyList<JsonRawBytes>)>(childrenResult.Error);
         }
 
-        var schemaResult = BuildSchema(childrenResult.Value, format);
+        Result<TableSchema> schemaResult = BuildSchema(childrenResult.Value, format);
         if (schemaResult.IsFailure)
         {
             return Results.Failure<(TableSchema, IReadOnlyList<JsonRawBytes>)>(schemaResult.Error);
@@ -52,7 +52,7 @@ public static class DrillDownSchemaExtractor
     private static Result<List<JsonRawBytes>> ParseArrayElements(JsonRawBytes nodeBytes)
     {
         List<JsonRawBytes> children = [];
-        var reader = new Utf8JsonReader(nodeBytes.Span);
+        Utf8JsonReader reader = new(nodeBytes.Span);
 
         if (!reader.Read() || reader.TokenType != JsonTokenType.StartArray)
         {
@@ -88,13 +88,13 @@ public static class DrillDownSchemaExtractor
     private static Result<TableSchema> BuildSchema(List<JsonRawBytes> childRawValues, DataFormat format)
     {
         List<string> keyOrder = [];
-        var keySet = new HashSet<string>(StringComparer.Ordinal);
-        var columnTypes = new Dictionary<string, ColumnType>(StringComparer.Ordinal);
-        var keyObservedCount = new Dictionary<string, int>(StringComparer.Ordinal);
+        HashSet<string> keySet = new(StringComparer.Ordinal);
+        Dictionary<string, ColumnType> columnTypes = new(StringComparer.Ordinal);
+        Dictionary<string, int> keyObservedCount = new(StringComparer.Ordinal);
 
-        foreach (var childBytes in childRawValues)
+        foreach (JsonRawBytes childBytes in childRawValues)
         {
-            var observedKeys = new HashSet<string>(StringComparer.Ordinal);
+            HashSet<string> observedKeys = new(StringComparer.Ordinal);
             SchemaScanner.ScanObject(childBytes.Span, keyOrder, keySet, columnTypes, observedKeys);
             SchemaScanner.IncrementObservationCounts(observedKeys, keyObservedCount);
         }

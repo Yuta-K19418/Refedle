@@ -27,7 +27,7 @@ internal static class FormatDetector
             return Results.Failure<DataFormat>("File does not exist");
         }
 
-        var fileInfo = new FileInfo(filePath);
+        FileInfo fileInfo = new(filePath);
         if (fileInfo.Length == 0)
         {
             return Results.Failure<DataFormat>("File is empty");
@@ -35,8 +35,8 @@ internal static class FormatDetector
 
         // Use ToUpperInvariant for normalization as recommended by CA1308 to avoid
         // potential round-tripping issues in some locales (e.g., Turkish 'I').
-        var rawExtension = Path.GetExtension(filePath);
-        var extension = rawExtension.ToUpperInvariant();
+        string? rawExtension = Path.GetExtension(filePath);
+        string extension = rawExtension.ToUpperInvariant();
 
         return extension switch
         {
@@ -61,8 +61,8 @@ internal static class FormatDetector
             return Results.Failure<DataFormat>("File path cannot be empty");
         }
 
-        var rawExtension = Path.GetExtension(filePath);
-        var extension = rawExtension.ToUpperInvariant();
+        string? rawExtension = Path.GetExtension(filePath);
+        string extension = rawExtension.ToUpperInvariant();
 
         return extension switch
         {
@@ -86,10 +86,10 @@ internal static class FormatDetector
     {
         try
         {
-            using var fs = File.OpenRead(filePath);
+            using FileStream fs = File.OpenRead(filePath);
             Utf8BomUtility.SkipUtf8Bom(fs);
 
-            var b = fs.ReadByte();
+            int b = fs.ReadByte();
             while (b != -1 && char.IsWhiteSpace((char)b))
             {
                 b = fs.ReadByte();

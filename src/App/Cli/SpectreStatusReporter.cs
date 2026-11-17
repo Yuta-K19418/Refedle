@@ -13,7 +13,7 @@ internal sealed class SpectreStatusReporter : IStatusReporter
     {
         ArgumentNullException.ThrowIfNull(work);
 
-        var status = AnsiConsole.Status().Spinner(Spinner.Known.Dots);
+        Status status = AnsiConsole.Status().Spinner(Spinner.Known.Dots);
         return await status.StartAsync(Markup.Escape(initialPhase), async ctx =>
         {
             void setPhase(string phase) => ctx.Status(Markup.Escape(phase));

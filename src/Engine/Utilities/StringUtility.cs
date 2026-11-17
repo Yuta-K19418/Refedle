@@ -12,7 +12,7 @@ public static class StringUtility
     /// <summary>Returns <c>true</c> if every byte is ASCII whitespace (space, tab, CR, or LF).</summary>
     public static bool IsWhiteSpace(ReadOnlySpan<byte> span)
     {
-        foreach (var b in span)
+        foreach (byte b in span)
         {
             if (b != (byte)' ' && b != (byte)'\t' && b != (byte)'\r' && b != (byte)'\n')
             {
@@ -28,7 +28,7 @@ public static class StringUtility
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var escaped = value
+        string escaped = value
             .Replace("\\", "\\\\", StringComparison.Ordinal)
             .Replace("\"", "\\\"", StringComparison.Ordinal);
         return $"\"{escaped}\"";
@@ -48,7 +48,7 @@ public static class StringUtility
             return value;
         }
 
-        var inner = value.AsSpan(1, value.Length - 2);
+        ReadOnlySpan<char> inner = value.AsSpan(1, value.Length - 2);
         return inner.IndexOf('\\') < 0 ? inner.ToString() : UnescapeString(inner);
     }
 
@@ -89,8 +89,8 @@ public static class StringUtility
 
     private static string UnescapeString(ReadOnlySpan<char> inner)
     {
-        var sb = new StringBuilder(inner.Length);
-        var i = 0;
+        StringBuilder sb = new(inner.Length);
+        int i = 0;
         while (i < inner.Length)
         {
             if (inner[i] == '\\' && i + 1 < inner.Length && (inner[i + 1] == '"' || inner[i + 1] == '\\'))
