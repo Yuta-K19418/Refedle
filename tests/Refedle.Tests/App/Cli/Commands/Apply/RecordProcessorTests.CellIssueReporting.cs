@@ -27,17 +27,17 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_UnparseableCell_ReportsCellIssue()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var reader = new TestRecordReader([["not-a-date"]], []);
-        var writer = new TestRecordWriter(null, (record) => writtenRecords.Add([.. record]));
+        List<string[]> writtenRecords = [];
+        TestRecordReader reader = new([["not-a-date"]], []);
+        TestRecordWriter writer = new(null, (record) => writtenRecords.Add([.. record]));
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
         result.HasMoreCellIssues.Should().BeFalse();
-        var issue = result.CellIssues.Should().ContainSingle().Subject;
+        CellIssue issue = result.CellIssues.Should().ContainSingle().Subject;
         issue.RowNumber.Should().Be(1);
         issue.ColumnName.Should().Be("col0");
         issue.RawValue.Should().Be("not-a-date");
@@ -50,17 +50,17 @@ public sealed partial class RecordProcessorTests
     {
         // Arrange — the unparseable cell sits on the 2nd data row; numbering is 1-based over
         // input data rows, so it must be reported as row 2 even though row 1 formats fine.
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["2024-03-15T10:30:00"],
                 ["not-a-date"],
                 ["2023-12-25T00:00:00"],
             ],
             []);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().ContainSingle().Which.RowNumber.Should().Be(2);
@@ -70,16 +70,16 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_ParseableCells_ReportsNoCellIssues()
     {
         // Arrange
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["2024-03-15T10:30:00"],
                 ["2023-12-25T00:00:00"],
             ],
             []);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().BeEmpty();
@@ -94,20 +94,20 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithInvalidCell_OnTransformedColumn_ReportsIssueAndWritesCellUnchanged()
     {
         // Arrange — real readers hand Invalid cells an empty value (the source was unreadable).
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
-        var reader = new TestRecordReader([[""]], [], presences: [[CellPresence.Invalid]]);
-        var writer = new TestRecordWriter(null, (record) => writtenRecords.Add([.. record]));
+        TestRecordReader reader = new([[""]], [], presences: [[CellPresence.Invalid]]);
+        TestRecordWriter writer = new(null, (record) => writtenRecords.Add([.. record]));
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
-        var issue = result.CellIssues.Should().ContainSingle().Subject;
+        CellIssue issue = result.CellIssues.Should().ContainSingle().Subject;
         issue.RowNumber.Should().Be(1);
         issue.ColumnName.Should().Be("col0");
         issue.RawValue.Should().BeEmpty();
@@ -119,18 +119,18 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithInvalidCell_OnNonTransformedColumn_ReportsIssue()
     {
         // Arrange — Invalid is a reader-layer signal, reported independently of any transform.
-        var writtenRecords = new List<string[]>();
-        var reader = new TestRecordReader(
+        List<string[]> writtenRecords = [];
+        TestRecordReader reader = new(
             [["Alice", ""]],
             [],
             presences: [[CellPresence.Value, CellPresence.Invalid]]);
-        var writer = new TestRecordWriter(null, (record) => writtenRecords.Add([.. record]));
+        TestRecordWriter writer = new(null, (record) => writtenRecords.Add([.. record]));
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _twoColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _twoColumns, default);
 
         // Assert
-        var issue = result.CellIssues.Should().ContainSingle().Subject;
+        CellIssue issue = result.CellIssues.Should().ContainSingle().Subject;
         issue.RowNumber.Should().Be(1);
         issue.ColumnName.Should().Be("col1");
         issue.Reason.Should().NotBeEmpty();
@@ -142,16 +142,16 @@ public sealed partial class RecordProcessorTests
     {
         // Arrange — FillSpec's deterministic overwrite applies to unreadable cells like any
         // other, and Fill has no reportable case, so no cell issue is collected.
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new FillSpec("ANON")),
         ];
-        var reader = new TestRecordReader([[""]], [], presences: [[CellPresence.Invalid]]);
-        var writer = new TestRecordWriter(null, (record) => writtenRecords.Add([.. record]));
+        TestRecordReader reader = new([[""]], [], presences: [[CellPresence.Invalid]]);
+        TestRecordWriter writer = new(null, (record) => writtenRecords.Add([.. record]));
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.CellIssues.Should().BeEmpty();
@@ -163,11 +163,11 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithNullCell_OnTransformedColumn_ReportsNoIssue()
     {
         // Arrange — Null/Missing are legitimate absence, deferred from reporting.
-        var reader = new TestRecordReader([[""]], [], presences: [[CellPresence.Null]]);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordReader reader = new([[""]], [], presences: [[CellPresence.Null]]);
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().BeEmpty();
@@ -178,11 +178,11 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithMissingCell_OnTransformedColumn_ReportsNoIssue()
     {
         // Arrange
-        var reader = new TestRecordReader([[""]], [], presences: [[CellPresence.Missing]]);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordReader reader = new([[""]], [], presences: [[CellPresence.Missing]]);
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().BeEmpty();
@@ -197,20 +197,20 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFilter_RowExcludedByFilter_IsNotReported()
     {
         // Arrange — only rows that are written contribute issues.
-        var filters = new List<FilterSpec>
-        {
+        List<FilterSpec> filters =
+        [
             new(0, ColumnType.Text, FilterOperator.Contains, "2024"),
-        };
-        var reader = new TestRecordReader(
+        ];
+        TestRecordReader reader = new(
             [
                 ["not-a-date"],
                 ["2024-03-15T10:30:00"],
             ],
             filters);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().BeEmpty();
@@ -221,20 +221,20 @@ public sealed partial class RecordProcessorTests
     {
         // Arrange — row 1 is filtered out, so the reported issue on row 2 must still say 2:
         // row numbers identify positions in the input file, not in the output.
-        var filters = new List<FilterSpec>
-        {
+        List<FilterSpec> filters =
+        [
             new(0, ColumnType.Text, FilterOperator.Contains, "second"),
-        };
-        var reader = new TestRecordReader(
+        ];
+        TestRecordReader reader = new(
             [
                 ["not-a-date"],
                 ["second bad value"],
             ],
             filters);
-        var writer = new TestRecordWriter(null, (_) => { });
+        TestRecordWriter writer = new(null, (_) => { });
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert
         result.CellIssues.Should().ContainSingle().Which.RowNumber.Should().Be(2);
@@ -251,13 +251,13 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WhenIssueCountReachesTheCap_CapsDetailAndFlagsMore(int rowCount, bool expectedHasMore)
     {
         // Arrange — every row fails to parse, so the issue count equals the row count.
-        var writtenRecords = new List<string[]>();
-        var rows = Enumerable.Repeat("not-a-date", rowCount).Select(value => new[] { value }).ToArray();
-        var reader = new TestRecordReader(rows, []);
-        var writer = new TestRecordWriter(null, (record) => writtenRecords.Add([.. record]));
+        List<string[]> writtenRecords = [];
+        string[][] rows = [.. Enumerable.Repeat("not-a-date", rowCount).Select(value => new[] { value })];
+        TestRecordReader reader = new(rows, []);
+        TestRecordWriter writer = new(null, (record) => writtenRecords.Add([.. record]));
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _dateColumnWithFormat, default);
 
         // Assert — all rows are still written; only the reported detail is capped.
         result.CellIssues.Should().HaveCount(Math.Min(rowCount, CellIssue.MaxReportedIssues));

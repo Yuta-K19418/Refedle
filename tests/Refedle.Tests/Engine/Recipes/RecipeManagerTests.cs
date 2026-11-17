@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Recipes;
@@ -26,9 +27,9 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_ThenLoadAsync_RoundTrip_ReturnsEquivalentRecipe()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
-        var recipe = new Recipe
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
+        Recipe recipe = new()
         {
             Name = "test",
             Description = "Test recipe",
@@ -37,8 +38,8 @@ public sealed class RecipeManagerTests : IDisposable
         };
 
         // Act
-        var saveResult = await manager.SaveAsync(recipe, filePath);
-        var loadResult = await manager.LoadAsync(filePath);
+        Result saveResult = await manager.SaveAsync(recipe, filePath);
+        Result<Recipe> loadResult = await manager.LoadAsync(filePath);
 
         // Assert
         saveResult.IsSuccess.Should().BeTrue();
@@ -47,7 +48,7 @@ public sealed class RecipeManagerTests : IDisposable
         loadResult.Value.Description.Should().Be("Test recipe");
         loadResult.Value.LastModified.Should().Be(new DateTimeOffset(2025, 6, 15, 10, 0, 0, TimeSpan.Zero));
         loadResult.Value.Actions.Should().HaveCount(1);
-        var action = loadResult.Value.Actions[0].Should().BeOfType<RenameColumnAction>().Subject;
+        RenameColumnAction action = loadResult.Value.Actions[0].Should().BeOfType<RenameColumnAction>().Subject;
         action.OldName.Should().Be("old");
         action.NewName.Should().Be("new");
     }
@@ -56,12 +57,12 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_CreatesFileAtSpecifiedPath()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
-        var result = await manager.SaveAsync(recipe, filePath);
+        Result result = await manager.SaveAsync(recipe, filePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -72,12 +73,12 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_WritesFileWithoutUtf8Bom()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
-        var result = await manager.SaveAsync(recipe, filePath);
+        Result result = await manager.SaveAsync(recipe, filePath);
 
         // Assert — check the BOM bytes literally so the test does not depend on the input-side utility.
         result.IsSuccess.Should().BeTrue();
@@ -89,14 +90,14 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_OverwritesExistingFile()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
         await File.WriteAllTextAsync(filePath, "existing content");
-        var recipe = new Recipe { Name = "overwritten", Actions = [] };
+        Recipe recipe = new() { Name = "overwritten", Actions = [] };
 
         // Act
-        var saveResult = await manager.SaveAsync(recipe, filePath);
-        var loadResult = await manager.LoadAsync(filePath);
+        Result saveResult = await manager.SaveAsync(recipe, filePath);
+        Result<Recipe> loadResult = await manager.LoadAsync(filePath);
 
         // Assert
         saveResult.IsSuccess.Should().BeTrue();
@@ -108,13 +109,13 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_WritesUtf8WithoutBom()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
         await manager.SaveAsync(recipe, filePath);
-        var bytes = await File.ReadAllBytesAsync(filePath);
+        byte[] bytes = await File.ReadAllBytesAsync(filePath);
 
         // Assert
         // UTF-8 BOM starts with 0xEF 0xBB 0xBF; absence of 0xEF confirms no BOM is written
@@ -125,11 +126,11 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_NonExistentFile_ReturnsFailure()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "nonexistent.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "nonexistent.yaml");
 
         // Act
-        var result = await manager.LoadAsync(filePath);
+        Result<Recipe> result = await manager.LoadAsync(filePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -140,12 +141,12 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_EmptyFile_ReturnsFailure()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "empty.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "empty.yaml");
         await File.WriteAllTextAsync(filePath, string.Empty);
 
         // Act
-        var result = await manager.LoadAsync(filePath);
+        Result<Recipe> result = await manager.LoadAsync(filePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -155,13 +156,13 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_InvalidYaml_ReturnsFailure()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "invalid.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "invalid.yaml");
         // A line with no ': ' separator produces a "Malformed root-level line" parse error
         await File.WriteAllTextAsync(filePath, "not_valid_yaml_no_colon_separator");
 
         // Act
-        var result = await manager.LoadAsync(filePath);
+        Result<Recipe> result = await manager.LoadAsync(filePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -171,12 +172,12 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_InvalidDirectoryPath_ReturnsFailure()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "nonexistent_subdir", "recipe.yaml");
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "nonexistent_subdir", "recipe.yaml");
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
-        var result = await manager.SaveAsync(recipe, filePath);
+        Result result = await manager.SaveAsync(recipe, filePath);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -186,11 +187,11 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_NullRecipe_ThrowsArgumentNullException()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
 
         // Act
-        var act = async () => await manager.SaveAsync(null!, filePath);
+        Func<Task<Result>> act = async () => await manager.SaveAsync(null!, filePath);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -200,11 +201,11 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_NullFilePath_ThrowsArgumentNullException()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
-        var act = async () => await manager.SaveAsync(recipe, null!);
+        Func<Task<Result>> act = async () => await manager.SaveAsync(recipe, null!);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -214,11 +215,11 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_WhitespaceFilePath_ThrowsArgumentException()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var recipe = new Recipe { Name = "test", Actions = [] };
+        RecipeManager manager = new();
+        Recipe recipe = new() { Name = "test", Actions = [] };
 
         // Act
-        var act = async () => await manager.SaveAsync(recipe, "   ");
+        Func<Task<Result>> act = async () => await manager.SaveAsync(recipe, "   ");
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>();
@@ -228,10 +229,10 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_NullFilePath_ThrowsArgumentNullException()
     {
         // Arrange
-        var manager = new RecipeManager();
+        RecipeManager manager = new();
 
         // Act
-        var act = async () => await manager.LoadAsync(null!);
+        Func<Task<Result<Recipe>>> act = async () => await manager.LoadAsync(null!);
 
         // Assert
         await act.Should().ThrowAsync<ArgumentNullException>();
@@ -241,10 +242,10 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_WhitespaceFilePath_ThrowsArgumentException()
     {
         // Arrange
-        var manager = new RecipeManager();
+        RecipeManager manager = new();
 
         // Act
-        var act = async () => await manager.LoadAsync("   ");
+        Func<Task<Result<Recipe>>> act = async () => await manager.LoadAsync("   ");
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>();
@@ -254,14 +255,14 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task SaveAsync_CancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
-        var recipe = new Recipe { Name = "test", Actions = [] };
-        using var cts = new CancellationTokenSource();
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
+        Recipe recipe = new() { Name = "test", Actions = [] };
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await manager.SaveAsync(recipe, filePath, cts.Token);
+        Func<Task<Result>> act = async () => await manager.SaveAsync(recipe, filePath, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -271,14 +272,14 @@ public sealed class RecipeManagerTests : IDisposable
     public async Task LoadAsync_CancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var manager = new RecipeManager();
-        var filePath = Path.Combine(_testDir, "recipe.yaml");
+        RecipeManager manager = new();
+        string filePath = Path.Combine(_testDir, "recipe.yaml");
         await File.WriteAllTextAsync(filePath, "name: \"test\"\nactions: []");
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await manager.LoadAsync(filePath, cts.Token);
+        Func<Task<Result<Recipe>>> act = async () => await manager.LoadAsync(filePath, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();

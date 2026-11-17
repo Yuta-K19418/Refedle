@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using AwesomeAssertions;
 using Refedle.App.Tui;
@@ -6,6 +7,7 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.Filtering;
 using Refedle.Engine.IO;
+using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonArray;
 using Refedle.Engine.IO.JsonObject;
@@ -13,6 +15,7 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
+using Terminal.Gui.App;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
@@ -26,7 +29,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         if (!_disposed)
         {
-            foreach (var file in _tempFiles)
+            foreach (string file in _tempFiles)
             {
                 if (File.Exists(file))
                 {
@@ -40,7 +43,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
     private string CreateTempFile(string extension, string content)
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{extension}");
+        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{extension}");
         File.WriteAllText(filePath, content);
         _tempFiles.Add(filePath);
         return filePath;
@@ -50,21 +53,21 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithNoFilePath_UsesDefaultHints()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().BeEquivalentTo(
@@ -76,23 +79,23 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithCsvFilePath_UsesDefaultHints()
     {
         // Arrange
-        var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().BeEquivalentTo(
@@ -104,23 +107,23 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonLinesPath_IncludesToggleHint()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().Contain("t:Tree/Table");
@@ -130,23 +133,23 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonArrayFilePath_IncludesToggleHint()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().Contain("t:Tree/Table");
@@ -156,17 +159,17 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithMorphTableView_IncludesMenuHint()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
@@ -177,9 +180,9 @@ public sealed partial class ViewManagerTests : IDisposable
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().Contain("x:Menu");
@@ -189,24 +192,24 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithFocusedTableMode_IncludesBackHint()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        var drillDown = new DrillDownState([new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        DrillDownState drillDown = new([new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
         currentStatusBar.SubViews.OfType<Shortcut>().Select(s => s.HelpText).Should().Contain("bs:Back");
     }
@@ -215,14 +218,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenToggleFails_ShowsError()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var indexer = new MockRowIndexer("test.jsonl");
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        MockRowIndexer indexer = new("test.jsonl");
+        using AppState state = new();
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         await viewManager.ToggleJsonLinesModeAsync();
@@ -236,21 +239,21 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenModeBecomesTree_SwitchesToTreeView()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Setup a valid table state
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        var indexer = new MockRowIndexer(filePath);
+        MockRowIndexer indexer = new(filePath);
         state.BeginIndexedTreeLoad(indexer);
         state.CompleteJsonLinesSchemaScan(schema);
 
@@ -266,22 +269,22 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenModeBecomesTable_SwitchesToTableView()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.EnterJsonLinesTree();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Setup a valid tree state
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        var indexer = new MockRowIndexer(filePath);
+        MockRowIndexer indexer = new(filePath);
         state.BeginIndexedTreeLoad(indexer);
         state.ApplyRefinedSchema(schema);
 
@@ -297,14 +300,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonArrayModeAsync_WhenLive_DoesNotThrow()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
-        var task = viewManager.ToggleJsonArrayModeAsync();
+        Task task = viewManager.ToggleJsonArrayModeAsync();
 
         // Assert
         await task;
@@ -315,15 +318,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonArrayModeAsync_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.Dispose();
 
         // Act
-        var act = () => viewManager.ToggleJsonArrayModeAsync();
+        Func<Task> act = () => viewManager.ToggleJsonArrayModeAsync();
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();
@@ -333,14 +336,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_WithValidIndexer_SetsCurrentView()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var indexer = new RowIndexer(filePath);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
 
         // Act
@@ -354,25 +357,25 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_WithValidIndexer_DoesNotShowTotalCountBeforeIndexCompletion()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.EnterJsonArrayTree();
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var indexer = new RowIndexer(filePath);
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        RowIndexer indexer = new(filePath);
 
         // Act — do NOT call BuildIndex, so IsIndexingCompleted stays false
         viewManager.SwitchToJsonArrayTree(indexer);
 
         // Assert — item count is not shown until BuildIndexCompleted fires
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().NotContainMatch("*items*");
@@ -383,18 +386,18 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithNoParam_RemovesExistingItemCountLabel()
     {
         // Arrange
-        var filePath = CreateTempFile(".csv", "col1\nval1");
-        using var app = TestAppFactory.Create();
-        var indexer = new MockRowIndexer("test.csv", 5000);
-        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        string filePath = CreateTempFile(".csv", "col1\nval1");
+        using IApplication app = TestAppFactory.Create();
+        MockRowIndexer indexer = new("test.csv", 5000);
+        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.CompleteCsvLoad(indexer, schema);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.RefreshStatusBarHints();
         window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
 
@@ -410,18 +413,18 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithCompletedIndexer_ShowsItemCountLabel()
     {
         // Arrange
-        var filePath = CreateTempFile(".csv", "col1\nval1");
-        using var app = TestAppFactory.Create();
-        var indexer = new MockRowIndexer("test.csv", 5000);
-        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        string filePath = CreateTempFile(".csv", "col1\nval1");
+        using IApplication app = TestAppFactory.Create();
+        MockRowIndexer indexer = new("test.csv", 5000);
+        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.CompleteCsvLoad(indexer, schema);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshStatusBarHints();
@@ -434,18 +437,18 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithUpdatedIndexer_ReplacesCountOnSubsequentCall()
     {
         // Arrange
-        var filePath = CreateTempFile(".csv", "col1\nval1");
-        using var app = TestAppFactory.Create();
-        var indexer = new MockRowIndexer("test.csv", 1000);
-        var schema = new TableSchema { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        string filePath = CreateTempFile(".csv", "col1\nval1");
+        using IApplication app = TestAppFactory.Create();
+        MockRowIndexer indexer = new("test.csv", 1000);
+        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.CompleteCsvLoad(indexer, schema);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act — first call
         viewManager.RefreshStatusBarHints();
@@ -454,7 +457,7 @@ public sealed partial class ViewManagerTests : IDisposable
         window.SubViews.OfType<Label>().First(l => l.Text == "1000 items").Text.Should().Be("1000 items");
 
         // Act — replace indexer with one that has a different row count
-        var reloadedIndexer = new MockRowIndexer("test.csv", 5000);
+        MockRowIndexer reloadedIndexer = new("test.csv", 5000);
         state.CompleteCsvLoad(reloadedIndexer, schema);
         viewManager.RefreshStatusBarHints();
 
@@ -467,15 +470,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         IRowIndexer? nullIndexer = null;
 
         // Act
-        var act = () => viewManager.SwitchToJsonArrayTree(nullIndexer!);
+        Action act = () => viewManager.SwitchToJsonArrayTree(nullIndexer!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -485,15 +488,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.Dispose();
 
         // Act
-        var act = () => viewManager.SwitchToJsonArrayTree(new MockRowIndexer("test.json"));
+        Action act = () => viewManager.SwitchToJsonArrayTree(new MockRowIndexer("test.json"));
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -503,12 +506,12 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonObjectTree_WithValidEntries_SetsCurrentView()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile("test.json");
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         IReadOnlyList<JsonObjectEntry> entries =
         [
             new JsonObjectEntry("id", System.Text.Encoding.UTF8.GetBytes("1")),
@@ -525,15 +528,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonObjectTree_WithNullEntries_ThrowsArgumentNullException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         IReadOnlyList<JsonObjectEntry>? nullEntries = null;
 
         // Act
-        var act = () => viewManager.SwitchToJsonObjectTree(nullEntries!);
+        Action act = () => viewManager.SwitchToJsonObjectTree(nullEntries!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -543,16 +546,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonObjectTree_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.Dispose();
         IReadOnlyList<JsonObjectEntry> entries = [];
 
         // Act
-        var act = () => viewManager.SwitchToJsonObjectTree(entries);
+        Action act = () => viewManager.SwitchToJsonObjectTree(entries);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -562,15 +565,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonObjectFilePath_DoesNotIncludeToggleHint()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "{\"id\":1}");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".json", "{\"id\":1}");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        using var statusBar = new StatusBar();
+        using Window window = new();
+        using StatusBar statusBar = new();
         window.Add(statusBar);
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         IReadOnlyList<JsonObjectEntry> entries =
         [
             new JsonObjectEntry("id", System.Text.Encoding.UTF8.GetBytes("1")),
@@ -582,9 +585,9 @@ public sealed partial class ViewManagerTests : IDisposable
         viewManager.RefreshStatusBarHints();
 
         // Assert
-        var currentStatusBar = viewManager.GetCurrentStatusBar();
+        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
         currentStatusBar.Should().NotBeNull();
-        var hints = Enumerable.Select(
+        IEnumerable<string> hints = Enumerable.Select(
             Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
             s => s.HelpText);
         hints.Should().NotContainMatch("*Tree/Table*");
@@ -595,15 +598,15 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — real file + matching KeyPath; ModeController is sealed and can't be mocked, so
         // success is driven by an actual scan over an actual file.
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -621,15 +624,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_WhenScanFails_ShowsErrorPlaceholder()
     {
         // Arrange — real file + non-matching KeyPath, so the sealed ModeController's scan fails.
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -647,18 +650,18 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — inject a deferred-capture uiThreadInvoke so state changes only happen once the
         // captured callback runs, mirroring how a real TUI posts work to the UI thread.
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         List<Action> capturedCallbacks = [];
-        using var viewManager = new ViewManager(
+        using ViewManager viewManager = new(
             window, state, modeController, new FilterIndexingRunner(), cb => capturedCallbacks.Add(cb));
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -684,19 +687,19 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — a success scan is required to reach SwitchToFocusedTable's dispose guard;
         // dispose before invoking the captured callback to simulate the race.
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         List<Action> capturedCallbacks = [];
         // Not 'using' — disposed manually below to simulate the race between scan completion and dispatch.
-        var viewManager = new ViewManager(
+        ViewManager viewManager = new(
             window, state, modeController, new FilterIndexingRunner(), cb => capturedCallbacks.Add(cb));
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -707,7 +710,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert — the fail-fast guard throws before any state mutation.
         capturedCallbacks.Should().ContainSingle();
-        var act = () => capturedCallbacks[0].Invoke();
+        Action act = () => capturedCallbacks[0].Invoke();
         act.Should().Throw<ObjectDisposedException>();
         state.GetDrillDownOrNull().Should().BeNull();
         state.CurrentMode.Should().Be(ViewMode.FileSelection);
@@ -717,15 +720,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into CsvTable
-        var filePath = CreateTempFile(".csv", "col1\nvalue1\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".csv", "col1\nvalue1\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var schema = new TableSchema
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.Csv,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
@@ -743,22 +746,22 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenDisplayedRowsHaveMismatchedColumnCount_ShowsErrorViewOnceAfterDraw()
     {
         // Arrange
-        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1,val2\nval3\nval4,val5\n"));
-        var queuedBeforeRead = fixture.Queued.Count;
-        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1,val2\nval3\nval4,val5\n"));
+        int queuedBeforeRead = fixture.Queued.Count;
+        CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
 
         // Act - drawing reads cells of the ragged window; the error must not swap views mid-draw
         _ = csvView.Table[0, 0];
         _ = csvView.Table[1, 1];
-        var viewDuringDraw = fixture.ViewManager.GetCurrentView();
-        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        Terminal.Gui.ViewBase.View? viewDuringDraw = fixture.ViewManager.GetCurrentView();
+        Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
         callback();
 
         // Assert
         viewDuringDraw.Should().BeSameAs(csvView);
         fixture.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        var errorView = fixture.ViewManager.GetCurrentView();
+        Terminal.Gui.ViewBase.View? errorView = fixture.ViewManager.GetCurrentView();
         errorView.Should().NotBeNull();
         errorView.Text.Should().Contain("Error reading CSV");
     }
@@ -767,12 +770,12 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenModeChangedBeforeQueuedErrorRuns_KeepsCurrentView()
     {
         // Arrange
-        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
-        var queuedBeforeRead = fixture.Queued.Count;
-        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        int queuedBeforeRead = fixture.Queued.Count;
+        CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
         _ = csvView.Table[0, 0];
-        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
         fixture.State.EnterPlaceholderMode();
 
         // Act
@@ -786,14 +789,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenViewReplacedByAnotherCsvViewBeforeQueuedErrorRuns_KeepsNewView()
     {
         // Arrange
-        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
-        var queuedBeforeRead = fixture.Queued.Count;
-        var oldView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        int queuedBeforeRead = fixture.Queued.Count;
+        CsvTableView oldView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         oldView.Table.Should().NotBeNull();
         _ = oldView.Table[0, 0];
-        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
         fixture.ViewManager.SwitchToCsvTable(fixture.Indexer, fixture.Schema);
-        var newView = fixture.ViewManager.GetCurrentView();
+        Terminal.Gui.ViewBase.View? newView = fixture.ViewManager.GetCurrentView();
 
         // Act
         callback();
@@ -808,13 +811,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenNewFileSessionStartsBeforeQueuedErrorRuns_KeepsCurrentSession()
     {
         // Arrange - the old view is still current while the next file loads
-        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
-        var queuedBeforeRead = fixture.Queued.Count;
-        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        int queuedBeforeRead = fixture.Queued.Count;
+        CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
         _ = csvView.Table[0, 0];
-        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
-        var nextFilePath = CreateTempFile(".csv", "col1,col2\nval1,val2\n");
+        Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        string nextFilePath = CreateTempFile(".csv", "col1,col2\nval1,val2\n");
         fixture.State.StartNewFile(nextFilePath);
 
         // Act
@@ -830,16 +833,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenViewManagerDisposedBeforeQueuedErrorRuns_DoesNothing()
     {
         // Arrange
-        using var fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
-        var queuedBeforeRead = fixture.Queued.Count;
-        var csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        int queuedBeforeRead = fixture.Queued.Count;
+        CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
         _ = csvView.Table[0, 0];
-        var callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
+        Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
         fixture.ViewManager.Dispose();
 
         // Act
-        var act = () => callback();
+        Action act = () => callback();
 
         // Assert
         act.Should().NotThrow();
@@ -850,15 +853,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into JsonLinesTable
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var schema = new TableSchema
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
@@ -876,16 +879,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithFilterAction_StartsFilterScanWithIndexerAndStateToken()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.AddMorphAction(FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "value").Value);
-        using var window = new Window();
-        var runner = new CapturingFilterScanRunner();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, runner, action => action());
-        var schema = new TableSchema
+        using Window window = new();
+        CapturingFilterScanRunner runner = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, runner, action => action());
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
@@ -895,7 +898,7 @@ public sealed partial class ViewManagerTests : IDisposable
         viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
 
         // Assert
-        var call = runner.Calls.Should().ContainSingle().Subject;
+        CapturingFilterScanRunner.Call call = runner.Calls.Should().ContainSingle().Subject;
         call.Indexer.Should().BeOfType<Refedle.Engine.IO.JsonLines.FilterRowIndexer>();
         call.Token.Should().Be(state.Cts.Token);
     }
@@ -904,15 +907,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithoutActions_DoesNotStartFilterScan()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var runner = new CapturingFilterScanRunner();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, runner, action => action());
-        var schema = new TableSchema
+        using Window window = new();
+        CapturingFilterScanRunner runner = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, runner, action => action());
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
@@ -929,10 +932,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithActionsApplied_KeepsViewAndDisplaysNewColumnValue()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             "col1");
-        var oldTable = harness.View.Table;
+        ITableSource? oldTable = harness.View.Table;
 
         // Act
         harness.Refine("col1", "col2");
@@ -949,11 +952,11 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SchemaRefined_WhileFilterScanPaused_ShowsFilteredRowsAfterResumeWithoutSecondScan()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "a").Value],
             "col1");
-        var oldTable = harness.View.Table;
-        var scan = harness.Runner.Calls.Should().ContainSingle().Subject;
+        ITableSource? oldTable = harness.View.Table;
+        CapturingFilterScanRunner.Call scan = harness.Runner.Calls.Should().ContainSingle().Subject;
 
         // Act
         harness.Refine("col1", "col2");
@@ -972,11 +975,11 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithActionsApplied_KeepsSelectedCell()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             "col1",
             "col2");
-        var oldTable = harness.View.Table;
+        ITableSource? oldTable = harness.View.Table;
         harness.View.SetSelection(1, 0, false);
 
         // Act
@@ -992,14 +995,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithScrolledView_KeepsRowOffsetAndSelection()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             10,
             "col1",
             "col2");
         harness.View.SetSelection(1, 3, false);
         harness.View.RowOffset = 2;
-        var oldTable = harness.View.Table;
+        ITableSource? oldTable = harness.View.Table;
         harness.View.RowOffset.Should().Be(2);
 
         // Act
@@ -1015,20 +1018,20 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithLaterPageSelected_KeepsPageAndSelection()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             1_500_000_000,
             "col1",
             "col2");
-        var pageSize = PagedTableSource.DefaultPageSize;
+        int pageSize = PagedTableSource.DefaultPageSize;
         harness.View.SetSelection(1, pageSize + 5, false);
-        var pageBefore = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject.CurrentPageNumber;
+        long pageBefore = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject.CurrentPageNumber;
 
         // Act
         harness.Refine("col1", "col2", "col3");
 
         // Assert
-        var paged = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject;
+        PagedTableSource paged = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject;
         pageBefore.Should().Be(2);
         paged.CurrentPageNumber.Should().Be(pageBefore);
         harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, pageSize + 5));
@@ -1038,15 +1041,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_AfterViewReplaced_LeavesCurrentViewUntouched()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             "col1");
-        var staleCallback = harness.State.OnSchemaRefined.Should().BeOfType<Action<TableSchema>>().Subject;
+        Action<TableSchema> staleCallback = harness.State.OnSchemaRefined.Should().BeOfType<Action<TableSchema>>().Subject;
         harness.ViewManager.SwitchToFileSelection();
-        var currentView = harness.ViewManager.GetCurrentView();
+        Terminal.Gui.ViewBase.View? currentView = harness.ViewManager.GetCurrentView();
 
         // Act
-        var exception = Record.Exception(() => staleCallback(CreateJsonLinesSchema("col1", "col2")));
+        Exception exception = Record.Exception(() => staleCallback(CreateJsonLinesSchema("col1", "col2")));
 
         // Assert
         exception.Should().BeNull();
@@ -1058,11 +1061,11 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithEmptyTable_SwapsTableWithoutSelection()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness(
+        using SchemaRefinementHarness harness = new(
             [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
             0,
             "col1");
-        var oldTable = harness.View.Table;
+        ITableSource? oldTable = harness.View.Table;
 
         // Act
         harness.Refine("col1", "col2");
@@ -1077,7 +1080,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SchemaRefined_WithoutActions_ExposesNewColumnOnSameView()
     {
         // Arrange
-        using var harness = new SchemaRefinementHarness([], "col1");
+        using SchemaRefinementHarness harness = new([], "col1");
 
         // Act
         harness.Refine("col1", "col2");
@@ -1098,9 +1101,9 @@ public sealed partial class ViewManagerTests : IDisposable
 
     private static LazyTransformer GetLazyTransformer(ViewManager viewManager)
     {
-        var view = viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
-        var paged = view.Table.Should().BeOfType<PagedTableSource>().Subject;
-        var stabilizing = paged.Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Subject;
+        JsonLinesTableView view = viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
+        PagedTableSource paged = view.Table.Should().BeOfType<PagedTableSource>().Subject;
+        ColumnWidthStabilizingTableSource stabilizing = paged.Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Subject;
         return stabilizing.Inner.Should().BeOfType<LazyTransformer>().Subject;
     }
 
@@ -1108,12 +1111,12 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToFileSelection_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into FileSelection
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.SetCurrentKeyPath([new KeyPathSegment("stale", KeyPathSegmentKind.Key)]);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.SwitchToFileSelection();
@@ -1127,13 +1130,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public void DrillDown_WithIndexSegmentInKeyPath_RendersLiteralIndexInBreadcrumb()
     {
         // Arrange — SingleDrillDownRequest (Phase 1) must not collapse array indices
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[{\"a\":1}]"),
             [
@@ -1153,15 +1156,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_WithIndexSegmentInKeyPath_RendersCollapsedIndexInBreadcrumb()
     {
         // Arrange — FullAggregationDrillDownRequest (Phase 2) collapses array indices to [*]
-        var filePath = CreateTempFile(".jsonl", "{\"list\":[{\"a\":1}]}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"list\":[{\"a\":1}]}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [
                 new KeyPathSegment("list", KeyPathSegmentKind.Key),
@@ -1180,8 +1183,8 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToFocusedTable_WithEmptyActionStack_SetsMorphCallbacksOnRawSource()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
@@ -1192,18 +1195,18 @@ public sealed partial class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.SwitchToFocusedTable(drillDown);
 
         // Assert — callbacks are wired even with no actions, so Morph works from the first DrillDown
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var decorated = view.Table.Should().BeOfType<PagedTableSource>().Which
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        ColumnWidthStabilizingTableSource decorated = view.Table.Should().BeOfType<PagedTableSource>().Which
             .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which;
         decorated.Inner.Should().BeOfType<FocusedTableSource>();
         view.IsRowIndexComplete.Should().BeNull();
@@ -1215,8 +1218,8 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshCurrentTableView_WithFocusedTableModeAndDrillDown_RendersThroughFocusedTableTransformer()
     {
         // Arrange — a pending action proves the re-render went through SwitchToFocusedTable's wrap path
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
@@ -1227,17 +1230,17 @@ public sealed partial class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "label" }]);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.RefreshCurrentTableView();
 
         // Assert
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which
             .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which.Inner.Should().BeOfType<FocusedTableTransformer>();
         view.Table.ColumnNames.Should().Contain("label (text)");
@@ -1245,20 +1248,18 @@ public sealed partial class ViewManagerTests : IDisposable
 
     private static DrillDownState CreateNumberedDrillDown(int rowCount)
     {
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
         };
-        var rows = Enumerable.Range(0, rowCount)
-            .Select(index => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"Alice{index}\"}}"), $"[{index}]"))
-            .ToArray();
+        FocusedTableRow[] rows = [.. Enumerable.Range(0, rowCount).Select(index => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"Alice{index}\"}}"), $"[{index}]"))];
         return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
     }
 
     private static async Task<Action> WaitForCallbackAsync(System.Collections.Concurrent.ConcurrentQueue<Action> captured)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
         Action? callback = null;
         while (!captured.TryDequeue(out callback) && DateTime.UtcNow < deadline)
         {
@@ -1270,7 +1271,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
     private static void ExecuteRemainingCallbacks(System.Collections.Concurrent.ConcurrentQueue<Action> captured)
     {
-        while (captured.TryDequeue(out var callback))
+        while (captured.TryDequeue(out Action? callback))
         {
             callback();
         }
@@ -1280,11 +1281,11 @@ public sealed partial class ViewManagerTests : IDisposable
         ViewManager viewManager,
         System.Collections.Concurrent.ConcurrentQueue<Action> captured)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
         while (viewManager.GetCurrentView() is not FocusedTableView && DateTime.UtcNow < deadline)
         {
-            var executedAny = false;
-            while (captured.TryDequeue(out var callback))
+            bool executedAny = false;
+            while (captured.TryDequeue(out Action? callback))
             {
                 callback();
                 executedAny = true;
@@ -1301,7 +1302,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
     private static void AssertAtFirstPageAndRow(FocusedTableView view)
     {
-        var paged = view.Table.Should().BeOfType<PagedTableSource>().Which;
+        PagedTableSource paged = view.Table.Should().BeOfType<PagedTableSource>().Which;
         paged.CurrentPageNumber.Should().Be(1);
         paged.WindowStart.Should().Be(0);
         view.Value.Should().NotBeNull().And.Subject.As<TableSelection>().SelectedCell.Y.Should().Be(0);
@@ -1315,18 +1316,16 @@ public sealed partial class ViewManagerTests : IDisposable
     /// </summary>
     private static DrillDownState CreateMixedDrillDown(int matchedInFirstBatch, int matchedInSecondBatch)
     {
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
         };
-        var names = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
+        IEnumerable<string> names = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
             .Concat(Enumerable.Range(0, 1000 - matchedInFirstBatch).Select(static i => $"Other{i}"))
             .Concat(Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}"))
             .Concat(Enumerable.Range(0, 250 - matchedInSecondBatch).Select(static i => $"Other{1000 + i}"));
-        var rows = names
-            .Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))
-            .ToArray();
+        FocusedTableRow[] rows = [.. names.Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
         return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
     }
 
@@ -1338,7 +1337,7 @@ public sealed partial class ViewManagerTests : IDisposable
         System.Collections.Concurrent.ConcurrentQueue<Action> captured,
         int expectedCount)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
         while (captured.Count < expectedCount && DateTime.UtcNow < deadline)
         {
             await Task.Delay(10);
@@ -1364,22 +1363,21 @@ public sealed partial class ViewManagerTests : IDisposable
         int totalBatches,
         int gateRowIndex = 1000)
     {
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
         };
-        var firstBatch = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
+        IEnumerable<string> firstBatch = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
             .Concat(Enumerable.Range(0, 1000 - matchedInFirstBatch).Select(static i => $"Other{i}"));
-        var secondBatch = Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}")
+        IEnumerable<string> secondBatch = Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}")
             .Concat(Enumerable.Range(0, 1000 - matchedInSecondBatch).Select(static i => $"Other{1000 + i}"));
-        var laterBatches = Enumerable.Range(2000, (totalBatches - 2) * 1000).Select(static i => $"Other{i}");
-        var rows = firstBatch
+        IEnumerable<string> laterBatches = Enumerable.Range(2000, (totalBatches - 2) * 1000).Select(static i => $"Other{i}");
+        FocusedTableRow[] rows = [.. firstBatch
             .Concat(secondBatch)
             .Concat(laterBatches)
-            .Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))
-            .ToArray();
-        var gated = new GatedDrillDownRows(rows, gateRowIndex);
+            .Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
+        GatedDrillDownRows gated = new(rows, gateRowIndex);
         return (new DrillDownState(gated, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []), gated);
     }
 
@@ -1391,16 +1389,14 @@ public sealed partial class ViewManagerTests : IDisposable
     /// </summary>
     private static DrillDownState CreateFaultingDrillDown(int matchedRows)
     {
-        var schema = new TableSchema
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
         };
-        var names = Enumerable.Range(0, matchedRows).Select(static i => $"Match{i}")
+        IEnumerable<string> names = Enumerable.Range(0, matchedRows).Select(static i => $"Match{i}")
             .Concat(Enumerable.Range(0, 1000 - matchedRows).Select(static i => $"Other{i}"));
-        var rows = names
-            .Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))
-            .ToArray();
+        FocusedTableRow[] rows = [.. names.Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
         return new DrillDownState(new FaultingDrillDownRows(rows, faultRowIndex: matchedRows), schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
     }
 
@@ -1417,7 +1413,7 @@ public sealed partial class ViewManagerTests : IDisposable
         System.Collections.Concurrent.ConcurrentQueue<Action> captured,
         Terminal.Gui.ViewBase.View root)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        DateTime deadline = DateTime.UtcNow.AddSeconds(10);
         while (DateTime.UtcNow < deadline)
         {
             ExecuteRemainingCallbacks(captured);
@@ -1438,29 +1434,29 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFilterAndFewMatches_ShowsLoadingViewThenTableOnCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ConcurrentQueue<Action> captured = new();
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
 
         // Act
         viewManager.SwitchToFocusedTable(drillDown);
 
         // Assert — one match is below the display threshold, so the loading view stays
         viewManager.GetCurrentView().Should().BeOfType<LoadingView>();
-        var onProgress = await WaitForCallbackAsync(captured);
+        Action onProgress = await WaitForCallbackAsync(captured);
         onProgress();
         viewManager.GetCurrentView().Should().BeOfType<LoadingView>();
 
-        var onCompleted = await WaitForCallbackAsync(captured);
+        Action onCompleted = await WaitForCallbackAsync(captured);
         onCompleted();
 
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(1);
         OverlayLabels(window).Should().BeEmpty();
     }
@@ -1469,15 +1465,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFilterMatchingManyRows_RevealsTableFromThresholdNotification()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ConcurrentQueue<Action> captured = new();
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
 
         // Act
         viewManager.SwitchToFocusedTable(drillDown);
@@ -1486,16 +1482,16 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — 500 matched rows exceed the threshold, so the reveal and the first tick
         // (queued in either order) both stage the table; only the completion stays pending
         await WaitForCallbacksAsync(captured, expectedCount: 3);
-        var onReveal = await WaitForCallbackAsync(captured);
+        Action onReveal = await WaitForCallbackAsync(captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(captured);
+        Action onFirstTick = await WaitForCallbackAsync(captured);
         onFirstTick();
 
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(500);
         OverlayLabels(window).Should().ContainSingle();
 
-        var onCompleted = await WaitForCallbackAsync(captured);
+        Action onCompleted = await WaitForCallbackAsync(captured);
         onCompleted();
         OverlayLabels(window).Should().BeEmpty();
     }
@@ -1504,10 +1500,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFilterAndCancelledToken_StaysOnLoadingViewWithoutCallbacks()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.State.Cts.Cancel();
 
@@ -1524,10 +1520,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFilterThenViewSwitch_StaleCallbacksDoNotRestoreFocusedTable()
     {
         // Arrange — one match: its tick and completion queue up while the loading view stays
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -1545,23 +1541,23 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task HandleMorphAction_WithFilterAfterMovingAwayFromFirstRow_ShowsTableAtFirstPageAndRow()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var drillDown = CreateNumberedDrillDown(rowCount: 12);
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12);
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ConcurrentQueue<Action> captured = new();
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
         viewManager.SwitchToFocusedTable(drillDown);
         captured.Clear();
-        var viewBeforeFilter = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView viewBeforeFilter = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         viewBeforeFilter.SetSelection(0, 5, false);
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
 
         // Act
         viewBeforeFilter.OnMorphAction?.Invoke(filter);
-        var viewAfterFilter = await WaitForFocusedTableViewAsync(viewManager, captured);
+        FocusedTableView viewAfterFilter = await WaitForFocusedTableViewAsync(viewManager, captured);
         ExecuteRemainingCallbacks(captured);
 
         // Assert
@@ -1573,18 +1569,18 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task RefreshCurrentTableView_AfterClearingFilterFromMovedSelection_ReturnsToFirstPageAndRow()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var baseDrillDown = CreateNumberedDrillDown(rowCount: 12);
-        var drillDown = baseDrillDown with { ActionStack = [filter] };
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState baseDrillDown = CreateNumberedDrillDown(rowCount: 12);
+        DrillDownState drillDown = baseDrillDown with { ActionStack = [filter] };
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ConcurrentQueue<Action> captured = new();
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), captured.Enqueue);
         viewManager.SwitchToFocusedTable(drillDown);
-        var viewBeforeClear = await WaitForFocusedTableViewAsync(viewManager, captured);
+        FocusedTableView viewBeforeClear = await WaitForFocusedTableViewAsync(viewManager, captured);
         ExecuteRemainingCallbacks(captured);
         viewBeforeClear.SetSelection(0, 5, false);
         state.ClearDrillDownActions();
@@ -1593,7 +1589,7 @@ public sealed partial class ViewManagerTests : IDisposable
         viewManager.RefreshCurrentTableView();
 
         // Assert
-        var viewAfterClear = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView viewAfterClear = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         viewAfterClear.Should().NotBeSameAs(viewBeforeClear);
         AssertAtFirstPageAndRow(viewAfterClear);
     }
@@ -1602,12 +1598,12 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFewerMatchesThanThresholdAndQueuedCallbacks_StaysOnLoadingViewUntilCompletionCallback()
     {
         // Arrange — 199 matches; the worker finishes before any queued callback runs (not a mid-scan test)
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateMixedDrillDown(matchedInFirstBatch: 199, matchedInSecondBatch: 0)
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 199, matchedInSecondBatch: 0)
             with
         { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — two batches queue two ticks (first + final) plus the completion
@@ -1615,17 +1611,17 @@ public sealed partial class ViewManagerTests : IDisposable
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 3);
 
         // Assert — neither tick reaches the display threshold, so the loading view stays
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
         harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>();
-        var onFinalTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFinalTick = await WaitForCallbackAsync(harness.Captured);
         onFinalTick();
         harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>();
 
-        var onCompleted = await WaitForCallbackAsync(harness.Captured);
+        Action onCompleted = await WaitForCallbackAsync(harness.Captured);
         onCompleted();
 
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(199);
         OverlayLabels(harness.Window).Should().BeEmpty();
     }
@@ -1634,37 +1630,37 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithThresholdMatchesAndQueuedCallbacks_RevealsTableFromThresholdAndGrowsRows()
     {
         // Arrange — 200 + 50 matches; callbacks are applied after the worker finished (not a mid-scan test)
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
             with
         { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the threshold reveal and both ticks queue (in any mutual order) before the completion
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 4);
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var onFinalTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFinalTick = await WaitForCallbackAsync(harness.Captured);
         onFinalTick();
 
         // Assert — executing every pre-completion callback leaves the table staged with the
         // overlay attached; the live matched count by deferred-execution time is the final 250
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
         SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
-        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        List<Terminal.Gui.ViewBase.View> drawOrder = [.. (view.SuperView?.SubViews ?? [])];
         drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
-        var transformer = GetFocusedTableTransformer(view);
+        FocusedTableTransformer transformer = GetFocusedTableTransformer(view);
 
-        var onCompleted = await WaitForCallbackAsync(harness.Captured);
+        Action onCompleted = await WaitForCallbackAsync(harness.Captured);
         onCompleted();
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
         OverlayLabels(harness.Window).Should().BeEmpty();
@@ -1677,35 +1673,35 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithMoreMatchesThanThresholdAndQueuedCallbacks_RevealsTableFromQueuedCallbacks()
     {
         // Arrange — 201 matches; callbacks are applied after the worker finished (not a mid-scan test)
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateMixedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0)
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0)
             with
         { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the threshold reveal and both ticks queue (in any mutual order) before the completion
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 4);
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var onFinalTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFinalTick = await WaitForCallbackAsync(harness.Captured);
         onFinalTick();
 
         // Assert — executing every pre-completion callback reveals the table
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
         SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
-        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        List<Terminal.Gui.ViewBase.View> drawOrder = [.. (view.SuperView?.SubViews ?? [])];
         drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
-        var onCompleted = await WaitForCallbackAsync(harness.Captured);
+        Action onCompleted = await WaitForCallbackAsync(harness.Captured);
         onCompleted();
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
         OverlayLabels(harness.Window).Should().BeEmpty();
@@ -1716,17 +1712,17 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — two batches: one threshold reveal plus two ticks plus one completion,
         // all queued by the worker
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
             with
         { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        var loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
+        LoadingView loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 4);
 
         // Assert — nothing the worker fired touches the view state before the UI thread invokes it
@@ -1736,7 +1732,7 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
 
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(250);
     }
 
@@ -1744,19 +1740,19 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithFewerMatchesThanThresholdWhileScanRunning_StaysOnLoadingView()
     {
         // Arrange — 199 matches in the first batch; the worker blocks on the second batch's first row
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 199, matchedInSecondBatch: 0, totalBatches: 2);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 199, matchedInSecondBatch: 0, totalBatches: 2);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the first tick is queued while the worker is provably mid-scan
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
 
         // Assert — 199 matches stay below the display threshold while the scan runs
@@ -1765,7 +1761,7 @@ public sealed partial class ViewManagerTests : IDisposable
         rows.ReleaseGate();
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(199);
     }
 
@@ -1774,13 +1770,13 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — 200 matches in the first batch, 50 more in the second; the worker blocks
         // on the second batch's first row
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50, totalBatches: 2);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50, totalBatches: 2);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — once the worker is blocked, exactly two batch-1 notifications are queued:
@@ -1791,12 +1787,12 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
 
         // Assert — the mid-scan reveal shows exactly the threshold rows with the overlay attached
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
         SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
-        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        List<Terminal.Gui.ViewBase.View> drawOrder = [.. (view.SuperView?.SubViews ?? [])];
         drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
@@ -1818,13 +1814,13 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — 201 matches in the first batch, none in the second; the worker blocks on
         // the second batch's first row
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0, totalBatches: 2);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0, totalBatches: 2);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — once the worker is blocked, exactly two batch-1 notifications are queued:
@@ -1835,12 +1831,12 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
 
         // Assert — the mid-scan reveal shows the 201 matched rows with the overlay attached
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(201);
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
         SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
-        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        List<Terminal.Gui.ViewBase.View> drawOrder = [.. (view.SuperView?.SubViews ?? [])];
         drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
@@ -1855,13 +1851,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WhileLoading_HostsOverlayOnContentContainerNotLoadingView()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 50, matchedInSecondBatch: 0, totalBatches: 2);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 50, matchedInSecondBatch: 0, totalBatches: 2);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the scan is blocked below the reveal threshold, so the loading view stays current
@@ -1869,8 +1865,8 @@ public sealed partial class ViewManagerTests : IDisposable
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
 
         // Assert
-        var loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        LoadingView loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(loadingView.SuperView);
         SelfAndDescendants(loadingView).Where(IsProgressOverlayLabel).Should().BeEmpty();
     }
@@ -1879,13 +1875,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WhenContentReplacedAfterMidScanReveal_RemovesOverlayBeforeStaleCallbacksRun()
     {
         // Arrange — the table is revealed mid-scan while the worker is blocked
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0, totalBatches: 2);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 201, matchedInSecondBatch: 0, totalBatches: 2);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -1907,13 +1903,13 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — 500 matches: the reveal, tick and completion queue up, none executed, so
         // the session is still current when the parent token is canceled
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        var loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
+        LoadingView loadingView = harness.ViewManager.GetCurrentView().Should().BeOfType<LoadingView>().Which;
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 3);
 
         // Act — canceling the parent token cancels the linked session token
@@ -1925,7 +1921,7 @@ public sealed partial class ViewManagerTests : IDisposable
         OverlayLabels(harness.Window).Should().ContainSingle();
         harness.Captured.Should().BeEmpty();
 
-        var disposeAfterParentCancel = () => harness.ViewManager.Dispose();
+        Action disposeAfterParentCancel = () => harness.ViewManager.Dispose();
         disposeAfterParentCancel.Should().NotThrow();
     }
 
@@ -1937,16 +1933,16 @@ public sealed partial class ViewManagerTests : IDisposable
         int expectedCallbacks)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateFaultingDrillDown(matchedRows) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateFaultingDrillDown(matchedRows) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the row read faults mid-batch; once the recorded task ends, the queued
         // callbacks are the reveal (when the threshold fired) and the failure, in that order
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        var assertScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertScan = () => harness.Runner.TaskAt(0);
         await assertScan.Should().ThrowAsync<InvalidOperationException>();
         await WaitForCallbacksAsync(harness.Captured, expectedCount: expectedCallbacks);
         ExecuteRemainingCallbacks(harness.Captured);
@@ -1954,11 +1950,11 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the failure retires the session and replaces the scan's views with the
         // error placeholder; no overlay survives, nothing stays queued, disposal stays safe
         harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        var placeholder = harness.ViewManager.GetCurrentView().Should().BeOfType<PlaceholderView>().Which;
+        PlaceholderView placeholder = harness.ViewManager.GetCurrentView().Should().BeOfType<PlaceholderView>().Which;
         placeholder.Text.Should().Contain("row read failed");
         OverlayLabels(harness.Window).Should().BeEmpty();
         harness.Captured.Should().BeEmpty();
-        var disposeAfterFailure = () => harness.ViewManager.Dispose();
+        Action disposeAfterFailure = () => harness.ViewManager.Dispose();
         disposeAfterFailure.Should().NotThrow();
     }
 
@@ -1966,27 +1962,27 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WhenScanFaultsAfterThreshold_DisposesRevealedTransformer()
     {
         // Arrange — 250 matches reveal the table before the row read faults
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateFaultingDrillDown(250) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateFaultingDrillDown(250) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — the reveal is enqueued before the fault's callback, so executing it first
         // stages the table; the failure callback then retires the session
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        var assertScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertScan = () => harness.Runner.TaskAt(0);
         await assertScan.Should().ThrowAsync<InvalidOperationException>();
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var transformer = GetFocusedTableTransformer(
+        FocusedTableTransformer transformer = GetFocusedTableTransformer(
             harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which);
         ExecuteRemainingCallbacks(harness.Captured);
 
         // Assert — the error placeholder is up and the session released the transformer
         harness.ViewManager.GetCurrentView().Should().BeOfType<PlaceholderView>();
-        var readDisposedTransformer = () => transformer[0, 1];
+        Func<object> readDisposedTransformer = () => transformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
         harness.Captured.Should().BeEmpty();
     }
@@ -1995,13 +1991,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithStaleFailureCallbackAfterReturn_KeepsRestoredTree()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateFaultingDrillDown(matchedRows: 50) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateFaultingDrillDown(matchedRows: 50) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.StartNewFile(filePath);
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
@@ -2023,14 +2019,14 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the gate sits on the row right after the 200th match, so the threshold
         // notification queues while no 1,000-row batch tick has fired yet
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(
             matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 2, gateRowIndex: 200);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act — while the worker is provably blocked, the threshold reveal is the only callback
@@ -2040,12 +2036,12 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
 
         // Assert — the table is revealed mid-scan, before any progress tick exists
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        var overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
+        Label overlayLabel = OverlayLabels(harness.Window).Should().ContainSingle().Subject;
         overlayLabel.SuperView.Should().BeSameAs(view.SuperView, "the overlay rides the content container, not the scrolling table");
         SelfAndDescendants(view).Where(IsProgressOverlayLabel).Should().BeEmpty();
-        var drawOrder = (view.SuperView?.SubViews ?? []).ToList();
+        List<Terminal.Gui.ViewBase.View> drawOrder = [.. (view.SuperView?.SubViews ?? [])];
         drawOrder.IndexOf(overlayLabel).Should().BeGreaterThan(drawOrder.IndexOf(view), "the table must not draw over the overlay");
         AssertAtFirstPageAndRow(view);
 
@@ -2060,10 +2056,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task RefreshCurrentTableView_WithClearedFilterAndQueuedScanCallbacks_IgnoresStaleCallbacks()
     {
         // Arrange — one match: its tick and completion queue up while the loading view stays
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2075,7 +2071,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the stale tick and completion leave the new unfiltered view untouched
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(12);
     }
 
@@ -2083,10 +2079,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task RefreshCurrentTableView_WithAppendedActionAndQueuedScanCallbacks_IgnoresStaleCallbacks()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2099,7 +2095,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the stale pair plus the new scan's pair end at the new transformer's view
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(1);
         view.Table.ColumnNames.Should().Contain("label (text)");
     }
@@ -2108,13 +2104,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WithQueuedScanCallbacks_IgnoresStaleCallbacks()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.StartNewFile(filePath);
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
@@ -2134,10 +2130,10 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task Dispose_WithQueuedScanCallbacks_IgnoresStaleCallbacksAndRepeatedDisposeIsSafe()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
@@ -2155,21 +2151,21 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task HandleMorphAction_WithFilterReplacementAfterScanFinished_IgnoresQueuedCompletionAndDisposesOldTransformer()
     {
         // Arrange — 500 matches: the first tick reveals the table, the completion stays queued
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2); // threshold reveal + first tick
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 1); // stale completion queued
-        var replacement = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
+        FilterAction replacement = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Alice3").Value;
 
         // Act — replacing the filter cancels the old scan and starts a new one
         stagedView.OnMorphAction?.Invoke(replacement);
@@ -2178,10 +2174,10 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the old session is torn down and its stale completion is inert
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
 
-        var newView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView newView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         newView.Should().NotBeSameAs(stagedView);
         newView.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(1);
     }
@@ -2190,19 +2186,19 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task HandleMorphAction_WithTransformActionAfterScanFinished_IgnoresQueuedCompletionAndDisposesOldTransformer()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2); // threshold reveal + first tick
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 1);
 
         // Act — a transform action rebuilds the transformer and restarts the scan; the new
@@ -2213,10 +2209,10 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
 
-        var newView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView newView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         newView.Should().NotBeSameAs(stagedView);
         newView.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(500);
         newView.Table.ColumnNames.Should().Contain("label (text)");
@@ -2226,24 +2222,24 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_AfterScanFinishedWithStagedTable_IgnoresQueuedCompletionAndDisposesOldTransformer()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.StartNewFile(filePath);
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2); // threshold reveal + first tick
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 1);
 
         // Act
@@ -2253,7 +2249,7 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
         harness.ViewManager.GetCurrentView().Should().BeOfType<JsonArrayTreeView>();
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
     }
 
@@ -2261,19 +2257,19 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task Dispose_AfterScanFinishedWithStagedTable_IgnoresQueuedCompletionAndIsIdempotent()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
+        using IApplication app = TestAppFactory.Create();
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Alice").Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 500) with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2); // threshold reveal + first tick
-        var onReveal = await WaitForCallbackAsync(harness.Captured);
+        Action onReveal = await WaitForCallbackAsync(harness.Captured);
         onReveal();
-        var onFirstTick = await WaitForCallbackAsync(harness.Captured);
+        Action onFirstTick = await WaitForCallbackAsync(harness.Captured);
         onFirstTick();
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var transformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer transformer = GetFocusedTableTransformer(stagedView);
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 1);
 
         // Act
@@ -2283,7 +2279,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Assert — the session-owned transformer is disposed and stale callbacks stay inert
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var readDisposedTransformer = () => transformer[0, 1];
+        Func<object> readDisposedTransformer = () => transformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
     }
 
@@ -2292,13 +2288,13 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — three batches; the batch 1 notifications stay queued (loading view) and
         // the worker is blocked on the first row of batch 2
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -2313,14 +2309,14 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert — the recorded scan task ends by cancellation rather than completion, which
         // deterministically proves the worker stopped after batches 1–2 (never reading batch 3)
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
 
         // the stale notifications leave the new unfiltered view untouched
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         view.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(3000);
     }
 
@@ -2328,16 +2324,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WhileWorkerBlocked_StopsWorkerAfterInFlightBatch()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.StartNewFile(filePath);
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
@@ -2352,7 +2348,7 @@ public sealed partial class ViewManagerTests : IDisposable
         rows.ReleaseGate();
 
         // Assert — the recorded scan task ends by cancellation after batches 1–2 only
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
 
@@ -2366,13 +2362,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task Dispose_WhileWorkerBlocked_StopsWorkerAfterInFlightBatchAndIsIdempotent()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -2387,7 +2383,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert — the recorded scan task ends by cancellation after batches 1–2 only, and
         // the queued notifications stay inert
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
         ExecuteRemainingCallbacks(harness.Captured);
@@ -2399,13 +2395,13 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — three batches; the executed batch 1 notification staged the table with
         // exactly the threshold rows, and the worker is blocked on the first row of batch 2
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -2413,22 +2409,22 @@ public sealed partial class ViewManagerTests : IDisposable
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
         stagedView.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
-        var replacement = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Match0").Value;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
+        FilterAction replacement = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "Match0").Value;
 
         // Act — replacing the filter cancels the blocked old worker and starts a new scan;
         // the first recorded task is the old worker's, and it must end by cancellation
         stagedView.OnMorphAction?.Invoke(replacement);
         rows.ReleaseGate();
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
-        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
+        FocusedTableView newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
 
         // Assert — the old session is torn down and the replacement scan produced the new view
         harness.Captured.Should().BeEmpty();
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
         newView.Should().NotBeSameAs(stagedView);
         newView.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(1);
@@ -2438,13 +2434,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task HandleMorphAction_WithTransformActionWhileWorkerBlocked_StopsOldWorkerAndDisposesOldTransformer()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -2452,20 +2448,20 @@ public sealed partial class ViewManagerTests : IDisposable
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
 
         // Act — a transform action cancels the blocked old worker and restarts the scan; the
         // first recorded task is the old worker's, and it must end by cancellation
         stagedView.OnMorphAction?.Invoke(new RenameColumnAction { OldName = "name", NewName = "label" });
         rows.ReleaseGate();
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
-        var newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
+        FocusedTableView newView = await WaitForCompletedFocusedTableViewAsync(harness.ViewManager, harness.Captured, harness.Window);
 
         // Assert — no queue-drain assertion here: the new scan also crosses the threshold, so
         // its reveal can legally be queued after the completion the helper waited for
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
         newView.Should().NotBeSameAs(stagedView);
         newView.Table.Should().BeOfType<PagedTableSource>().Which.Rows.Should().Be(200);
@@ -2476,16 +2472,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WhileWorkerBlockedOnStagedTable_StopsWorkerAndDisposesOldTransformer()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.StartNewFile(filePath);
         harness.State.BeginIndexedTreeLoad(indexer);
         harness.State.EnterFocusedTable(drillDown);
@@ -2495,14 +2491,14 @@ public sealed partial class ViewManagerTests : IDisposable
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var oldTransformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer oldTransformer = GetFocusedTableTransformer(stagedView);
 
         // Act — returning to the tree cancels the blocked scan; the recorded task must end
         // by cancellation after batches 1–2 only
         harness.ViewManager.ReturnFromDrillDown();
         rows.ReleaseGate();
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
 
@@ -2510,7 +2506,7 @@ public sealed partial class ViewManagerTests : IDisposable
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
         harness.ViewManager.GetCurrentView().Should().BeOfType<JsonArrayTreeView>();
-        var readDisposedTransformer = () => oldTransformer[0, 1];
+        Func<object> readDisposedTransformer = () => oldTransformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
     }
 
@@ -2518,13 +2514,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task Dispose_WhileWorkerBlockedOnStagedTable_StopsWorkerDisposesSessionAndIsIdempotent()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var harness = new FilterScanHarness();
-        await using var scope = new GatedScanScope(rows, harness);
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FilterScanHarness harness = new();
+        await using GatedScanScope scope = new(rows, harness);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
@@ -2532,22 +2528,22 @@ public sealed partial class ViewManagerTests : IDisposable
         // worker is blocked; execute them in whichever order the threads landed
         await WaitForCallbacksAsync(harness.Captured, expectedCount: 2);
         ExecuteRemainingCallbacks(harness.Captured);
-        var stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var transformer = GetFocusedTableTransformer(stagedView);
+        FocusedTableView stagedView = harness.ViewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        FocusedTableTransformer transformer = GetFocusedTableTransformer(stagedView);
 
         // Act — disposing mid-scan cancels the blocked worker; the second call must be safe;
         // the recorded task must end by cancellation after batches 1–2 only
         harness.ViewManager.Dispose();
         harness.ViewManager.Dispose();
         rows.ReleaseGate();
-        var assertOldScan = () => harness.Runner.TaskAt(0);
+        Func<Task> assertOldScan = () => harness.Runner.TaskAt(0);
         await assertOldScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
 
         // Assert — the worker never read batch 3 and the session-owned transformer is disposed
         ExecuteRemainingCallbacks(harness.Captured);
         harness.Captured.Should().BeEmpty();
-        var readDisposedTransformer = () => transformer[0, 1];
+        Func<object> readDisposedTransformer = () => transformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
     }
 
@@ -2556,22 +2552,22 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the manager is driven directly, so only its own guard can make the
         // second Dispose safe (ViewManager.Dispose short-circuits repeated calls)
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var transformer = FocusedTableTransformer.Create(
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(
             new FocusedTableSource(drillDown),
             drillDown.Schema,
             drillDown.ActionStack,
             200);
-        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        var runner = new RecordingFilterScanRunner();
-        using var parentCts = new CancellationTokenSource();
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        await using var scope = new DirectScanScope(rows, runner);
-        var manager = new FilterScanManager(
+        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        RecordingFilterScanRunner runner = new();
+        using CancellationTokenSource parentCts = new();
+        ConcurrentQueue<Action> captured = new();
+        await using DirectScanScope scope = new(rows, runner);
+        FilterScanManager manager = new(
             runner,
             captured.Enqueue,
             () => parentCts.Token,
@@ -2587,16 +2583,16 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Act
         manager.Dispose();
-        var disposeAgain = () => manager.Dispose();
+        Action disposeAgain = () => manager.Dispose();
         rows.ReleaseGate();
 
         // Assert — the worker observed the cancellation after batches 1–2 only, and the
         // session-owned transformer is disposed
         disposeAgain.Should().NotThrow();
-        var assertScan = () => runner.TaskAt(0);
+        Func<Task> assertScan = () => runner.TaskAt(0);
         await assertScan.Should().ThrowAsync<OperationCanceledException>();
         rows.ReadCount.Should().Be(2000);
-        var readDisposedTransformer = () => transformer[0, 1];
+        Func<object> readDisposedTransformer = () => transformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
         scope.BodyCompleted = true;
     }
@@ -2605,22 +2601,22 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FilterScanManagerProgress_WhenCurrentSessionIsCanceled_DoesNotUpdateOverlay()
     {
         // Arrange — the session stays the current one; only its CTS is canceled (parent token)
-        using var app = TestAppFactory.Create();
-        var gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using var rows = gated.Rows;
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using var transformer = FocusedTableTransformer.Create(
+        using IApplication app = TestAppFactory.Create();
+        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
+        using GatedDrillDownRows rows = gated.Rows;
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
+        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(
             new FocusedTableSource(drillDown),
             drillDown.Schema,
             drillDown.ActionStack,
             200);
-        var indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        var runner = new RecordingFilterScanRunner();
-        using var parentCts = new CancellationTokenSource();
-        var captured = new System.Collections.Concurrent.ConcurrentQueue<Action>();
-        await using var scope = new DirectScanScope(rows, runner);
-        var manager = new FilterScanManager(
+        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
+        RecordingFilterScanRunner runner = new();
+        using CancellationTokenSource parentCts = new();
+        ConcurrentQueue<Action> captured = new();
+        await using DirectScanScope scope = new(rows, runner);
+        FilterScanManager manager = new(
             runner,
             captured.Enqueue,
             () => parentCts.Token,
@@ -2635,8 +2631,8 @@ public sealed partial class ViewManagerTests : IDisposable
         await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
         // the threshold reveal and the first progress tick are both queued once the worker is blocked
         await WaitForCallbacksAsync(captured, expectedCount: 2);
-        var label = scope.Host.SubViews.OfType<Label>().Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
-        var textBefore = label.Text;
+        Label label = scope.Host.SubViews.OfType<Label>().Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
+        string textBefore = label.Text;
 
         // Act
         parentCts.Cancel();
@@ -2651,8 +2647,8 @@ public sealed partial class ViewManagerTests : IDisposable
     public void HandleMorphAction_WithFocusedTableModeAndDrillDown_AppendsToDrillDownActionStack()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
@@ -2663,21 +2659,21 @@ public sealed partial class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.SwitchToFocusedTable(drillDown);
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var action = new RenameColumnAction { OldName = "name", NewName = "label" };
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        RenameColumnAction action = new() { OldName = "name", NewName = "label" };
 
         // Act
         view.OnMorphAction?.Invoke(action);
 
         // Assert
         state.ActionStack.Should().BeEmpty();
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.ActionStack.Should().Equal(action);
     }
 
@@ -2686,8 +2682,8 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the DrillDown replays a just-loaded recipe (clean); applying an action within
         // it must flip its own flag without touching the root one
-        using var app = TestAppFactory.Create();
-        var schema = new TableSchema
+        using IApplication app = TestAppFactory.Create();
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
@@ -2698,20 +2694,20 @@ public sealed partial class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "name", NewName = "loaded" }]);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.SwitchToFocusedTable(drillDown);
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var action = new RenameColumnAction { OldName = "name", NewName = "label" };
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        RenameColumnAction action = new() { OldName = "name", NewName = "label" };
 
         // Act
         view.OnMorphAction?.Invoke(action);
 
         // Assert
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.HasUnsavedChanges.Should().BeTrue();
         state.HasUnsavedChanges.Should().BeFalse();
     }
@@ -2721,9 +2717,9 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — a populated base ActionStack must survive appending a morph action to the
         // active DrillDown's own stack
-        using var app = TestAppFactory.Create();
-        var baseAction = new RenameColumnAction { OldName = "base", NewName = "renamed_base" };
-        var schema = new TableSchema
+        using IApplication app = TestAppFactory.Create();
+        RenameColumnAction baseAction = new() { OldName = "base", NewName = "renamed_base" };
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.JsonArray,
             Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
@@ -2734,22 +2730,22 @@ public sealed partial class ViewManagerTests : IDisposable
             ViewMode.JsonArrayTree,
             KeyPath: [],
             ActionStack: []);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterFocusedTable(drillDown);
         state.AddMorphAction(baseAction);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.SwitchToFocusedTable(drillDown);
-        var view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
-        var drillDownAction = new DeleteColumnAction { ColumnName = "drill_down" };
+        FocusedTableView view = viewManager.GetCurrentView().Should().BeOfType<FocusedTableView>().Which;
+        DeleteColumnAction drillDownAction = new() { ColumnName = "drill_down" };
 
         // Act
         view.OnMorphAction?.Invoke(drillDownAction);
 
         // Assert
         state.ActionStack.Should().Equal(baseAction);
-        var drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDownAfter = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDownAfter.ActionStack.Should().Equal(drillDownAction);
     }
 
@@ -2758,30 +2754,30 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — an error view replaced FocusedTable, then the base table was shown again;
         // the action must go to the base stack and no DrillDown session may remain
-        var filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
-        using var app = TestAppFactory.Create();
-        var drillDownAction = new RenameColumnAction { OldName = "x", NewName = "y" };
-        var drillDown = new DrillDownState(
+        string filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
+        using IApplication app = TestAppFactory.Create();
+        RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")],
             new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] },
             ViewMode.JsonLinesTree,
             KeyPath: [],
             ActionStack: [drillDownAction]);
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.EnterFocusedTable(drillDown);
         state.EnterPlaceholderMode();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
-        var schema = new TableSchema
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        TableSchema schema = new()
         {
             SourceFormat = DataFormat.Csv,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
         };
         viewManager.SwitchToCsvTable(new MockRowIndexer(filePath), schema);
-        var view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
-        var action = new RenameColumnAction { OldName = "col1", NewName = "renamed" };
+        CsvTableView view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
+        RenameColumnAction action = new() { OldName = "col1", NewName = "renamed" };
 
         // Act
         view.OnMorphAction?.Invoke(action);
@@ -2796,14 +2792,14 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the base table's ActionStack must survive entering a DrillDown, and the fresh
         // DrillDownState must start with its own empty ActionStack
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[{\"a\":1}]"),
             [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
@@ -2814,7 +2810,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().BeEmpty();
     }
 
@@ -2822,14 +2818,14 @@ public sealed partial class ViewManagerTests : IDisposable
     public void DrillDown_OnFailure_LeavesActionStackUntouched()
     {
         // Arrange — an empty array node fails schema extraction, routing to ShowError
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.AddMorphAction(new RenameColumnAction { OldName = "a", NewName = "b" });
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             DataFormat.JsonObject,
             Encoding.UTF8.GetBytes("[]"),
             [new KeyPathSegment("list", KeyPathSegmentKind.Key)],
@@ -2848,16 +2844,16 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the base table's ActionStack must survive entering a DrillDown, and the fresh
         // DrillDownState must start with its own empty ActionStack
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -2867,7 +2863,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert
         state.ActionStack.Should().ContainSingle();
-        var drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
+        DrillDownState drillDown = state.GetDrillDownOrNull().Should().BeOfType<DrillDownState>().Which;
         drillDown.ActionStack.Should().BeEmpty();
     }
 
@@ -2875,16 +2871,16 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_OnFailure_LeavesActionStackUntouched()
     {
         // Arrange — a non-matching KeyPath forces the scan to fail
-        var filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
+        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.AddMorphAction(new RenameColumnAction { OldName = "name", NewName = "label" });
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             DataFormat.JsonLines,
             [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
@@ -2901,20 +2897,20 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithJsonLinesTreePreviousMode_RestoresJsonLinesTree()
     {
         // Arrange
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
-        using var app = TestAppFactory.Create();
-        var indexer = new Refedle.Engine.IO.JsonLines.RowIndexer(filePath);
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        using IApplication app = TestAppFactory.Create();
+        Refedle.Engine.IO.JsonLines.RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.BeginIndexedTreeLoad(indexer);
-        var drillDown = new DrillDownState(
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.ReturnFromDrillDown();
@@ -2929,20 +2925,20 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithJsonArrayTreePreviousMode_RestoresJsonArrayTree()
     {
         // Arrange
-        var filePath = CreateTempFile(".json", "[1,2,3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile(".json", "[1,2,3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonArray, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonArray, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile(filePath);
         state.BeginIndexedTreeLoad(indexer);
-        var drillDown = new DrillDownState(
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.ReturnFromDrillDown();
@@ -2957,18 +2953,18 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithJsonObjectTreePreviousMode_RestoresJsonObjectTree()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("id", Encoding.UTF8.GetBytes("1"))];
-        var schema = new TableSchema { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using var state = new AppState();
+        TableSchema schema = new() { SourceFormat = DataFormat.JsonObject, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
+        using AppState state = new();
         state.StartNewFile("test.json");
         state.EnterJsonObjectTree(entries);
-        var drillDown = new DrillDownState(
+        DrillDownState drillDown = new(
             [new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonObjectTree, KeyPath: [], ActionStack: []);
         state.EnterFocusedTable(drillDown);
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
 
         // Act
         viewManager.ReturnFromDrillDown();
@@ -2983,11 +2979,11 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithNullDrillDown_DoesNothing()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.SwitchToFileSelection();
 
         // Act
@@ -3002,15 +2998,15 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var state = new AppState();
-        using var window = new Window();
-        var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), action => action());
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
         viewManager.Dispose();
 
         // Act
-        var act = () => viewManager.ReturnFromDrillDown();
+        Action act = () => viewManager.ReturnFromDrillDown();
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -3051,16 +3047,16 @@ public sealed partial class ViewManagerTests : IDisposable
 
         public static RaggedCsvFixture Create(string filePath)
         {
-            var app = TestAppFactory.Create();
-            var state = new AppState();
+            IApplication app = TestAppFactory.Create();
+            AppState state = new();
             state.StartNewFile(filePath);
-            var window = new Window();
+            Window window = new();
             List<Action> queued = [];
-            var modeController = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            var viewManager = new ViewManager(window, state, modeController, new FilterIndexingRunner(), queued.Add);
-            var indexer = new Refedle.Engine.IO.Csv.DataRowIndexer(filePath);
+            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), queued.Add);
+            DataRowIndexer indexer = new(filePath);
             indexer.BuildIndex();
-            var schema = new TableSchema
+            TableSchema schema = new()
             {
                 SourceFormat = DataFormat.Csv,
                 Columns =
@@ -3125,7 +3121,7 @@ public sealed partial class ViewManagerTests : IDisposable
             File.WriteAllText(_filePath, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"x\", \"col2\": \"y\"}\n");
             State.StartNewFile(_filePath);
             State.SetActionStack(actions);
-            var modeController = new ModeController(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
             _viewManager = new ViewManager(Window, State, modeController, Runner, action => action());
             _viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(_filePath, totalRows), CreateJsonLinesSchema(initialColumns));
             View = _viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
@@ -3214,7 +3210,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         public FilterScanHarness()
         {
-            var modeController = new ModeController(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
             ViewManager = new ViewManager(Window, State, modeController, Runner, Captured.Enqueue);
         }
 
@@ -3242,7 +3238,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
         {
-            var task = _inner.RunAsync(filterIndexer, ct);
+            Task task = _inner.RunAsync(filterIndexer, ct);
             lock (_lock)
             {
                 _runs.Add(new Run(filterIndexer, task));
@@ -3325,7 +3321,7 @@ public sealed partial class ViewManagerTests : IDisposable
         {
             harness.ViewManager.Dispose();
             rows.ReleaseGate();
-            foreach (var task in harness.Runner.Tasks())
+            foreach (Task task in harness.Runner.Tasks())
             {
                 // WhenAny observes a canceled or faulted worker without throwing; a worker
                 // stuck past the bound fails the test instead of hanging cleanup
@@ -3357,7 +3353,7 @@ public sealed partial class ViewManagerTests : IDisposable
             List<Exception> failures = [];
             Capture(failures, rows.ReleaseGate);
             Capture(failures, () => Manager?.Dispose());
-            foreach (var task in runner.Tasks())
+            foreach (Task task in runner.Tasks())
             {
                 // WhenAny observes a canceled or faulted worker without throwing
                 await Task.WhenAny(task.WaitAsync(TimeSpan.FromSeconds(10))).ConfigureAwait(false);

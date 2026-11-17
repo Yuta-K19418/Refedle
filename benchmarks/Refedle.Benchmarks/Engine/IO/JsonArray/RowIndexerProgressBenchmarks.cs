@@ -20,7 +20,7 @@ public class RowIndexerProgressBenchmarks : RowIndexerProgressBenchmarksBase
     private protected override void WriteRows(StreamWriter writer, int rowCount)
     {
         writer.Write('[');
-        for (var i = 0; i < rowCount; i++)
+        for (int i = 0; i < rowCount; i++)
         {
             if (i > 0)
             {

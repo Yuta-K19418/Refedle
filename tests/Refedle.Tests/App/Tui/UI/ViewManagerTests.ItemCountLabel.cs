@@ -11,6 +11,8 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
+using Terminal.Gui.App;
+using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI;
@@ -40,7 +42,7 @@ public sealed partial class ViewManagerTests
 
     private static DataRowIndexer BuildCsvIndexer(string filePath)
     {
-        var indexer = new DataRowIndexer(filePath);
+        DataRowIndexer indexer = new(filePath);
         indexer.BuildIndex();
         return indexer;
     }
@@ -51,14 +53,14 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WithCompletedRealFilter_ShowsMatchingRowCount(string filterValue, string expectedText)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".csv", "col1\na\nb\n");
-        var indexer = BuildCsvIndexer(filePath);
-        using var harness = new ItemCountHarness(filePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".csv", "col1\na\nb\n");
+        DataRowIndexer indexer = BuildCsvIndexer(filePath);
+        using ItemCountHarness harness = new(filePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
 
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
-        var textWhileScanning = GetItemCountText(harness.Window);
+        string? textWhileScanning = GetItemCountText(harness.Window);
         await harness.Queue.RunUntilAsync(() => GetItemCountText(harness.Window) is not null);
 
         // Assert
@@ -72,14 +74,14 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToJsonLinesTableView_WithCompletedRealFilter_ShowsMatchingRowCount(string filterValue, string expectedText)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n{\"col1\": \"b\"}\n");
-        var indexer = new MockRowIndexer(filePath, 2);
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n{\"col1\": \"b\"}\n");
+        MockRowIndexer indexer = new(filePath, 2);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
 
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
-        var textWhileScanning = GetItemCountText(harness.Window);
+        string? textWhileScanning = GetItemCountText(harness.Window);
         await harness.Queue.RunUntilAsync(() => GetItemCountText(harness.Window) is not null);
 
         // Assert
@@ -91,14 +93,14 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhileFilterScanRuns_HidesItemCountUntilScanCompletes()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
-        var textWhileScanning = GetItemCountText(harness.Window);
+        string? textWhileScanning = GetItemCountText(harness.Window);
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
@@ -112,15 +114,15 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToJsonLinesTableView_WhileFilterScanRuns_HidesItemCountUntilScanCompletes()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var indexer = new MockRowIndexer(filePath, 1);
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        MockRowIndexer indexer = new(filePath, 1);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
-        var textWhileScanning = GetItemCountText(harness.Window);
+        string? textWhileScanning = GetItemCountText(harness.Window);
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
@@ -134,10 +136,10 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WithFaultedScan_ShowsErrorViewWithFailureReason()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
@@ -147,7 +149,7 @@ public sealed partial class ViewManagerTests
 
         // Assert
         harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        var errorView = harness.ViewManager.GetCurrentView();
+        View? errorView = harness.ViewManager.GetCurrentView();
         errorView.Should().NotBeNull();
         errorView.Text.Should().Be("Filter scan failed: scan failed");
         GetItemCountText(harness.Window).Should().BeNull();
@@ -157,12 +159,12 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToJsonLinesTableView_WithFaultedScan_ShowsErrorViewWithFailureReason()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var indexer = new MockRowIndexer(filePath, 1);
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
-        var schema = CreateItemCountSchema(DataFormat.JsonLines);
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        MockRowIndexer indexer = new(filePath, 1);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
+        TableSchema schema = CreateItemCountSchema(DataFormat.JsonLines);
         harness.State.CompleteJsonLinesSchemaScan(schema);
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, schema);
         harness.State.CurrentMode.Should().Be(ViewMode.JsonLinesTable);
@@ -174,7 +176,7 @@ public sealed partial class ViewManagerTests
 
         // Assert
         harness.State.CurrentMode.Should().Be(ViewMode.PlaceholderView);
-        var errorView = harness.ViewManager.GetCurrentView();
+        View? errorView = harness.ViewManager.GetCurrentView();
         errorView.Should().NotBeNull();
         errorView.Text.Should().Be("Filter scan failed: scan failed");
         GetItemCountText(harness.Window).Should().BeNull();
@@ -184,13 +186,13 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WithCanceledScan_KeepsTableAndItemCountHidden()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
-        var tableView = harness.ViewManager.GetCurrentView();
+        View? tableView = harness.ViewManager.GetCurrentView();
 
         // Act
         runner.End(0, ScanOutcome.Canceled);
@@ -206,16 +208,16 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenFaultedScanIsSuperseded_KeepsNewView()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        var schema = CreateItemCountSchema(DataFormat.Csv);
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        TableSchema schema = CreateItemCountSchema(DataFormat.Csv);
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
         await harness.Queue.RunNextAsync(); // indexing already finished, so the first scan begins
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
         await harness.Queue.RunNextAsync(); // the replacement scan begins
-        var newView = harness.ViewManager.GetCurrentView();
+        View? newView = harness.ViewManager.GetCurrentView();
 
         // Act
         runner.End(0, ScanOutcome.Faulted);
@@ -231,16 +233,16 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenFaultedScanBelongsToPreviousFileSession_KeepsCurrentSession()
     {
         // Arrange - the view is still the old one while the next file loads
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
-        var oldView = harness.ViewManager.GetCurrentView();
+        View? oldView = harness.ViewManager.GetCurrentView();
         runner.End(0, ScanOutcome.Faulted);
-        var callback = await harness.Queue.NextAsync();
-        var nextFilePath = CreateTempFile(".csv", "col1\nb\n");
+        Action callback = await harness.Queue.NextAsync();
+        string nextFilePath = CreateTempFile(".csv", "col1\nb\n");
         harness.State.StartNewFile(nextFilePath);
 
         // Act
@@ -257,18 +259,18 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenViewManagerIsDisposedBeforeFault_DoesNotShowError()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         harness.ViewManager.Dispose();
         runner.End(0, ScanOutcome.Faulted);
-        var callback = await harness.Queue.NextAsync();
+        Action callback = await harness.Queue.NextAsync();
 
         // Act
-        var act = () => callback();
+        Action act = () => callback();
 
         // Assert
         act.Should().NotThrow();
@@ -279,11 +281,11 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenScanIsSuperseded_IgnoresStaleCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        var schema = CreateItemCountSchema(DataFormat.Csv);
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        TableSchema schema = CreateItemCountSchema(DataFormat.Csv);
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
         await harness.Queue.RunNextAsync(); // indexing already finished, so the first scan begins
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
@@ -292,7 +294,7 @@ public sealed partial class ViewManagerTests
         // Act
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
-        var textAfterStaleCompletion = GetItemCountText(harness.Window);
+        string? textAfterStaleCompletion = GetItemCountText(harness.Window);
         runner.Complete(1);
         await harness.Queue.RunNextAsync();
 
@@ -305,10 +307,10 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenViewManagerIsDisposedBeforeCompletion_IgnoresCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
@@ -325,10 +327,10 @@ public sealed partial class ViewManagerTests
     public void SwitchToFocusedTable_WithoutFilter_ShowsFocusedTableRowCount()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var drillDown = CreateNumberedDrillDown(rowCount: 12);
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act
@@ -346,16 +348,16 @@ public sealed partial class ViewManagerTests
         string expectedText)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, filterValue).Value;
-        var drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, filterValue).Value;
+        DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
         harness.State.EnterFocusedTable(drillDown);
 
         // Act
         harness.ViewManager.SwitchToFocusedTable(drillDown);
-        var textWhileScanning = GetItemCountText(harness.Window);
+        string? textWhileScanning = GetItemCountText(harness.Window);
         await harness.Queue.RunUntilAsync(() => IsCompletedFocusedTable(harness.ViewManager));
 
         // Assert
@@ -367,25 +369,25 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToFocusedTable_WithFilterRevealedMidScan_ShowsItemCountOnlyAfterCompletion()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        var drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
+        DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
             with
         { ActionStack = [filter] };
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
         harness.State.EnterFocusedTable(drillDown);
         harness.ViewManager.SwitchToFocusedTable(drillDown);
 
         // Act — the scan queues a reveal, two progress ticks and the completion, in that order
-        var reveal = await harness.Queue.NextAsync();
-        var firstTick = await harness.Queue.NextAsync();
-        var finalTick = await harness.Queue.NextAsync();
-        var completion = await harness.Queue.NextAsync();
+        Action reveal = await harness.Queue.NextAsync();
+        Action firstTick = await harness.Queue.NextAsync();
+        Action finalTick = await harness.Queue.NextAsync();
+        Action completion = await harness.Queue.NextAsync();
         reveal();
         firstTick();
         finalTick();
-        var textWhileTableIsRevealed = GetItemCountText(harness.Window);
+        string? textWhileTableIsRevealed = GetItemCountText(harness.Window);
         completion();
 
         // Assert
@@ -410,7 +412,7 @@ public sealed partial class ViewManagerTests
 
         public async Task<Action> NextAsync()
         {
-            using var cts = new CancellationTokenSource(Timeout);
+            using CancellationTokenSource cts = new(Timeout);
             return await _channel.Reader.ReadAsync(cts.Token);
         }
 
@@ -430,8 +432,8 @@ public sealed partial class ViewManagerTests
         /// </summary>
         public async Task AssertNothingQueuedAsync(TimeSpan grace)
         {
-            using var cts = new CancellationTokenSource(grace);
-            var read = async () => await _channel.Reader.ReadAsync(cts.Token);
+            using CancellationTokenSource cts = new(grace);
+            Func<Task<Action>> read = async () => await _channel.Reader.ReadAsync(cts.Token);
             await read.Should().ThrowAsync<OperationCanceledException>(
                 "no callback must be queued within the grace period");
         }
@@ -447,7 +449,7 @@ public sealed partial class ViewManagerTests
 
         public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
         {
-            var scan = new TaskCompletionSource();
+            TaskCompletionSource scan = new();
             _scans.Add(scan);
             return scan.Task;
         }
@@ -491,7 +493,7 @@ public sealed partial class ViewManagerTests
             }
 
             Window.Add(_statusBar);
-            var modeController = new ModeController(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
             ViewManager = new ViewManager(Window, State, modeController, runner, Queue.Enqueue);
         }
 

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.Commands.Apply;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
@@ -23,7 +24,7 @@ public sealed class DrillDownRecipeValidatorTests
         Recipe? recipe = null;
 
         // Act
-        var act = () => DrillDownRecipeValidator.Validate(DataFormat.JsonObject, recipe!);
+        Func<Result> act = () => DrillDownRecipeValidator.Validate(DataFormat.JsonObject, recipe!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>().WithParameterName("recipe");
@@ -37,10 +38,10 @@ public sealed class DrillDownRecipeValidatorTests
         // Arrange
         // A present-but-empty KeyPath is distinct from null: the validator checks
         // presence only and must not reject it based on segment count.
-        var recipe = CreateRecipe([]);
+        Recipe recipe = CreateRecipe([]);
 
         // Act
-        var result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+        Result result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -52,10 +53,10 @@ public sealed class DrillDownRecipeValidatorTests
     public void Validate_WithDrillDownFormatAndNullKeyPath_ReturnsFailure(DataFormat inputFormat)
     {
         // Arrange
-        var recipe = CreateRecipe(drillDownKeyPath: null);
+        Recipe recipe = CreateRecipe(drillDownKeyPath: null);
 
         // Act
-        var result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+        Result result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -70,10 +71,10 @@ public sealed class DrillDownRecipeValidatorTests
     public void Validate_WithNonDrillDownFormatAndNullKeyPath_ReturnsSuccess(DataFormat inputFormat)
     {
         // Arrange
-        var recipe = CreateRecipe(drillDownKeyPath: null);
+        Recipe recipe = CreateRecipe(drillDownKeyPath: null);
 
         // Act
-        var result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+        Result result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -87,10 +88,10 @@ public sealed class DrillDownRecipeValidatorTests
     public void Validate_WithKeyPath_ReturnsSuccessForAllFormats(DataFormat inputFormat)
     {
         // Arrange
-        var recipe = CreateRecipe(_testKeyPath);
+        Recipe recipe = CreateRecipe(_testKeyPath);
 
         // Act
-        var result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
+        Result result = DrillDownRecipeValidator.Validate(inputFormat, recipe);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

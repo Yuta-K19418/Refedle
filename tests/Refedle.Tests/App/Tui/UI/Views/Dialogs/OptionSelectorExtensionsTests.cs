@@ -11,10 +11,10 @@ public sealed class OptionSelectorExtensionsTests
     public void EnableAutoSelectAndVimKeys_DoesNotThrow()
     {
         // Arrange
-        using var selector = new OptionSelector<FilterOperator>();
+        using OptionSelector<FilterOperator> selector = new();
 
         // Act
-        var exception = Record.Exception(() => selector.EnableAutoSelectAndVimKeys());
+        Exception exception = Record.Exception(() => selector.EnableAutoSelectAndVimKeys());
 
         // Assert
         exception.Should().BeNull();
@@ -24,13 +24,13 @@ public sealed class OptionSelectorExtensionsTests
     public void EnableAutoSelectAndVimKeys_WithFreshSelector_DoesNotMutateValue()
     {
         // Arrange
-        using var selector = new OptionSelector<FilterOperator>();
+        using OptionSelector<FilterOperator> selector = new();
 
         // Act
         selector.EnableAutoSelectAndVimKeys();
 
         // Assert
-        var initialOperator = selector.Value;
+        FilterOperator? initialOperator = selector.Value;
         initialOperator.Should().Be(FilterOperator.Equals);
     }
 }

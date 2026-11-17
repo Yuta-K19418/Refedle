@@ -37,14 +37,14 @@ internal sealed class FakeReleaseClient(
     {
         _downloadRequests.Add(new AssetDownloadRequest(tag, fileName, destinationPath));
 
-        var isChecksums = string.Equals(fileName, ChecksumsFileName, StringComparison.Ordinal);
-        var configuredFailure = isChecksums ? checksumsFailure : archiveFailure;
+        bool isChecksums = string.Equals(fileName, ChecksumsFileName, StringComparison.Ordinal);
+        Result? configuredFailure = isChecksums ? checksumsFailure : archiveFailure;
         if (configuredFailure is { } failure)
         {
             return failure;
         }
 
-        var content = isChecksums ? checksumsFile : archiveFile;
+        byte[]? content = isChecksums ? checksumsFile : archiveFile;
         if (content is null)
         {
             return Results.Failure($"Could not download '{fileName}' (status: 404 NotFound).");

@@ -10,8 +10,8 @@ public sealed class FilterIndexingRunnerTests
     public async Task RunAsync_WithValidFilterIndexer_InvokesBuildIndexAsyncWithToken()
     {
         // Arrange
-        var indexer = new FakeFilterRowIndexer();
-        using var cts = new CancellationTokenSource();
+        FakeFilterRowIndexer indexer = new();
+        using CancellationTokenSource cts = new();
 
         // Act
         await new FilterIndexingRunner().RunAsync(indexer, cts.Token);
@@ -27,7 +27,7 @@ public sealed class FilterIndexingRunnerTests
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
-        var act = () =>
+        Action act = () =>
         {
             new FilterIndexingRunner().RunAsync(null!, CancellationToken.None);
         };
@@ -40,12 +40,12 @@ public sealed class FilterIndexingRunnerTests
     public async Task RunAsync_WithCancelledToken_CancelsWithoutInvokingIndexer()
     {
         // Arrange
-        var indexer = new FakeFilterRowIndexer();
-        using var cts = new CancellationTokenSource();
+        FakeFilterRowIndexer indexer = new();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = async () => await new FilterIndexingRunner().RunAsync(indexer, cts.Token);
+        Func<Task> act = async () => await new FilterIndexingRunner().RunAsync(indexer, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -56,10 +56,10 @@ public sealed class FilterIndexingRunnerTests
     public async Task RunAsync_WhenIndexerFaults_PropagatesException()
     {
         // Arrange
-        var indexer = new FaultingFilterRowIndexer();
+        FaultingFilterRowIndexer indexer = new();
 
         // Act
-        var act = async () => await new FilterIndexingRunner().RunAsync(indexer, CancellationToken.None);
+        Func<Task> act = async () => await new FilterIndexingRunner().RunAsync(indexer, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>();

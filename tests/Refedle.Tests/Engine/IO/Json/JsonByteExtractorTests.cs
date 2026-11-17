@@ -14,13 +14,13 @@ public sealed class JsonByteExtractorTests
     public void ExtractNestedBytes_ForSimpleObject_ReturnsCorrectByteSlice()
     {
         // Arrange
-        var json = "{\"a\": 1}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"a\": 1}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
 
         // Assert
         slice.ToArray().Should().BeEquivalentTo(rawJson);
@@ -30,13 +30,13 @@ public sealed class JsonByteExtractorTests
     public void ExtractNestedBytes_ForSimpleArray_ReturnsCorrectByteSlice()
     {
         // Arrange
-        var json = "[1, 2]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, 2]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
 
         // Assert
         slice.ToArray().Should().BeEquivalentTo(rawJson);
@@ -46,13 +46,13 @@ public sealed class JsonByteExtractorTests
     public void ExtractNestedBytes_ForComplexNestedStructure_ReturnsCorrectByteSlice()
     {
         // Arrange
-        var json = "{\"a\": [1, 2], \"b\": {\"c\": 3}}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"a\": [1, 2], \"b\": {\"c\": 3}}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
 
         // Assert
         slice.ToArray().Should().BeEquivalentTo(rawJson);
@@ -62,19 +62,19 @@ public sealed class JsonByteExtractorTests
     public void ExtractNestedBytes_WithLargerContext_ReturnsOnlyTargetStructure()
     {
         // Arrange
-        var fullJson = "{\"root\": {\"id\": 1, \"value\": \"test\"}, \"other\": 2}";
-        var rawJson = Encoding.UTF8.GetBytes(fullJson);
-        var reader = new Utf8JsonReader(rawJson);
+        string fullJson = "{\"root\": {\"id\": 1, \"value\": \"test\"}, \"other\": 2}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(fullJson);
+        Utf8JsonReader reader = new(rawJson);
 
         reader.Read(); // StartObject (root)
         reader.Read(); // PropertyName "root"
         reader.Read(); // StartObject (target nested object)
 
-        var expectedNestedJson = "{\"id\": 1, \"value\": \"test\"}";
-        var expectedBytes = Encoding.UTF8.GetBytes(expectedNestedJson);
+        string expectedNestedJson = "{\"id\": 1, \"value\": \"test\"}";
+        byte[] expectedBytes = Encoding.UTF8.GetBytes(expectedNestedJson);
 
         // Act
-        var slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
+        JsonRawBytes slice = JsonByteExtractor.ExtractNestedBytes(ref reader, rawJson);
 
         // Assert
         slice.ToArray().Should().BeEquivalentTo(expectedBytes);
@@ -87,12 +87,12 @@ public sealed class JsonByteExtractorTests
     public void CountObjectProperties_VariousObjects_ReturnsTopLevelPropertyCount(string json, int expectedCount)
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var propertyCount = JsonByteExtractor.CountObjectProperties(ref reader);
+        int propertyCount = JsonByteExtractor.CountObjectProperties(ref reader);
 
         // Assert
         propertyCount.Should().Be(expectedCount);
@@ -102,13 +102,13 @@ public sealed class JsonByteExtractorTests
     public void CountObjectProperties_WithNestedObjectAndArrayValues_CountsOnlyTopLevelKeys()
     {
         // Arrange
-        var json = "{\"a\": {\"nested1\": 1, \"nested2\": 2}, \"b\": [1, 2, 3]}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"a\": {\"nested1\": 1, \"nested2\": 2}, \"b\": [1, 2, 3]}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var propertyCount = JsonByteExtractor.CountObjectProperties(ref reader);
+        int propertyCount = JsonByteExtractor.CountObjectProperties(ref reader);
 
         // Assert
         propertyCount.Should().Be(2);
@@ -118,9 +118,9 @@ public sealed class JsonByteExtractorTests
     public void CountObjectProperties_AfterCounting_ReaderStopsAtMatchingEndObjectToken()
     {
         // Arrange
-        var json = "[{\"a\": 1, \"b\": {\"nested\": 1}}, \"sibling\"]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[{\"a\": 1, \"b\": {\"nested\": 1}}, \"sibling\"]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
         reader.Read(); // Move to StartObject (target)
 
@@ -141,12 +141,12 @@ public sealed class JsonByteExtractorTests
     public void CountArrayElements_VariousArrays_ReturnsTopLevelElementCount(string json, int expectedCount)
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var elementCount = JsonByteExtractor.CountArrayElements(ref reader);
+        int elementCount = JsonByteExtractor.CountArrayElements(ref reader);
 
         // Assert
         elementCount.Should().Be(expectedCount);
@@ -156,13 +156,13 @@ public sealed class JsonByteExtractorTests
     public void CountArrayElements_WithNestedObjectAndArrayElements_CountsOnlyTopLevelElements()
     {
         // Arrange
-        var json = "[1, {\"x\": 1, \"y\": 2}, [1, 2, 3], 4]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, {\"x\": 1, \"y\": 2}, [1, 2, 3], 4]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var elementCount = JsonByteExtractor.CountArrayElements(ref reader);
+        int elementCount = JsonByteExtractor.CountArrayElements(ref reader);
 
         // Assert
         elementCount.Should().Be(4);
@@ -172,9 +172,9 @@ public sealed class JsonByteExtractorTests
     public void CountArrayElements_AfterCounting_ReaderStopsAtMatchingEndArrayToken()
     {
         // Arrange
-        var json = "[[1, [2, 3]], \"sibling\"]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[[1, [2, 3]], \"sibling\"]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray (outer)
         reader.Read(); // Move to StartArray (target)
 
@@ -192,13 +192,13 @@ public sealed class JsonByteExtractorTests
     public void FormatObjectPreview_ForObjectWithProperties_ReturnsCollapsedPreviewString()
     {
         // Arrange
-        var json = "{\"a\": 1, \"b\": 2}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"a\": 1, \"b\": 2}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var preview = JsonByteExtractor.FormatObjectPreview(ref reader);
+        string preview = JsonByteExtractor.FormatObjectPreview(ref reader);
 
         // Assert
         preview.Should().Be("{Object: 2 properties}");
@@ -208,13 +208,13 @@ public sealed class JsonByteExtractorTests
     public void FormatArrayPreview_ForArrayWithElements_ReturnsCollapsedPreviewString()
     {
         // Arrange
-        var json = "[1, 2, 3]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, 2, 3]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var preview = JsonByteExtractor.FormatArrayPreview(ref reader);
+        string preview = JsonByteExtractor.FormatArrayPreview(ref reader);
 
         // Assert
         preview.Should().Be("[Array: 3 items]");
@@ -224,13 +224,13 @@ public sealed class JsonByteExtractorTests
     public void FormatObjectPreview_ForEmptyObject_ReturnsZeroPropertiesPreview()
     {
         // Arrange
-        var json = "{}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var preview = JsonByteExtractor.FormatObjectPreview(ref reader);
+        string preview = JsonByteExtractor.FormatObjectPreview(ref reader);
 
         // Assert
         preview.Should().Be("{Object: 0 properties}");
@@ -240,13 +240,13 @@ public sealed class JsonByteExtractorTests
     public void FormatArrayPreview_ForEmptyArray_ReturnsZeroItemsPreview()
     {
         // Arrange
-        var json = "[]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var preview = JsonByteExtractor.FormatArrayPreview(ref reader);
+        string preview = JsonByteExtractor.FormatArrayPreview(ref reader);
 
         // Assert
         preview.Should().Be("[Array: 0 items]");

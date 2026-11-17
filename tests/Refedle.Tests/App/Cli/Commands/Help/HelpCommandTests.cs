@@ -21,7 +21,7 @@ public sealed class HelpCommandTests
         // Arrange
 
         // Act
-        var isMatch = HelpCommand.IsMatch(arguments);
+        bool isMatch = HelpCommand.IsMatch(arguments);
 
         // Assert
         isMatch.Should().Be(expected);
@@ -46,11 +46,11 @@ public sealed class HelpCommandTests
     public async Task RunAsync_WithAnyState_WritesAllHelpSectionsAndEntriesAndReturnsSuccess(string expectedFragment)
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var command = new HelpCommand(logger);
+        TestAppLogger logger = new();
+        HelpCommand command = new(logger);
 
         // Act
-        var exitCode = await command.RunAsync();
+        ExitCode exitCode = await command.RunAsync();
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -71,11 +71,11 @@ public sealed class HelpCommandTests
               --output <path>    Output file (optional with --dry-run)
               --dry-run          Validate and print the resolved plan without writing output
             """;
-        var logger = new TestAppLogger();
-        var command = new HelpCommand(logger);
+        TestAppLogger logger = new();
+        HelpCommand command = new(logger);
 
         // Act
-        var exitCode = await command.RunAsync();
+        ExitCode exitCode = await command.RunAsync();
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);

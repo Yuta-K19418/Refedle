@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text;
 using AwesomeAssertions;
+using AwesomeAssertions.Specialized;
 using Refedle.App;
 using Refedle.App.Cli;
 
@@ -28,11 +29,11 @@ public sealed class CliDispatcherTests : IDisposable
     public async Task RunAsync_WithHelpCommand_ReturnsSuccess()
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Help, [], logger, statusReporter, CancellationToken.None);
+        ExitCode exitCode = await CliDispatcher.RunAsync(CliCommand.Help, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -42,11 +43,11 @@ public sealed class CliDispatcherTests : IDisposable
     public async Task RunAsync_WithVersionCommand_ReturnsSuccess()
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Version, [], logger, statusReporter, CancellationToken.None);
+        ExitCode exitCode = await CliDispatcher.RunAsync(CliCommand.Version, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -58,15 +59,15 @@ public sealed class CliDispatcherTests : IDisposable
         // Arrange — a full valid apply invocation only completes if the leading "apply" token
         // was removed before ApplyRunner parsed the arguments; otherwise argument parsing
         // rejects "apply" as an invalid flag and the exit code is Failure.
-        var inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
+        string inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
         string[] args = ["apply", "--input", inputFile, "--recipe", recipeFile, "--output", outputFile];
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
+        ExitCode exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -79,11 +80,11 @@ public sealed class CliDispatcherTests : IDisposable
         // Arrange — missing required --recipe/--output flags fail argument parsing
         // before any processing starts.
         string[] args = ["apply", "--input", "x.csv"];
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
+        ExitCode exitCode = await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -97,14 +98,14 @@ public sealed class CliDispatcherTests : IDisposable
     {
         // Arrange — the matcher never yields CliCommand.Apply without a leading "apply" token;
         // reaching the dispatcher that way is a programming error, not a user-input condition.
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var act = async () => await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
+        Func<Task<ExitCode>> act = async () => await CliDispatcher.RunAsync(CliCommand.Apply, args, logger, statusReporter, CancellationToken.None);
 
         // Assert
-        var thrown = await act.Should().ThrowExactlyAsync<ArgumentException>();
+        ExceptionAssertions<ArgumentException> thrown = await act.Should().ThrowExactlyAsync<ArgumentException>();
         thrown.Which.ParamName.Should().Be("args");
     }
 
@@ -112,12 +113,12 @@ public sealed class CliDispatcherTests : IDisposable
     public async Task RunAsync_WithUnknownCommand_ThrowsUnreachableException()
     {
         // Arrange — a value outside the declared CliCommand members, reachable only via a cast.
-        var command = (CliCommand)int.MaxValue;
-        var logger = new TestAppLogger();
-        var statusReporter = new TestStatusReporter();
+        CliCommand command = (CliCommand)int.MaxValue;
+        TestAppLogger logger = new();
+        TestStatusReporter statusReporter = new();
 
         // Act
-        var act = async () => await CliDispatcher.RunAsync(command, [], logger, statusReporter, CancellationToken.None);
+        Func<Task<ExitCode>> act = async () => await CliDispatcher.RunAsync(command, [], logger, statusReporter, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<UnreachableException>();
@@ -125,7 +126,7 @@ public sealed class CliDispatcherTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         return filePath;
     }

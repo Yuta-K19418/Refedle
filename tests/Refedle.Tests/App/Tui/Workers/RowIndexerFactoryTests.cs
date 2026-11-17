@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine.IO;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
@@ -27,7 +28,7 @@ public sealed class RowIndexerFactoryTests : IDisposable
     public void Create_WithCsvFormat_ReturnsDataRowIndexer()
     {
         // Act
-        var result = RowIndexerFactory.Create(DataFormat.Csv, _testFilePath);
+        IRowIndexer result = RowIndexerFactory.Create(DataFormat.Csv, _testFilePath);
 
         // Assert
         result.Should().BeOfType<DataRowIndexer>();
@@ -38,7 +39,7 @@ public sealed class RowIndexerFactoryTests : IDisposable
     public void Create_WithJsonLinesFormat_ReturnsRowIndexer()
     {
         // Act
-        var result = RowIndexerFactory.Create(DataFormat.JsonLines, _testFilePath);
+        IRowIndexer result = RowIndexerFactory.Create(DataFormat.JsonLines, _testFilePath);
 
         // Assert
         result.Should().BeOfType<RowIndexer>();
@@ -49,7 +50,7 @@ public sealed class RowIndexerFactoryTests : IDisposable
     public void Create_WithUnsupportedFormat_ThrowsNotSupportedException()
     {
         // Act
-        var act = () => RowIndexerFactory.Create((DataFormat)999, _testFilePath);
+        Func<IRowIndexer> act = () => RowIndexerFactory.Create((DataFormat)999, _testFilePath);
 
         // Assert
         act.Should().Throw<NotSupportedException>();

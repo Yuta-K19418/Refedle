@@ -20,7 +20,7 @@ public class IncrementalSchemaScannerBenchmarks : IncrementalSchemaScannerBenchm
     private protected override void WriteRows(StreamWriter writer, int rowCount)
     {
         writer.WriteLine("id,name,email,age,city");
-        for (var i = 0; i < rowCount; i++)
+        for (int i = 0; i < rowCount; i++)
         {
             writer.WriteLine($"{i},User{i},user{i}@example.com,{20 + (i % 50)},City{i % 100}");
         }

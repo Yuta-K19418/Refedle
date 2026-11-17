@@ -4,6 +4,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO.JsonObject;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonRangeTreeNodes;
 
@@ -28,7 +29,7 @@ public sealed class JsonObjectRangeTreeNodeTests
         IReadOnlyList<JsonObjectEntry>? nullEntries = null;
 
         // Act
-        var act = () => new JsonObjectRangeTreeNode(nullEntries!, 0L, 10L);
+        Func<JsonObjectRangeTreeNode> act = () => new JsonObjectRangeTreeNode(nullEntries!, 0L, 10L);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -38,10 +39,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Constructor_WithNegativeStartIndex_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1);
 
         // Act
-        var act = () => new JsonObjectRangeTreeNode(entries, -1L, 10L);
+        Func<JsonObjectRangeTreeNode> act = () => new JsonObjectRangeTreeNode(entries, -1L, 10L);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -51,10 +52,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Constructor_WithNegativeCount_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1);
 
         // Act
-        var act = () => new JsonObjectRangeTreeNode(entries, 0L, -1L);
+        Func<JsonObjectRangeTreeNode> act = () => new JsonObjectRangeTreeNode(entries, 0L, -1L);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -64,10 +65,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Constructor_SetsCorrectDisplayText()
     {
         // Arrange
-        var entries = CreateNumberedEntries(3);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(3);
 
         // Act
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 1000L);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 1000L);
 
         // Assert
         node.Text.Should().Be("[0 - 999]");
@@ -77,10 +78,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Constructor_SetsCorrectDisplayText_PartialRange()
     {
         // Arrange
-        var entries = CreateNumberedEntries(3);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(3);
 
         // Act
-        var node = new JsonObjectRangeTreeNode(entries, 1000L, 500L);
+        JsonObjectRangeTreeNode node = new(entries, 1000L, 500L);
 
         // Assert
         node.Text.Should().Be("[1,000 - 1,499]");
@@ -90,10 +91,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Constructor_WithZeroCount_DisplayTextIsEmptyRange()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1);
 
         // Act
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 0L);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 0L);
 
         // Assert
         node.Text.Should().Be("[0 - (empty)]");
@@ -109,10 +110,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void CreateKeyNode_PrimitiveValue_ReturnsValueNodeWithLabel(string key, string json)
     {
         // Arrange
-        var valueBytes = ToBytes(json);
+        JsonRawBytes valueBytes = ToBytes(json);
 
         // Act
-        var node = JsonObjectRangeTreeNode.CreateKeyNode(key, valueBytes);
+        ITreeNode node = JsonObjectRangeTreeNode.CreateKeyNode(key, valueBytes);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -123,10 +124,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void CreateKeyNode_NullValue_ReturnsValueNodeWithLabel()
     {
         // Arrange
-        var valueBytes = ToBytes("null");
+        JsonRawBytes valueBytes = ToBytes("null");
 
         // Act
-        var node = JsonObjectRangeTreeNode.CreateKeyNode("k", valueBytes);
+        ITreeNode node = JsonObjectRangeTreeNode.CreateKeyNode("k", valueBytes);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -139,10 +140,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void CreateKeyNode_InvalidInput_ReturnsValueNodeWithErrorText(string key, string rawValue)
     {
         // Arrange
-        var valueBytes = ToBytes(rawValue);
+        JsonRawBytes valueBytes = ToBytes(rawValue);
 
         // Act
-        var node = JsonObjectRangeTreeNode.CreateKeyNode(key, valueBytes);
+        ITreeNode node = JsonObjectRangeTreeNode.CreateKeyNode(key, valueBytes);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -153,10 +154,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void CreateKeyNode_ObjectValue_ReturnsObjectNodeWithLabel()
     {
         // Arrange
-        var valueBytes = ToBytes("{\"a\":1}");
+        JsonRawBytes valueBytes = ToBytes("{\"a\":1}");
 
         // Act
-        var node = JsonObjectRangeTreeNode.CreateKeyNode("data", valueBytes);
+        ITreeNode node = JsonObjectRangeTreeNode.CreateKeyNode("data", valueBytes);
 
         // Assert
         node.Should().BeOfType<JsonObjectTreeNode>();
@@ -167,10 +168,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void CreateKeyNode_ArrayValue_ReturnsArrayNodeWithLabel()
     {
         // Arrange
-        var valueBytes = ToBytes("[1,2]");
+        JsonRawBytes valueBytes = ToBytes("[1,2]");
 
         // Act
-        var node = JsonObjectRangeTreeNode.CreateKeyNode("tags", valueBytes);
+        ITreeNode node = JsonObjectRangeTreeNode.CreateKeyNode("tags", valueBytes);
 
         // Assert
         node.Should().BeOfType<JsonArrayTreeNode>();
@@ -183,10 +184,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void IsChildrenLoaded_InitiallyFalse()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1);
 
         // Act
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 1L);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 1L);
 
         // Assert
         node.IsChildrenLoaded.Should().BeFalse();
@@ -196,10 +197,10 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void Children_BeforeEnsureChildrenLoaded_ReturnsEmpty()
     {
         // Arrange — node has count > 0 but EnsureChildrenLoaded() is never called
-        var entries = CreateNumberedEntries(3);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(3);
 
         // Act
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 3L);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 3L);
 
         // Assert — without EnsureChildrenLoaded(), Children returns the default empty list
         node.Children.Should().BeEmpty();
@@ -209,14 +210,14 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void EnsureChildrenLoaded_PopulatesKeyNodes()
     {
         // Arrange
-        var entries = CreateNumberedEntries(3);
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 3L);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(3);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 3L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(3);
         children[0].Text.Should().Be("k0: 0");
         children[2].Text.Should().Be("k2: 2");
@@ -233,13 +234,13 @@ public sealed class JsonObjectRangeTreeNodeTests
             new JsonObjectEntry("arr", ToBytes("[1]")),
             new JsonObjectEntry("val", ToBytes("1")),
         ];
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 3L);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 3L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children[0].Should().BeOfType<JsonObjectTreeNode>().Which.ParentNode.Should().BeNull();
         children[1].Should().BeOfType<JsonArrayTreeNode>().Which.ParentNode.Should().BeNull();
         children[2].Should().BeOfType<JsonValueTreeNode>().Which.ParentNode.Should().BeNull();
@@ -249,14 +250,14 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void EnsureChildrenLoaded_WhenAlreadyLoaded_IsIdempotent()
     {
         // Arrange
-        var entries = CreateNumberedEntries(2);
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 2L);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 2L);
 
         // Act
         node.EnsureChildrenLoaded();
-        var firstChildren = node.Children;
+        IList<ITreeNode> firstChildren = node.Children;
         node.EnsureChildrenLoaded();
-        var secondChildren = node.Children;
+        IList<ITreeNode> secondChildren = node.Children;
 
         // Assert — second call does not reload
         secondChildren.Should().BeSameAs(firstChildren);
@@ -268,14 +269,14 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void EnsureChildrenLoaded_CountExceedsRangeSize_CreatesNestedRangeNodes()
     {
         // Arrange — one node covering 2500 entries exceeds RangeSize → nested ranges
-        var entries = CreateNumberedEntries(2500);
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 2500L);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2500);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 2500L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(3);
         children.Should().OnlyContain(c => c is JsonObjectRangeTreeNode);
     }
@@ -284,14 +285,14 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void EnsureChildrenLoaded_CountNotMultipleOfRangeSize_LastChildHasRemainderCount()
     {
         // Arrange — 2500 count → 3 children: 1000 + 1000 + 500
-        var entries = CreateNumberedEntries(2500);
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 2500L);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2500);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 2500L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(3);
         children[0].Text.Should().Be("[0 - 999]");
         children[1].Text.Should().Be("[1,000 - 1,999]");
@@ -302,16 +303,16 @@ public sealed class JsonObjectRangeTreeNodeTests
     public void EnsureChildrenLoaded_NestedRangeChildrenContainCorrectKeysAndValues()
     {
         // Arrange — expand the last nested range of a 2500-entry node
-        var entries = CreateNumberedEntries(2500);
-        var node = new JsonObjectRangeTreeNode(entries, 0L, 2500L);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2500);
+        JsonObjectRangeTreeNode node = new(entries, 0L, 2500L);
 
         // Act
         node.EnsureChildrenLoaded();
-        var lastNested = (JsonObjectRangeTreeNode)node.Children[2];
+        JsonObjectRangeTreeNode lastNested = (JsonObjectRangeTreeNode)node.Children[2];
         lastNested.EnsureChildrenLoaded();
 
         // Assert
-        var children = lastNested.Children;
+        IList<ITreeNode> children = lastNested.Children;
         children.Should().HaveCount(500);
         children[0].Text.Should().Be("k2000: 2000");
         children[499].Text.Should().Be("k2499: 2499");

@@ -26,10 +26,10 @@ public sealed class TuiStartupOptionsTests : IDisposable
     public void FindMissingFileError_WhenNoFilesReferenced_ReturnsNull()
     {
         // Arrange
-        var options = new TuiStartupOptions();
+        TuiStartupOptions options = new();
 
         // Act
-        var error = options.FindMissingFileError();
+        string? error = options.FindMissingFileError();
 
         // Assert
         error.Should().BeNull();
@@ -39,10 +39,10 @@ public sealed class TuiStartupOptionsTests : IDisposable
     public void FindMissingFileError_WhenAllReferencedFilesExist_ReturnsNull()
     {
         // Arrange
-        var options = new TuiStartupOptions(InputFile: _existingFile, RecipeFile: _existingFile);
+        TuiStartupOptions options = new(InputFile: _existingFile, RecipeFile: _existingFile);
 
         // Act
-        var error = options.FindMissingFileError();
+        string? error = options.FindMissingFileError();
 
         // Assert
         error.Should().BeNull();
@@ -52,10 +52,10 @@ public sealed class TuiStartupOptionsTests : IDisposable
     public void FindMissingFileError_WhenInputFileIsMissing_ReturnsInputFileError()
     {
         // Arrange
-        var options = new TuiStartupOptions(InputFile: _missingFile, RecipeFile: _existingFile);
+        TuiStartupOptions options = new(InputFile: _missingFile, RecipeFile: _existingFile);
 
         // Act
-        var error = options.FindMissingFileError();
+        string? error = options.FindMissingFileError();
 
         // Assert
         error.Should().Be($"Error: File not found: {_missingFile}");
@@ -65,10 +65,10 @@ public sealed class TuiStartupOptionsTests : IDisposable
     public void FindMissingFileError_WhenRecipeFileIsMissing_ReturnsRecipeFileError()
     {
         // Arrange
-        var options = new TuiStartupOptions(InputFile: _existingFile, RecipeFile: _missingFile);
+        TuiStartupOptions options = new(InputFile: _existingFile, RecipeFile: _missingFile);
 
         // Act
-        var error = options.FindMissingFileError();
+        string? error = options.FindMissingFileError();
 
         // Assert
         error.Should().Be($"Error: Recipe file not found: {_missingFile}");
@@ -78,10 +78,10 @@ public sealed class TuiStartupOptionsTests : IDisposable
     public void FindMissingFileError_WhenBothFilesAreMissing_ReportsInputFileFirst()
     {
         // Arrange
-        var options = new TuiStartupOptions(InputFile: _missingFile, RecipeFile: _missingFile);
+        TuiStartupOptions options = new(InputFile: _missingFile, RecipeFile: _missingFile);
 
         // Act
-        var error = options.FindMissingFileError();
+        string? error = options.FindMissingFileError();
 
         // Assert
         error.Should().Be($"Error: File not found: {_missingFile}");

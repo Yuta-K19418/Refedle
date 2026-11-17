@@ -29,9 +29,9 @@ public sealed class IndexTaskManagerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_testFilePath, "{\"id\":1}\n{\"id\":2}");
-        var indexer = new RowIndexer(_testFilePath);
-        using var manager = new IndexTaskManager();
-        var tcs = new TaskCompletionSource<bool>();
+        RowIndexer indexer = new(_testFilePath);
+        using IndexTaskManager manager = new();
+        TaskCompletionSource<bool> tcs = new();
         indexer.BuildIndexCompleted += () => tcs.TrySetResult(true);
 
         // Act
@@ -46,10 +46,10 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void Start_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
-        using var manager = new IndexTaskManager();
+        using IndexTaskManager manager = new();
 
         // Act
-        var act = () => manager.Start(null!);
+        Action act = () => manager.Start(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -59,11 +59,11 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void Start_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var manager = new IndexTaskManager();
+        IndexTaskManager manager = new();
         manager.Dispose();
 
         // Act
-        var act = () => manager.Start(new RowIndexer(_testFilePath));
+        Action act = () => manager.Start(new RowIndexer(_testFilePath));
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -73,11 +73,11 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         // Arrange
-        var manager = new IndexTaskManager();
+        IndexTaskManager manager = new();
 
         // Act
         manager.Dispose();
-        var act = () => manager.Dispose();
+        Action act = () => manager.Dispose();
 
         // Assert
         act.Should().NotThrow();
@@ -87,10 +87,10 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void Dispose_WithoutPriorStart_DoesNotThrow()
     {
         // Arrange
-        var manager = new IndexTaskManager();
+        IndexTaskManager manager = new();
 
         // Act
-        var act = () => manager.Dispose();
+        Action act = () => manager.Dispose();
 
         // Assert
         act.Should().NotThrow();
@@ -102,20 +102,20 @@ public sealed class IndexTaskManagerTests : IDisposable
         // Arrange
         // Use BlockingIndexer for indexer1 to guarantee it is still running when
         // indexer2 starts, making the cancellation behaviour deterministic.
-        var indexer1 = new BlockingIndexer();
-        var firstCheckpoint1 = new TaskCompletionSource<bool>();
-        var completed1 = new TaskCompletionSource<bool>();
+        BlockingIndexer indexer1 = new();
+        TaskCompletionSource<bool> firstCheckpoint1 = new();
+        TaskCompletionSource<bool> completed1 = new();
         indexer1.FirstCheckpointReached += () => firstCheckpoint1.TrySetResult(true);
         indexer1.BuildIndexCompleted += () => completed1.TrySetResult(true);
 
-        var lines = Enumerable.Range(0, 500_000).Select(i => $"{{\"id\":{i}}}").ToList();
+        List<string> lines = [.. Enumerable.Range(0, 500_000).Select(i => $"{{\"id\":{i}}}")];
         await File.WriteAllLinesAsync(_testFilePath, lines);
 
-        var indexer2 = new RowIndexer(_testFilePath);
-        var completed2 = new TaskCompletionSource<bool>();
+        RowIndexer indexer2 = new(_testFilePath);
+        TaskCompletionSource<bool> completed2 = new();
         indexer2.BuildIndexCompleted += () => completed2.TrySetResult(true);
 
-        using var manager = new IndexTaskManager();
+        using IndexTaskManager manager = new();
 
         // Act
         manager.Start(indexer1);
@@ -138,10 +138,10 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void CancelCurrent_WhenIdle_DoesNotThrow()
     {
         // Arrange
-        using var manager = new IndexTaskManager();
+        using IndexTaskManager manager = new();
 
         // Act
-        var act = () => manager.CancelCurrent();
+        Action act = () => manager.CancelCurrent();
 
         // Assert
         act.Should().NotThrow();
@@ -151,13 +151,13 @@ public sealed class IndexTaskManagerTests : IDisposable
     public async Task CancelCurrent_AfterStart_CancelsTask()
     {
         // Arrange
-        var indexer = new BlockingIndexer();
-        var firstCheckpoint = new TaskCompletionSource<bool>();
-        var completed = new TaskCompletionSource<bool>();
+        BlockingIndexer indexer = new();
+        TaskCompletionSource<bool> firstCheckpoint = new();
+        TaskCompletionSource<bool> completed = new();
         indexer.FirstCheckpointReached += () => firstCheckpoint.TrySetResult(true);
         indexer.BuildIndexCompleted += () => completed.TrySetResult(true);
 
-        using var manager = new IndexTaskManager();
+        using IndexTaskManager manager = new();
         manager.Start(indexer);
         await firstCheckpoint.Task.WaitAsync(_waitTimeout);
 
@@ -173,11 +173,11 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void CancelCurrent_CalledTwice_DoesNotThrow()
     {
         // Arrange
-        using var manager = new IndexTaskManager();
+        using IndexTaskManager manager = new();
         manager.CancelCurrent();
 
         // Act
-        var act = () => manager.CancelCurrent();
+        Action act = () => manager.CancelCurrent();
 
         // Assert
         act.Should().NotThrow();
@@ -187,11 +187,11 @@ public sealed class IndexTaskManagerTests : IDisposable
     public void CancelCurrent_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        var manager = new IndexTaskManager();
+        IndexTaskManager manager = new();
         manager.Dispose();
 
         // Act
-        var act = () => manager.CancelCurrent();
+        Action act = () => manager.CancelCurrent();
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -203,13 +203,13 @@ public sealed class IndexTaskManagerTests : IDisposable
         // Arrange
         // Use a controllable fake that blocks until cancelled, making the test
         // deterministic regardless of machine speed.
-        var indexer = new BlockingIndexer();
-        var firstCheckpoint = new TaskCompletionSource<bool>();
-        var completed = new TaskCompletionSource<bool>();
+        BlockingIndexer indexer = new();
+        TaskCompletionSource<bool> firstCheckpoint = new();
+        TaskCompletionSource<bool> completed = new();
         indexer.FirstCheckpointReached += () => firstCheckpoint.TrySetResult(true);
         indexer.BuildIndexCompleted += () => completed.TrySetResult(true);
 
-        var manager = new IndexTaskManager();
+        IndexTaskManager manager = new();
 
         // Act
         manager.Start(indexer);

@@ -13,7 +13,7 @@ public sealed class KeyPathFormatterTests
         IReadOnlyList<KeyPathSegment> path = [];
 
         // Act
-        var result = KeyPathFormatter.Format(path, collapseIndices: false);
+        string result = KeyPathFormatter.Format(path, collapseIndices: false);
 
         // Assert
         result.Should().Be("root");
@@ -30,7 +30,7 @@ public sealed class KeyPathFormatterTests
         ];
 
         // Act
-        var result = KeyPathFormatter.Format(path, collapseIndices: false);
+        string result = KeyPathFormatter.Format(path, collapseIndices: false);
 
         // Assert
         result.Should().Be("k1 > k2");
@@ -47,7 +47,7 @@ public sealed class KeyPathFormatterTests
         ];
 
         // Act
-        var result = KeyPathFormatter.Format(path, collapseIndices: true);
+        string result = KeyPathFormatter.Format(path, collapseIndices: true);
 
         // Assert
         result.Should().Be("items[*]");
@@ -64,7 +64,7 @@ public sealed class KeyPathFormatterTests
         ];
 
         // Act
-        var result = KeyPathFormatter.Format(path, collapseIndices: false);
+        string result = KeyPathFormatter.Format(path, collapseIndices: false);
 
         // Assert
         result.Should().Be("items[2]");

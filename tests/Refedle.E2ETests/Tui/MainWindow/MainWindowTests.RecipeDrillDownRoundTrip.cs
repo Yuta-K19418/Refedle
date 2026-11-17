@@ -11,9 +11,9 @@ public sealed partial class MainWindowTests
     public async Task SaveAndLoadRecipe_SingleDrillDownFromJsonObject_RoundTripsKeyPathAndActionAcrossFreshSession()
     {
         // Arrange
-        var content = """{"items":[{"name":"A","val":1},{"name":"B","val":2}]}""";
-        var inputFile = _testDirectory.CreateFile("input.json", content);
-        var savePath = Path.Combine(Environment.CurrentDirectory, "recipe-roundtrip-single-drilldown-test.yaml");
+        string content = """{"items":[{"name":"A","val":1},{"name":"B","val":2}]}""";
+        string inputFile = _testDirectory.CreateFile("input.json", content);
+        string savePath = Path.Combine(Environment.CurrentDirectory, "recipe-roundtrip-single-drilldown-test.yaml");
         File.Delete(savePath);
         try
         {
@@ -53,7 +53,7 @@ public sealed partial class MainWindowTests
 
             // Assert: the saved recipe recorded both the DrillDown location and the action.
             File.Exists(savePath).Should().BeTrue();
-            var recipeContent = await File.ReadAllTextAsync(savePath);
+            string recipeContent = await File.ReadAllTextAsync(savePath);
             recipeContent.Should().Contain("drillDownKeyPath:");
             recipeContent.Should().Contain("key: \"items\"");
             recipeContent.Should().Contain("type: Rename");
@@ -67,7 +67,7 @@ public sealed partial class MainWindowTests
 
             // Assert: the fresh session lands directly on the DrillDown table with the recipe's
             // action already applied, without any further key input.
-            var lines = await Harness.WaitForContentsAsync("label (text)");
+            string[] lines = await Harness.WaitForContentsAsync("label (text)");
             lines.Should().Contain(line => line.Contains("[0]", StringComparison.Ordinal) && line.Contains('A') && line.Contains('1'));
             lines.Should().Contain(line => line.Contains("[1]", StringComparison.Ordinal) && line.Contains('B') && line.Contains('2'));
         }
@@ -81,14 +81,14 @@ public sealed partial class MainWindowTests
     public async Task SaveAndLoadRecipe_FullAggregationDrillDownFromJsonArray_RoundTripsKeyPathAndActionAcrossFreshSession()
     {
         // Arrange
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
-        var savePath = Path.Combine(Environment.CurrentDirectory, "recipe-roundtrip-full-aggregation-test.yaml");
+        string inputFile = _testDirectory.CreateFile("input.json", content);
+        string savePath = Path.Combine(Environment.CurrentDirectory, "recipe-roundtrip-full-aggregation-test.yaml");
         File.Delete(savePath);
         try
         {
@@ -129,7 +129,7 @@ public sealed partial class MainWindowTests
 
             // Assert: the root-level DrillDown has an empty KeyPath, and the action was recorded.
             File.Exists(savePath).Should().BeTrue();
-            var recipeContent = await File.ReadAllTextAsync(savePath);
+            string recipeContent = await File.ReadAllTextAsync(savePath);
             recipeContent.Should().Contain("drillDownKeyPath: []");
             recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"name\"");
@@ -142,7 +142,7 @@ public sealed partial class MainWindowTests
 
             // Assert: the fresh session lands directly on the DrillDown table with the recipe's
             // action already applied, without any further key input.
-            var lines = await Harness.WaitForContentsAsync("label (text)");
+            string[] lines = await Harness.WaitForContentsAsync("label (text)");
             lines.Should().Contain(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal));
             lines.Should().Contain(line => line.Contains("Bob", StringComparison.Ordinal) && line.Contains("25", StringComparison.Ordinal));
         }

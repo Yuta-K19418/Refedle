@@ -10,7 +10,7 @@ public sealed class BreadcrumbBarTests
     public void SetPath_WithPath_UpdatesDisplayedText()
     {
         // Arrange
-        using var bar = new BreadcrumbBar();
+        using BreadcrumbBar bar = new();
         IReadOnlyList<KeyPathSegment> path =
         [
             new KeyPathSegment("data", KeyPathSegmentKind.Key),

@@ -4,6 +4,7 @@ using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.JsonLines;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonRangeTreeNodes;
 
@@ -36,7 +37,7 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     private RowIndexer CreateAndBuildIndexer(string content)
     {
         File.WriteAllText(_testFilePath, content);
-        var indexer = new RowIndexer(_testFilePath);
+        RowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
         return indexer;
     }
@@ -45,12 +46,12 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
         IRowIndexer? nullIndexer = null;
 
         // Act
-        var act = () => new JsonLinesRangeTreeNode(nullIndexer!, reader, 0, 10);
+        Func<JsonLinesRangeTreeNode> act = () => new JsonLinesRangeTreeNode(nullIndexer!, reader, 0, 10);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -60,11 +61,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_WithNullReader_ThrowsArgumentNullException()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
         RowReader? reader = null;
 
         // Act
-        var act = () => new JsonLinesRangeTreeNode(indexer, reader!, 0, 10);
+        Func<JsonLinesRangeTreeNode> act = () => new JsonLinesRangeTreeNode(indexer, reader!, 0, 10);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -74,11 +75,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_WithNegativeStartIndex_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
 
         // Act
-        var act = () => new JsonLinesRangeTreeNode(indexer, reader, -1L, 10);
+        Func<JsonLinesRangeTreeNode> act = () => new JsonLinesRangeTreeNode(indexer, reader, -1L, 10);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -88,11 +89,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_WithNegativeCount_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
 
         // Act
-        var act = () => new JsonLinesRangeTreeNode(indexer, reader, 0L, -1L);
+        Func<JsonLinesRangeTreeNode> act = () => new JsonLinesRangeTreeNode(indexer, reader, 0L, -1L);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -102,11 +103,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_SetsCorrectDisplayText()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
 
         // Act
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 1000L);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 1000L);
 
         // Assert
         node.Text.Should().Be("Lines 1 - 1,000");
@@ -116,11 +117,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_SetsCorrectDisplayText_PartialRange()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
 
         // Act
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 1000L, 500L);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 1000L, 500L);
 
         // Assert
         node.Text.Should().Be("Lines 1,001 - 1,500");
@@ -130,13 +131,13 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void EnsureChildrenLoaded_PopulatesChildren()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 3L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 3L);
 
         // Act
         node.EnsureChildrenLoaded();
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(3);
@@ -146,12 +147,12 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Children_EmptyRange_ReturnsEmptyChildren()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 0L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 0L);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         node.Text.Should().Be("Lines 1 (empty)");
@@ -162,13 +163,13 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void EnsureChildrenLoaded_CountExceedsAvailableLines_ReturnsOnlyAvailableChildren()
     {
         // Arrange — file has 2 lines, but node requests count=3; ReadLines returns only 2
-        var indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 3L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 3L);
 
         // Act
         node.EnsureChildrenLoaded();
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(2);
@@ -178,10 +179,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_WithEmptyBytes_CreatesInvalidNode()
     {
         // Arrange
-        var emptyBytes = JsonRawBytes.Empty;
+        JsonRawBytes emptyBytes = JsonRawBytes.Empty;
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(emptyBytes, 0L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(emptyBytes, 0L);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -192,10 +193,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_WithMalformedJson_CreatesInvalidNode()
     {
         // Arrange
-        var malformed = new JsonRawBytes("{abc"u8.ToArray());
+        JsonRawBytes malformed = new("{abc"u8.ToArray());
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(malformed, 5L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(malformed, 5L);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -211,10 +212,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
         string json, Type expectedType, string expectedLabel)
     {
         // Arrange
-        var bytes = new JsonRawBytes(System.Text.Encoding.UTF8.GetBytes(json));
+        JsonRawBytes bytes = new(System.Text.Encoding.UTF8.GetBytes(json));
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
 
         // Assert
         node.Should().BeOfType(expectedType);
@@ -225,12 +226,12 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void IsChildrenLoaded_InitiallyFalse()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 1L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 1L);
 
         // Act
-        var result = node.IsChildrenLoaded;
+        bool result = node.IsChildrenLoaded;
 
         // Assert
         result.Should().BeFalse();
@@ -240,9 +241,9 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void EnsureChildrenLoaded_LoadsChildren()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}\n{\"b\":2}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 2L);
 
         // Act
         node.EnsureChildrenLoaded();
@@ -256,15 +257,15 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void EnsureChildrenLoaded_WhenAlreadyLoaded_IsIdempotent()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 1L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 1L);
 
         // Act
         node.EnsureChildrenLoaded();
-        var firstChildren = node.Children;
+        IList<ITreeNode> firstChildren = node.Children;
         node.EnsureChildrenLoaded();
-        var secondChildren = node.Children;
+        IList<ITreeNode> secondChildren = node.Children;
 
         // Assert — second call does not reload
         secondChildren.Should().BeSameAs(firstChildren);
@@ -274,9 +275,9 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void EnsureChildrenLoaded_EmptyRange_SetsIsChildrenLoadedTrue()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 0L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 0L);
 
         // Act
         node.EnsureChildrenLoaded();
@@ -292,15 +293,15 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void LoadChildren_CountExceedsRangeSize_CreatesNestedRangeNodes()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2500L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 2500L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(3);
         children.Should().OnlyContain(c => c is JsonLinesRangeTreeNode);
     }
@@ -309,16 +310,16 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void LoadChildren_CountEqualsRangeSize_CreatesLineNodes()
     {
         // Arrange — 1000 lines, exactly at RangeSize boundary → line nodes, not nested range nodes
-        var lines = Enumerable.Range(0, 1000).Select(i => $"{{\"id\":{i}}}");
-        var indexer = CreateAndBuildIndexer(string.Join("\n", lines));
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 1000L);
+        IEnumerable<string> lines = Enumerable.Range(0, 1000).Select(i => $"{{\"id\":{i}}}");
+        RowIndexer indexer = CreateAndBuildIndexer(string.Join("\n", lines));
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 1000L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(1000);
         children.Should().NotContain(c => c is JsonLinesRangeTreeNode);
     }
@@ -327,15 +328,15 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void LoadChildren_CountNotMultipleOfRangeSize_LastChildHasRemainderCount()
     {
         // Arrange — 2500 count → 3 children: 1000 + 1000 + 500
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2500L);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 0L, 2500L);
 
         // Act
         node.EnsureChildrenLoaded();
 
         // Assert
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
         children.Should().HaveCount(3);
         children[0].Text.Should().Be("Lines 1 - 1,000");
         children[1].Text.Should().Be("Lines 1,001 - 2,000");
@@ -346,11 +347,11 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void Constructor_WithLongStartIndex_SetsCorrectDisplayText()
     {
         // Arrange
-        var indexer = CreateAndBuildIndexer("{\"a\":1}");
-        using var reader = new RowReader(indexer.FilePath);
+        RowIndexer indexer = CreateAndBuildIndexer("{\"a\":1}");
+        using RowReader reader = new(indexer.FilePath);
 
         // Act
-        var node = new JsonLinesRangeTreeNode(indexer, reader, 2_000_000_000L, 1000L);
+        JsonLinesRangeTreeNode node = new(indexer, reader, 2_000_000_000L, 1000L);
 
         // Assert
         node.Text.Should().Be("Lines 2,000,000,001 - 2,000,001,000");
@@ -360,10 +361,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_WithNewlineOnlyBytes_CreatesInvalidNode()
     {
         // Arrange — a bare newline (blank line content) is not valid JSON
-        var bytes = new JsonRawBytes("\n"u8.ToArray());
+        JsonRawBytes bytes = new("\n"u8.ToArray());
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -374,10 +375,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_WithUtf8Bom_CreatesInvalidNode()
     {
         // Arrange — BOM (EF BB BF) prefix is not a valid JSON token
-        var bytes = new JsonRawBytes([0xEF, 0xBB, 0xBF, .. "{\"a\":1}"u8]);
+        JsonRawBytes bytes = new([0xEF, 0xBB, 0xBF, .. "{\"a\":1}"u8]);
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 0L);
 
         // Assert — reader cannot parse the BOM-prefixed bytes, so the line is treated as invalid
         node.Should().BeOfType<JsonValueTreeNode>();
@@ -389,10 +390,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_ObjectToken_SetsRecordPositionAsOneBased()
     {
         // Arrange
-        var bytes = new JsonRawBytes(Encoding.UTF8.GetBytes("{\"a\":1}"));
+        JsonRawBytes bytes = new(Encoding.UTF8.GetBytes("{\"a\":1}"));
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 3L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 3L);
 
         // Assert
         node.Should().BeOfType<JsonObjectTreeNode>()
@@ -403,10 +404,10 @@ public sealed class JsonLinesRangeTreeNodeTests : IDisposable
     public void CreateLineNode_ArrayToken_SetsRecordPositionAsOneBased()
     {
         // Arrange
-        var bytes = new JsonRawBytes(Encoding.UTF8.GetBytes("[1,2]"));
+        JsonRawBytes bytes = new(Encoding.UTF8.GetBytes("[1,2]"));
 
         // Act
-        var node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 3L);
+        ITreeNode node = JsonLinesRangeTreeNode.CreateLineNode(bytes, 3L);
 
         // Assert
         node.Should().BeOfType<JsonArrayTreeNode>()

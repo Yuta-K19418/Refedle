@@ -56,10 +56,10 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_FirstAccess_ReturnsCorrectBytes()
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer);
+        using ElementByteCache cache = new(_indexer);
 
         // Act
-        var result = cache.GetRow(0);
+        JsonRawBytes result = cache.GetRow(0);
 
         // Assert
         Encoding.UTF8.GetString(result.Span).Should().Be("{\"id\":1,\"name\":\"Alice\"}");
@@ -69,11 +69,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_SecondAccessSameIndex_ReturnsSameBytes()
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer);
+        using ElementByteCache cache = new(_indexer);
 
         // Act
-        var first = cache.GetRow(0);
-        var second = cache.GetRow(0);
+        JsonRawBytes first = cache.GetRow(0);
+        JsonRawBytes second = cache.GetRow(0);
 
         // Assert
         first.ToArray().Should().Equal(second.ToArray());
@@ -83,11 +83,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_LastValidIndex_ReturnsCorrectBytes()
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer);
-        var lastIndex = cache.TotalRows - 1;
+        using ElementByteCache cache = new(_indexer);
+        long lastIndex = cache.TotalRows - 1;
 
         // Act
-        var result = cache.GetRow(lastIndex);
+        JsonRawBytes result = cache.GetRow(lastIndex);
 
         // Assert
         Encoding.UTF8.GetString(result.Span).Should().Be("{\"id\":10,\"name\":\"Jack\"}");
@@ -97,11 +97,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_OutsideCachedRange_UpdatesCacheWindow()
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer, capacity: 5, prefetchWindow: 3);
+        using ElementByteCache cache = new(_indexer, capacity: 5, prefetchWindow: 3);
 
         // Act — access index 0 to prime cache, then access index 9 (outside initial window)
         _ = cache.GetRow(0);
-        var result = cache.GetRow(9);
+        JsonRawBytes result = cache.GetRow(9);
 
         // Assert
         Encoding.UTF8.GetString(result.Span).Should().Be("{\"id\":10,\"name\":\"Jack\"}");
@@ -113,10 +113,10 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_NegativeIndex_ReturnsEmpty(long invalidIndex)
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer);
+        using ElementByteCache cache = new(_indexer);
 
         // Act
-        var result = cache.GetRow(invalidIndex);
+        JsonRawBytes result = cache.GetRow(invalidIndex);
 
         // Assert
         result.IsEmpty.Should().BeTrue();
@@ -126,11 +126,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_IndexEqualToTotalElements_ReturnsEmpty()
     {
         // Arrange
-        using var cache = new ElementByteCache(_indexer);
-        var totalRows = cache.TotalRows;
+        using ElementByteCache cache = new(_indexer);
+        long totalRows = cache.TotalRows;
 
         // Act
-        var result = cache.GetRow(totalRows);
+        JsonRawBytes result = cache.GetRow(totalRows);
 
         // Assert
         result.IsEmpty.Should().BeTrue();
@@ -140,11 +140,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void GetRow_AfterDisposal_ThrowsObjectDisposedException()
     {
         // Arrange
-        var cache = new ElementByteCache(_indexer);
+        ElementByteCache cache = new(_indexer);
         cache.Dispose();
 
         // Act
-        var act = () => cache.GetRow(0);
+        Func<JsonRawBytes> act = () => cache.GetRow(0);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -154,11 +154,11 @@ public sealed class ElementByteCacheTests : IDisposable
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         // Arrange
-        var cache = new ElementByteCache(_indexer);
+        ElementByteCache cache = new(_indexer);
 
         // Act
         cache.Dispose();
-        var act = () => cache.Dispose();
+        Action act = () => cache.Dispose();
 
         // Assert
         act.Should().NotThrow();

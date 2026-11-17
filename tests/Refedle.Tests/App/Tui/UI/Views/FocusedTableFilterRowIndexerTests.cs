@@ -89,7 +89,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void Constructor_WithNullSource_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new FocusedTableFilterRowIndexer(null!, [], RevealThreshold);
+        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(null!, [], RevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -99,7 +99,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void Constructor_WithNullFilterSpecs_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), null!, RevealThreshold);
+        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), null!, RevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -111,7 +111,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void Constructor_WithNonPositiveRevealThreshold_ThrowsArgumentOutOfRangeException(int revealThreshold)
     {
         // Act
-        var act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), [], revealThreshold);
+        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), [], revealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -121,8 +121,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_MatchesOnlyRowsSatisfyingFilter()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A"], ["[1]", "B"], ["[2]", "A"]]);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], RevealThreshold);
+        FakeFocusedSource source = new([["[0]", "A"], ["[1]", "B"], ["[2]", "A"]]);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);
@@ -137,8 +137,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithMultipleSpecs_UsesAndSemantics()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A", "x"], ["[1]", "A", "y"], ["[2]", "B", "y"]]);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A"), MakeSpec(1, "y")], RevealThreshold);
+        FakeFocusedSource source = new([["[0]", "A", "x"], ["[1]", "A", "y"], ["[2]", "B", "y"]]);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A"), MakeSpec(1, "y")], RevealThreshold);
 
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);
@@ -152,8 +152,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithMoreRowsThanOneBatch_ScansAllRows()
     {
         // Arrange
-        var rows = Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", i % 2 == 0 ? "A" : "B" }).ToArray();
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        string[][] rows = [.. Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", i % 2 == 0 ? "A" : "B" })];
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);
@@ -167,12 +167,12 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WhenCancelled_ThrowsOperationCanceledException()
     {
         // Arrange
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
-        using var cts = new CancellationTokenSource();
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var act = () => indexer.BuildIndexAsync(cts.Token);
+        Func<Task> act = () => indexer.BuildIndexAsync(cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -183,8 +183,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithSingleBatch_FiresProgressChangedOnceWithFinalCounts()
     {
         // Arrange
-        var source = new FakeFocusedSource([["[0]", "A"], ["[1]", "B"]]);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], RevealThreshold);
+        FakeFocusedSource source = new([["[0]", "A"], ["[1]", "B"]]);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -199,8 +199,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithMultipleBatches_ProgressReportsEveryBatchBoundary()
     {
         // Arrange
-        var rows = Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", "A" }).ToArray();
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        string[][] rows = [.. Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", "A" })];
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -215,8 +215,8 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithManyRows_SkipsBatchesBelowOnePercentAndReportsShortFinalBatch()
     {
         // Arrange — each 1000-row batch is below 1% of 150001 rows, so some batches are skipped
-        var rows = Enumerable.Range(0, 150_001).Select(i => new[] { $"[{i}]", "A" }).ToArray();
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        string[][] rows = [.. Enumerable.Range(0, 150_001).Select(i => new[] { $"[{i}]", "A" })];
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -236,7 +236,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithEmptySource_CompletesWithoutProgress()
     {
         // Arrange
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -252,12 +252,12 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithEmptySourceAndCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
-        using var cts = new CancellationTokenSource();
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var act = () => indexer.BuildIndexAsync(cts.Token);
+        Func<Task> act = () => indexer.BuildIndexAsync(cts.Token);
 
         // Assert — the final token check covers the empty source, where the loop never runs
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -267,15 +267,15 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_CancelledDuringFinalBatch_ThrowsWithoutFinalProgressNotification()
     {
         // Arrange — 2000 rows = 2 batches; the gate blocks on the final row of the final batch
-        var rows = Enumerable.Range(0, 2000).Select(i => new[] { $"[{i}]", "A" }).ToArray();
-        using var source = new GatedFocusedSource(rows, gateRowIndex: 1999);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], RevealThreshold);
+        string[][] rows = [.. Enumerable.Range(0, 2000).Select(i => new[] { $"[{i}]", "A" })];
+        using GatedFocusedSource source = new(rows, gateRowIndex: 1999);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
 
         // Act
-        var build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
+        Task build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
         try
         {
             await source.GateReached.Task;
@@ -284,7 +284,7 @@ public sealed class FocusedTableFilterRowIndexerTests
 
             // Assert — the in-flight batch finishes, then the post-yield token check throws
             // before the final progress notification fires
-            var assertBuild = () => build;
+            Func<Task> assertBuild = () => build;
             await assertBuild.Should().ThrowAsync<OperationCanceledException>();
             events.Should().ContainSingle().Which.Should().Be((1000, 2000));
             indexer.TotalMatchedRows.Should().Be(2000);
@@ -303,13 +303,13 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_CancelledMidScan_StopsReadingSourceAfterInFlightBatch()
     {
         // Arrange — 3000 rows = 3 batches; the gate blocks on the last row of batch 2
-        var rows = Enumerable.Range(0, 3000).Select(i => new[] { $"[{i}]", "A" }).ToArray();
-        using var source = new GatedFocusedSource(rows, gateRowIndex: 1999);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], RevealThreshold);
-        using var cts = new CancellationTokenSource();
+        string[][] rows = [.. Enumerable.Range(0, 3000).Select(i => new[] { $"[{i}]", "A" })];
+        using GatedFocusedSource source = new(rows, gateRowIndex: 1999);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
+        using CancellationTokenSource cts = new();
 
         // Act
-        var build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
+        Task build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
         try
         {
             await source.GateReached.Task;
@@ -317,7 +317,7 @@ public sealed class FocusedTableFilterRowIndexerTests
             source.ReleaseGate();
 
             // Assert — one read per row: batch 3 is never read after cancellation
-            var assertBuild = () => build;
+            Func<Task> assertBuild = () => build;
             await assertBuild.Should().ThrowAsync<OperationCanceledException>();
             source.ReadCount.Should().Be(2000);
             indexer.TotalMatchedRows.Should().Be(2000);
@@ -336,10 +336,10 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void GetSourceRow_BeforeBuildOrOutOfRange_ReturnsMinusOne(int filteredRow)
     {
         // Arrange
-        var indexer = new FocusedTableFilterRowIndexer(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
-        var sourceRow = indexer.GetSourceRow(filteredRow);
+        int sourceRow = indexer.GetSourceRow(filteredRow);
 
         // Assert
         sourceRow.Should().Be(-1);
@@ -349,12 +349,12 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WhenMatchesReachThreshold_CompletesThresholdReachedMidScan()
     {
         // Arrange — threshold 2 of 3 matches; the gate blocks on the final row, after the threshold
-        var rows = Enumerable.Range(0, 3).Select(static i => new[] { $"[{i}]", "A" }).ToArray();
-        using var source = new GatedFocusedSource(rows, gateRowIndex: 2);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], 2);
+        string[][] rows = [.. Enumerable.Range(0, 3).Select(static i => new[] { $"[{i}]", "A" })];
+        using GatedFocusedSource source = new(rows, gateRowIndex: 2);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], 2);
 
         // Act
-        var build = Task.Run(() => indexer.BuildIndexAsync(CancellationToken.None));
+        Task build = Task.Run(() => indexer.BuildIndexAsync(CancellationToken.None));
         try
         {
             await indexer.ThresholdReached.WaitAsync(TimeSpan.FromSeconds(10));
@@ -376,7 +376,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithFewerMatchesThanThreshold_CancelsThresholdReachedOnCompletion()
     {
         // Arrange — a single match never reaches the threshold of 2
-        var indexer = new FocusedTableFilterRowIndexer(
+        FocusedTableFilterRowIndexer indexer = new(
             new FakeFocusedSource([["[0]", "A"], ["[1]", "B"]]), [MakeSpec(0, "A")], 2);
 
         // Act
@@ -396,12 +396,12 @@ public sealed class FocusedTableFilterRowIndexerTests
             ["[0]", "A"],
             ["[1]", "B"],
         ];
-        using var source = new GatedFocusedSource(rows, gateRowIndex: 1);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], 2);
-        using var cts = new CancellationTokenSource();
+        using GatedFocusedSource source = new(rows, gateRowIndex: 1);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], 2);
+        using CancellationTokenSource cts = new();
 
         // Act
-        var build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
+        Task build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
         try
         {
             await source.GateReached.Task;
@@ -409,7 +409,7 @@ public sealed class FocusedTableFilterRowIndexerTests
             source.ReleaseGate();
 
             // Assert — the canceled scan cancels the pending threshold wait as well
-            var assertBuild = () => build;
+            Func<Task> assertBuild = () => build;
             await assertBuild.Should().ThrowAsync<OperationCanceledException>();
             indexer.ThresholdReached.Status.Should().Be(TaskStatus.Canceled);
         }
@@ -430,12 +430,12 @@ public sealed class FocusedTableFilterRowIndexerTests
             ["[0]", "A"],
             ["[1]", "A"],
         ];
-        using var source = new GatedFocusedSource(rows, gateRowIndex: 1);
-        var indexer = new FocusedTableFilterRowIndexer(source, [MakeSpec(0, "A")], 1);
-        using var cts = new CancellationTokenSource();
+        using GatedFocusedSource source = new(rows, gateRowIndex: 1);
+        FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], 1);
+        using CancellationTokenSource cts = new();
 
         // Act
-        var build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
+        Task build = Task.Run(() => indexer.BuildIndexAsync(cts.Token));
         try
         {
             await indexer.ThresholdReached.WaitAsync(TimeSpan.FromSeconds(10));
@@ -444,7 +444,7 @@ public sealed class FocusedTableFilterRowIndexerTests
             source.ReleaseGate();
 
             // Assert — the late cancel cannot undo an already completed threshold wait
-            var assertBuild = () => build;
+            Func<Task> assertBuild = () => build;
             await assertBuild.Should().ThrowAsync<OperationCanceledException>();
             indexer.ThresholdReached.Status.Should().Be(TaskStatus.RanToCompletion);
         }
@@ -460,11 +460,11 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WhenSourceFaultsBeforeThreshold_ThrowsAndCancelsThresholdReached()
     {
         // Arrange — one match stays below threshold 2; the second row's read faults
-        var indexer = new FocusedTableFilterRowIndexer(
+        FocusedTableFilterRowIndexer indexer = new(
             new FaultingFocusedSource([["[0]", "A"], ["[1]", "A"]], faultRowIndex: 1), [MakeSpec(0, "A")], 2);
 
         // Act
-        var act = () => indexer.BuildIndexAsync(CancellationToken.None);
+        Func<Task> act = () => indexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert — the fault propagates and the finally block cancels the pending threshold wait
         await act.Should().ThrowAsync<InvalidOperationException>();
@@ -475,11 +475,11 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WhenSourceFaultsAfterThresholdReached_ThrowsAndKeepsThresholdCompleted()
     {
         // Arrange — threshold 1 fires at the first match; the second row's read faults
-        var indexer = new FocusedTableFilterRowIndexer(
+        FocusedTableFilterRowIndexer indexer = new(
             new FaultingFocusedSource([["[0]", "A"], ["[1]", "A"]], faultRowIndex: 1), [MakeSpec(0, "A")], 1);
 
         // Act
-        var act = () => indexer.BuildIndexAsync(CancellationToken.None);
+        Func<Task> act = () => indexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert — the fault cannot undo an already completed threshold wait
         await act.Should().ThrowAsync<InvalidOperationException>();

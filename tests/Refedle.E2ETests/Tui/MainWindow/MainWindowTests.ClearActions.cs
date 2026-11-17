@@ -10,13 +10,13 @@ public sealed partial class MainWindowTests
     public async Task ClearActionsKey_OnCsvTableWithPendingAction_RevertsToOriginalRendering()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
@@ -40,7 +40,7 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("Clear all actions");
         Harness.SendKey(KeyCode.CursorLeft);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name (text)");
+        string[] lines = await Harness.WaitForContentsAsync("name (text)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("name (text)", StringComparison.Ordinal));
@@ -53,14 +53,14 @@ public sealed partial class MainWindowTests
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view, then apply a
         // Rename on the "name" column. Column 0 is the "#" pseudo column, so move right first.
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25},
               {"name":"Charlie","age":35}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -88,7 +88,7 @@ public sealed partial class MainWindowTests
         await Harness.WaitForContentsAsync("Clear all actions");
         Harness.SendKey(KeyCode.CursorLeft);
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("name (text)");
+        string[] lines = await Harness.WaitForContentsAsync("name (text)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("name (text)", StringComparison.Ordinal));

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
+using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -33,12 +34,12 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_TKey_InvokesTableModeToggleAndReturnsTrue()
     {
         // Arrange — T switches to table mode via the injected callback.
-        using var app = TestAppFactory.Create();
-        var toggled = false;
-        using var view = new ConcreteMorphTreeView(() => toggled = true, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        bool toggled = false;
+        using ConcreteMorphTreeView view = new(() => toggled = true, _ => { });
 
         // Act
-        var result = view.ProcessKey(new Key(KeyCode.T));
+        bool result = view.ProcessKey(new Key(KeyCode.T));
 
         // Assert — the toggle fires and the key is consumed.
         result.Should().BeTrue();
@@ -53,11 +54,11 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_VimSelectionKey_IsConsumedAndReturnsTrue(KeyCode keyCode)
     {
         // Arrange — j/k move by one row, d/u move by one page; all go through ConsumeAction.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var result = view.ProcessKey(new Key(keyCode));
+        bool result = view.ProcessKey(new Key(keyCode));
 
         // Assert
         result.Should().BeTrue();
@@ -70,11 +71,11 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — h/l are forwarded to the base TreeView as CursorLeft/CursorRight.
         // Their return value depends on base TreeView state, so only exception-safety is locked.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var act = () => view.ProcessKey(new Key(keyCode));
+        Func<bool> act = () => view.ProcessKey(new Key(keyCode));
 
         // Assert
         act.Should().NotThrow();
@@ -84,11 +85,11 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_FirstGOfSequence_IsConsumedAndReturnsTrue()
     {
         // Arrange — first 'g' enters the pending state (PendingGSequence).
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var result = view.ProcessKey(new Key(KeyCode.G));
+        bool result = view.ProcessKey(new Key(KeyCode.G));
 
         // Assert
         result.Should().BeTrue();
@@ -99,12 +100,12 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — 'gg' within the timeout resolves to GoToFirst. The view owns its own
         // translator with a 1000 ms timeout, so two synchronous presses stay well within it.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var first = view.ProcessKey(new Key(KeyCode.G));
-        var second = view.ProcessKey(new Key(KeyCode.G));
+        bool first = view.ProcessKey(new Key(KeyCode.G));
+        bool second = view.ProcessKey(new Key(KeyCode.G));
 
         // Assert — both presses are consumed; the pair navigates to the first node.
         first.Should().BeTrue();
@@ -115,11 +116,11 @@ public sealed class MorphTreeViewTests
     public void OnKeyDown_ShiftG_GoesToEndAndReturnsTrue()
     {
         // Arrange — Shift+G resolves to GoToEnd.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var result = view.ProcessKey(new Key(KeyCode.G | KeyCode.ShiftMask));
+        bool result = view.ProcessKey(new Key(KeyCode.G | KeyCode.ShiftMask));
 
         // Assert
         result.Should().BeTrue();
@@ -133,11 +134,11 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — global shortcuts must NOT be consumed so they reach AppKeyHandler.
         // (T is excluded here because it is intercepted earlier as the table-mode toggle.)
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var result = view.ProcessKey(new Key(keyCode));
+        bool result = view.ProcessKey(new Key(keyCode));
 
         // Assert
         result.Should().BeFalse();
@@ -150,11 +151,11 @@ public sealed class MorphTreeViewTests
     {
         // Arrange — neither a vim key nor a global shortcut, so it falls through to base.OnKeyDown.
         // The return value depends on base TreeView state, so only exception-safety is locked.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTreeView(() => { }, _ => { });
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTreeView view = new(() => { }, _ => { });
 
         // Act
-        var act = () => view.ProcessKey(new Key(keyCode));
+        Func<bool> act = () => view.ProcessKey(new Key(keyCode));
 
         // Assert
         act.Should().NotThrow();

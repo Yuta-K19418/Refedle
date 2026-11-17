@@ -1,5 +1,7 @@
+using System.Drawing;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI;
+using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -17,9 +19,9 @@ public sealed class FilterScanProgressOverlayTests
     public void Show_WithParent_AddsSpinnerAndLabelWithoutProgressBar()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
 
         // Act
         overlay.Show(parent);
@@ -34,9 +36,9 @@ public sealed class FilterScanProgressOverlayTests
     public void Show_WhenAlreadyShown_KeepsOnlyOneInstanceOfEachView()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         overlay.Show(parent);
 
         // Act
@@ -59,9 +61,9 @@ public sealed class FilterScanProgressOverlayTests
         string expectedText)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         overlay.Show(parent);
 
         // Act
@@ -76,9 +78,9 @@ public sealed class FilterScanProgressOverlayTests
     public void Update_WithZeroTotalRows_ShowsZeroProgress()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         overlay.Show(parent);
 
         // Act
@@ -92,10 +94,10 @@ public sealed class FilterScanProgressOverlayTests
     public void Update_WhenNotShown_DoesNotThrow()
     {
         // Arrange
-        using var overlay = new FilterScanProgressOverlay();
+        using FilterScanProgressOverlay overlay = new();
 
         // Act
-        var act = () => overlay.Update(1, 2);
+        Action act = () => overlay.Update(1, 2);
 
         // Assert
         act.Should().NotThrow();
@@ -105,14 +107,14 @@ public sealed class FilterScanProgressOverlayTests
     public void Dismiss_WithOverlayShown_RemovesAndDisposesAllViews()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         overlay.Show(parent);
-        var spinner = parent.SubViews.OfType<SpinnerView>().Single();
-        var label = GetLabel(parent);
-        var spinnerDisposed = false;
-        var labelDisposed = false;
+        SpinnerView spinner = parent.SubViews.OfType<SpinnerView>().Single();
+        Label label = GetLabel(parent);
+        bool spinnerDisposed = false;
+        bool labelDisposed = false;
         spinner.Disposing += (_, _) => spinnerDisposed = true;
         label.Disposing += (_, _) => labelDisposed = true;
 
@@ -130,9 +132,9 @@ public sealed class FilterScanProgressOverlayTests
     public void Show_WithParent_PlacesOverlayOnParentBottomRowOneColumnInsideRightEdge()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         app.StopAfterFirstIteration = true;
         app.Begin(parent);
 
@@ -142,9 +144,9 @@ public sealed class FilterScanProgressOverlayTests
 
         // Assert — the whole strip sits on the parent's bottom row when the host does not
         // scroll (its content size equals its viewport)
-        var spinner = parent.SubViews.OfType<SpinnerView>().Single();
-        var label = GetLabel(parent);
-        var contentSize = parent.GetContentSize();
+        SpinnerView spinner = parent.SubViews.OfType<SpinnerView>().Single();
+        Label label = GetLabel(parent);
+        Size contentSize = parent.GetContentSize();
         spinner.Frame.Y.Should().Be(contentSize.Height - 1);
         label.Frame.Y.Should().Be(contentSize.Height - 1);
         label.Frame.Right.Should().Be(contentSize.Width - 1);
@@ -155,15 +157,15 @@ public sealed class FilterScanProgressOverlayTests
     public void Show_WithParent_UsesWhiteOnDarkGraySchemeForAllViews()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
 
         // Act
         overlay.Show(parent);
 
         // Assert
-        var expected = new Attribute(ColorName16.White, ColorName16.DarkGray);
+        Attribute expected = new(ColorName16.White, ColorName16.DarkGray);
         parent.SubViews.OfType<SpinnerView>().Single().GetScheme().Normal.Should().Be(expected);
         GetLabel(parent).GetScheme().Normal.Should().Be(expected);
     }
@@ -172,19 +174,19 @@ public sealed class FilterScanProgressOverlayTests
     public void BringToFront_WithViewAddedAfterShow_MovesOverlayViewsAboveIt()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
         overlay.Show(parent);
-        using var later = new View();
+        using View later = new();
         parent.Add(later);
 
         // Act
         overlay.BringToFront();
 
         // Assert
-        var order = parent.SubViews.ToList();
-        var laterIndex = order.IndexOf(later);
+        List<View> order = [.. parent.SubViews];
+        int laterIndex = order.IndexOf(later);
         order.IndexOf(GetLabel(parent)).Should().BeGreaterThan(laterIndex);
         order.IndexOf(parent.SubViews.OfType<SpinnerView>().Single()).Should().BeGreaterThan(laterIndex);
     }
@@ -193,10 +195,10 @@ public sealed class FilterScanProgressOverlayTests
     public void BringToFront_WhenNotShown_DoesNotThrow()
     {
         // Arrange
-        using var overlay = new FilterScanProgressOverlay();
+        using FilterScanProgressOverlay overlay = new();
 
         // Act
-        var act = overlay.BringToFront;
+        Action act = overlay.BringToFront;
 
         // Assert
         act.Should().NotThrow();
@@ -206,10 +208,10 @@ public sealed class FilterScanProgressOverlayTests
     public void Dismiss_WhenNotShown_DoesNotThrow()
     {
         // Arrange
-        using var overlay = new FilterScanProgressOverlay();
+        using FilterScanProgressOverlay overlay = new();
 
         // Act
-        var act = overlay.Dismiss;
+        Action act = overlay.Dismiss;
 
         // Assert
         act.Should().NotThrow();
@@ -219,14 +221,14 @@ public sealed class FilterScanProgressOverlayTests
     public void BringToFront_AfterDismiss_LeavesParentSubViewsUnchanged()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = CreateParent();
-        using var overlay = new FilterScanProgressOverlay();
-        using var sibling = new View();
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = CreateParent();
+        using FilterScanProgressOverlay overlay = new();
+        using View sibling = new();
         overlay.Show(parent);
         parent.Add(sibling);
         overlay.Dismiss();
-        var before = parent.SubViews.ToList();
+        List<View> before = [.. parent.SubViews];
 
         // Act
         overlay.BringToFront();

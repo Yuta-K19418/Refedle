@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
+using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -45,8 +46,8 @@ public sealed partial class MorphTableViewTests
     public void Dispose_DisposesTableIfIDisposable()
     {
         // Arrange
-        using var view = new ConcreteMorphTableView();
-        using var table = new DisposableTableSource();
+        using ConcreteMorphTableView view = new();
+        using DisposableTableSource table = new();
         view.Table = table;
 
         // Act
@@ -60,12 +61,12 @@ public sealed partial class MorphTableViewTests
     public void Dispose_DoesNotThrow_WhenTableIsNotIDisposable()
     {
         // Arrange
-        using var view = new ConcreteMorphTableView();
-        var table = new NonDisposableTableSource();
+        using ConcreteMorphTableView view = new();
+        NonDisposableTableSource table = new();
         view.Table = table;
 
         // Act
-        var act = () => view.Dispose();
+        Action act = () => view.Dispose();
 
         // Assert
         act.Should().NotThrow();
@@ -83,11 +84,11 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_WhenTableIsNull_DelegatesToBaseWithoutThrowing()
     {
         // Arrange — Table is null, so OnKeyDown short-circuits to the base view.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView();
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new();
 
         // Act
-        var act = () => view.ProcessKey(new Key(KeyCode.J));
+        Func<bool> act = () => view.ProcessKey(new Key(KeyCode.J));
 
         // Assert — the vim path is skipped; base.OnKeyDown runs without throwing.
         act.Should().NotThrow();
@@ -103,14 +104,14 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_VimNavigationKey_IsConsumedAndReturnsTrue(KeyCode keyCode)
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var result = view.ProcessKey(new Key(keyCode));
+        bool result = view.ProcessKey(new Key(keyCode));
 
         // Assert — hjkl/du are mapped to commands and consumed.
         result.Should().BeTrue();
@@ -120,14 +121,14 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_FirstGOfSequence_IsConsumedAndReturnsTrue()
     {
         // Arrange — first 'g' enters the pending state (PendingGSequence).
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var result = view.ProcessKey(new Key(KeyCode.G));
+        bool result = view.ProcessKey(new Key(KeyCode.G));
 
         // Assert
         result.Should().BeTrue();
@@ -138,15 +139,15 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — 'gg' within the timeout resolves to GoToFirst. The view owns its own
         // translator with a 1000 ms timeout, so two synchronous presses stay well within it.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var first = view.ProcessKey(new Key(KeyCode.G));
-        var second = view.ProcessKey(new Key(KeyCode.G));
+        bool first = view.ProcessKey(new Key(KeyCode.G));
+        bool second = view.ProcessKey(new Key(KeyCode.G));
 
         // Assert — both presses are consumed; the pair navigates to the first row.
         first.Should().BeTrue();
@@ -157,14 +158,14 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_ShiftG_GoesToEndAndReturnsTrue()
     {
         // Arrange — Shift+G resolves to GoToEnd.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var result = view.ProcessKey(new Key(KeyCode.G | KeyCode.ShiftMask));
+        bool result = view.ProcessKey(new Key(KeyCode.G | KeyCode.ShiftMask));
 
         // Assert
         result.Should().BeTrue();
@@ -177,14 +178,14 @@ public sealed partial class MorphTableViewTests
     public void OnKeyDown_GlobalShortcut_BubblesUpAndReturnsFalse(KeyCode keyCode)
     {
         // Arrange — global shortcuts must NOT be consumed so they reach AppKeyHandler.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var result = view.ProcessKey(new Key(keyCode));
+        bool result = view.ProcessKey(new Key(keyCode));
 
         // Assert
         result.Should().BeFalse();
@@ -197,14 +198,14 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — neither a vim key nor a global shortcut, so it falls through to base.OnKeyDown.
         // The return value depends on base TableView state, so only exception-safety is locked.
-        using var app = TestAppFactory.Create();
-        using var view = new ConcreteMorphTableView
+        using IApplication app = TestAppFactory.Create();
+        using ConcreteMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
 
         // Act
-        var act = () => view.ProcessKey(new Key(keyCode));
+        Func<bool> act = () => view.ProcessKey(new Key(keyCode));
 
         // Assert
         act.Should().NotThrow();

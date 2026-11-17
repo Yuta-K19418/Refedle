@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.Commands.Apply;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Types;
 
@@ -27,10 +28,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithCsvInput_ReturnsHeaderColumnNames()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
+        string inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.Csv, inputFile, drillDownKeyPath: null, CancellationToken.None);
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.Csv, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         namesResult.IsSuccess.Should().BeTrue();
@@ -41,11 +42,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonLinesSpanningMultipleBatches_IncludesColumnsFromEveryBatch()
     {
         // Arrange — 1001 rows spans two batches (BatchSize = 1000); "b" only appears in the second.
-        var lines = Enumerable.Range(0, 1000).Select(_ => """{"a":1}""").Append("""{"a":1,"b":2}""");
-        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        IEnumerable<string> lines = Enumerable.Range(0, 1000).Select(_ => """{"a":1}""").Append("""{"a":1,"b":2}""");
+        string inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         namesResult.IsSuccess.Should().BeTrue();
@@ -56,11 +57,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonLinesColumnBeyondInitialScanCap_IncludesColumn()
     {
         // Arrange — "late" first appears at row 201, beyond the old 200-row initial-scan cap.
-        var lines = Enumerable.Range(0, 200).Select(_ => """{"a":1}""").Append("""{"a":1,"late":2}""");
-        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        IEnumerable<string> lines = Enumerable.Range(0, 200).Select(_ => """{"a":1}""").Append("""{"a":1,"late":2}""");
+        string inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         namesResult.IsSuccess.Should().BeTrue();
@@ -71,12 +72,12 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.jsonl", """{"a":1}""");
-        using var cts = new CancellationTokenSource();
+        string inputFile = CreateTestFile("input.jsonl", """{"a":1}""");
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = () => ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, cts.Token);
+        Func<Task<Result<IReadOnlyList<string>>>> act = () => ColumnNameResolver.ResolveColumnNamesAsync(DataFormat.JsonLines, inputFile, drillDownKeyPath: null, cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -86,10 +87,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithUnsupportedFormat_ThrowsNotSupportedException()
     {
         // Arrange — an enum value outside the DataFormat range: every real format is now handled.
-        var inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
+        string inputFile = CreateTestFile("input.csv", "name,age\nAlice,30");
 
         // Act
-        var act = () => ColumnNameResolver.ResolveColumnNamesAsync((DataFormat)999, inputFile, drillDownKeyPath: null, CancellationToken.None);
+        Func<Task<Result<IReadOnlyList<string>>>> act = () => ColumnNameResolver.ResolveColumnNamesAsync((DataFormat)999, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<NotSupportedException>().WithMessage("*999*");
@@ -99,16 +100,16 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonLinesAndKeyPath_ReturnsFullAggregationColumnNames()
     {
         // Arrange — the KeyPath is traversed for every line; the column set is the union of leaves.
-        var lines = new[]
-        {
+        string[] lines =
+        [
             """{"orders":[{"id":1,"item":"a"}]}""",
             """{"orders":[{"id":2,"note":"x"}]}""",
-        };
-        var inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        ];
+        string inputFile = CreateTestFile("input.jsonl", $"{string.Join("\n", lines)}\n");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonLines, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -120,11 +121,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonLinesAndKeyPathMatchingNothing_PropagatesScanFailure()
     {
         // Arrange — the DrillDown path is absent from every line.
-        var inputFile = CreateTestFile("input.jsonl", "{\"other\":1}\n{\"other\":2}\n");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.jsonl", "{\"other\":1}\n{\"other\":2}\n");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonLines, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -136,13 +137,13 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonArrayAndKeyPath_ReturnsDrilledDownColumnNames()
     {
         // Arrange — the union of every record's drilled-down child keys, in first-seen order.
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.json",
             """[{"orders":[{"id":1,"item":"a"},{"id":2}]},{"orders":[{"id":3,"note":"x"}]}]""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonArray, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -154,10 +155,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonArrayAndNullKeyPath_ThrowsInvalidOperationException()
     {
         // Arrange — null cannot reach this branch: DrillDownRecipeValidator rejects it upstream.
-        var inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
+        string inputFile = CreateTestFile("input.json", """[{"orders":[{"id":1}]}]""");
 
         // Act
-        var act = () => ColumnNameResolver.ResolveColumnNamesAsync(
+        Func<Task<Result<IReadOnlyList<string>>>> act = () => ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonArray, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
@@ -168,10 +169,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonArrayAndEmptyKeyPath_ReturnsWholeRecordColumnNames()
     {
         // Arrange — an empty path is a valid scope: each top-level record is itself the leaf.
-        var inputFile = CreateTestFile("input.json", """[{"a":1,"b":2},{"a":3}]""");
+        string inputFile = CreateTestFile("input.json", """[{"a":1,"b":2},{"a":3}]""");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonArray, inputFile, drillDownKeyPath: [], CancellationToken.None);
 
         // Assert
@@ -183,11 +184,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonArrayAndPathAbsentInEveryRecord_PropagatesScanFailure()
     {
         // Arrange — the path matches nothing, so the scan reports no rows.
-        var inputFile = CreateTestFile("input.json", """[{"other":1},{"other":2}]""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """[{"other":1},{"other":2}]""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonArray, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -199,14 +200,14 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectAndUtf8Bom_ReturnsDrilledDownColumnNames()
     {
         // Arrange — a UTF-8 BOM at the start of the file must not break KeyPath resolution.
-        var inputFile = Path.Combine(_testDir, "input.json");
+        string inputFile = Path.Combine(_testDir, "input.json");
         File.WriteAllBytes(
             inputFile,
             [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("""{"orders":[{"id":1,"item":"a"},{"id":2}]}""")]);
         KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -218,11 +219,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectAndKeyPath_ReturnsDrilledDownColumnNames()
     {
         // Arrange — the union of the child objects' keys, in first-seen order.
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2}]}""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2}]}""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -234,10 +235,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectAndNullKeyPath_ReturnsFailure()
     {
         // Arrange — null is rejected with the TUI's empty-path message.
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: null, CancellationToken.None);
 
         // Assert
@@ -249,10 +250,10 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectAndEmptyKeyPath_ReturnsFailure()
     {
         // Arrange — present-but-empty is rejected with the same message as null (TUI parity).
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: [], CancellationToken.None);
 
         // Assert
@@ -264,11 +265,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectAndUnresolvableKeyPath_ReturnsFailure()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var keyPath = new KeyPathSegment[] { new("missing", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        KeyPathSegment[] keyPath = [new("missing", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -280,11 +281,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectResolvingToNonArrayNode_ReturnsFailure()
     {
         // Arrange — the KeyPath resolves, but to an object rather than an array of rows.
-        var inputFile = CreateTestFile("input.json", """{"meta":{"version":1}}""");
-        var keyPath = new KeyPathSegment[] { new("meta", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """{"meta":{"version":1}}""");
+        KeyPathSegment[] keyPath = [new("meta", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -296,11 +297,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectResolvingToEmptyArray_ReturnsFailure()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[]}""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """{"orders":[]}""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -312,11 +313,11 @@ public sealed class ColumnNameResolverTests : IDisposable
     public async Task ResolveColumnNames_WithJsonObjectResolvingToKeylessChildren_ReturnsFailure()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{},{}]}""");
-        var keyPath = new KeyPathSegment[] { new("orders", KeyPathSegmentKind.Key) };
+        string inputFile = CreateTestFile("input.json", """{"orders":[{},{}]}""");
+        KeyPathSegment[] keyPath = [new("orders", KeyPathSegmentKind.Key)];
 
         // Act
-        var namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
+        Result<IReadOnlyList<string>> namesResult = await ColumnNameResolver.ResolveColumnNamesAsync(
             DataFormat.JsonObject, inputFile, drillDownKeyPath: keyPath, CancellationToken.None);
 
         // Assert
@@ -326,7 +327,7 @@ public sealed class ColumnNameResolverTests : IDisposable
 
     private string CreateTestFile(string fileName, string content)
     {
-        var filePath = Path.Combine(_testDir, fileName);
+        string filePath = Path.Combine(_testDir, fileName);
         File.WriteAllText(filePath, content);
         return filePath;
     }

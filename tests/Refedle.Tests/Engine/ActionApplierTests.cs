@@ -14,7 +14,7 @@ public sealed class ActionApplierTests
         // Arrange
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], []).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], []).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -30,7 +30,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new RenameColumnAction { OldName = "A", NewName = "RenamedA" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -48,7 +48,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new RenameColumnAction { OldName = "NonExistent", NewName = "NewName" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -63,7 +63,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -79,7 +79,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "NonExistent" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -92,7 +92,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [FilterAction.Create("A", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -110,7 +110,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [FilterAction.Create("NonExistent", FilterOperator.Equals, ComparisonType.Text, "test").Value];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Filters.Should().BeEmpty();
@@ -127,7 +127,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -141,7 +141,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -161,7 +161,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert — the filter resolves from the action's ComparisonType, not the cast type.
         result.Filters.Should().HaveCount(1);
@@ -176,7 +176,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B", "C"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B", "C"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -191,7 +191,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new CastColumnAction { ColumnName = "NonExistent", TargetType = ColumnType.WholeNumber }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -209,7 +209,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert
         result.Filters.Should().HaveCount(2);
@@ -228,7 +228,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -243,7 +243,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [];
 
         // Act
-        var act = () => ActionApplier.BuildOutputSchema(null!, actions);
+        Func<Result<BatchOutputSchema>> act = () => ActionApplier.BuildOutputSchema(null!, actions);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -255,7 +255,7 @@ public sealed class ActionApplierTests
         // Arrange
 
         // Act
-        var act = () => ActionApplier.BuildOutputSchema(["A"], null!);
+        Func<Result<BatchOutputSchema>> act = () => ActionApplier.BuildOutputSchema(["A"], null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -268,7 +268,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -287,7 +287,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A", "B"], actions).Value;
 
         // Assert — the filter carries the action's ComparisonType and resolves by renamed name.
         result.Columns.Should().HaveCount(2);
@@ -308,7 +308,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new FillColumnAction { ColumnName = "Email", Value = "REDACTED" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -325,7 +325,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new FillColumnAction { ColumnName = "NonExistent", Value = "FILL" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -344,7 +344,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Name", "Email", "Age"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["Name", "Email", "Age"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(2);
@@ -366,7 +366,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -386,7 +386,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Status"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["Status"], actions).Value;
 
         // Assert
         result.Columns.Should().HaveCount(1);
@@ -404,7 +404,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["Email"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -422,7 +422,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
+        BatchOutputSchema result = ActionApplier.BuildOutputSchema(["A"], actions).Value;
 
         // Assert
         result.Columns.Should().BeEmpty();
@@ -440,7 +440,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "CreatedAt", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
+        Result<BatchOutputSchema> result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -458,7 +458,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "Name", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Name"], actions);
+        Result<BatchOutputSchema> result = ActionApplier.BuildOutputSchema(["Name"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -473,7 +473,7 @@ public sealed class ActionApplierTests
         IMorphAction[] actions = [new FormatTimestampAction { ColumnName = "NonExistent", TargetFormat = "yyyy/MM/dd" }];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["A"], actions);
+        Result<BatchOutputSchema> result = ActionApplier.BuildOutputSchema(["A"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -492,7 +492,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["Date"], actions);
+        Result<BatchOutputSchema> result = ActionApplier.BuildOutputSchema(["Date"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -512,7 +512,7 @@ public sealed class ActionApplierTests
         ];
 
         // Act
-        var result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
+        Result<BatchOutputSchema> result = ActionApplier.BuildOutputSchema(["CreatedAt"], actions);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

@@ -1,5 +1,6 @@
 using System.Text;
 using AwesomeAssertions;
+using Refedle.App.Tui.UI.Views;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Drivers;
@@ -29,8 +30,8 @@ public sealed partial class FilePathBarTests
     // assert on cells without null-suppression.
     private static Attribute[] ScreenRowAttributes(IApplication app, int row, int columns)
     {
-        var driver = DriverOf(app);
-        var contents = ScreenContents(driver);
+        IDriver driver = DriverOf(app);
+        Cell[,] contents = ScreenContents(driver);
         return [.. Enumerable.Range(0, columns)
             .Select(col => CellAttribute(contents, row, col))];
     }
@@ -38,10 +39,10 @@ public sealed partial class FilePathBarTests
     // Reconstructs the text of the first columns of one captured screen row.
     private static string ScreenRowText(IApplication app, int row, int columns)
     {
-        var driver = DriverOf(app);
-        var contents = ScreenContents(driver);
-        var text = new StringBuilder();
-        for (var col = 0; col < columns; col++)
+        IDriver driver = DriverOf(app);
+        Cell[,] contents = ScreenContents(driver);
+        StringBuilder text = new();
+        for (int col = 0; col < columns; col++)
         {
             text.Append(contents[row, col].Grapheme);
         }
@@ -54,12 +55,12 @@ public sealed partial class FilePathBarTests
     {
         // Arrange — a Window works as the top-level for Begin; no border so the bar's geometry
         // matches the plain View used by the text tests.
-        using var app = TestAppFactory.Create();
-        using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
-        using var fileMenuItem = new MenuBarItem("_File", []);
-        using var menuBar = new MenuBar { Menus = [fileMenuItem] };
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = new() { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
+        using MenuBarItem fileMenuItem = new("_File", []);
+        using MenuBar menuBar = new() { Menus = [fileMenuItem] };
         parent.Add(menuBar);
-        using var bar = AddBar(parent);
+        using FilePathBar bar = AddBar(parent);
         bar.SetMenuAttribute(() => fileMenuItem.GetAttributeForRole(VisualRole.Normal));
         bar.SetFilePath("/data/orders.csv");
         app.StopAfterFirstIteration = true;
@@ -71,8 +72,8 @@ public sealed partial class FilePathBarTests
         // Assert — label and bar must read as one continuous bar through the parent's right edge.
         // The label's hotkey letter carries a different foreground/style, so only the background
         // is asserted over the label, while the bar columns check the full menu attribute.
-        var menuAttribute = fileMenuItem.GetAttributeForRole(VisualRole.Normal);
-        var attributes = ScreenRowAttributes(app, 0, ParentWidth);
+        Attribute menuAttribute = fileMenuItem.GetAttributeForRole(VisualRole.Normal);
+        Attribute[] attributes = ScreenRowAttributes(app, 0, ParentWidth);
         attributes.Select(attribute => attribute.Background)
             .Should().OnlyContain(background => background == menuAttribute.Background);
         attributes.Skip(7)
@@ -85,12 +86,12 @@ public sealed partial class FilePathBarTests
     public void Draw_WithNoPath_PaintsOnlyFileLabelWithMenuColors()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
-        using var fileMenuItem = new MenuBarItem("_File", []);
-        using var menuBar = new MenuBar { Menus = [fileMenuItem] };
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = new() { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
+        using MenuBarItem fileMenuItem = new("_File", []);
+        using MenuBar menuBar = new() { Menus = [fileMenuItem] };
         parent.Add(menuBar);
-        using var bar = AddBar(parent);
+        using FilePathBar bar = AddBar(parent);
         app.StopAfterFirstIteration = true;
         app.Begin(parent);
 
@@ -99,7 +100,7 @@ public sealed partial class FilePathBarTests
 
         // Assert — without a path nothing may be painted after the File label: the bar columns
         // must hold the parent Window's own Normal attribute.
-        var attributes = ScreenRowAttributes(app, 0, ParentWidth);
+        Attribute[] attributes = ScreenRowAttributes(app, 0, ParentWidth);
         attributes[0].Background.Should().Be(fileMenuItem.GetAttributeForRole(VisualRole.Normal).Background);
         attributes.Skip(7)
             .Should().OnlyContain(attribute => attribute == parent.GetAttributeForRole(VisualRole.Normal));
@@ -109,14 +110,14 @@ public sealed partial class FilePathBarTests
     public void Draw_WithPathExactlyAsWideAsBar_PaintsWholeRowUpToBarEndWithMenuColors()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
-        using var fileMenuItem = new MenuBarItem("_File", []);
-        using var menuBar = new MenuBar { Menus = [fileMenuItem] };
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = new() { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
+        using MenuBarItem fileMenuItem = new("_File", []);
+        using MenuBar menuBar = new() { Menus = [fileMenuItem] };
         parent.Add(menuBar);
-        using var bar = AddBar(parent);
+        using FilePathBar bar = AddBar(parent);
         bar.SetMenuAttribute(() => fileMenuItem.GetAttributeForRole(VisualRole.Normal));
-        var path = new string('a', BarWidth - 4) + ".csv"; // exactly BarWidth columns, no elision needed
+        string path = new string('a', BarWidth - 4) + ".csv"; // exactly BarWidth columns, no elision needed
         bar.SetFilePath(path);
         app.StopAfterFirstIteration = true;
         app.Begin(parent);
@@ -125,8 +126,8 @@ public sealed partial class FilePathBarTests
         app.LayoutAndDraw();
 
         // Assert — the bar fills to the parent's right edge and stays continuous with the File label.
-        var menuAttribute = fileMenuItem.GetAttributeForRole(VisualRole.Normal);
-        var attributes = ScreenRowAttributes(app, 0, ParentWidth);
+        Attribute menuAttribute = fileMenuItem.GetAttributeForRole(VisualRole.Normal);
+        Attribute[] attributes = ScreenRowAttributes(app, 0, ParentWidth);
         attributes.Select(attribute => attribute.Background)
             .Should().OnlyContain(background => background == menuAttribute.Background);
         attributes.Skip(7)
@@ -139,12 +140,12 @@ public sealed partial class FilePathBarTests
     {
         // Arrange — draw the path once, then clear it, so the test exercises the repaint
         // transition rather than the initial no-path state.
-        using var app = TestAppFactory.Create();
-        using var parent = new Window { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
-        using var fileMenuItem = new MenuBarItem("_File", []);
-        using var menuBar = new MenuBar { Menus = [fileMenuItem] };
+        using IApplication app = TestAppFactory.Create();
+        using Window parent = new() { Width = ParentWidth, Height = 3, BorderStyle = LineStyle.None };
+        using MenuBarItem fileMenuItem = new("_File", []);
+        using MenuBar menuBar = new() { Menus = [fileMenuItem] };
         parent.Add(menuBar);
-        using var bar = AddBar(parent);
+        using FilePathBar bar = AddBar(parent);
         bar.SetMenuAttribute(() => fileMenuItem.GetAttributeForRole(VisualRole.Normal));
         bar.SetFilePath("/data/orders.csv");
         app.StopAfterFirstIteration = true;
@@ -157,7 +158,7 @@ public sealed partial class FilePathBarTests
 
         // Assert — clearing must wipe the bar: the columns right of the File label must hold
         // the parent Window's own Normal attribute and contain no path characters.
-        var attributes = ScreenRowAttributes(app, 0, ParentWidth);
+        Attribute[] attributes = ScreenRowAttributes(app, 0, ParentWidth);
         attributes.Skip(7)
             .Should().OnlyContain(attribute => attribute == parent.GetAttributeForRole(VisualRole.Normal));
         ScreenRowText(app, 0, ParentWidth)[7..].Should().Be(new string(' ', ParentWidth - 7));

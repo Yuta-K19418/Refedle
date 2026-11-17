@@ -19,7 +19,7 @@ public class RowIndexerProgressBenchmarks : RowIndexerProgressBenchmarksBase
     /// <inheritdoc/>
     private protected override void WriteRows(StreamWriter writer, int rowCount)
     {
-        for (var i = 0; i < rowCount; i++)
+        for (int i = 0; i < rowCount; i++)
         {
             writer.Write($"{{\"id\":{i},\"name\":\"User{i}\",\"email\":\"user{i}@example.com\",\"city\":\"City{i % 100}\",\"note\":\"short padding text\"}}\n");
         }

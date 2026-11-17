@@ -15,12 +15,12 @@ public sealed partial class RowReaderTests
     public void ReadLines_WithFileSpanningManyChunks_ReturnsEveryLineIntact()
     {
         // Arrange
-        var expectedLines = BuildVariedLengthLines(count: 3_000);
+        string[] expectedLines = BuildVariedLengthLines(count: 3_000);
         WriteTestContent(string.Join('\n', expectedLines) + "\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.ReadLines(byteOffset: 0, linesToSkip: 0, linesToRead: expectedLines.Length));
+        string[] lines = DecodeLines(reader.ReadLines(byteOffset: 0, linesToSkip: 0, linesToRead: expectedLines.Length));
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -30,12 +30,12 @@ public sealed partial class RowReaderTests
     public void ReadLines_WithLinesToSkipSpanningManyChunks_ReturnsLinesAfterSkippedOnes()
     {
         // Arrange
-        var allLines = BuildVariedLengthLines(count: 3_000);
+        string[] allLines = BuildVariedLengthLines(count: 3_000);
         WriteTestContent(string.Join('\n', allLines) + "\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.ReadLines(byteOffset: 0, linesToSkip: 2_500, linesToRead: 10));
+        string[] lines = DecodeLines(reader.ReadLines(byteOffset: 0, linesToSkip: 2_500, linesToRead: 10));
 
         // Assert
         lines.Should().Equal(allLines.Skip(2_500).Take(10));
@@ -45,12 +45,12 @@ public sealed partial class RowReaderTests
     public void EnumerateLines_WithFileSpanningManyChunks_ReturnsEveryLineIntact()
     {
         // Arrange
-        var expectedLines = BuildVariedLengthLines(count: 3_000);
+        string[] expectedLines = BuildVariedLengthLines(count: 3_000);
         WriteTestContent(string.Join('\n', expectedLines) + "\n");
-        using var reader = new RowReader(_testFilePath);
+        using RowReader reader = new(_testFilePath);
 
         // Act
-        var lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
+        string[] lines = DecodeLines(reader.EnumerateLines(linesToSkip: 0));
 
         // Assert
         lines.Should().Equal(expectedLines);

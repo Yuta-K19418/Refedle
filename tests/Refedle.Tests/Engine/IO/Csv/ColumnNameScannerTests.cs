@@ -27,7 +27,7 @@ public sealed class ColumnNameScannerTests : IDisposable
         File.WriteAllText(_testFilePath, "name,age,city\nAlice,30,NYC");
 
         // Act
-        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+        IReadOnlyList<string> names = ColumnNameScanner.ScanColumnNames(_testFilePath);
 
         // Assert
         names.Should().Equal(["name", "age", "city"]);
@@ -40,7 +40,7 @@ public sealed class ColumnNameScannerTests : IDisposable
         File.WriteAllBytes(_testFilePath, [0xEF, 0xBB, 0xBF, .. System.Text.Encoding.UTF8.GetBytes("name,age\nAlice,30")]);
 
         // Act
-        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+        IReadOnlyList<string> names = ColumnNameScanner.ScanColumnNames(_testFilePath);
 
         // Assert
         names.Should().Equal(["name", "age"]);
@@ -53,7 +53,7 @@ public sealed class ColumnNameScannerTests : IDisposable
         File.WriteAllText(_testFilePath, "name,age\n");
 
         // Act
-        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+        IReadOnlyList<string> names = ColumnNameScanner.ScanColumnNames(_testFilePath);
 
         // Assert
         names.Should().Equal(["name", "age"]);
@@ -68,7 +68,7 @@ public sealed class ColumnNameScannerTests : IDisposable
         File.WriteAllText(_testFilePath, $"{header}\nAlice,30,NYC");
 
         // Act
-        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+        IReadOnlyList<string> names = ColumnNameScanner.ScanColumnNames(_testFilePath);
 
         // Assert
         names.Should().Equal(["name", "Column2", "age"]);
@@ -108,15 +108,15 @@ public sealed class ColumnNameScannerTests : IDisposable
     {
         // Arrange
         // Header: "say ""hi""",other
-        var headerLine = "\"say \"\"hi\"\"\",other";
+        string headerLine = "\"say \"\"hi\"\"\",other";
         // Data: v1,v2
-        var dataLine = "v1,v2";
+        string dataLine = "v1,v2";
         string[] lines = [headerLine, dataLine];
-        var csvContent = string.Join("\n", lines);
+        string csvContent = string.Join("\n", lines);
         File.WriteAllText(_testFilePath, csvContent);
 
         // Act
-        var names = ColumnNameScanner.ScanColumnNames(_testFilePath);
+        IReadOnlyList<string> names = ColumnNameScanner.ScanColumnNames(_testFilePath);
 
         // Assert
         // Expected: say "hi", other

@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers.Schema.JsonLines;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema.JsonLines;
@@ -29,10 +30,10 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
             _tempFilePath,
             ["{\"id\":1,\"name\":\"Alice\"}", "{\"id\":2,\"name\":\"Bob\"}"]
         );
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act
-        var schema = await scanner.InitialScanAsync();
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Assert
         schema.ColumnCount.Should().Be(2);
@@ -47,7 +48,7 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_tempFilePath, string.Empty);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
 
         // Act & Assert
         await Assert.ThrowsAsync<InvalidOperationException>(() => scanner.InitialScanAsync());
@@ -58,14 +59,14 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange
         // 200 lines with only "a", then 1 line introducing "b"
-        var initialLines = Enumerable.Repeat("{\"a\":1}", 200);
+        IEnumerable<string> initialLines = Enumerable.Repeat("{\"a\":1}", 200);
         string[] extraLine = ["{\"a\":2,\"b\":\"extra\"}"];
         await File.WriteAllLinesAsync(_tempFilePath, initialLines.Concat(extraLine));
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Act
-        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        TableSchema refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert
         refinedSchema.ColumnCount.Should().Be(2);
@@ -78,13 +79,13 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     {
         // Arrange
         await File.WriteAllLinesAsync(_tempFilePath, ["{\"id\":1}"]);
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
-        using var cts = new CancellationTokenSource();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
+        using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
         // Act
-        var backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
+        Task<TableSchema> backgroundTask = scanner.StartBackgroundScanAsync(schema, cts.Token);
         await Task.WhenAny(backgroundTask);
 
         // Assert
@@ -100,11 +101,11 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
             _tempFilePath,
             Enumerable.Range(0, 5).Select(i => $"{{\"id\":{i}}}")
         );
-        var scanner = new IncrementalSchemaScanner(_tempFilePath);
-        var schema = await scanner.InitialScanAsync();
+        IncrementalSchemaScanner scanner = new(_tempFilePath);
+        TableSchema schema = await scanner.InitialScanAsync();
 
         // Act
-        var refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
+        TableSchema refinedSchema = await scanner.StartBackgroundScanAsync(schema, CancellationToken.None);
 
         // Assert
         refinedSchema.ColumnCount.Should().Be(schema.ColumnCount);

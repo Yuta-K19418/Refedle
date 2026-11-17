@@ -14,16 +14,16 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherSucceedsWithCellIssues_WarningsFollowPublishedOutput()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(
             cellIssues: [new CellIssue(3, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert — the output is published and the issues are reported after it.
         exitCode.Should().Be(ExitCode.Success);
@@ -39,15 +39,15 @@ public sealed partial class RunnerTests
     public async Task RunAsync_WhenDispatcherSucceedsWithoutCellIssues_WritesNoWarnings()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher();
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -59,18 +59,16 @@ public sealed partial class RunnerTests
     {
         // Arrange — the overflow flag comes from the dispatch result, so a dropped or
         // hard-coded HasMoreCellIssues in RunAsync must surface here.
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var issues = Enumerable.Range(1, CellIssue.MaxReportedIssues)
-            .Select(rowNumber => new CellIssue(rowNumber, "age", $"bad{rowNumber}", "not recognized as a timestamp"))
-            .ToArray();
-        var dispatcher = new TestFormatDispatcher(cellIssues: issues, hasMoreCellIssues: true);
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        CellIssue[] issues = [.. Enumerable.Range(1, CellIssue.MaxReportedIssues).Select(rowNumber => new CellIssue(rowNumber, "age", $"bad{rowNumber}", "not recognized as a timestamp"))];
+        TestFormatDispatcher dispatcher = new(cellIssues: issues, hasMoreCellIssues: true);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert — header, the capped entries in row order, then the closing indicator.
         exitCode.Should().Be(ExitCode.Success);
@@ -88,16 +86,16 @@ public sealed partial class RunnerTests
     {
         // Arrange — the logger probes the real output path from inside WriteWarningAsync,
         // so emitting warnings before the atomic publish would fail this test.
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new OutputCheckingLogger(outputFile);
-        var dispatcher = new TestFormatDispatcher(
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        OutputCheckingLogger logger = new(outputFile);
+        TestFormatDispatcher dispatcher = new(
             cellIssues: [new CellIssue(3, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
@@ -110,17 +108,17 @@ public sealed partial class RunnerTests
     {
         // Arrange — a failed run discards its output and reports its own error; cell-level
         // detail would only add noise on top of that.
-        var inputFile = CreateTestFile("input.csv", TestCsvContent);
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
-        var dispatcher = new TestFormatDispatcher(
+        string inputFile = CreateTestFile("input.csv", TestCsvContent);
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Empty\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
+        TestFormatDispatcher dispatcher = new(
             result: ExitCode.Failure,
             cellIssues: [new CellIssue(1, "age", "twenty", "not recognized as a timestamp")]);
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, dispatcher, new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
@@ -139,18 +137,18 @@ public sealed partial class RunnerTests
             not-a-date
             """;
         const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
-        var inputFile = CreateTestFile("input.csv", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.csv", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Contain("2024/03/15");
         output.Should().Contain("not-a-date");
         logger.Warnings.Should().HaveCount(2);
@@ -169,21 +167,21 @@ public sealed partial class RunnerTests
             {"date": @@@}
             """;
         const string recipeYaml = "name: Format date\nactions:\n  - type: FormatTimestamp\n    columnName: date\n    targetFormat: yyyy/MM/dd";
-        var inputFile = CreateTestFile("input.jsonl", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Warnings.Should().HaveCount(2);
         logger.Warnings[1].Should().StartWith("Row 2, column \"date\":");
         logger.Warnings[1].Should().NotContain("(");
-        var outputLines = await File.ReadAllLinesAsync(outputFile);
+        string[] outputLines = await File.ReadAllLinesAsync(outputFile);
         outputLines.Should().HaveCount(2);
         outputLines[1].Should().Be("""{"date":""}""");
     }
@@ -198,20 +196,20 @@ public sealed partial class RunnerTests
             {"date": @@@}
             """;
         const string recipeYaml = "name: Fill date\nactions:\n  - type: Fill\n    columnName: date\n    value: N/A";
-        var inputFile = CreateTestFile("input.jsonl", content);
-        var recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.jsonl", content);
+        string recipeFile = CreateTestFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Warnings.Should().BeEmpty();
         logger.Errors.Should().BeEmpty();
-        var outputLines = await File.ReadAllLinesAsync(outputFile);
+        string[] outputLines = await File.ReadAllLinesAsync(outputFile);
         outputLines.Should().HaveCount(2);
         outputLines.Should().AllSatisfy(line => line.Should().Be("""{"date":"N/A"}"""));
     }

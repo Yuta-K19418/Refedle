@@ -3,6 +3,7 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -15,7 +16,7 @@ public sealed partial class JsonObjectTreeViewTests
         IReadOnlyList<JsonObjectEntry> nullEntries = null!;
 
         // Act
-        var act = () => JsonObjectTreeView.Create(nullEntries, () => { }, _ => { });
+        Func<JsonObjectTreeView> act = () => JsonObjectTreeView.Create(nullEntries, () => { }, _ => { });
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -28,7 +29,7 @@ public sealed partial class JsonObjectTreeViewTests
         IReadOnlyList<JsonObjectEntry> entries = [];
 
         // Act
-        var act = () => JsonObjectTreeView.Create(entries, null!, _ => { });
+        Func<JsonObjectTreeView> act = () => JsonObjectTreeView.Create(entries, null!, _ => { });
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -41,7 +42,7 @@ public sealed partial class JsonObjectTreeViewTests
         IReadOnlyList<JsonObjectEntry> entries = [];
 
         // Act
-        var act = () => JsonObjectTreeView.Create(entries, () => { }, null!);
+        Func<JsonObjectTreeView> act = () => JsonObjectTreeView.Create(entries, () => { }, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -54,7 +55,7 @@ public sealed partial class JsonObjectTreeViewTests
         IReadOnlyList<JsonObjectEntry> entries = [];
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert
         view.Objects.Should().BeEmpty();
@@ -66,10 +67,10 @@ public sealed partial class JsonObjectTreeViewTests
         // Arrange
         IReadOnlyList<JsonObjectEntry> entries = [new JsonObjectEntry("data", ToBytes("{\"a\":1}"))];
         List<IReadOnlyList<KeyPathSegment>> observedPaths = [];
-        using var view = JsonObjectTreeView.Create(entries, () => { }, path => observedPaths.Add(path));
-        var objects = view.Objects;
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, path => observedPaths.Add(path));
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var node = objects.First();
+        ITreeNode node = objects.First();
 
         // Act
         view.SelectedObject = node;
@@ -91,7 +92,7 @@ public sealed partial class JsonObjectTreeViewTests
         ];
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert
         view.Objects.Should().HaveCount(3);
@@ -101,15 +102,15 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_EntryCountAtBoundary_AddsKeyNodesDirectly()
     {
         // Arrange — 1000 entries is exactly the boundary, keys go directly under the root
-        var entries = CreateNumberedEntries(1000);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1000);
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert
-        var objects = view.Objects;
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var list = objects.ToList();
+        List<ITreeNode> list = [.. objects];
         list.Should().HaveCount(1000);
         list.Should().NotContain(o => o is JsonObjectRangeTreeNode);
     }
@@ -118,15 +119,15 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_EntryCountAboveBoundary_AddsRangeNodes()
     {
         // Arrange — 1001 entries triggers range mode
-        var entries = CreateNumberedEntries(1001);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1001);
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert
-        var objects = view.Objects;
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var list = objects.ToList();
+        List<ITreeNode> list = [.. objects];
         list.Should().HaveCount(2);
         list.Should().OnlyContain(o => o is JsonObjectRangeTreeNode);
     }
@@ -135,15 +136,15 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_LargeEntryCount_CorrectRangeCount()
     {
         // Arrange — 2500 entries → 3 ranges: [0-999], [1000-1999], [2000-2499]
-        var entries = CreateNumberedEntries(2500);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2500);
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert
-        var objects = view.Objects;
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var list = objects.ToList();
+        List<ITreeNode> list = [.. objects];
         list.Should().HaveCount(3);
         list[0].Text.Should().Be("[0 - 999]");
         list[1].Text.Should().Be("[1,000 - 1,999]");
@@ -154,13 +155,13 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_LargeEntryCount_RangeNodesAreNotEagerlyLoaded()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1001);
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1001);
 
         // Act
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
 
         // Assert — DelegateTreeBuilder prevents eager loading via AddObject()
-        var objects = view.Objects;
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
         objects.OfType<JsonObjectRangeTreeNode>().Should().OnlyContain(n => !n.IsChildrenLoaded);
     }
@@ -169,15 +170,15 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_LargeEntryCount_ExpandedLastRangeShowsRemainderKeysAndValues()
     {
         // Arrange — 2500 entries; last range [2,000 - 2,499] holds the 500-entry remainder
-        var entries = CreateNumberedEntries(2500);
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
-        var objects = view.Objects;
+        List<JsonObjectEntry> entries = CreateNumberedEntries(2500);
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
+        JsonObjectRangeTreeNode lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
 
         // Act
         lastRange.EnsureChildrenLoaded();
-        var children = lastRange.Children;
+        IList<ITreeNode> children = lastRange.Children;
 
         // Assert
         children.Should().HaveCount(500);
@@ -192,12 +193,12 @@ public sealed partial class JsonObjectTreeViewTests
         // The last key holds an object because primitive key nodes carry no KeyName.
         List<JsonObjectEntry> entries = [.. CreateNumberedEntries(1000), new("k1000", ToBytes("{\"a\":1}"))];
         List<IReadOnlyList<KeyPathSegment>> observedPaths = [];
-        using var view = JsonObjectTreeView.Create(entries, () => { }, path => observedPaths.Add(path));
-        var objects = view.Objects;
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, path => observedPaths.Add(path));
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
+        JsonObjectRangeTreeNode lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
         lastRange.EnsureChildrenLoaded();
-        var keyNode = lastRange.Children[0];
+        ITreeNode keyNode = lastRange.Children[0];
 
         // Act
         view.SelectedObject = keyNode;
@@ -211,18 +212,18 @@ public sealed partial class JsonObjectTreeViewTests
     public void Create_WithMoreThanRangeSizeEntries_TreeBuilderExpandsRangeNodeAndReturnsItsKeys()
     {
         // Arrange
-        var entries = CreateNumberedEntries(1001);
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
-        var objects = view.Objects;
+        List<JsonObjectEntry> entries = CreateNumberedEntries(1001);
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var ranges = objects.OfType<JsonObjectRangeTreeNode>().ToList();
-        var treeBuilder = view.TreeBuilder;
+        List<JsonObjectRangeTreeNode> ranges = [.. objects.OfType<JsonObjectRangeTreeNode>()];
+        ITreeBuilder<ITreeNode>? treeBuilder = view.TreeBuilder;
         treeBuilder.Should().NotBeNull();
 
         // Act
-        var canExpand = treeBuilder.CanExpand(ranges[0]);
-        var children = treeBuilder.GetChildren(ranges[0]).ToList();
-        var lastChildren = treeBuilder.GetChildren(ranges[1]).ToList();
+        bool canExpand = treeBuilder.CanExpand(ranges[0]);
+        List<ITreeNode> children = [.. treeBuilder.GetChildren(ranges[0])];
+        List<ITreeNode> lastChildren = [.. treeBuilder.GetChildren(ranges[1])];
 
         // Assert
         canExpand.Should().BeTrue();
@@ -237,17 +238,17 @@ public sealed partial class JsonObjectTreeViewTests
     {
         // Arrange — the last range holds an object-valued key, as a real large file would
         List<JsonObjectEntry> entries = [.. CreateNumberedEntries(1000), new("k1000", ToBytes("{\"a\":1}"))];
-        using var view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
-        var objects = view.Objects;
+        using JsonObjectTreeView view = JsonObjectTreeView.Create(entries, () => { }, _ => { });
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
-        var treeBuilder = view.TreeBuilder;
+        JsonObjectRangeTreeNode lastRange = objects.OfType<JsonObjectRangeTreeNode>().Last();
+        ITreeBuilder<ITreeNode>? treeBuilder = view.TreeBuilder;
         treeBuilder.Should().NotBeNull();
-        var keyNode = treeBuilder.GetChildren(lastRange).Single();
+        ITreeNode keyNode = treeBuilder.GetChildren(lastRange).Single();
 
         // Act
-        var canExpand = treeBuilder.CanExpand(keyNode);
-        var children = treeBuilder.GetChildren(keyNode).ToList();
+        bool canExpand = treeBuilder.CanExpand(keyNode);
+        List<ITreeNode> children = [.. treeBuilder.GetChildren(keyNode)];
 
         // Assert
         keyNode.Text.Should().Be("k1000: {Object: 1 properties}");

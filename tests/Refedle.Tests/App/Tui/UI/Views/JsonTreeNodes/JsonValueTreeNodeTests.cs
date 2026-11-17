@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonTreeNodes;
 
@@ -13,10 +14,10 @@ public sealed class JsonValueTreeNodeTests
     public void Constructor_WithValidText_SetsTextProperty()
     {
         // Arrange
-        var expectedText = "Test Value";
+        string expectedText = "Test Value";
 
         // Act
-        var node = new JsonValueTreeNode(expectedText);
+        JsonValueTreeNode node = new(expectedText);
 
         // Assert
         node.Text.Should().Be(expectedText);
@@ -26,10 +27,10 @@ public sealed class JsonValueTreeNodeTests
     public void Constructor_WhenCalled_InitializesChildrenAsEmptyList()
     {
         // Arrange
-        var node = new JsonValueTreeNode("Test");
+        JsonValueTreeNode node = new("Test");
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().NotBeNull();
@@ -40,10 +41,10 @@ public sealed class JsonValueTreeNodeTests
     public void ValueKind_WhenInitialized_StoresCorrectValue()
     {
         // Arrange
-        var expectedKind = JsonValueKind.String;
+        JsonValueKind expectedKind = JsonValueKind.String;
 
         // Act
-        var node = new JsonValueTreeNode("Test") { ValueKind = expectedKind };
+        JsonValueTreeNode node = new("Test") { ValueKind = expectedKind };
 
         // Assert
         node.ValueKind.Should().Be(expectedKind);

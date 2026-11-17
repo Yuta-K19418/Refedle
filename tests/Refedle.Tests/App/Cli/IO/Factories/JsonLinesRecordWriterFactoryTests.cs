@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Refedle.App.Cli.IO;
 using Refedle.App.Cli.IO.Factories;
+using Refedle.App.Cli.IO.Json;
 using Refedle.Engine;
 
 namespace Refedle.Tests.App.Cli.IO.Factories;
@@ -22,12 +23,12 @@ public sealed class JsonLinesRecordWriterFactoryTests() : IDisposable
     public async Task CreateAsync_ReturnsWriterThatWritesJsonLinesWithoutUtf8Bom()
     {
         // Arrange
-        var outputFile = Path.Combine(_testDir, "out.jsonl");
-        var factory = new JsonLinesRecordWriterFactory();
-        var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
+        string outputFile = Path.Combine(_testDir, "out.jsonl");
+        JsonLinesRecordWriterFactory factory = new();
+        BatchOutputSchema outputSchema = new([new BatchOutputColumn("value", "value")], []);
 
         // Act
-        await using (var writer = await factory.CreateAsync(outputFile, outputSchema, new TestAppLogger(), CancellationToken.None))
+        await using (JsonLinesRecordWriter writer = await factory.CreateAsync(outputFile, outputSchema, new TestAppLogger(), CancellationToken.None))
         {
             await writer.WriteHeaderAsync(default);
             await writer.WriteStartRecordAsync(default);
@@ -38,7 +39,7 @@ public sealed class JsonLinesRecordWriterFactoryTests() : IDisposable
         }
 
         // Assert — check the BOM bytes literally so the test does not depend on the input-side utility.
-        var bytes = File.ReadAllBytes(outputFile);
+        byte[] bytes = File.ReadAllBytes(outputFile);
         byte[] utf8Bom = [0xEF, 0xBB, 0xBF];
         bytes.AsSpan(0, 3).SequenceEqual(utf8Bom).Should().BeFalse();
         File.ReadAllText(outputFile).Should().Be("{\"value\":\"a\"}\n");

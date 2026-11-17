@@ -32,12 +32,12 @@ public sealed class TypeInferrerTests
     public void InferType_ValueTokens_ReturnsExpectedType(string json, ColumnType expected)
     {
         // Arrange
-        var bytes = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(bytes);
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(bytes);
         reader.Read();
 
         // Act
-        var result = TypeInferrer.InferType(reader.TokenType, reader.ValueSpan);
+        ColumnType result = TypeInferrer.InferType(reader.TokenType, reader.ValueSpan);
 
         // Assert
         result.Should().Be(expected);
@@ -47,7 +47,7 @@ public sealed class TypeInferrerTests
     public void InferType_NoneToken_ReturnsFallbackText()
     {
         // Arrange / Act
-        var result = TypeInferrer.InferType(JsonTokenType.None, []);
+        ColumnType result = TypeInferrer.InferType(JsonTokenType.None, []);
 
         // Assert
         result.Should().Be(ColumnType.Text);
@@ -64,7 +64,7 @@ public sealed class TypeInferrerTests
     public void IsNullToken_TokenScenarios_ReturnsExpected(JsonTokenType tokenType, bool expected)
     {
         // Act
-        var result = TypeInferrer.IsNullToken(tokenType);
+        bool result = TypeInferrer.IsNullToken(tokenType);
 
         // Assert
         result.Should().Be(expected);
@@ -87,10 +87,10 @@ public sealed class TypeInferrerTests
     public void TryParseTimestamp_ValueScenarios_ReturnsExpected(string value, bool expected)
     {
         // Arrange
-        var bytes = Encoding.UTF8.GetBytes(value);
+        byte[] bytes = Encoding.UTF8.GetBytes(value);
 
         // Act
-        var result = TypeInferrer.TryParseTimestamp(bytes, out _);
+        bool result = TypeInferrer.TryParseTimestamp(bytes, out _);
 
         // Assert
         result.Should().Be(expected);

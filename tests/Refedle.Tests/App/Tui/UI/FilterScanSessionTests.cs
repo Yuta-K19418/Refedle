@@ -25,10 +25,10 @@ public sealed class FilterScanSessionTests
 
         public Fixture()
         {
-            var source = new FakeFocusedSource(
+            FakeFocusedSource source = new(
                 [["[0]", "A"], ["[1]", "B"]],
                 ["#", "name"]);
-            var schema = new TableSchema
+            TableSchema schema = new()
             {
                 Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text, ColumnIndex = 0 }],
                 SourceFormat = DataFormat.JsonArray,
@@ -56,7 +56,7 @@ public sealed class FilterScanSessionTests
     public async Task Dispose_Once_UnsubscribesProgressDisposesCtsAndTransformer()
     {
         // Arrange
-        using var fixture = new Fixture();
+        using Fixture fixture = new();
 
         // Act
         fixture.Session.Dispose();
@@ -64,9 +64,9 @@ public sealed class FilterScanSessionTests
 
         // Assert
         fixture.ProgressCalls.Should().Be(0);
-        var readCtsToken = () => fixture.Cts.Token;
+        Func<CancellationToken> readCtsToken = () => fixture.Cts.Token;
         readCtsToken.Should().Throw<ObjectDisposedException>();
-        var readDisposedTransformer = () => fixture.Transformer[0, 1];
+        Func<object> readDisposedTransformer = () => fixture.Transformer[0, 1];
         readDisposedTransformer.Should().Throw<ObjectDisposedException>();
     }
 
@@ -74,11 +74,11 @@ public sealed class FilterScanSessionTests
     public void Dispose_CalledTwice_DoesNotThrow()
     {
         // Arrange
-        using var fixture = new Fixture();
+        using Fixture fixture = new();
         fixture.Session.Dispose();
 
         // Act
-        var disposeAgain = () => fixture.Session.Dispose();
+        Action disposeAgain = () => fixture.Session.Dispose();
 
         // Assert
         disposeAgain.Should().NotThrow();

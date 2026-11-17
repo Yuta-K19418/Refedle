@@ -18,7 +18,7 @@ public sealed partial class TopLevelScannerTests
         WriteTestFileWithUtf8Bom("{\"k\":\"v\",\"n\":42}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(2);
@@ -35,7 +35,7 @@ public sealed partial class TopLevelScannerTests
         WriteTestFileWithUtf8Bom(string.Empty);
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().BeEmpty();
@@ -48,7 +48,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().BeEmpty();
@@ -61,7 +61,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, string.Empty);
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().BeEmpty();
@@ -71,10 +71,10 @@ public sealed partial class TopLevelScannerTests
     public void Scan_WithNonExistentFilePath_ThrowsFileNotFoundException()
     {
         // Arrange
-        var nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
+        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
 
         // Act
-        var act = () => TopLevelScanner.Scan(nonExistentPath);
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan(nonExistentPath);
 
         // Assert
         act.Should().Throw<FileNotFoundException>();
@@ -87,7 +87,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"k\":\"v\"}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -102,7 +102,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"n\":42}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -117,7 +117,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"n\":-42}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -132,7 +132,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"n\":3.14}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -147,7 +147,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"k\":\"\"}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -162,7 +162,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"o\":{\"a\":1}}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -177,7 +177,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"a\":[1,2]}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -194,7 +194,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, json);
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -209,7 +209,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"b\":2,\"a\":1}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(2);
@@ -226,7 +226,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"k\":1,\"k\":2}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -241,7 +241,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"k\":1,\"k\":2,\"k\":3}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -256,7 +256,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"a\":1,\"k\":1,\"b\":2,\"k\":2}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(3);
@@ -273,7 +273,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"x\":{\"y\":{\"z\":1}}}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -288,7 +288,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"日本語キー\":1}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -303,7 +303,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"key\\\"q\\\"\":1}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -321,7 +321,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, json);
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -334,11 +334,11 @@ public sealed partial class TopLevelScannerTests
     {
         // Arrange — object with many small fields so the total exceeds 1 MB
         // without any single JSON string token exceeding the buffer
-        var fields = string.Join(",", Enumerable.Range(0, 90_000).Select(i => $"\"f{i}\":{i}"));
+        string fields = string.Join(",", Enumerable.Range(0, 90_000).Select(i => $"\"f{i}\":{i}"));
         File.WriteAllText(_testFilePath, $"{{{fields}}}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(90_000);
@@ -353,12 +353,12 @@ public sealed partial class TopLevelScannerTests
     {
         // Arrange — single nested object whose value exceeds the 1 MB initial buffer,
         // exercising the buffer-origin arithmetic when a value straddles buffer refills
-        var innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
-        var innerObject = $"{{{innerFields}}}";
+        string innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
+        string innerObject = $"{{{innerFields}}}";
         File.WriteAllText(_testFilePath, $"{{\"big\":{innerObject}}}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -371,12 +371,12 @@ public sealed partial class TopLevelScannerTests
     {
         // Arrange — the existing buffer-refill fixture prefixed with a BOM: the shifted start
         // offset must not corrupt the buffer-origin arithmetic around the straddling value.
-        var innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
-        var innerObject = $"{{{innerFields}}}";
+        string innerFields = string.Join(",", Enumerable.Range(0, 100_000).Select(i => $"\"f{i}\":{i}"));
+        string innerObject = $"{{{innerFields}}}";
         WriteTestFileWithUtf8Bom($"{{\"big\":{innerObject}}}");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -388,11 +388,11 @@ public sealed partial class TopLevelScannerTests
     public void Scan_WithStringValueExceedingMaxBufferSize_ThrowsNotSupportedException()
     {
         // Arrange — string value larger than 16 MB
-        var oversizedString = new string('a', 16 * 1024 * 1024 + 1);
+        string oversizedString = new('a', 16 * 1024 * 1024 + 1);
         File.WriteAllText(_testFilePath, $"{{\"k\":\"{oversizedString}\"}}");
 
         // Act
-        var act = () => TopLevelScanner.Scan(_testFilePath);
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         act.Should().Throw<NotSupportedException>();
@@ -405,7 +405,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "{\"k\":}");
 
         // Act
-        var act = () => TopLevelScanner.Scan(_testFilePath);
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         act.Should().Throw<System.Text.Json.JsonException>();
@@ -418,11 +418,11 @@ public sealed partial class TopLevelScannerTests
         // before Scan is invoked. The first ThrowIfCancellationRequested in the
         // loop will throw deterministically, regardless of timing.
         File.WriteAllText(_testFilePath, "{\"k\":1}");
-        using var cts = new CancellationTokenSource();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
 
         // Act
-        var act = () => TopLevelScanner.Scan(_testFilePath, cts.Token);
+        Func<IReadOnlyList<JsonObjectEntry>> act = () => TopLevelScanner.Scan(_testFilePath, cts.Token);
 
         // Assert
         act.Should().Throw<OperationCanceledException>();
@@ -435,7 +435,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "  { \"k\" : 1 }  ");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().HaveCount(1);
@@ -450,7 +450,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "[1,2,3]");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().BeEmpty();
@@ -463,7 +463,7 @@ public sealed partial class TopLevelScannerTests
         File.WriteAllText(_testFilePath, "42");
 
         // Act
-        var result = TopLevelScanner.Scan(_testFilePath);
+        IReadOnlyList<JsonObjectEntry> result = TopLevelScanner.Scan(_testFilePath);
 
         // Assert
         result.Should().BeEmpty();

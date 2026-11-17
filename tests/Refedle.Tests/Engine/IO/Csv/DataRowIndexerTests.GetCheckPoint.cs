@@ -10,15 +10,15 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange: Fixed-length rows "v001,d001\n" = 10 bytes each
         // Header "col1,col2\n" = 10 bytes
-        var lines = new List<string> { "col1,col2" };
+        List<string> lines = ["col1,col2"];
         lines.AddRange(Enumerable.Range(1, 500).Select(i => $"v{i:D3},d{i:D3}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines) + "\n");
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(250);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(250);
 
         // Assert
         byteOffset.Should().Be(10); // First checkpoint after header (10 bytes)
@@ -30,15 +30,15 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange: Fixed-length rows "v0001,d0001\n" = 12 bytes each
         // Header "col01,col02\n" = 12 bytes
-        var lines = new List<string> { "col01,col02" };
+        List<string> lines = ["col01,col02"];
         lines.AddRange(Enumerable.Range(1, 1500).Select(i => $"v{i:D4},d{i:D4}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines) + "\n");
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(1000);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(1000);
 
         // Assert
         // First checkpoint after header: 12 bytes
@@ -52,15 +52,15 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange: Fixed-length rows "v0001,d0001\n" = 12 bytes each
         // Header "col01,col02\n" = 12 bytes
-        var lines = new List<string> { "col01,col02" };
+        List<string> lines = ["col01,col02"];
         lines.AddRange(Enumerable.Range(1, 1200).Select(i => $"v{i:D4},d{i:D4}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines) + "\n");
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(1150);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(1150);
 
         // Assert
         // First checkpoint after header: 12 bytes
@@ -76,18 +76,18 @@ public sealed partial class DataRowIndexerTests
         // Arrange: File with 2000 data rows (checkpoints at 0, 1000, 2000)
         // Fixed-length rows "v0001,d0001\n" = 12 bytes each
         // Header "col01,col02\n" = 12 bytes
-        var lines = new List<string> { "col01,col02" };
+        List<string> lines = ["col01,col02"];
         lines.AddRange(Enumerable.Range(1, 2000).Select(i => $"v{i:D4},d{i:D4}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines) + "\n");
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Verify TotalRows is 2000 (header excluded, only data rows)
         indexer.TotalRows.Should().Be(2000);
 
         // Act: Request row 5000, which is far beyond TotalRows
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(5000);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(5000);
 
         // Assert: Returns last checkpoint (2000)
         // idealCheckPointIndex = 5000 / 1000 = 5
@@ -104,11 +104,11 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4");
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act
-        var act = () => indexer.GetCheckPoint(-1);
+        Func<(long byteOffset, int rowOffset)> act = () => indexer.GetCheckPoint(-1);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -119,11 +119,11 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4");
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(0);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(0);
 
         // Assert
         // Header length: "col1,col2\n" = 10 bytes
@@ -135,15 +135,15 @@ public sealed partial class DataRowIndexerTests
     public void GetCheckPoint_WithExactlyCheckpointInterval_ReturnsCorrectCheckpoint()
     {
         // Arrange: Create file with 2000 rows
-        var lines = new List<string> { "col1,col2" };
+        List<string> lines = ["col1,col2"];
         lines.AddRange(Enumerable.Range(1, 2000).Select(i => $"v{i:D4},d{i:D4}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines));
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
 
         // Act: Request row 1000 (exactly checkpoint interval)
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(1000);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(1000);
 
         // Assert
         // Row 1000 should be at checkpoint 1000
@@ -157,10 +157,10 @@ public sealed partial class DataRowIndexerTests
     {
         // Arrange
         File.WriteAllText(_testFilePath, "col1,col2\nval1,val2\nval3,val4");
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
 
         // Act (before BuildIndex)
-        var (byteOffset, rowOffset) = indexer.GetCheckPoint(100);
+        (long byteOffset, int rowOffset) = indexer.GetCheckPoint(100);
 
         // Assert: Should return -1 when no checkpoints exist (before BuildIndex)
         byteOffset.Should().Be(-1);
@@ -171,24 +171,24 @@ public sealed partial class DataRowIndexerTests
     public async Task GetCheckPoint_ThreadSafety_ConcurrentAccessDoesNotThrow()
     {
         // Arrange
-        var lines = new List<string> { "col1,col2" };
+        List<string> lines = ["col1,col2"];
         lines.AddRange(Enumerable.Range(1, 5000).Select(i => $"v{i:D4},d{i:D4}"));
         File.WriteAllText(_testFilePath, string.Join("\n", lines));
 
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
 
         // Act: Start indexing in background
-        var indexingTask = Task.Run(() => indexer.BuildIndex());
+        Task indexingTask = Task.Run(() => indexer.BuildIndex());
 
         // Concurrently call GetCheckPoint from multiple threads
-        var tasks = new List<Task>();
-        for (var i = 0; i < 10; i++)
+        List<Task> tasks = [];
+        for (int i = 0; i < 10; i++)
         {
             tasks.Add(Task.Run(() =>
             {
-                for (var j = 0; j < 100; j++)
+                for (int j = 0; j < 100; j++)
                 {
-                    var (byteOffset, rowOffset) = indexer.GetCheckPoint(j * 50);
+                    (long byteOffset, int rowOffset) = indexer.GetCheckPoint(j * 50);
                     // Should not throw
                     _ = byteOffset;
                     _ = rowOffset;

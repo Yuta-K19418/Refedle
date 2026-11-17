@@ -13,7 +13,7 @@ public sealed class CellIssueReporterTests
     public async Task ReportAsync_WithNoCellIssues_WritesNoWarnings()
     {
         // Arrange
-        var logger = new TestAppLogger();
+        TestAppLogger logger = new();
 
         // Act
         await CellIssueReporter.ReportAsync([], hasMoreCellIssues: false, logger);
@@ -30,11 +30,11 @@ public sealed class CellIssueReporterTests
     public async Task ReportAsync_WithCellIssueHavingRawValue_WritesHeaderAndEntryWithQuotedValue()
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var issues = new[]
-        {
+        TestAppLogger logger = new();
+        CellIssue[] issues =
+        [
             new CellIssue(3, "date", "not-a-date", "not recognized as a timestamp"),
-        };
+        ];
 
         // Act
         await CellIssueReporter.ReportAsync(issues, hasMoreCellIssues: false, logger);
@@ -49,11 +49,11 @@ public sealed class CellIssueReporterTests
     public async Task ReportAsync_WithCellIssueHavingEmptyRawValue_OmitsTheValueFromTheEntry()
     {
         // Arrange — unreadable source cells carry no text to show.
-        var logger = new TestAppLogger();
-        var issues = new[]
-        {
+        TestAppLogger logger = new();
+        CellIssue[] issues =
+        [
             new CellIssue(4, "date", "", "unreadable source value"),
-        };
+        ];
 
         // Act
         await CellIssueReporter.ReportAsync(issues, hasMoreCellIssues: false, logger);
@@ -68,12 +68,12 @@ public sealed class CellIssueReporterTests
     public async Task ReportAsync_WithMultipleCellIssues_WritesOneEntryPerIssueInOrder()
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var issues = new[]
-        {
+        TestAppLogger logger = new();
+        CellIssue[] issues =
+        [
             new CellIssue(1, "a", "x", "reason 1"),
             new CellIssue(2, "b", "y", "reason 2"),
-        };
+        ];
 
         // Act
         await CellIssueReporter.ReportAsync(issues, hasMoreCellIssues: false, logger);
@@ -92,11 +92,11 @@ public sealed class CellIssueReporterTests
     public async Task ReportAsync_WithHasMoreCellIssues_ClosesWithMoreThanCapIndicator()
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var issues = new[]
-        {
+        TestAppLogger logger = new();
+        CellIssue[] issues =
+        [
             new CellIssue(1, "date", "not-a-date", "not recognized as a timestamp"),
-        };
+        ];
 
         // Act
         await CellIssueReporter.ReportAsync(issues, hasMoreCellIssues: true, logger);

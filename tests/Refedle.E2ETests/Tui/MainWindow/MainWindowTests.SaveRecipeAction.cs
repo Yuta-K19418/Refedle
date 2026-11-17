@@ -10,14 +10,14 @@ public sealed partial class MainWindowTests
     public async Task SaveRecipe_FromCsvTable_WritesPerformedActionToRecipeFile()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
-        var savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-csv-test.yaml");
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-csv-test.yaml");
         File.Delete(savePath);
         try
         {
@@ -54,7 +54,7 @@ public sealed partial class MainWindowTests
 
             // Assert
             File.Exists(savePath).Should().BeTrue();
-            var recipeContent = await File.ReadAllTextAsync(savePath);
+            string recipeContent = await File.ReadAllTextAsync(savePath);
             recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"name\"");
             recipeContent.Should().Contain("newName: \"years\"");
@@ -69,12 +69,12 @@ public sealed partial class MainWindowTests
     public async Task SaveRecipe_FromJsonLinesTree_WritesPerformedActionToRecipeFile()
     {
         // Arrange
-        var content = """
+        string content = """
             {"name":"Alice","age":30}
             {"name":"Bob","age":25}
             """;
-        var inputFile = _testDirectory.CreateFile("input.jsonl", content);
-        var savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-jsonlinestree-test.yaml");
+        string inputFile = _testDirectory.CreateFile("input.jsonl", content);
+        string savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-jsonlinestree-test.yaml");
         File.Delete(savePath);
         try
         {
@@ -123,7 +123,7 @@ public sealed partial class MainWindowTests
 
             // Assert
             File.Exists(savePath).Should().BeTrue();
-            var recipeContent = await File.ReadAllTextAsync(savePath);
+            string recipeContent = await File.ReadAllTextAsync(savePath);
             recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"age\"");
             recipeContent.Should().Contain("newName: \"years\"");
@@ -138,14 +138,14 @@ public sealed partial class MainWindowTests
     public async Task SaveRecipe_FromFocusedTableWithActiveDrillDown_WritesDrillDownKeyPathAndActionStackToRecipeFile()
     {
         // Arrange: DrillDown from a JSON array root into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
-        var savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-focusedtable-test.yaml");
+        string inputFile = _testDirectory.CreateFile("input.json", content);
+        string savePath = Path.Combine(Environment.CurrentDirectory, "save-recipe-focusedtable-test.yaml");
         File.Delete(savePath);
         try
         {
@@ -187,7 +187,7 @@ public sealed partial class MainWindowTests
             // Assert: the root array node's KeyPath has no segments, so the empty-list form is
             // the correct round-trip — see RecipeYamlSerializer's KeyPathTraverser.LastKeySegment note.
             File.Exists(savePath).Should().BeTrue();
-            var recipeContent = await File.ReadAllTextAsync(savePath);
+            string recipeContent = await File.ReadAllTextAsync(savePath);
             recipeContent.Should().Contain("drillDownKeyPath: []");
             recipeContent.Should().Contain("type: Rename");
             recipeContent.Should().Contain("oldName: \"name\"");

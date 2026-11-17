@@ -10,13 +10,13 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FilterColumnOnCsvTable_RendersOnlyMatchingRows()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
@@ -36,7 +36,7 @@ public sealed partial class MainWindowTests
         Harness.SendKey(KeyCode.Enter);
         // Absence alone can hold for a dialog frame or a half-redrawn frame, so also require the
         // expected filtered row to be present before handing the frame to the assertions below.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal) && !line.Contains("Filter Column", StringComparison.Ordinal))
                 && l.Any(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal)),
             "filtered table rendered with the \"Alice\" row and without \"Charlie\"");
@@ -51,14 +51,14 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FilterColumnOnFocusedTable_RendersOnlyMatchingRows()
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25},
               {"name":"Charlie","age":35}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -83,7 +83,7 @@ public sealed partial class MainWindowTests
         Harness.SendKey(KeyCode.Enter);
         // Absence alone can hold for a dialog frame or a half-redrawn frame, so also require the
         // expected filtered row to be present before handing the frame to the assertions below.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("Charlie", StringComparison.Ordinal) && !line.Contains("Filter Column", StringComparison.Ordinal))
                 && l.Any(line => line.Contains("Alice", StringComparison.Ordinal) && line.Contains("30", StringComparison.Ordinal)),
             "filtered table rendered with the \"Alice\" row and without \"Charlie\"");

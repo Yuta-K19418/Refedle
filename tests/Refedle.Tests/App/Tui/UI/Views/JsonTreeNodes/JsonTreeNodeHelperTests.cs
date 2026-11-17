@@ -15,13 +15,13 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithStartObjectToken_ReturnsJsonObjectTreeNode()
     {
         // Arrange
-        var json = "{\"key\": \"value\"}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"key\": \"value\"}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
 
         // Assert
         node.Should().NotBeNull();
@@ -33,13 +33,13 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithStartArrayToken_ReturnsJsonArrayTreeNode()
     {
         // Arrange
-        var json = "[1, 2, 3]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, 2, 3]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson);
 
         // Assert
         node.Should().NotBeNull();
@@ -51,17 +51,17 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithStringToken_ReturnsJsonValueTreeNode()
     {
         // Arrange
-        var json = "\"hello\"";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "\"hello\"";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to String
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "str", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "str", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("str: \"hello\"");
         valueNode.ValueKind.Should().Be(JsonValueKind.String);
     }
@@ -70,17 +70,17 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithNumberToken_ReturnsJsonValueTreeNode()
     {
         // Arrange
-        var json = "123";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "123";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to Number
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "num", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "num", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("num: 123");
         valueNode.ValueKind.Should().Be(JsonValueKind.Number);
     }
@@ -89,17 +89,17 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithTrueToken_ReturnsJsonValueTreeNode()
     {
         // Arrange
-        var json = "true";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "true";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to True
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "bool", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "bool", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("bool: true");
         valueNode.ValueKind.Should().Be(JsonValueKind.True);
     }
@@ -108,17 +108,17 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithFalseToken_ReturnsJsonValueTreeNode()
     {
         // Arrange
-        var json = "false";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "false";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to False
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "bool", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "bool", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("bool: false");
         valueNode.ValueKind.Should().Be(JsonValueKind.False);
     }
@@ -127,17 +127,17 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithNullToken_ReturnsJsonValueTreeNode()
     {
         // Arrange
-        var json = "null";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "null";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to Null
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "nul", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "nul", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("nul: <null>");
         valueNode.ValueKind.Should().Be(JsonValueKind.Null);
     }
@@ -146,18 +146,18 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithUnrecognizedToken_ReturnsUndefinedJsonValueTreeNode()
     {
         // Arrange
-        var json = "{}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
         reader.Read(); // Move to EndObject (unhandled in switch)
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "unk", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "unk", rawJson);
 
         // Assert
         node.Should().BeOfType<JsonValueTreeNode>();
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.Text.Should().Be("unk: <unknown>");
         valueNode.ValueKind.Should().Be(JsonValueKind.Undefined);
     }
@@ -177,7 +177,7 @@ public sealed class JsonTreeNodeHelperTests
         // Arrange
 
         // Act
-        var result = JsonTreeNodeHelper.EscapeString(input);
+        string result = JsonTreeNodeHelper.EscapeString(input);
 
         // Assert
         result.Should().Be(expected);
@@ -187,16 +187,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_NestedObject_SetsKeyNameOnReturnedNode()
     {
         // Arrange
-        var json = "{\"key\": \"value\"}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"key\": \"value\"}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
 
         // Assert
-        var objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
+        JsonObjectTreeNode objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
         objectNode.KeyName.Should().Be("obj");
     }
 
@@ -204,16 +204,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_NestedArray_SetsKeyNameOnReturnedNode()
     {
         // Arrange
-        var json = "[1, 2, 3]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, 2, 3]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson);
 
         // Assert
-        var arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
+        JsonArrayTreeNode arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
         arrayNode.KeyName.Should().Be("arr");
     }
 
@@ -221,16 +221,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithRecordPosition_PropagatesRecordPositionToObjectNode()
     {
         // Arrange
-        var json = "{\"key\": \"value\"}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"key\": \"value\"}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson, recordPosition: 5L);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson, recordPosition: 5L);
 
         // Assert
-        var objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
+        JsonObjectTreeNode objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
         objectNode.RecordPosition.Should().Be(5L);
     }
 
@@ -238,16 +238,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithRecordPosition_PropagatesRecordPositionToArrayNode()
     {
         // Arrange
-        var json = "[1, 2, 3]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "[1, 2, 3]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartArray
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson, recordPosition: 7L);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson, recordPosition: 7L);
 
         // Assert
-        var arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
+        JsonArrayTreeNode arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
         arrayNode.RecordPosition.Should().Be(7L);
     }
 
@@ -255,16 +255,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithNullRecordPosition_SetsNullRecordPositionOnNode()
     {
         // Arrange
-        var json = "{\"key\": \"value\"}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        string json = "{\"key\": \"value\"}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read(); // Move to StartObject
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson);
 
         // Assert
-        var objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
+        JsonObjectTreeNode objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
         objectNode.RecordPosition.Should().BeNull();
     }
 
@@ -272,16 +272,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithObjectToken_PropagatesParentNodeAndKeyName()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"k\":\"v\"}");
-        var reader = new Utf8JsonReader(rawJson);
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"k\":\"v\"}");
+        Utf8JsonReader reader = new(rawJson);
         reader.Read();
         ITreeNode parent = new JsonValueTreeNode("parent");
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson, parentNode: parent);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "obj", rawJson, parentNode: parent);
 
         // Assert
-        var objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
+        JsonObjectTreeNode objectNode = node.Should().BeOfType<JsonObjectTreeNode>().Subject;
         objectNode.KeyName.Should().Be("obj");
         objectNode.ParentNode.Should().BeSameAs(parent);
     }
@@ -290,16 +290,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithArrayToken_PropagatesParentNodeAndKeyName()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[1]");
-        var reader = new Utf8JsonReader(rawJson);
+        byte[] rawJson = Encoding.UTF8.GetBytes("[1]");
+        Utf8JsonReader reader = new(rawJson);
         reader.Read();
         ITreeNode parent = new JsonValueTreeNode("parent");
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson, parentNode: parent);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, "arr", rawJson, parentNode: parent);
 
         // Assert
-        var arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
+        JsonArrayTreeNode arrayNode = node.Should().BeOfType<JsonArrayTreeNode>().Subject;
         arrayNode.KeyName.Should().Be("arr");
         arrayNode.ParentNode.Should().BeSameAs(parent);
     }
@@ -313,16 +313,16 @@ public sealed class JsonTreeNodeHelperTests
     public void CreateChildNode_WithValueToken_PropagatesParentNodeAndKeyName(string json, string label)
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var reader = new Utf8JsonReader(rawJson);
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        Utf8JsonReader reader = new(rawJson);
         reader.Read();
         ITreeNode parent = new JsonValueTreeNode("parent");
 
         // Act
-        var node = JsonTreeNodeHelper.CreateChildNode(ref reader, label, rawJson, parentNode: parent);
+        ITreeNode? node = JsonTreeNodeHelper.CreateChildNode(ref reader, label, rawJson, parentNode: parent);
 
         // Assert
-        var valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
+        JsonValueTreeNode valueNode = node.Should().BeOfType<JsonValueTreeNode>().Subject;
         valueNode.KeyName.Should().Be(label);
         valueNode.ParentNode.Should().BeSameAs(parent);
     }

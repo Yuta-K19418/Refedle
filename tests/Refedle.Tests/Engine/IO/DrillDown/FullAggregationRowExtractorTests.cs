@@ -19,7 +19,7 @@ public sealed class FullAggregationRowExtractorTests
         ];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
 
         // Assert
         rows.Select(r => Id(r.Bytes)).Should().Equal([1, 2]);
@@ -37,7 +37,7 @@ public sealed class FullAggregationRowExtractorTests
         ];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
 
         // Assert
         rows.Select(r => Id(r.Bytes)).Should().Equal([1, 3]);
@@ -50,7 +50,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<JsonRawBytes> batch = [Bytes("""{"orders":[{"id":1},{"id":2},{"id":3}]}""")];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
 
         // Assert
         rows.Select(r => Id(r.Bytes)).Should().Equal([1, 2, 3]);
@@ -63,7 +63,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<JsonRawBytes> batch = [Bytes("""{"tags":["x","y"]}""")];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("tags"));
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("tags"));
 
         // Assert
         rows.Select(r => JsonObjectCellExtractor.ExtractCell(r.Bytes.Span, "value"u8)).Should().Equal(["x", "y"]);
@@ -76,7 +76,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<JsonRawBytes> batch = [Bytes("""{"id":7}"""), Bytes("""{"id":8}""")];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath());
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath());
 
         // Assert
         rows.Select(r => Id(r.Bytes)).Should().Equal([7, 8]);
@@ -89,7 +89,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<JsonRawBytes> batch = [];
 
         // Act
-        var rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
+        IReadOnlyList<FocusedTableRow> rows = FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
 
         // Assert
         rows.Should().BeEmpty();
@@ -102,7 +102,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<JsonRawBytes> batch = null!;
 
         // Act
-        var act = () => FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
+        Func<IReadOnlyList<FocusedTableRow>> act = () => FullAggregationRowExtractor.ExtractRows(batch, KeyPath("orders"));
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -115,7 +115,7 @@ public sealed class FullAggregationRowExtractorTests
         IReadOnlyList<KeyPathSegment> keyPath = null!;
 
         // Act
-        var act = () => FullAggregationRowExtractor.ExtractRows([], keyPath);
+        Func<IReadOnlyList<FocusedTableRow>> act = () => FullAggregationRowExtractor.ExtractRows([], keyPath);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -128,7 +128,7 @@ public sealed class FullAggregationRowExtractorTests
 
     private static int Id(JsonRawBytes bytes)
     {
-        using var doc = JsonDocument.Parse(bytes);
+        using JsonDocument doc = JsonDocument.Parse(bytes);
         return doc.RootElement.GetProperty("id").GetInt32();
     }
 }

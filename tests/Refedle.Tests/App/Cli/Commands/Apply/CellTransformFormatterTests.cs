@@ -16,11 +16,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithFillSpec_TextValue_ReturnsPlainTextValueCell()
     {
         // Arrange
-        var cell = new CellData("original", CellPresence.Value);
-        var transform = new FillSpec("ANON");
+        CellData cell = new("original", CellPresence.Value);
+        FillSpec transform = new("ANON");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -34,11 +34,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithFillSpec_NumericValue_ReturnsNumericValueCell()
     {
         // Arrange
-        var cell = new CellData("original", CellPresence.Value);
-        var transform = new FillSpec("123");
+        CellData cell = new("original", CellPresence.Value);
+        FillSpec transform = new("123");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -52,11 +52,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithFillSpec_BooleanValue_ReturnsBooleanValueCell()
     {
         // Arrange
-        var cell = new CellData("original", CellPresence.Value);
-        var transform = new FillSpec("true");
+        CellData cell = new("original", CellPresence.Value);
+        FillSpec transform = new("true");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -70,11 +70,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithFillSpec_NonValueCell_OverwritesWithValueCell()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Null);
-        var transform = new FillSpec("N/A");
+        CellData cell = new([], CellPresence.Null);
+        FillSpec transform = new("N/A");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -96,11 +96,11 @@ public sealed class CellTransformFormatterTests
         string expected)
     {
         // Arrange
-        var cell = new CellData(raw, CellPresence.Value);
-        var transform = new TimestampFormatSpec(targetFormat);
+        CellData cell = new(raw, CellPresence.Value);
+        TimestampFormatSpec transform = new(targetFormat);
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -120,11 +120,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithTimestampFormatSpec_UnparseableValue_ReturnsOriginalCellAndReason(string raw)
     {
         // Arrange
-        var cell = new CellData(raw, CellPresence.Value);
-        var transform = new TimestampFormatSpec("yyyy/MM/dd");
+        CellData cell = new(raw, CellPresence.Value);
+        TimestampFormatSpec transform = new("yyyy/MM/dd");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeFalse();
@@ -139,11 +139,11 @@ public sealed class CellTransformFormatterTests
         // Raw cells (embedded JSON objects/arrays) must keep Raw encoding so the
         // JSON writer emits them verbatim instead of as a quoted string.
         // Arrange
-        var cell = new CellData("{\"a\":1}", CellPresence.Value, CellEncoding.Raw);
-        var transform = new TimestampFormatSpec("yyyy/MM/dd");
+        CellData cell = new("{\"a\":1}", CellPresence.Value, CellEncoding.Raw);
+        TimestampFormatSpec transform = new("yyyy/MM/dd");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeFalse();
@@ -161,11 +161,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithTimestampFormatSpec_NullCell_ReturnsOriginalCell()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Null);
-        var transform = new TimestampFormatSpec("yyyy/MM/dd");
+        CellData cell = new([], CellPresence.Null);
+        TimestampFormatSpec transform = new("yyyy/MM/dd");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -178,11 +178,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithTimestampFormatSpec_MissingCell_ReturnsOriginalCell()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Missing);
-        var transform = new TimestampFormatSpec("yyyy/MM/dd");
+        CellData cell = new([], CellPresence.Missing);
+        TimestampFormatSpec transform = new("yyyy/MM/dd");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();
@@ -195,11 +195,11 @@ public sealed class CellTransformFormatterTests
     public void TryFormat_WithTimestampFormatSpec_InvalidCell_ReturnsOriginalCell()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Invalid);
-        var transform = new TimestampFormatSpec("yyyy/MM/dd");
+        CellData cell = new([], CellPresence.Invalid);
+        TimestampFormatSpec transform = new("yyyy/MM/dd");
 
         // Act
-        var success = CellTransformFormatter.TryFormat(transform, cell, out var result, out var reason);
+        bool success = CellTransformFormatter.TryFormat(transform, cell, out CellData result, out string? reason);
 
         // Assert
         success.Should().BeTrue();

@@ -17,7 +17,7 @@ public sealed class JsonLinesRecordReaderTests : IDisposable
 
     public void Dispose()
     {
-        foreach (var path in _tempFiles)
+        foreach (string path in _tempFiles)
         {
             if (File.Exists(path))
             {
@@ -32,10 +32,10 @@ public sealed class JsonLinesRecordReaderTests : IDisposable
     public async Task Dispatch_MoveNextAndGetCellData_ForwardToTheSelectedReader(bool drillDown)
     {
         // Arrange
-        using var reader = await BuildReaderAsync(drillDown, ["id", "item"], []);
+        using JsonLinesRecordReader reader = await BuildReaderAsync(drillDown, ["id", "item"], []);
 
         // Act
-        var items = await DrainColumnAsync(reader, 1);
+        IReadOnlyList<string> items = await DrainColumnAsync(reader, 1);
 
         // Assert
         items.Should().Equal(["a", "b"]);
@@ -48,13 +48,13 @@ public sealed class JsonLinesRecordReaderTests : IDisposable
     {
         // Arrange — the filter keeps only the row whose item is "a".
         BatchFilterSpec[] filters = [new(1, ComparisonType.Text, FilterOperator.Equals, "a")];
-        using var reader = await BuildReaderAsync(drillDown, ["id", "item"], filters);
+        using JsonLinesRecordReader reader = await BuildReaderAsync(drillDown, ["id", "item"], filters);
 
         // Act
         await reader.MoveNextAsync(default);
-        var firstMatches = reader.EvaluateFilters();
+        bool firstMatches = reader.EvaluateFilters();
         await reader.MoveNextAsync(default);
-        var secondMatches = reader.EvaluateFilters();
+        bool secondMatches = reader.EvaluateFilters();
 
         // Assert
         firstMatches.Should().BeTrue();
@@ -67,11 +67,11 @@ public sealed class JsonLinesRecordReaderTests : IDisposable
     public async Task Dispatch_AfterDispose_MoveNextThrows(bool drillDown)
     {
         // Arrange
-        var reader = await BuildReaderAsync(drillDown, ["id"], []);
+        JsonLinesRecordReader reader = await BuildReaderAsync(drillDown, ["id"], []);
         reader.Dispose();
 
         // Act
-        var act = async () => await reader.MoveNextAsync(default);
+        Func<Task<bool>> act = async () => await reader.MoveNextAsync(default);
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();
@@ -97,18 +97,18 @@ public sealed class JsonLinesRecordReaderTests : IDisposable
     {
         // Both fixtures yield rows [(id:1,item:a),(id:2,item:b)]: bare reads each line, the
         // DrillDown path traverses "orders" in the single line.
-        var content = drillDown
+        string content = drillDown
             ? """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""" + "\n"
             : "{\"id\":1,\"item\":\"a\"}\n{\"id\":2,\"item\":\"b\"}\n";
         IReadOnlyList<KeyPathSegment>? keyPath = drillDown
             ? [new KeyPathSegment("orders", KeyPathSegmentKind.Key)]
             : null;
 
-        var path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        string path = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
         File.WriteAllText(path, content);
         _tempFiles.Add(path);
 
-        var outputSchema = new BatchOutputSchema([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
+        BatchOutputSchema outputSchema = new([.. columns.Select(c => new BatchOutputColumn(c, c))], filters);
         return await new JsonLinesRecordReaderFactory().CreateAsync(
             path, keyPath, columns, outputSchema, new TestAppLogger(), CancellationToken.None);
     }

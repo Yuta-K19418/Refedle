@@ -52,7 +52,7 @@ public sealed class LazyTransformerTests
     }
 
     private static TableSchema MakeSchema(params (string name, ColumnType type)[] cols) =>
-        new TableSchema
+        new()
         {
             Columns =
             [
@@ -84,10 +84,10 @@ public sealed class LazyTransformerTests
     public void Create_WithNullSource_ThrowsArgumentNullException()
     {
         // Arrange
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
 
         // Act
-        var act = () => LazyTransformer.Create(null!, schema, []);
+        Func<LazyTransformer> act = () => LazyTransformer.Create(null!, schema, []);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -97,7 +97,7 @@ public sealed class LazyTransformerTests
     public void Create_WithNullOriginalSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello"],
             ],
@@ -105,7 +105,7 @@ public sealed class LazyTransformerTests
         );
 
         // Act
-        var act = () => LazyTransformer.Create(source, null!, []);
+        Func<LazyTransformer> act = () => LazyTransformer.Create(source, null!, []);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -115,16 +115,16 @@ public sealed class LazyTransformerTests
     public void Create_WithNullActions_ThrowsArgumentNullException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
 
         // Act
-        var act = () => LazyTransformer.Create(source, schema, null!);
+        Func<LazyTransformer> act = () => LazyTransformer.Create(source, schema, null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -138,20 +138,20 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameAction_OutputSchemaReflectsNewName()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("X (text)");
@@ -162,21 +162,21 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameAction_SourceColumnIndexPreserved()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("hello");
@@ -190,13 +190,13 @@ public sealed class LazyTransformerTests
     public void Create_WithDeleteAction_DeletedColumnAbsentFromOutputSchema()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -204,7 +204,7 @@ public sealed class LazyTransformerTests
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.Columns.Should().Be(2);
@@ -215,22 +215,22 @@ public sealed class LazyTransformerTests
     public void Create_WithDeleteAction_SourceColumnIndicesMappedCorrectly()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 1]; // output col 1 → source col 2 (C)
+        object result = transformer[0, 1]; // output col 1 → source col 2 (C)
 
         // Assert
         result.Should().Be("c");
@@ -240,17 +240,17 @@ public sealed class LazyTransformerTests
     public void Create_AllColumnsDeleted_ColumnsIsZero()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.Columns.Should().Be(0);
@@ -264,20 +264,20 @@ public sealed class LazyTransformerTests
     public void Create_WithCastAction_OutputSchemaReflectsNewType()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         // ColumnType is reflected through FormatCellValue behaviour: valid integer is returned as-is
@@ -292,13 +292,13 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameFollowedByDelete_OperatesOnRenamedName()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -306,7 +306,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.Columns.Should().Be(1);
@@ -321,17 +321,17 @@ public sealed class LazyTransformerTests
     public void Indexer_EmptyActionStack_ReturnsSameValueAsSource()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("hello");
@@ -353,21 +353,21 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be(expectedValue);
@@ -384,21 +384,21 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("<invalid>");
@@ -408,21 +408,21 @@ public sealed class LazyTransformerTests
     public void Indexer_CastToText_ReturnsRawValue()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["007"],
             ],
             ["count"]
         );
-        var schema = MakeSchema(("count", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("count", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "count", TargetType = ColumnType.Text },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("007");
@@ -434,21 +434,21 @@ public sealed class LazyTransformerTests
     public void Indexer_CastToJsonValueTypes_ReturnsRawValue(ColumnType targetType, string rawValue)
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["value"]
         );
-        var schema = MakeSchema(("value", ColumnType.Text));
+        TableSchema schema = MakeSchema(("value", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "value", TargetType = targetType },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be(rawValue);
@@ -462,13 +462,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnOneTimestampColumn_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00", "2024-03-20T14:05:33"],
             ],
             ["created_at", "updated_at"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("created_at", ColumnType.Timestamp),
             ("updated_at", ColumnType.Timestamp)
         );
@@ -480,11 +480,11 @@ public sealed class LazyTransformerTests
                 TargetFormat = "yyyy/MM/dd",
             },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var targeted = transformer[0, 0];
-        var untouched = transformer[0, 1];
+        object targeted = transformer[0, 0];
+        object untouched = transformer[0, 1];
 
         // Assert
         targeted.Should().Be("2024/01/15");
@@ -495,13 +495,13 @@ public sealed class LazyTransformerTests
     public void Indexer_WithActionOnOneColumn_UntouchedNumberAndBoolColumnsStayRaw()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00", "007", "1.50", "TRUE"],
             ],
             ["created_at", "count", "price", "active"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("created_at", ColumnType.Timestamp),
             ("count", ColumnType.WholeNumber),
             ("price", ColumnType.FloatingPoint),
@@ -515,12 +515,12 @@ public sealed class LazyTransformerTests
                 TargetFormat = "yyyy/MM/dd",
             },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var count = transformer[0, 1];
-        var price = transformer[0, 2];
-        var active = transformer[0, 3];
+        object count = transformer[0, 1];
+        object price = transformer[0, 2];
+        object active = transformer[0, 3];
 
         // Assert
         count.Should().Be("007");
@@ -532,21 +532,21 @@ public sealed class LazyTransformerTests
     public void CastAction_ToTimestamp_WithoutFormatTimestamp_UsesDefaultFormat()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-03-20T14:05:33"],
             ],
             ["updated_at"]
         );
-        var schema = MakeSchema(("updated_at", ColumnType.Text));
+        TableSchema schema = MakeSchema(("updated_at", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "updated_at", TargetType = ColumnType.Timestamp },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("2024-03-20 14:05:33");
@@ -556,23 +556,23 @@ public sealed class LazyTransformerTests
     public void CastAction_AfterFormatTimestamp_DoesNotResetFormatString()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
             new FormatTimestampAction { ColumnName = "created_at", TargetFormat = "yyyy/MM/dd" },
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("2024/01/15");
@@ -582,11 +582,11 @@ public sealed class LazyTransformerTests
     public void Indexer_CastThenRenameAndDelete_PreservesTargetColumnFormatting()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [["discard", "007", "1.50"]],
             ["drop", "count", "price"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("drop", ColumnType.Text),
             ("count", ColumnType.Text),
             ("price", ColumnType.FloatingPoint)
@@ -597,11 +597,11 @@ public sealed class LazyTransformerTests
             new RenameColumnAction { OldName = "count", NewName = "renamed" },
             new DeleteColumnAction { ColumnName = "drop" },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var targeted = transformer[0, 0];
-        var untouched = transformer[0, 1];
+        object targeted = transformer[0, 0];
+        object untouched = transformer[0, 1];
 
         // Assert
         targeted.Should().Be("7");
@@ -616,20 +616,20 @@ public sealed class LazyTransformerTests
     public void Create_ActionTargetingNonExistentColumn_IsSilentlySkipped()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "DoesNotExist" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.Columns.Should().Be(1);
@@ -639,20 +639,20 @@ public sealed class LazyTransformerTests
     public void Create_CastTargetingNonExistentColumn_IsSkippedAndOtherColumnsUnchanged()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["007"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "DoesNotExist", TargetType = ColumnType.WholeNumber },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.Columns.Should().Be(1);
@@ -668,17 +668,17 @@ public sealed class LazyTransformerTests
     public void Indexer_NegativeRow_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var act = () => _ = transformer[-1, 0];
+        Func<object> act = () => _ = transformer[-1, 0];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -688,17 +688,17 @@ public sealed class LazyTransformerTests
     public void Indexer_NegativeCol_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var act = () => _ = transformer[0, -1];
+        Func<object> act = () => _ = transformer[0, -1];
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -708,17 +708,17 @@ public sealed class LazyTransformerTests
     public void Indexer_RowExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var act = () => _ = transformer[1, 0]; // only row 0 exists
+        Func<object> act = () => _ = transformer[1, 0]; // only row 0 exists
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -728,17 +728,17 @@ public sealed class LazyTransformerTests
     public void Indexer_ColExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var act = () => _ = transformer[0, 1]; // only col 0 exists
+        Func<object> act = () => _ = transformer[0, 1]; // only col 0 exists
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -752,7 +752,7 @@ public sealed class LazyTransformerTests
     public void Rows_DelegatesToUnderlyingSource()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a"],
                 ["b"],
@@ -762,11 +762,11 @@ public sealed class LazyTransformerTests
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
-        var rows = transformer.TotalRows;
+        long rows = transformer.TotalRows;
 
         // Assert
         rows.Should().Be(5);
@@ -776,22 +776,22 @@ public sealed class LazyTransformerTests
     public void Columns_ReflectsTransformedSchemaColumnCount()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
         );
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var columns = transformer.Columns;
+        int columns = transformer.Columns;
 
         // Assert
         columns.Should().Be(2);
@@ -801,21 +801,21 @@ public sealed class LazyTransformerTests
     public void ColumnNames_ReflectsTransformedSchemaNames()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var names = transformer.ColumnNames;
+        string[] names = transformer.ColumnNames;
 
         // Assert
         names.Should().BeEquivalentTo(["X (text)", "B (text)"], o => o.WithStrictOrdering());
@@ -829,7 +829,7 @@ public sealed class LazyTransformerTests
     public void Filter_EqualsOperator_OnlyMatchingRowsReturned()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
@@ -837,14 +837,14 @@ public sealed class LazyTransformerTests
             ],
             ["Name"]
         );
-        var schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
         ];
 
         // Act — rows 0 and 2 match "Alice"
-        using var transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
 
         // Assert
         transformer.TotalRows.Should().Be(2);
@@ -856,7 +856,7 @@ public sealed class LazyTransformerTests
     public void Filter_ContainsOperator_SubstringMatchingRowsReturned()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["apple"],
                 ["banana"],
@@ -865,14 +865,14 @@ public sealed class LazyTransformerTests
             ],
             ["Fruit"]
         );
-        var schema = MakeSchema(("Fruit", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Fruit", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Fruit", FilterOperator.Contains, ComparisonType.Text, "ap").Value,
         ];
 
         // Act — rows 0 ("apple") and 2 ("apricot") contain "ap"
-        using var transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, [0, 2]);
 
         // Assert
         transformer.TotalRows.Should().Be(2);
@@ -888,7 +888,7 @@ public sealed class LazyTransformerTests
     public void Filter_MultipleFilterActions_AppliesAndSemantics()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["Alice", "30"],
                 ["Bob", "25"],
@@ -897,7 +897,7 @@ public sealed class LazyTransformerTests
             ],
             ["Name", "Age"]
         );
-        var schema = MakeSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
@@ -905,7 +905,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act — only row 0 ("Alice", "30") matches both filters
-        using var transformer = MakeFilteredTransformer(source, schema, actions, [0]);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, [0]);
 
         // Assert
         transformer.TotalRows.Should().Be(1);
@@ -917,21 +917,21 @@ public sealed class LazyTransformerTests
     public void Filter_NoMatchingRows_RowsIsZero()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
             ],
             ["Name"]
         );
-        var schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Charlie").Value,
         ];
 
         // Act — no rows match "Charlie"
-        using var transformer = MakeFilteredTransformer(source, schema, actions, []);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert
         transformer.TotalRows.Should().Be(0);
@@ -945,14 +945,14 @@ public sealed class LazyTransformerTests
     public void Filter_TargetingRenamedColumn_CorrectlyResolved()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
             ],
             ["Name"]
         );
-        var schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
@@ -960,7 +960,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act — only row 0 ("Alice") matches
-        using var transformer = MakeFilteredTransformer(source, schema, actions, [0]);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, [0]);
 
         // Assert
         transformer.TotalRows.Should().Be(1);
@@ -971,14 +971,14 @@ public sealed class LazyTransformerTests
     public void Filter_TargetingDeletedColumn_SilentlySkipped()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["Alice", "active"],
                 ["Bob", "inactive"],
             ],
             ["Name", "Status"]
         );
-        var schema = MakeSchema(("Name", ColumnType.Text), ("Status", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Name", ColumnType.Text), ("Status", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "Status" },
@@ -988,7 +988,7 @@ public sealed class LazyTransformerTests
 
         // Act — the filter spec is skipped (Status column was deleted), so no FilterSpec
         // is generated and the factory is never called; all source rows are exposed
-        using var transformer = MakeFilteredTransformer(source, schema, actions, []);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert — both rows retained because the filter was silently skipped
         transformer.TotalRows.Should().Be(2);
@@ -1002,7 +1002,7 @@ public sealed class LazyTransformerTests
     public void Filter_GreaterThanOnWholeNumberColumn_ReturnsMatchingRows()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["10"],
                 ["50"],
@@ -1011,14 +1011,14 @@ public sealed class LazyTransformerTests
             ],
             ["Score"]
         );
-        var schema = MakeSchema(("Score", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("Score", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Score", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
 
         // Act — rows 1 (50) and 2 (30) are greater than 20
-        using var transformer = MakeFilteredTransformer(source, schema, actions, [1, 2]);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, [1, 2]);
 
         // Assert
         transformer.TotalRows.Should().Be(2);
@@ -1030,21 +1030,21 @@ public sealed class LazyTransformerTests
     public void Filter_NumericOperatorOnTextColumn_ExcludesAllRows()
     {
         // Arrange — GreaterThan on a Text column always returns false, excluding all rows
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello"],
                 ["world"],
             ],
             ["Word"]
         );
-        var schema = MakeSchema(("Word", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Word", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Word", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
         ];
 
         // Act — numeric operators on Text columns always return false, so no rows match
-        using var transformer = MakeFilteredTransformer(source, schema, actions, []);
+        using LazyTransformer transformer = MakeFilteredTransformer(source, schema, actions, []);
 
         // Assert — all rows excluded because numeric operators are unsupported on Text columns
         transformer.TotalRows.Should().Be(0);
@@ -1058,7 +1058,7 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_SingleColumn_AllCellsReturnFillValue()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1"],
                 ["a2"],
@@ -1066,14 +1066,14 @@ public sealed class LazyTransformerTests
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("FILLED");
@@ -1085,20 +1085,20 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_NonExistentColumn_IsIgnored()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "DoesNotExist", Value = "FILLED" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("a1");
@@ -1108,21 +1108,21 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_EmptyString_AllCellsReturnEmpty()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1"],
                 ["a2"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = string.Empty },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be(string.Empty);
@@ -1133,13 +1133,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_WithRename_FillAppliedAfterRename()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1", "b1"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -1147,7 +1147,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("X (text)");
@@ -1159,13 +1159,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_SameColumnFilledTwice_LastValueWins()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["original"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "first" },
@@ -1173,7 +1173,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("second");
@@ -1183,13 +1183,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_MultipleColumns_OnlyTargetColumnFilled()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1", "b1", "c1"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1200,7 +1200,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("a1");
@@ -1212,13 +1212,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_FillBeforeRename_FillPreservedAfterRename()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
@@ -1226,7 +1226,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("X (text)");
@@ -1237,13 +1237,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_WithCast_FillValueBypassesCastFormatting()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -1251,7 +1251,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         // FillValue takes precedence over cast formatting
@@ -1262,13 +1262,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_BeforeCast_FillValueBypassesCastFormatting()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "hello" },
@@ -1276,7 +1276,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         // A cast after the fill must not lose the raw fill override
@@ -1287,13 +1287,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_AfterCastAndRename_FillValueOverridesAndNeighborStaysRaw()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["007", "1.50"],
             ],
             ["count", "price"]
         );
-        var schema = MakeSchema(("count", ColumnType.Text), ("price", ColumnType.FloatingPoint));
+        TableSchema schema = MakeSchema(("count", ColumnType.Text), ("price", ColumnType.FloatingPoint));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "count", TargetType = ColumnType.WholeNumber },
@@ -1302,7 +1302,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("N/A");
@@ -1313,13 +1313,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_ColumnNames_PreservesAllColumnNames()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a1", "b1", "c1"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1330,7 +1330,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         // All three columns should be present after fill action
@@ -1349,16 +1349,16 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_EmptyActionStack_ReturnsSchemaNames()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["42", "hello"],
             ],
             ["Age", "Name"]
         );
-        var schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Assert
         transformer.RawColumnNames[0].Should().Be("Age");
@@ -1369,20 +1369,20 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_WithRenameAction_ReflectsNewName()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.RawColumnNames[0].Should().Be("X");
@@ -1393,13 +1393,13 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_WithDeleteAction_ExcludesDeletedColumn()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        var schema = MakeSchema(
+        TableSchema schema = MakeSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1407,7 +1407,7 @@ public sealed class LazyTransformerTests
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "B" }];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.RawColumnNames.Should().BeEquivalentTo(["A", "C"], o => o.WithStrictOrdering());
@@ -1417,15 +1417,15 @@ public sealed class LazyTransformerTests
     public void ColumnNames_WithCastAction_ReflectsNewTypeLabel()
     {
         // Arrange
-        var source = new FakeTableSource([["42"]], ["A"]);
-        var schema = MakeSchema(("A", ColumnType.Text));
+        FakeTableSource source = new([["42"]], ["A"]);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("A (number)");
@@ -1436,16 +1436,16 @@ public sealed class LazyTransformerTests
     public void ColumnNames_EmptyActionStack_ReturnsLabeledNames()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["42", "hello"],
             ],
             ["Age", "Name"]
         );
-        var schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
+        TableSchema schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, []);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("Age (number)");
@@ -1468,20 +1468,20 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["original"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.WholeNumber));
+        TableSchema schema = MakeSchema(("A", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = fillValue },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be($"A ({expectedLabel})");
@@ -1492,15 +1492,15 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_NumberColumnFilledWithText_TypeChangesToText()
     {
         // Arrange
-        var source = new FakeTableSource([["100"]], ["Price"]);
-        var schema = MakeSchema(("Price", ColumnType.WholeNumber));
+        FakeTableSource source = new([["100"]], ["Price"]);
+        TableSchema schema = MakeSchema(("Price", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Price", Value = "N/A" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("Price (text)");
@@ -1511,15 +1511,15 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_TextColumnFilledWithNumber_TypeChangesToNumber()
     {
         // Arrange
-        var source = new FakeTableSource([["hello"]], ["Value"]);
-        var schema = MakeSchema(("Value", ColumnType.Text));
+        FakeTableSource source = new([["hello"]], ["Value"]);
+        TableSchema schema = MakeSchema(("Value", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Value", Value = "42" },
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer.ColumnNames[0].Should().Be("Value (number)");
@@ -1534,13 +1534,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnTimestampColumn_FormatsValueWithTargetFormat()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1549,10 +1549,10 @@ public sealed class LazyTransformerTests
                 TargetFormat = "yyyy/MM/dd",
             },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("2024/01/15");
@@ -1562,13 +1562,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnNonExistentColumn_IsSkipped()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        var schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1579,7 +1579,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("hello");
@@ -1589,13 +1589,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_AfterCastToTimestamp_FormatsCorrectly()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Text));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
@@ -1607,7 +1607,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("2024/01/15");
@@ -1617,13 +1617,13 @@ public sealed class LazyTransformerTests
     public void MultipleFormatTimestampActions_LastOneWins()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1639,7 +1639,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("01/15/2024");
@@ -1649,13 +1649,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_WithInvalidTimestampValue_ReturnsInvalidMarker()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["not-a-date"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1666,7 +1666,7 @@ public sealed class LazyTransformerTests
         ];
 
         // Act
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Assert
         transformer[0, 0].Should().Be("<invalid>");
@@ -1676,13 +1676,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_WithEmptyTargetFormat_UsesDefaultFormat()
     {
         // Arrange
-        var source = new FakeTableSource(
+        FakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        var schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1691,10 +1691,10 @@ public sealed class LazyTransformerTests
                 TargetFormat = string.Empty,
             },
         ];
-        using var transformer = LazyTransformer.Create(source, schema, actions);
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
         // Act
-        var result = transformer[0, 0];
+        object result = transformer[0, 0];
 
         // Assert
         result.Should().Be("2024-01-15 09:30:00");
@@ -1704,23 +1704,23 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OverJsonLinesSource_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        var path = Path.GetTempFileName();
+        string path = Path.GetTempFileName();
         try
         {
             File.WriteAllLines(
                 path,
                 ["{\"created_at\":\"2024-01-15T09:30:00\",\"updated_at\":\"2024-03-20T14:05:33\"}"]
             );
-            var indexer = new RowIndexer(path);
+            RowIndexer indexer = new(path);
             indexer.BuildIndex();
-            using var cache = new RowByteCache(indexer);
-            var schema = MakeSchema(
+            using RowByteCache cache = new(indexer);
+            TableSchema schema = MakeSchema(
                 ("created_at", ColumnType.Timestamp),
                 ("updated_at", ColumnType.Timestamp)
             );
             // The transformer disposes its wrapped source; the using guards the
             // transformer-construction gap (double dispose is a guarded no-op).
-            using var source = new JsonLinesTableSource(cache, schema);
+            using JsonLinesTableSource source = new(cache, schema);
             IReadOnlyList<IMorphAction> actions =
             [
                 new FormatTimestampAction
@@ -1729,11 +1729,11 @@ public sealed class LazyTransformerTests
                     TargetFormat = "yyyy/MM/dd",
                 },
             ];
-            using var transformer = LazyTransformer.Create(source, schema, actions);
+            using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
             // Act
-            var targeted = transformer[0, 0];
-            var untouched = transformer[0, 1];
+            object targeted = transformer[0, 0];
+            object untouched = transformer[0, 1];
 
             // Assert
             targeted.Should().Be("2024/01/15");
@@ -1749,29 +1749,29 @@ public sealed class LazyTransformerTests
     public void CastAction_OverJsonLinesNumberColumn_ReformatsCastColumnAndLeavesOtherRaw()
     {
         // Arrange
-        var path = Path.GetTempFileName();
+        string path = Path.GetTempFileName();
         try
         {
             File.WriteAllLines(path, ["{\"price\": 1.50, \"amount\": 1.50}"]);
-            var indexer = new RowIndexer(path);
+            RowIndexer indexer = new(path);
             indexer.BuildIndex();
-            using var cache = new RowByteCache(indexer);
-            var schema = MakeSchema(
+            using RowByteCache cache = new(indexer);
+            TableSchema schema = MakeSchema(
                 ("price", ColumnType.FloatingPoint),
                 ("amount", ColumnType.FloatingPoint)
             );
             // The transformer disposes its wrapped source; the using guards the
             // transformer-construction gap (double dispose is a guarded no-op).
-            using var source = new JsonLinesTableSource(cache, schema);
+            using JsonLinesTableSource source = new(cache, schema);
             IReadOnlyList<IMorphAction> actions =
             [
                 new CastColumnAction { ColumnName = "price", TargetType = ColumnType.FloatingPoint },
             ];
-            using var transformer = LazyTransformer.Create(source, schema, actions);
+            using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
             // Act
-            var cast = transformer[0, 0];
-            var untouched = transformer[0, 1];
+            object cast = transformer[0, 0];
+            object untouched = transformer[0, 1];
 
             // Assert
             cast.Should().Be("1.5");
@@ -1787,35 +1787,35 @@ public sealed class LazyTransformerTests
     public void CastAction_OverJsonLinesNumberColumn_ToWholeNumber_ShowsInvalidForRawNotations()
     {
         // Arrange
-        var path = Path.GetTempFileName();
+        string path = Path.GetTempFileName();
         try
         {
             File.WriteAllLines(path, ["{\"exponent\": 1e3, \"integral\": 1.0, \"plain\": 1000}"]);
-            var indexer = new RowIndexer(path);
+            RowIndexer indexer = new(path);
             indexer.BuildIndex();
-            using var cache = new RowByteCache(indexer);
+            using RowByteCache cache = new(indexer);
             // Schema types mirror the schema scan's inference: "1e3" -> Text,
             // "1.0" -> FloatingPoint, "1000" -> WholeNumber.
-            var schema = MakeSchema(
+            TableSchema schema = MakeSchema(
                 ("exponent", ColumnType.Text),
                 ("integral", ColumnType.FloatingPoint),
                 ("plain", ColumnType.WholeNumber)
             );
             // The transformer disposes its wrapped source; the using guards the
             // transformer-construction gap (double dispose is a guarded no-op).
-            using var source = new JsonLinesTableSource(cache, schema);
+            using JsonLinesTableSource source = new(cache, schema);
             IReadOnlyList<IMorphAction> actions =
             [
                 new CastColumnAction { ColumnName = "exponent", TargetType = ColumnType.WholeNumber },
                 new CastColumnAction { ColumnName = "integral", TargetType = ColumnType.WholeNumber },
                 new CastColumnAction { ColumnName = "plain", TargetType = ColumnType.WholeNumber },
             ];
-            using var transformer = LazyTransformer.Create(source, schema, actions);
+            using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
             // Act
-            var exponent = transformer[0, 0];
-            var integral = transformer[0, 1];
-            var plain = transformer[0, 2];
+            object exponent = transformer[0, 0];
+            object integral = transformer[0, 1];
+            object plain = transformer[0, 2];
 
             // Assert — integral values in raw exponent/decimal notation fail long parsing;
             // plain integers still display normally
@@ -1833,9 +1833,9 @@ public sealed class LazyTransformerTests
     public void Dispose_DisposesUnderlyingSource()
     {
         // Arrange
-        using var source = new DisposableFakeTableSource([["a"]], ["A"]);
-        var schema = MakeSchema(("A", ColumnType.Text));
-        var transformer = LazyTransformer.Create(source, schema, []);
+        using DisposableFakeTableSource source = new([["a"]], ["A"]);
+        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
         transformer.Dispose();

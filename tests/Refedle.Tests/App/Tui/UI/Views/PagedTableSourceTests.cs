@@ -39,7 +39,7 @@ public sealed class PagedTableSourceTests
     public void Constructor_WithNullInner_ThrowsArgumentNullException()
     {
         // Arrange / Act
-        var act = () => new PagedTableSource(null!);
+        Func<PagedTableSource> act = () => new PagedTableSource(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -51,10 +51,10 @@ public sealed class PagedTableSourceTests
     public void Constructor_WithNonPositivePageSize_ThrowsArgumentOutOfRangeException(int pageSize)
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 10);
+        RecordingTableSource inner = new(totalRows: 10);
 
         // Act
-        var act = () => new PagedTableSource(inner, pageSize);
+        Func<PagedTableSource> act = () => new PagedTableSource(inner, pageSize);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -64,10 +64,10 @@ public sealed class PagedTableSourceTests
     public void Constructor_WithPageSizeAboveOneThirdOfIntMaxValue_ThrowsArgumentOutOfRangeException()
     {
         // Arrange — three pages of this size would no longer fit in int.MaxValue
-        var inner = new RecordingTableSource(totalRows: 10);
+        RecordingTableSource inner = new(totalRows: 10);
 
         // Act
-        var act = () => new PagedTableSource(inner, int.MaxValue / 3 + 1);
+        Func<PagedTableSource> act = () => new PagedTableSource(inner, int.MaxValue / 3 + 1);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -77,11 +77,11 @@ public sealed class PagedTableSourceTests
     public void Rows_OnFirstPage_ShowsTwoPages()
     {
         // Arrange — 10 rows per page, 100 rows total; page 1 has no previous page
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         rows.Should().Be(20);
@@ -92,12 +92,12 @@ public sealed class PagedTableSourceTests
     public void Rows_OnMiddlePage_ShowsThreePages()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 3;
 
         // Act
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         rows.Should().Be(30);
@@ -108,12 +108,12 @@ public sealed class PagedTableSourceTests
     public void Rows_OnLastPage_ShowsRemainingRowsOnly()
     {
         // Arrange — 95 rows = 9 full pages + 5 rows; page 10 shows pages 9-10
-        var inner = new RecordingTableSource(totalRows: 95);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 95);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 10;
 
         // Act
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         rows.Should().Be(15);
@@ -124,11 +124,11 @@ public sealed class PagedTableSourceTests
     public void Rows_WhenTableSmallerThanOnePage_ShowsAllRows()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 7);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 7);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         rows.Should().Be(7);
@@ -138,11 +138,11 @@ public sealed class PagedTableSourceTests
     public void Rows_WhenTotalRowsIsZero_ShowsZeroRows()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 0);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 0);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         rows.Should().Be(0);
@@ -152,13 +152,13 @@ public sealed class PagedTableSourceTests
     public void Rows_AfterTotalRowsGrows_ExtendsWindowWithoutMovingIt()
     {
         // Arrange — background indexing keeps appending rows while the user stays put
-        var inner = new RecordingTableSource(totalRows: 45);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 45);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 5;
 
         // Act
         inner.TotalRows = 80;
-        var rows = source.Rows;
+        int rows = source.Rows;
 
         // Assert
         source.WindowStart.Should().Be(30);
@@ -169,8 +169,8 @@ public sealed class PagedTableSourceTests
     public void Indexer_OnMiddlePage_ReadsInnerRowAtWindowOffset()
     {
         // Arrange — page 3's window covers pages 2-4, so it starts at absolute row 10
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 3;
 
         // Act
@@ -184,12 +184,12 @@ public sealed class PagedTableSourceTests
     public void ColumnNamesAndColumns_DelegateToInner()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 10);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 10);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var columnNames = source.ColumnNames;
-        var columns = source.Columns;
+        string[] columnNames = source.ColumnNames;
+        int columns = source.Columns;
 
         // Assert
         columnNames.Should().Equal(["value"]);
@@ -200,11 +200,11 @@ public sealed class PagedTableSourceTests
     public void Inner_ExposesWrappedSource()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 10);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 10);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var recovered = source.Inner;
+        IExtendedTableSource recovered = source.Inner;
 
         // Assert
         recovered.Should().BeSameAs(inner);
@@ -214,12 +214,12 @@ public sealed class PagedTableSourceTests
     public void SwitchPageFor_RowInNextPage_ShiftsWindowForwardByPage()
     {
         // Arrange — page 3's window covers pages 2-4 (start row 10); row 40 opens page 5
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 3;
 
         // Act
-        var windowShift = source.SwitchPageFor(40);
+        long windowShift = source.SwitchPageFor(40);
 
         // Assert — the window slides to pages 4-6, shifting its start by two pages
         windowShift.Should().Be(20);
@@ -231,12 +231,12 @@ public sealed class PagedTableSourceTests
     public void SwitchPageFor_RowOnCurrentPage_ReturnsZeroShift()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.CurrentPageNumber = 3;
 
         // Act
-        var windowShift = source.SwitchPageFor(25);
+        long windowShift = source.SwitchPageFor(25);
 
         // Assert
         windowShift.Should().Be(0);
@@ -247,11 +247,11 @@ public sealed class PagedTableSourceTests
     public void SwitchPageFor_RowOnAdjacentPageInsideWindow_ReturnsZeroShiftButUpdatesPage()
     {
         // Arrange — page 1 window spans pages 1-2; row 12 opens page 2, window stays
-        var inner = new RecordingTableSource(totalRows: 100);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 100);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var windowShift = source.SwitchPageFor(12);
+        long windowShift = source.SwitchPageFor(12);
 
         // Assert
         windowShift.Should().Be(0);
@@ -263,11 +263,11 @@ public sealed class PagedTableSourceTests
     public void SwitchPageFor_RowBeyondEnd_ClampsToLastPage()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 95);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 95);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
-        var windowShift = source.SwitchPageFor(94);
+        long windowShift = source.SwitchPageFor(94);
 
         // Assert
         source.CurrentPageNumber.Should().Be(10);
@@ -279,8 +279,8 @@ public sealed class PagedTableSourceTests
     public void CurrentPageNumber_WhenAssignedBeyondLastPage_ClampsToPageCount()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 95);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 95);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
         source.CurrentPageNumber = 99;
@@ -293,8 +293,8 @@ public sealed class PagedTableSourceTests
     public void CurrentPageNumber_WhenAssignedNonPositive_ClampsToOne()
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows: 95);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        RecordingTableSource inner = new(totalRows: 95);
+        using PagedTableSource source = new(inner, pageSize: 10);
 
         // Act
         source.CurrentPageNumber = 0;
@@ -310,12 +310,12 @@ public sealed class PagedTableSourceTests
     public void Indexer_OnLastWindowWithDefaultPageSize_PassesLongAbsoluteRowToInner(long totalRows)
     {
         // Arrange
-        var inner = new RecordingTableSource(totalRows);
-        using var source = new PagedTableSource(inner);
+        RecordingTableSource inner = new(totalRows);
+        using PagedTableSource source = new(inner);
         source.SwitchPageFor(totalRows - 1);
 
         // Act
-        var displayedRows = source.Rows;
+        int displayedRows = source.Rows;
         _ = source[displayedRows - 1, 0];
 
         // Assert
@@ -328,9 +328,9 @@ public sealed class PagedTableSourceTests
     public void Indexer_WithRowBeyondIntMaxAndSmallPageSize_PassesLongAbsoluteRowToInner()
     {
         // Arrange
-        var firstRowPastIntMax = (long)int.MaxValue + 1;
-        var inner = new RecordingTableSource(firstRowPastIntMax + 2);
-        using var source = new PagedTableSource(inner, pageSize: 10);
+        long firstRowPastIntMax = (long)int.MaxValue + 1;
+        RecordingTableSource inner = new(firstRowPastIntMax + 2);
+        using PagedTableSource source = new(inner, pageSize: 10);
         source.SwitchPageFor(firstRowPastIntMax);
 
         // Act
@@ -344,16 +344,16 @@ public sealed class PagedTableSourceTests
     public void CurrentPageNumber_WithTotalRowsNearLongMaxValue_ClampsWithoutOverflow()
     {
         // Arrange
-        var inner = new RecordingTableSource(long.MaxValue);
-        using var source = new PagedTableSource(inner, pageSize: 3);
+        RecordingTableSource inner = new(long.MaxValue);
+        using PagedTableSource source = new(inner, pageSize: 3);
 
         // Act
         source.CurrentPageNumber = long.MaxValue;
-        var displayedRows = source.Rows;
+        int displayedRows = source.Rows;
         _ = source[displayedRows - 1, 0];
 
         // Assert — ceil(long.MaxValue / 3) pages; the window is the last two pages (3 rows + a 1-row remainder)
-        var lastPage = ((long.MaxValue - 1) / 3) + 1;
+        long lastPage = ((long.MaxValue - 1) / 3) + 1;
         source.CurrentPageNumber.Should().Be(lastPage);
         source.WindowStart.Should().Be((lastPage - 2) * 3);
         displayedRows.Should().Be(4);
@@ -364,12 +364,12 @@ public sealed class PagedTableSourceTests
     public void Rows_OnLastPageWithPageSizeOneAndLongMaxValueRows_ShowsTwoRowsAndPassesLongRowToInner()
     {
         // Arrange
-        var inner = new RecordingTableSource(long.MaxValue);
-        using var source = new PagedTableSource(inner, pageSize: 1);
+        RecordingTableSource inner = new(long.MaxValue);
+        using PagedTableSource source = new(inner, pageSize: 1);
         source.SwitchPageFor(long.MaxValue - 1);
 
         // Act
-        var displayedRows = source.Rows;
+        int displayedRows = source.Rows;
         _ = source[displayedRows - 1, 0];
 
         // Assert
@@ -383,8 +383,8 @@ public sealed class PagedTableSourceTests
     public void Dispose_CalledTwice_DisposesInnerSourceOnce()
     {
         // Arrange
-        var inner = new DisposableTableSource();
-        var source = new PagedTableSource(inner);
+        DisposableTableSource inner = new();
+        PagedTableSource source = new(inner);
         source.Dispose();
 
         // Act
@@ -398,8 +398,8 @@ public sealed class PagedTableSourceTests
     public void Dispose_DisposesInnerSource()
     {
         // Arrange
-        var inner = new DisposableTableSource();
-        var source = new PagedTableSource(inner);
+        DisposableTableSource inner = new();
+        PagedTableSource source = new(inner);
 
         // Act
         source.Dispose();

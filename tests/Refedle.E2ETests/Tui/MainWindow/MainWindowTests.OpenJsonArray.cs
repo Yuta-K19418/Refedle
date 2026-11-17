@@ -9,14 +9,14 @@ public sealed partial class MainWindowTests
     public async Task OpenKey_WithJsonArrayFileSelectedInOpenDialog_RendersTreeNodes()
     {
         // Arrange
-        var content = """
+        string content = """
             [
               {"name":"Item1","age":1},
               {"name":"Item2","age":2},
               {"name":"Item3","age":3}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
 
         // Act: drive the real 'o'-key flow. The path field is pre-filled with the dialog's
         // current directory, so clear it (same pattern as the Save tests) before entering
@@ -31,7 +31,7 @@ public sealed partial class MainWindowTests
         Harness.SendPaste(inputFile);
         await Harness.WaitForContentsAsync("input.json");
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("[2]:", "Object: 2 properties");
+        string[] lines = await Harness.WaitForContentsAsync("[2]:", "Object: 2 properties");
 
         // Assert
         lines.Should().Contain(line => line.Contains("[0]:", StringComparison.Ordinal));

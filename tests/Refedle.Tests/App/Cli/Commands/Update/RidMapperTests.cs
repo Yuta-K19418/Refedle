@@ -1,6 +1,7 @@
 using System.Runtime.InteropServices;
 using AwesomeAssertions;
 using Refedle.App.Cli.Commands.Update;
+using Refedle.Engine;
 
 namespace Refedle.Tests.App.Cli.Commands.Update;
 
@@ -26,10 +27,10 @@ public sealed class RidMapperTests
     public void Resolve_WithSupportedCombination_ReturnsRid(string platformName, Architecture architecture, string expectedRid)
     {
         // Arrange
-        var platform = OSPlatform.Create(platformName);
+        OSPlatform platform = OSPlatform.Create(platformName);
 
         // Act
-        var result = RidMapper.Resolve(platform, architecture);
+        Result<string> result = RidMapper.Resolve(platform, architecture);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -41,10 +42,10 @@ public sealed class RidMapperTests
     public void Resolve_WithUnsupportedCombination_FailsWithExplanation(string platformName, Architecture architecture, string expectedMessageFragment)
     {
         // Arrange
-        var platform = OSPlatform.Create(platformName);
+        OSPlatform platform = OSPlatform.Create(platformName);
 
         // Act
-        var result = RidMapper.Resolve(platform, architecture);
+        Result<string> result = RidMapper.Resolve(platform, architecture);
 
         // Assert
         result.IsFailure.Should().BeTrue();

@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
@@ -11,7 +12,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_NewKeyInLine_AddsNullableColumn()
     {
         // Arrange
-        var initialSchema = new TableSchema
+        TableSchema initialSchema = new()
         {
             Columns =
             [
@@ -25,10 +26,10 @@ public sealed partial class SchemaScannerTests
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        var line = Line("{\"a\": 1, \"b\": \"new\"}");
+        JsonRawBytes line = Line("{\"a\": 1, \"b\": \"new\"}");
 
         // Act
-        var result = SchemaScanner.RefineSchema(initialSchema, line.Span);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(initialSchema, line.Span);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -41,7 +42,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_ExistingColumnAbsentInLine_MarksNullable()
     {
         // Arrange
-        var initialSchema = new TableSchema
+        TableSchema initialSchema = new()
         {
             Columns =
             [
@@ -55,10 +56,10 @@ public sealed partial class SchemaScannerTests
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        var line = Line("{}"); // 'a' is missing
+        JsonRawBytes line = Line("{}"); // 'a' is missing
 
         // Act
-        var result = SchemaScanner.RefineSchema(initialSchema, line.Span);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(initialSchema, line.Span);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -69,7 +70,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_TypeConflict_ResolvesViaColumnTypeResolver()
     {
         // Arrange
-        var initialSchema = new TableSchema
+        TableSchema initialSchema = new()
         {
             Columns =
             [
@@ -83,10 +84,10 @@ public sealed partial class SchemaScannerTests
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        var line = Line("{\"a\": 1.5}"); // Conflict: WholeNumber vs FloatingPoint
+        JsonRawBytes line = Line("{\"a\": 1.5}"); // Conflict: WholeNumber vs FloatingPoint
 
         // Act
-        var result = SchemaScanner.RefineSchema(initialSchema, line.Span);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(initialSchema, line.Span);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -97,7 +98,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_MalformedJsonLine_ReturnsOriginalSchemaUnchanged()
     {
         // Arrange
-        var initialSchema = new TableSchema
+        TableSchema initialSchema = new()
         {
             Columns =
             [
@@ -111,10 +112,10 @@ public sealed partial class SchemaScannerTests
             ],
             SourceFormat = DataFormat.JsonLines,
         };
-        var line = new JsonRawBytes("malformed"u8.ToArray());
+        JsonRawBytes line = new("malformed"u8.ToArray());
 
         // Act
-        var result = SchemaScanner.RefineSchema(initialSchema, line.Span);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(initialSchema, line.Span);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -125,7 +126,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_EmptySpan_ReturnsOriginalSchemaUnchanged()
     {
         // Arrange
-        var initialSchema = new TableSchema
+        TableSchema initialSchema = new()
         {
             Columns =
             [
@@ -141,7 +142,7 @@ public sealed partial class SchemaScannerTests
         };
 
         // Act
-        var result = SchemaScanner.RefineSchema(initialSchema, []);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(initialSchema, []);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

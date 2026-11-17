@@ -1,5 +1,6 @@
 using System.Text;
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.JsonLines;
 
@@ -22,14 +23,14 @@ public sealed class LineChunkCursorTests : IDisposable
     private MmapService OpenMmap(string content)
     {
         File.WriteAllText(_testFilePath, content, new UTF8Encoding(false));
-        var openResult = MmapService.Open(_testFilePath);
+        Result<MmapService> openResult = MmapService.Open(_testFilePath);
         return openResult.Value;
     }
 
     private static string[] ReadRemainingLines(LineChunkCursor cursor)
     {
         List<string> lines = [];
-        while (cursor.TryReadLine(out var line))
+        while (cursor.TryReadLine(out JsonRawBytes line))
         {
             lines.Add(Encoding.UTF8.GetString(line.Span));
         }
@@ -62,7 +63,7 @@ public sealed class LineChunkCursorTests : IDisposable
 
     private static int SkipLines(LineChunkCursor cursor, int count)
     {
-        var skippedCount = 0;
+        int skippedCount = 0;
         while (skippedCount < count && cursor.TrySkipLine())
         {
             skippedCount++;
@@ -77,13 +78,13 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithShortLinesSpanningMultipleChunks_NextReadReturnsFollowingLine()
     {
         // Arrange
-        var lines = BuildManyShortLines();
-        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] lines = BuildManyShortLines();
+        using MmapService mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skippedCount = SkipLines(cursor, 15_000);
-        var remainingLines = ReadRemainingLines(cursor);
+        int skippedCount = SkipLines(cursor, 15_000);
+        string[] remainingLines = ReadRemainingLines(cursor);
 
         // Assert
         skippedCount.Should().Be(15_000);
@@ -94,12 +95,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithShortLinesSpanningMultipleChunks_ReturnsFalseAfterSkippingEveryLine()
     {
         // Arrange
-        var lines = BuildManyShortLines();
-        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] lines = BuildManyShortLines();
+        using MmapService mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skippedCount = SkipLines(cursor, lines.Length + 1);
+        int skippedCount = SkipLines(cursor, lines.Length + 1);
 
         // Assert
         skippedCount.Should().Be(lines.Length);
@@ -110,11 +111,11 @@ public sealed class LineChunkCursorTests : IDisposable
     {
         // Arrange
         const string content = "{\"a\":1}\n";
-        using var mmap = OpenMmap(content);
-        using var cursor = new LineChunkCursor(mmap, startOffset: content.Length);
+        using MmapService mmap = OpenMmap(content);
+        using LineChunkCursor cursor = new(mmap, startOffset: content.Length);
 
         // Act
-        var skipped = cursor.TrySkipLine();
+        bool skipped = cursor.TrySkipLine();
 
         // Assert
         skipped.Should().BeFalse();
@@ -124,12 +125,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithTerminatedLine_ReturnsTrueAndNextReadReturnsFollowingLine()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skipped = cursor.TrySkipLine();
-        var hasLine = cursor.TryReadLine(out var line);
+        bool skipped = cursor.TrySkipLine();
+        bool hasLine = cursor.TryReadLine(out JsonRawBytes line);
 
         // Assert
         skipped.Should().BeTrue();
@@ -141,12 +142,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithEmptyLine_ReturnsTrueAndNextReadReturnsFollowingLine()
     {
         // Arrange
-        using var mmap = OpenMmap("\n{\"b\":2}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("\n{\"b\":2}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skipped = cursor.TrySkipLine();
-        var hasLine = cursor.TryReadLine(out var line);
+        bool skipped = cursor.TrySkipLine();
+        bool hasLine = cursor.TryReadLine(out JsonRawBytes line);
 
         // Assert
         skipped.Should().BeTrue();
@@ -158,11 +159,11 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WhenLastLineHasNoNewline_ReturnsFalse()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("{\"a\":1}");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skipped = cursor.TrySkipLine();
+        bool skipped = cursor.TrySkipLine();
 
         // Assert
         skipped.Should().BeFalse();
@@ -172,13 +173,13 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithLineLongerThanOneChunk_ReturnsTrueAndNextReadReturnsFollowingLine()
     {
         // Arrange
-        var lines = BuildLongAndShortLines();
-        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] lines = BuildLongAndShortLines();
+        using MmapService mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skipped = cursor.TrySkipLine();
-        var remainingLines = ReadRemainingLines(cursor);
+        bool skipped = cursor.TrySkipLine();
+        string[] remainingLines = ReadRemainingLines(cursor);
 
         // Assert
         skipped.Should().BeTrue();
@@ -189,12 +190,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WhenLastLineWithoutNewlineIsLongerThanOneChunk_ReturnsFalse()
     {
         // Arrange
-        using var mmap = OpenMmap($"{{\"short\":1}}\n{{\"long\":\"{new string('c', 250_000)}\"}}");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap($"{{\"short\":1}}\n{{\"long\":\"{new string('c', 250_000)}\"}}");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var firstSkipped = cursor.TrySkipLine();
-        var secondSkipped = cursor.TrySkipLine();
+        bool firstSkipped = cursor.TrySkipLine();
+        bool secondSkipped = cursor.TrySkipLine();
 
         // Assert
         firstSkipped.Should().BeTrue();
@@ -205,13 +206,13 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithCrLfSplitAcrossChunks_NextReadReturnsFollowingLine()
     {
         // Arrange
-        var lines = BuildLinesWithCrLfSplitAcrossChunks();
-        using var mmap = OpenMmap(string.Join("\r\n", lines) + "\r\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] lines = BuildLinesWithCrLfSplitAcrossChunks();
+        using MmapService mmap = OpenMmap(string.Join("\r\n", lines) + "\r\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var skipped = cursor.TrySkipLine();
-        var remainingLines = ReadRemainingLines(cursor);
+        bool skipped = cursor.TrySkipLine();
+        string[] remainingLines = ReadRemainingLines(cursor);
 
         // Assert
         skipped.Should().BeTrue();
@@ -222,12 +223,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TrySkipLine_WithNonZeroStartOffset_SkipsLineAtThatOffset()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 8);
+        using MmapService mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 8);
 
         // Act
-        var skipped = cursor.TrySkipLine();
-        var remainingLines = ReadRemainingLines(cursor);
+        bool skipped = cursor.TrySkipLine();
+        string[] remainingLines = ReadRemainingLines(cursor);
 
         // Assert
         skipped.Should().BeTrue();
@@ -240,12 +241,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithShortLinesSpanningMultipleChunks_ReturnsEveryLineIntact()
     {
         // Arrange
-        var expectedLines = BuildManyShortLines();
-        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] expectedLines = BuildManyShortLines();
+        using MmapService mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -266,11 +267,11 @@ public sealed class LineChunkCursorTests : IDisposable
             "日本語のテキスト",
             "{\"k\":\"値\"}",
         ];
-        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -281,11 +282,11 @@ public sealed class LineChunkCursorTests : IDisposable
     {
         // Arrange
         string[] expectedLines = [.. Enumerable.Range(0, 5_000).Select(i => $"{{\"名前\":\"テスト{i}\"}}")];
-        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -296,11 +297,11 @@ public sealed class LineChunkCursorTests : IDisposable
     {
         // Arrange
         const string content = "{\"a\":1}\n";
-        using var mmap = OpenMmap(content);
-        using var cursor = new LineChunkCursor(mmap, startOffset: content.Length);
+        using MmapService mmap = OpenMmap(content);
+        using LineChunkCursor cursor = new(mmap, startOffset: content.Length);
 
         // Act
-        var hasLine = cursor.TryReadLine(out var line);
+        bool hasLine = cursor.TryReadLine(out JsonRawBytes line);
 
         // Assert
         hasLine.Should().BeFalse();
@@ -311,12 +312,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_AfterLastTerminatedLine_ReturnsFalse()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("{\"a\":1}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var hasFirstLine = cursor.TryReadLine(out var firstLine);
-        var hasSecondLine = cursor.TryReadLine(out _);
+        bool hasFirstLine = cursor.TryReadLine(out JsonRawBytes firstLine);
+        bool hasSecondLine = cursor.TryReadLine(out _);
 
         // Assert
         hasFirstLine.Should().BeTrue();
@@ -328,11 +329,11 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithEmptyLines_ReturnsEmptyLinesBetweenOtherLines()
     {
         // Arrange
-        using var mmap = OpenMmap("\n{\"a\":1}\n\n{\"b\":2}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("\n{\"a\":1}\n\n{\"b\":2}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(string.Empty, "{\"a\":1}", string.Empty, "{\"b\":2}");
@@ -342,11 +343,11 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WhenLastLineHasNoNewline_ReturnsLastLine()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}\n{\"b\":");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap("{\"a\":1}\n{\"b\":");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal("{\"a\":1}", "{\"b\":");
@@ -356,12 +357,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithLinesLongerThanOneChunk_ReturnsEveryLineIntact()
     {
         // Arrange
-        var expectedLines = BuildLongAndShortLines();
-        using var mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] expectedLines = BuildLongAndShortLines();
+        using MmapService mmap = OpenMmap(string.Join('\n', expectedLines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -372,11 +373,11 @@ public sealed class LineChunkCursorTests : IDisposable
     {
         // Arrange
         string[] expectedLines = ["{\"short\":1}", $"{{\"long\":\"{new string('c', 250_000)}\"}}"];
-        using var mmap = OpenMmap(string.Join('\n', expectedLines));
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap(string.Join('\n', expectedLines));
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -392,11 +393,11 @@ public sealed class LineChunkCursorTests : IDisposable
     {
         // Arrange
         string[] expectedLines = [new string('a', firstLineLength), new string('b', 100), new string('c', 100)];
-        using var mmap = OpenMmap(string.Join("\r\n", expectedLines) + "\r\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        using MmapService mmap = OpenMmap(string.Join("\r\n", expectedLines) + "\r\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -406,12 +407,12 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithCrLfSplitAcrossChunks_TrimsLineEndingsFromEveryLine()
     {
         // Arrange
-        var expectedLines = BuildLinesWithCrLfSplitAcrossChunks();
-        using var mmap = OpenMmap(string.Join("\r\n", expectedLines) + "\r\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 0);
+        string[] expectedLines = BuildLinesWithCrLfSplitAcrossChunks();
+        using MmapService mmap = OpenMmap(string.Join("\r\n", expectedLines) + "\r\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 0);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal(expectedLines);
@@ -421,11 +422,11 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithNonZeroStartOffset_ReturnsLinesFromThatOffset()
     {
         // Arrange
-        using var mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: 8);
+        using MmapService mmap = OpenMmap("{\"a\":1}\n{\"b\":2}\n{\"c\":3}\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: 8);
 
         // Act
-        var lines = ReadRemainingLines(cursor);
+        string[] lines = ReadRemainingLines(cursor);
 
         // Assert
         lines.Should().Equal("{\"b\":2}", "{\"c\":3}");
@@ -435,13 +436,13 @@ public sealed class LineChunkCursorTests : IDisposable
     public void TryReadLine_WithNonZeroStartOffsetAtLineLongerThanOneChunk_ReturnsRemainingLinesIntact()
     {
         // Arrange
-        var lines = BuildLongAndShortLines();
-        var offsetOfThirdLine = lines[0].Length + 1 + lines[1].Length + 1;
-        using var mmap = OpenMmap(string.Join('\n', lines) + "\n");
-        using var cursor = new LineChunkCursor(mmap, startOffset: offsetOfThirdLine);
+        string[] lines = BuildLongAndShortLines();
+        int offsetOfThirdLine = lines[0].Length + 1 + lines[1].Length + 1;
+        using MmapService mmap = OpenMmap(string.Join('\n', lines) + "\n");
+        using LineChunkCursor cursor = new(mmap, startOffset: offsetOfThirdLine);
 
         // Act
-        var readLines = ReadRemainingLines(cursor);
+        string[] readLines = ReadRemainingLines(cursor);
 
         // Assert
         readLines.Should().Equal(lines.Skip(2));

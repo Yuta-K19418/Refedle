@@ -22,7 +22,7 @@ public sealed class DataFormatExtensionsTests
         // (parameters provided via [InlineData])
 
         // Act
-        var result = format.GetDisplayName();
+        string result = format.GetDisplayName();
 
         // Assert
         result.Should().Be(expected);
@@ -68,7 +68,7 @@ public sealed class DataFormatExtensionsTests
         // (parameters provided via MemberData)
 
         // Act
-        var result = format.GetValidCastTargets();
+        IReadOnlySet<ColumnType> result = format.GetValidCastTargets();
 
         // Assert
         result.Should().BeEquivalentTo(expectedTypes);
@@ -78,10 +78,10 @@ public sealed class DataFormatExtensionsTests
     public void GetValidCastTargets_WithInvalidFormat_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        var invalidFormat = (DataFormat)999;
+        DataFormat invalidFormat = (DataFormat)999;
 
         // Act
-        var exception = Record.Exception(() => invalidFormat.GetValidCastTargets());
+        Exception exception = Record.Exception(() => invalidFormat.GetValidCastTargets());
 
         // Assert
         exception.Should().BeOfType<ArgumentOutOfRangeException>();

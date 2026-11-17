@@ -35,7 +35,7 @@ internal sealed class UpdateArchiveFixture : IDisposable
     /// <summary>Builds a fixture whose archive contains a <c>refedle</c> entry with the given bytes.</summary>
     public static UpdateArchiveFixture WithBinaryEntry(byte[] binaryContent)
     {
-        var fixture = new UpdateArchiveFixture();
+        UpdateArchiveFixture fixture = new();
         fixture.WriteTarGz([(BinaryEntryName, binaryContent)]);
         return fixture;
     }
@@ -43,7 +43,7 @@ internal sealed class UpdateArchiveFixture : IDisposable
     /// <summary>Builds a fixture whose archive is valid but has no <c>refedle</c> entry.</summary>
     public static UpdateArchiveFixture WithoutBinaryEntry()
     {
-        var fixture = new UpdateArchiveFixture();
+        UpdateArchiveFixture fixture = new();
         fixture.WriteTarGz([("README.md", "not the binary"u8.ToArray())]);
         return fixture;
     }
@@ -51,7 +51,7 @@ internal sealed class UpdateArchiveFixture : IDisposable
     /// <summary>Builds a fixture whose archive starts with the gzip magic but holds garbage.</summary>
     public static UpdateArchiveFixture WithCorruptGzip()
     {
-        var fixture = new UpdateArchiveFixture();
+        UpdateArchiveFixture fixture = new();
         File.WriteAllBytes(fixture.ArchivePath, [0x1F, 0x8B, 0x08, 0x00, 0xDE, 0xAD, 0xBE, 0xEF, 0x01, 0x02, 0x03, 0x04]);
         return fixture;
     }
@@ -66,13 +66,13 @@ internal sealed class UpdateArchiveFixture : IDisposable
 
     private void WriteTarGz(IReadOnlyList<(string name, byte[] content)> entries)
     {
-        using var fileStream = File.Create(ArchivePath);
-        using var gzipStream = new GZipStream(fileStream, CompressionLevel.Optimal);
-        using var tarWriter = new TarWriter(gzipStream, TarEntryFormat.Pax);
-        foreach (var (name, content) in entries)
+        using FileStream fileStream = File.Create(ArchivePath);
+        using GZipStream gzipStream = new(fileStream, CompressionLevel.Optimal);
+        using TarWriter tarWriter = new(gzipStream, TarEntryFormat.Pax);
+        foreach ((string? name, byte[]? content) in entries)
         {
-            using var dataStream = new MemoryStream(content);
-            var entry = new PaxTarEntry(TarEntryType.RegularFile, name) { DataStream = dataStream };
+            using MemoryStream dataStream = new(content);
+            PaxTarEntry entry = new(TarEntryType.RegularFile, name) { DataStream = dataStream };
             tarWriter.WriteEntry(entry);
         }
     }

@@ -9,5 +9,5 @@ internal static class AppStateTestExtensions
     /// <c>TryGetDrillDown</c> that likewise ignores the current mode.
     /// </summary>
     internal static DrillDownState? GetDrillDownOrNull(this AppState state) =>
-        state.TryGetDrillDown(out var drillDown) ? drillDown : null;
+        state.TryGetDrillDown(out DrillDownState? drillDown) ? drillDown : null;
 }

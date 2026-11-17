@@ -31,10 +31,9 @@ public class RowByteCacheBenchmarks : IDisposable
         _testFilePath = Path.Combine(Path.GetTempPath(), $"row_byte_cache_benchmark_{Guid.NewGuid()}.jsonl");
 
         // Create 10,000 lines of test data
-        var lines = Enumerable
+        string[] lines = [.. Enumerable
             .Range(1, 10_000)
-            .Select(i => $"{{\"id\":{i},\"name\":\"User{i}\",\"age\":{i % 100}}}")
-            .ToArray();
+            .Select(i => $"{{\"id\":{i},\"name\":\"User{i}\",\"age\":{i % 100}}}")];
 
         File.WriteAllLines(_testFilePath, lines);
 
@@ -49,11 +48,11 @@ public class RowByteCacheBenchmarks : IDisposable
     [Benchmark]
     public void Access_RandomPattern_CacheHit50()
     {
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
-        var totalLines = _indexer.TotalRows;
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
+        long totalLines = _indexer.TotalRows;
 
         // Random access pattern (approximately 50% cache hit rate)
-        for (var i = 0; i < 1000; i++)
+        for (int i = 0; i < 1000; i++)
         {
             int lineIndex;
             if (i % 2 == 0)
@@ -67,7 +66,7 @@ public class RowByteCacheBenchmarks : IDisposable
                 lineIndex = _random.Next(Capacity + 50, (int)totalLines - 1);
             }
 
-            var bytes = cache.GetRow(lineIndex);
+            JsonRawBytes bytes = cache.GetRow(lineIndex);
             _ = bytes.Length; // Use result (prevent optimization)
         }
 
@@ -80,15 +79,15 @@ public class RowByteCacheBenchmarks : IDisposable
     [Benchmark]
     public void Access_SequentialPattern_CacheHit90()
     {
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
 
         // Sequential access pattern (approximately 90% cache hit rate)
-        for (var i = 0; i < 1000; i++)
+        for (int i = 0; i < 1000; i++)
         {
             // Sequential access (within the same window)
-            var lineIndex = i % Capacity;
+            int lineIndex = i % Capacity;
 
-            var bytes = cache.GetRow(lineIndex);
+            JsonRawBytes bytes = cache.GetRow(lineIndex);
             _ = bytes.Length; // Use result (prevent optimization)
         }
 
@@ -101,12 +100,12 @@ public class RowByteCacheBenchmarks : IDisposable
     [Benchmark]
     public void Access_RepeatedSameLine_CacheHit100()
     {
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
 
         // Repeated access to the same line (100% cache hit rate)
-        for (var i = 0; i < 1000; i++)
+        for (int i = 0; i < 1000; i++)
         {
-            var bytes = cache.GetRow(50);
+            JsonRawBytes bytes = cache.GetRow(50);
             _ = bytes.Length; // Use result (prevent optimization)
         }
 
@@ -120,15 +119,15 @@ public class RowByteCacheBenchmarks : IDisposable
     public void Access_VaryingCacheSizes()
     {
         // Performance measurement with various cache sizes
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
-        var totalLines = _indexer.TotalRows;
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
+        long totalLines = _indexer.TotalRows;
 
         // Mixed access pattern
-        for (var i = 0; i < 500; i++)
+        for (int i = 0; i < 500; i++)
         {
             // Random access
-            var lineIndex = _random.Next(0, (int)totalLines - 1);
-            var bytes = cache.GetRow(lineIndex);
+            int lineIndex = _random.Next(0, (int)totalLines - 1);
+            JsonRawBytes bytes = cache.GetRow(lineIndex);
             _ = bytes.Length;
         }
 
@@ -141,13 +140,13 @@ public class RowByteCacheBenchmarks : IDisposable
     [Benchmark]
     public void Access_LargeFile_10kLines()
     {
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
 
         // Random access with large file
-        for (var i = 0; i < 200; i++)
+        for (int i = 0; i < 200; i++)
         {
-            var lineIndex = _random.Next(0, 10_000);
-            var bytes = cache.GetRow(lineIndex);
+            int lineIndex = _random.Next(0, 10_000);
+            JsonRawBytes bytes = cache.GetRow(lineIndex);
             _ = bytes.Length;
         }
 
@@ -161,27 +160,26 @@ public class RowByteCacheBenchmarks : IDisposable
     public void Access_LargeFile_100kLines()
     {
         // Create separate file with 100k lines (for benchmarking only)
-        var largeFilePath = Path.Combine(Path.GetTempPath(), $"row_byte_cache_benchmark_large_{Guid.NewGuid()}.jsonl");
+        string largeFilePath = Path.Combine(Path.GetTempPath(), $"row_byte_cache_benchmark_large_{Guid.NewGuid()}.jsonl");
         try
         {
-            var lines = Enumerable
+            string[] lines = [.. Enumerable
                 .Range(1, 100_000)
-                .Select(i => $"{{\"id\":{i},\"data\":\"LargeDataset{i}\"}}")
-                .ToArray();
+                .Select(i => $"{{\"id\":{i},\"data\":\"LargeDataset{i}\"}}")];
 
             File.WriteAllLines(largeFilePath, lines);
 
             // MmapService is not used
-            var indexer = new RowIndexer(largeFilePath);
+            RowIndexer indexer = new(largeFilePath);
             indexer.BuildIndex();
 
-            using var cache = new RowByteCache(indexer, capacity: Capacity, prefetchWindow: 20);
+            using RowByteCache cache = new(indexer, capacity: Capacity, prefetchWindow: 20);
 
             // Random access with large file
-            for (var i = 0; i < 100; i++)
+            for (int i = 0; i < 100; i++)
             {
-                var lineIndex = _random.Next(0, 100_000);
-                var bytes = cache.GetRow(lineIndex);
+                int lineIndex = _random.Next(0, 100_000);
+                JsonRawBytes bytes = cache.GetRow(lineIndex);
                 _ = bytes.Length;
             }
         }
@@ -198,10 +196,10 @@ public class RowByteCacheBenchmarks : IDisposable
     public void InitializeCache_FirstTime()
     {
         // Measure cache initialization cost
-        var cache = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
+        RowByteCache cache = new(_indexer, capacity: Capacity, prefetchWindow: 20);
 
         // Initial access
-        var bytes = cache.GetRow(0);
+        JsonRawBytes bytes = cache.GetRow(0);
         _ = bytes.Length;
 
         cache.Dispose();
@@ -214,11 +212,11 @@ public class RowByteCacheBenchmarks : IDisposable
     public void InitializeCache_AfterDisposal()
     {
         // Measure reinitialization cost after disposal
-        var cache1 = new RowByteCache(_indexer, capacity: Capacity, prefetchWindow: 20);
+        RowByteCache cache1 = new(_indexer, capacity: Capacity, prefetchWindow: 20);
         cache1.Dispose();
 
-        var cache2 = new RowByteCache(_indexer, capacity: Capacity);
-        var bytes = cache2.GetRow(0);
+        RowByteCache cache2 = new(_indexer, capacity: Capacity);
+        JsonRawBytes bytes = cache2.GetRow(0);
         _ = bytes.Length;
 
         cache2.Dispose();

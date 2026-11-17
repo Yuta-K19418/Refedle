@@ -22,8 +22,8 @@ public sealed class DataRowCacheTests : IDisposable
 
     private static string[] ToStringArray(CsvDataRow row)
     {
-        var result = new string[row.Count];
-        for (var i = 0; i < row.Count; i++)
+        string[] result = new string[row.Count];
+        for (int i = 0; i < row.Count; i++)
         {
             result[i] = row[i].IsEmpty ? string.Empty : new string(row[i].Span);
         }
@@ -33,8 +33,8 @@ public sealed class DataRowCacheTests : IDisposable
 
     private static string BuildCsvWith20DataRows()
     {
-        var header = "col1,col2";
-        var dataRows = Enumerable.Range(0, 20).Select(i => $"val{i * 2 + 1},val{i * 2 + 2}");
+        string header = "col1,col2";
+        IEnumerable<string> dataRows = Enumerable.Range(0, 20).Select(i => $"val{i * 2 + 1},val{i * 2 + 2}");
         return string.Join("\n", [header, .. dataRows]);
     }
 
@@ -42,14 +42,14 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithValidIndex_ReturnsCorrectRow()
     {
         // Arrange
-        var csvContent = "col1,col2,col3\nval1,val2,val3\nval4,val5,val6\nval7,val8,val9";
+        string csvContent = "col1,col2,col3\nval1,val2,val3\nval4,val5,val6\nval7,val8,val9";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 3, capacity: 10, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 3, capacity: 10, prefetchWindow: 20);
 
         // Act
-        var row = cache.GetRow(0);
+        CsvDataRow row = cache.GetRow(0);
 
         // Assert
         ToStringArray(row).Should().Equal(["val1", "val2", "val3"]);
@@ -59,16 +59,16 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithMultipleRequests_UsesCacheEfficiently()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 10, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 10, prefetchWindow: 20);
 
         // Act - Request same row multiple times
-        var row1 = cache.GetRow(0);
-        var row2 = cache.GetRow(0);
-        var row3 = cache.GetRow(1);
+        CsvDataRow row1 = cache.GetRow(0);
+        CsvDataRow row2 = cache.GetRow(0);
+        CsvDataRow row3 = cache.GetRow(1);
 
         // Assert
         ToStringArray(row1).Should().Equal(["val1", "val2"]);
@@ -82,14 +82,14 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithInvalidNegativeIndex_ReturnsEmptyArray(long invalidIndex)
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
 
         // Act
-        var row = cache.GetRow(invalidIndex);
+        CsvDataRow row = cache.GetRow(invalidIndex);
 
         // Assert
         row.Should().BeEmpty();
@@ -99,14 +99,14 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithIndexBeyondTotalRows_ReturnsEmptyArray()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
 
         // Act
-        var row = cache.GetRow(100);
+        CsvDataRow row = cache.GetRow(100);
 
         // Assert
         row.Should().BeEmpty();
@@ -116,16 +116,16 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithSmallCacheSize_HandlesWindowedReads()
     {
         // Arrange
-        var csvContent = BuildCsvWith20DataRows();
+        string csvContent = BuildCsvWith20DataRows();
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 5, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 5, prefetchWindow: 20);
 
         // Act - Request rows outside the initial cache window
-        var row0 = cache.GetRow(0);
-        var row10 = cache.GetRow(10);
-        var row19 = cache.GetRow(19);
+        CsvDataRow row0 = cache.GetRow(0);
+        CsvDataRow row10 = cache.GetRow(10);
+        CsvDataRow row19 = cache.GetRow(19);
 
         // Assert
         ToStringArray(row0).Should().Equal(["val1", "val2"]);
@@ -137,11 +137,11 @@ public sealed class DataRowCacheTests : IDisposable
     public void TotalRows_ReturnsCorrectCount()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6\nval7,val8";
+        string csvContent = "col1,col2\nval1,val2\nval3,val4\nval5,val6\nval7,val8";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
 
         // Act & Assert - DataRowIndexer counts data rows excluding header
         cache.TotalRows.Should().Be(4);
@@ -151,15 +151,15 @@ public sealed class DataRowCacheTests : IDisposable
     public void GetRow_WithRaggedCsvDataRow_ThrowsInvalidDataException()
     {
         // Arrange
-        var csvContent = "col1,col2,col3\nval1,val2\nval3";
+        string csvContent = "col1,col2,col3\nval1,val2\nval3";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 3, capacity: 200, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 3, capacity: 200, prefetchWindow: 20);
 
         // Act & Assert
         // Sep.Reader enforces strict column count matching by default
-        var act = () => cache.GetRow(0);
+        Func<CsvDataRow> act = () => cache.GetRow(0);
         act.Should().Throw<InvalidDataException>();
     }
 
@@ -168,14 +168,14 @@ public sealed class DataRowCacheTests : IDisposable
     {
         // Arrange - Only header row
         File.WriteAllText(_testFilePath, "col1,col2");
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        using var cache = new DataRowCache(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
+        using DataRowCache cache = new(indexer, columnCount: 2, capacity: 200, prefetchWindow: 20);
 
         // Act & Assert - No data rows exist (only header), so TotalRows should be 0
         // row 0 is out of bounds (no data rows)
         cache.TotalRows.Should().Be(0);
-        var row = cache.GetRow(0);
+        CsvDataRow row = cache.GetRow(0);
         row.Should().BeEmpty();
     }
 
@@ -183,18 +183,18 @@ public sealed class DataRowCacheTests : IDisposable
     public void Dispose_DisposesReader()
     {
         // Arrange
-        var csvContent = "col1,col2\nval1,val2";
+        string csvContent = "col1,col2\nval1,val2";
         File.WriteAllText(_testFilePath, csvContent);
-        var indexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer indexer = new(_testFilePath);
         indexer.BuildIndex();
-        var cache = new DataRowCache(indexer, columnCount: 2);
+        DataRowCache cache = new(indexer, columnCount: 2);
         cache.GetRow(0);
 
         // Act
         cache.Dispose();
 
         // Assert — verify the underlying FileStream was released by acquiring exclusive access
-        using var stream = new FileStream(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
+        using FileStream stream = new(_testFilePath, FileMode.Open, FileAccess.Read, FileShare.None);
         stream.Should().NotBeNull();
     }
 }

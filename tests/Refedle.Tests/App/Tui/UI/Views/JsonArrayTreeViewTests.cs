@@ -1,7 +1,9 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.IO.JsonArray;
+using Terminal.Gui.App;
 using Terminal.Gui.Input;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -14,7 +16,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     {
         if (!_disposed)
         {
-            foreach (var file in _tempFiles)
+            foreach (string file in _tempFiles)
             {
                 if (File.Exists(file))
                 {
@@ -28,7 +30,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
 
     private string CreateTempFile(string content)
     {
-        var filePath = Path.Combine(Path.GetTempPath(), $"jsonarray_treeview_{Guid.NewGuid()}.json");
+        string filePath = Path.Combine(Path.GetTempPath(), $"jsonarray_treeview_{Guid.NewGuid()}.json");
         File.WriteAllText(filePath, content);
         _tempFiles.Add(filePath);
         return filePath;
@@ -40,18 +42,18 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void HandleAccepted_NonRangeNode_DoesNotThrow()
     {
         // Arrange
-        var filePath = CreateTempFile("[{\"a\":1}]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile("[{\"a\":1}]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        using var view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
-        var objects = view.Objects;
+        using JsonArrayTreeView view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
+        IEnumerable<ITreeNode>? objects = view.Objects;
         objects.Should().NotBeNull();
-        var elementNode = objects.First();
+        ITreeNode elementNode = objects.First();
         view.SelectedObject = elementNode;
 
         // Act — Accept on a non-range node should not throw
-        var act = () => view.InvokeCommand(Command.Accept);
+        Func<bool?> act = () => view.InvokeCommand(Command.Accept);
 
         // Assert
         act.Should().NotThrow();
@@ -61,25 +63,25 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void Dispose_UnsubscribesEventHandlers()
     {
         // Arrange — view created with event subscriptions via in-progress indexer
-        var filePath = CreateTempFile("[1, 2]");
-        using var app = TestAppFactory.Create();
-        var realIndexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile("[1, 2]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
-        var stubIndexer = new StubRowIndexer(realIndexer, 0, fakeIsCompleted: false);
-        using var view = JsonArrayTreeView.Create(stubIndexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
+        StubRowIndexer stubIndexer = new(realIndexer, 0, fakeIsCompleted: false);
+        using JsonArrayTreeView view = JsonArrayTreeView.Create(stubIndexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
 
         // Act — simulate progress, then dispose
         stubIndexer.UpdateTotalRows(3000);
         stubIndexer.RaiseProgressChanged(0, stubIndexer.FileSize);
-        var objectsBefore = view.Objects;
+        IEnumerable<ITreeNode>? objectsBefore = view.Objects;
         objectsBefore.Should().NotBeNull();
-        var countBeforeDispose = objectsBefore.ToList().Count;
+        int countBeforeDispose = objectsBefore.ToList().Count;
         view.Dispose();
 
         // Assert — raising events after disposal does not throw (handlers unsubscribed)
         countBeforeDispose.Should().Be(3);
         stubIndexer.UpdateTotalRows(6000);
-        var act = () => stubIndexer.RaiseProgressChanged(0, 0);
+        Action act = () => stubIndexer.RaiseProgressChanged(0, 0);
         act.Should().NotThrow();
     }
 
@@ -87,14 +89,14 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void Dispose_FastPath_DoesNotThrow()
     {
         // Arrange — IsIndexingCompleted == true at creation (fast-path, no event subscriptions)
-        var filePath = CreateTempFile("[1, 2, 3]");
-        using var app = TestAppFactory.Create();
-        var indexer = new RowIndexer(filePath);
+        string filePath = CreateTempFile("[1, 2, 3]");
+        using IApplication app = TestAppFactory.Create();
+        RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
-        using var view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
+        using JsonArrayTreeView view = JsonArrayTreeView.Create(indexer, () => { }, _ => { }, SynchronousUiThreadInvoke);
 
         // Act & Assert — Dispose on fast-path view should not throw
-        var act = () => view.Dispose();
+        Action act = () => view.Dispose();
         act.Should().NotThrow();
     }
 }

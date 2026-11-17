@@ -4,9 +4,11 @@ using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO;
+using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.Tests.App.Tui.Workers.Schema;
+using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
@@ -23,7 +25,7 @@ public sealed partial class ViewManagerTests
         // (no setup required)
 
         // Act
-        var act = () => new FilterScanManager(
+        Func<FilterScanManager> act = () => new FilterScanManager(
             new FilterIndexingRunner(),
             static _ => { },
             static () => CancellationToken.None,
@@ -40,15 +42,15 @@ public sealed partial class ViewManagerTests
 
     private static IEnumerable<View> SelfAndDescendants(View view)
     {
-        var pending = new Stack<View>();
+        Stack<View> pending = new();
         pending.Push(view);
 
         while (pending.Count > 0)
         {
-            var current = pending.Pop();
+            View current = pending.Pop();
             yield return current;
 
-            foreach (var child in current.SubViews)
+            foreach (View child in current.SubViews)
             {
                 pending.Push(child);
             }
@@ -66,16 +68,16 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WithFilterAction_ShowsOverlayOnContentContainerUntilScanCompletes()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
-        var tableView = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
-        var labelWhileScanning = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
+        CsvTableView tableView = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
+        View labelWhileScanning = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
 
         // Assert — while the scan runs, the overlay rides the content container (the table
         // view's own parent) and never enters the table view's subtree
@@ -95,16 +97,16 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToJsonLinesTableView_WithFilterAction_ShowsProgressOverlayUntilScanCompletes()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var indexer = new MockRowIndexer(filePath, 1);
-        using var harness = new ItemCountHarness(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        MockRowIndexer indexer = new(filePath, 1);
+        using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
         // Act
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
-        var labelWhileScanning = FindProgressOverlayLabel(harness.Window);
+        Label? labelWhileScanning = FindProgressOverlayLabel(harness.Window);
         runner.Complete(0);
         await harness.Queue.RunNextAsync();
 
@@ -118,23 +120,23 @@ public sealed partial class ViewManagerTests
     public async Task SchemaRefined_WhileLazyFilterScanRuns_KeepsProgressOverlayAndCompletesOnRebuiltView()
     {
         // Arrange — a real two-row scan whose queued tick and completion run after the rebuild
-        using var app = TestAppFactory.Create();
-        using var harness = new LazyScanHarness(
+        using IApplication app = TestAppFactory.Create();
+        using LazyScanHarness harness = new(
             FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "a").Value);
         harness.ViewManager.SwitchToJsonLinesTableView(
             new MockRowIndexer(harness.FilePath, 2),
             CreateJsonLinesSchema("col1"));
-        var view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
-        var oldTable = view.Table;
+        JsonLinesTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
+        ITableSource? oldTable = view.Table;
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
         // Act — rebuild the transformer on the same view while the scan's callbacks are queued
         harness.Refine("col1", "col2");
         FindProgressOverlayLabel(harness.Window).Should().NotBeNull("the overlay must survive the rebuild");
-        var finalTick = await harness.Queue.NextAsync();
+        Action finalTick = await harness.Queue.NextAsync();
         finalTick();
-        var labelAfterTick = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
-        var completion = await harness.Queue.NextAsync();
+        View labelAfterTick = SelfAndDescendants(harness.Window).Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
+        Action completion = await harness.Queue.NextAsync();
         completion();
         await harness.Runner.TaskAt(0);
 
@@ -151,10 +153,10 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToCsvTable_WhenViewIsReplacedDuringScan_RetiresOverlayWithoutTouchingOldView()
     {
         // Arrange
-        using var app = TestAppFactory.Create();
-        var runner = new ControllableFilterScanRunner();
-        var indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
-        using var harness = new ItemCountHarness(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
+        using IApplication app = TestAppFactory.Create();
+        ControllableFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
 
@@ -168,7 +170,7 @@ public sealed partial class ViewManagerTests
 
         // Act — let the orphaned scan complete
         runner.Complete(0);
-        var runStaleCompletion = () => harness.Queue.RunNextAsync();
+        Func<Task> runStaleCompletion = () => harness.Queue.RunNextAsync();
 
         // Assert — the stale completion is discarded without touching the disposed table view
         await runStaleCompletion.Should().NotThrowAsync();
@@ -182,15 +184,15 @@ public sealed partial class ViewManagerTests
         // Arrange — the file holds two matching rows but only the first is indexed when the
         // switch happens; the indexer reports the second before indexing finishes, so an
         // early-starting scan would snapshot only the first row
-        using var app = TestAppFactory.Create();
+        using IApplication app = TestAppFactory.Create();
         // Not appended mid-test: the CSV table keeps the file open (FileShare.Read) while shown,
         // so a write fails on Windows with an IOException (sharing violation). JSON Lines closes
         // the file after mapping, so its variant can append.
-        var filePath = CreateTempFile(".csv", "col1\na\na\n");
-        var indexer = new GrowableRowIndexer(filePath, "col1\n".Length);
+        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        var runner = new RecordingFilterScanRunner();
-        using var harness = new ItemCountHarness(
+        RecordingFilterScanRunner runner = new();
+        using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act — switch to the filtered table while indexing is still running
@@ -221,12 +223,12 @@ public sealed partial class ViewManagerTests
     public async Task SwitchToJsonLinesTableView_WhenIndexingCompletes_IncludesRowsIndexedAfterSwitch()
     {
         // Arrange — same deferred-start scenario on the JSON Lines table view
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        var indexer = new GrowableRowIndexer(filePath, firstRowByteOffset: 0);
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        GrowableRowIndexer indexer = new(filePath, firstRowByteOffset: 0);
         indexer.AddRows(1);
-        var runner = new RecordingFilterScanRunner();
-        using var harness = new ItemCountHarness(
+        RecordingFilterScanRunner runner = new();
+        using ItemCountHarness harness = new(
             filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
         // Act — switch to the filtered table while indexing is still running
@@ -257,12 +259,12 @@ public sealed partial class ViewManagerTests
     {
         // Arrange — the file holds two matching rows, but the completion event fires with
         // only the first row indexed, modeling an index that ended before the whole file
-        using var app = TestAppFactory.Create();
-        var filePath = CreateTempFile(".csv", "col1\na\na\n");
-        var indexer = new GrowableRowIndexer(filePath, "col1\n".Length);
+        using IApplication app = TestAppFactory.Create();
+        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        var runner = new RecordingFilterScanRunner();
-        using var harness = new ItemCountHarness(
+        RecordingFilterScanRunner runner = new();
+        using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act — the index completes having covered only the first row
@@ -333,7 +335,7 @@ public sealed partial class ViewManagerTests
             State.StartNewFile(FilePath);
             State.AddMorphAction(filter);
             _window.Add(_statusBar);
-            var modeController = new ModeController(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
             ViewManager = new ViewManager(_window, State, modeController, Runner, Queue.Enqueue);
         }
 

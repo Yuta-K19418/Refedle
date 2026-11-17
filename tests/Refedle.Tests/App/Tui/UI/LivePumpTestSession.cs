@@ -29,7 +29,7 @@ internal static class LivePumpTestSession
     public static Task<LivePumpTestSession<T>> StartAsync<T>(Func<IApplication, Window, T> setup) =>
         LivePumpTestSession<T>.StartAsync(app =>
         {
-            var window = new Window();
+            Window window = new();
             try
             {
                 return (window, setup(app, window));
@@ -75,7 +75,7 @@ internal static class ModalKeys
             }
 
             app.Iteration -= OnIteration;
-            foreach (var key in keys)
+            foreach (Key key in keys)
             {
                 app.Keyboard.RaiseKeyDownEvent(key);
             }
@@ -115,12 +115,12 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
 
     public static async Task<LivePumpTestSession<T>> StartAsync(Func<IApplication, (Window runWindow, T setup)> setup)
     {
-        var initTcs = new TaskCompletionSource<(IApplication app, T setup)>(
+        TaskCompletionSource<(IApplication app, T setup)> initTcs = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var readyTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var cts = new CancellationTokenSource();
+        TaskCompletionSource readyTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationTokenSource cts = new();
 
-        var pumpTask = Task.Run(async () =>
+        Task pumpTask = Task.Run(async () =>
         {
             IApplication? app = null;
             Window? window = null;
@@ -129,7 +129,7 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
             try
             {
                 app = TestAppFactory.Create();
-                var setupPair = setup(app);
+                (Window runWindow, T setup) setupPair = setup(app);
                 window = setupPair.runWindow;
                 setupResult = setupPair.setup;
 
@@ -164,7 +164,7 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
 
         try
         {
-            var (app, result) = await AwaitWithTimeoutAsync(initTcs.Task, "the worker to initialize the application");
+            (IApplication? app, T? result) = await AwaitWithTimeoutAsync(initTcs.Task, "the worker to initialize the application");
             await AwaitWithTimeoutAsync(readyTcs.Task, "the loop's first iteration");
 
             return new LivePumpTestSession<T>(app, result, cts, pumpTask);
@@ -185,7 +185,7 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
 
     public async Task<TResult> InvokeAsync<TResult>(Func<IApplication, T, Task<TResult>> action)
     {
-        var startedTcs = new TaskCompletionSource<Task<TResult>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<Task<TResult>> startedTcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         _app.Invoke(() =>
         {
             try
@@ -201,7 +201,7 @@ internal sealed class LivePumpTestSession<T> : IAsyncDisposable
         // _app.Invoke only enqueues the callback and never signals completion, so the loop
         // thread starting the action and the action itself finishing are tracked as two
         // separate awaits rather than one.
-        var task = await AwaitWithTimeoutAsync(startedTcs.Task, "Invoke to start the marshalled action on the loop thread");
+        Task<TResult> task = await AwaitWithTimeoutAsync(startedTcs.Task, "Invoke to start the marshalled action on the loop thread");
         return await AwaitWithTimeoutAsync(task, "the marshalled action to complete");
     }
 

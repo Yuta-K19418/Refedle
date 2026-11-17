@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using nietras.SeparatedValues;
 using Refedle.App.Cli.IO;
 using Refedle.App.Cli.IO.Csv;
 using Refedle.Engine;
@@ -19,17 +20,17 @@ public sealed class CsvRecordReaderTests
     internal async Task GetCellData_CsvText_ReturnsValuePresenceAndClassifiedEncoding(string input, CellEncoding expectedEncoding)
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, $"value,filler\n{input},x\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
-            using var recordReader = new CsvRecordReader(sepReader, outputSchema);
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            BatchOutputSchema outputSchema = new([new BatchOutputColumn("value", "value")], []);
+            using CsvRecordReader recordReader = new(sepReader, outputSchema);
             await recordReader.MoveNextAsync(default);
 
             // Act
-            var cell = recordReader.GetCellData(0);
+            CellData cell = recordReader.GetCellData(0);
 
             // Assert
             cell.Presence.Should().Be(CellPresence.Value);
@@ -47,16 +48,16 @@ public sealed class CsvRecordReaderTests
     public async Task MoveNextAsync_WithMismatchedColumnCount_ThrowsInvalidDataException()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
-            using var recordReader = new CsvRecordReader(sepReader, outputSchema);
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            BatchOutputSchema outputSchema = new([new BatchOutputColumn("value", "value")], []);
+            using CsvRecordReader recordReader = new(sepReader, outputSchema);
 
             // Act - Sep enforces the header column count on the first data row
-            var act = () => recordReader.MoveNextAsync(default).AsTask();
+            Func<Task<bool>> act = () => recordReader.MoveNextAsync(default).AsTask();
 
             // Assert
             await act.Should().ThrowAsync<InvalidDataException>();
@@ -71,20 +72,20 @@ public sealed class CsvRecordReaderTests
     public async Task ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, "value\nhello\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            var outputSchema = new BatchOutputSchema([new BatchOutputColumn("value", "value")], []);
-            var recordReader = new CsvRecordReader(sepReader, outputSchema);
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            BatchOutputSchema outputSchema = new([new BatchOutputColumn("value", "value")], []);
+            CsvRecordReader recordReader = new(sepReader, outputSchema);
             recordReader.Dispose();
 
             // Act
             Action act = () => recordReader.ThrowIfDisposed();
 
             // Assert
-            var exception = act.Should().Throw<ObjectDisposedException>().Which;
+            ObjectDisposedException exception = act.Should().Throw<ObjectDisposedException>().Which;
             exception.ObjectName.Should().Be(typeof(CsvRecordReader).FullName);
         }
         finally
@@ -100,16 +101,16 @@ public sealed class CsvRecordReaderTests
     public async Task EvaluateFilters_FilterColumnBeyondCurrentRowColCount_ReturnsFalse()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(5, FilterOperator.Equals, "hello"));
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            using CsvRecordReader recordReader = new(sepReader, BuildOutputSchema(5, FilterOperator.Equals, "hello"));
             await recordReader.MoveNextAsync(default);
 
             // Act
-            var result = recordReader.EvaluateFilters();
+            bool result = recordReader.EvaluateFilters();
 
             // Assert
             result.Should().BeFalse();
@@ -124,16 +125,16 @@ public sealed class CsvRecordReaderTests
     public async Task EvaluateFilters_MatchingStringFilter_ReturnsTrue()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "hello"));
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            using CsvRecordReader recordReader = new(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "hello"));
             await recordReader.MoveNextAsync(default);
 
             // Act
-            var result = recordReader.EvaluateFilters();
+            bool result = recordReader.EvaluateFilters();
 
             // Assert
             result.Should().BeTrue();
@@ -148,16 +149,16 @@ public sealed class CsvRecordReaderTests
     public async Task EvaluateFilters_NonMatchingStringFilter_ReturnsFalse()
     {
         // Arrange
-        var filePath = Path.GetTempFileName();
+        string filePath = Path.GetTempFileName();
         try
         {
             await File.WriteAllTextAsync(filePath, "value,filler\nhello,x\n");
-            var sepReader = await CsvSep.FromFileAsync(filePath);
-            using var recordReader = new CsvRecordReader(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "world"));
+            SepReader sepReader = await CsvSep.FromFileAsync(filePath);
+            using CsvRecordReader recordReader = new(sepReader, BuildOutputSchema(0, FilterOperator.Equals, "world"));
             await recordReader.MoveNextAsync(default);
 
             // Act
-            var result = recordReader.EvaluateFilters();
+            bool result = recordReader.EvaluateFilters();
 
             // Assert
             result.Should().BeFalse();

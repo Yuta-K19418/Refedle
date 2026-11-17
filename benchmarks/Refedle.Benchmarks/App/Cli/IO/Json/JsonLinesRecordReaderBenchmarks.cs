@@ -36,10 +36,10 @@ public class JsonLinesRecordReaderBenchmarks
         _tempFilePath = Path.Combine(Path.GetTempPath(), $"jsonlines_record_reader_benchmark_{Guid.NewGuid()}.jsonl");
         File.WriteAllText(_tempFilePath, JsonLine);
 
-        var rowIndexer = new RowIndexer(_tempFilePath);
+        RowIndexer rowIndexer = new(_tempFilePath);
         rowIndexer.BuildIndex();
-        var rowReader = new RowReader(_tempFilePath);
-        var (inputColumnNames, outputSchema) = BuildSchemas();
+        RowReader rowReader = new(_tempFilePath);
+        (IReadOnlyList<string>? inputColumnNames, BatchOutputSchema? outputSchema) = BuildSchemas();
         _reader = new BareJsonLinesRecordReader(rowIndexer, rowReader, inputColumnNames, outputSchema);
         _ = _reader.MoveNextAsync(default).AsTask().GetAwaiter().GetResult();
 
@@ -86,7 +86,7 @@ public class JsonLinesRecordReaderBenchmarks
     private static (IReadOnlyList<string> inputColumnNames, BatchOutputSchema outputSchema) BuildSchemas()
     {
         string[] inputColumnNames = [NumberColumn, StringColumn, ObjectColumn, ArrayColumn];
-        var outputSchema = new BatchOutputSchema(
+        BatchOutputSchema outputSchema = new(
             [
                 new BatchOutputColumn(NumberColumn, NumberColumn),
                 new BatchOutputColumn(StringColumn, StringColumn),

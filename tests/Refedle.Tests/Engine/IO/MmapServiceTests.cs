@@ -1,5 +1,6 @@
 using System.Text;
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO;
 
 namespace Refedle.Tests.Engine.IO;
@@ -37,10 +38,10 @@ public sealed class MmapServiceTests : IDisposable
     {
         // Arrange
         File.WriteAllBytes(_testFilePath, header);
-        using var mmap = MmapService.Open(_testFilePath).Value;
+        using MmapService mmap = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var bodyOffset = mmap.GetOffsetAfterUtf8Bom();
+        long bodyOffset = mmap.GetOffsetAfterUtf8Bom();
 
         // Assert
         bodyOffset.Should().Be(expected);
@@ -50,11 +51,11 @@ public sealed class MmapServiceTests : IDisposable
     public void GetOffsetAfterUtf8Bom_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var mmap = MmapService.Open(_testFilePath).Value;
+        MmapService mmap = MmapService.Open(_testFilePath).Value;
         mmap.Dispose();
 
         // Act
-        var act = () => mmap.GetOffsetAfterUtf8Bom();
+        Func<long> act = () => mmap.GetOffsetAfterUtf8Bom();
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -64,11 +65,11 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_ValidFile_ReturnsSuccess()
     {
         // Act
-        var result = MmapService.Open(_testFilePath);
+        Result<MmapService> result = MmapService.Open(_testFilePath);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        using var service = result.Value;
+        using MmapService service = result.Value;
         service.Length.Should().Be(TestContent.Length);
     }
 
@@ -76,7 +77,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_NonExistentFile_ReturnsFailure()
     {
         // Act
-        var result = MmapService.Open("nonexistent.txt");
+        Result<MmapService> result = MmapService.Open("nonexistent.txt");
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -87,13 +88,13 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_EmptyFile_ReturnsFailure()
     {
         // Arrange
-        var emptyFilePath = Path.Combine(Path.GetTempPath(), $"empty_{Guid.NewGuid()}.txt");
+        string emptyFilePath = Path.Combine(Path.GetTempPath(), $"empty_{Guid.NewGuid()}.txt");
         File.WriteAllText(emptyFilePath, string.Empty);
 
         try
         {
             // Act
-            var result = MmapService.Open(emptyFilePath);
+            Result<MmapService> result = MmapService.Open(emptyFilePath);
 
             // Assert
             result.IsFailure.Should().BeTrue();
@@ -109,7 +110,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_NullFilePath_ThrowsArgumentNullException()
     {
         // Act
-        var act = () => MmapService.Open(null!);
+        Func<Result<MmapService>> act = () => MmapService.Open(null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -119,7 +120,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_EmptyFilePath_ThrowsArgumentException()
     {
         // Act
-        var act = () => MmapService.Open(string.Empty);
+        Func<Result<MmapService>> act = () => MmapService.Open(string.Empty);
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -129,7 +130,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Open_WhitespaceFilePath_ThrowsArgumentException()
     {
         // Act
-        var act = () => MmapService.Open("   ");
+        Func<Result<MmapService>> act = () => MmapService.Open("   ");
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -139,7 +140,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_ValidRange_ReadsCorrectData()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[5];
 
         // Act
@@ -153,7 +154,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_FullFile_ReadsCorrectData()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[TestContent.Length];
 
         // Act
@@ -170,7 +171,7 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_ValidNonZeroRange_CopiesRequestedBytes(int offset, int length, string expected)
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[length];
 
         // Act
@@ -184,10 +185,10 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_ZeroLength_DoesNotThrow()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var act = () => service.Read(0, []);
+        Action act = () => service.Read(0, []);
 
         // Assert
         act.Should().NotThrow();
@@ -197,10 +198,10 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_OffsetAtEnd_ZeroLengthDoesNotThrow()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var act = () => service.Read(TestContent.Length, []);
+        Action act = () => service.Read(TestContent.Length, []);
 
         // Assert
         act.Should().NotThrow();
@@ -210,11 +211,11 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_NegativeOffset_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
-        var buffer = new byte[1];
+        using MmapService service = MmapService.Open(_testFilePath).Value;
+        byte[] buffer = new byte[1];
 
         // Act
-        var act = () => service.Read(-1, buffer);
+        Action act = () => service.Read(-1, buffer);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -224,11 +225,11 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_OutOfRange_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
-        var buffer = new byte[TestContent.Length + 1];
+        using MmapService service = MmapService.Open(_testFilePath).Value;
+        byte[] buffer = new byte[TestContent.Length + 1];
 
         // Act
-        var act = () => service.Read(0, buffer);
+        Action act = () => service.Read(0, buffer);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -238,11 +239,11 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_OffsetPlusLengthOutOfRange_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
-        var buffer = new byte[2];
+        using MmapService service = MmapService.Open(_testFilePath).Value;
+        byte[] buffer = new byte[2];
 
         // Act
-        var act = () => service.Read(TestContent.Length - 1, buffer);
+        Action act = () => service.Read(TestContent.Length - 1, buffer);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -252,13 +253,13 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_LargeOffsetAndLength_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         // Using values that would overflow if added: offset + length would wrap around
-        var largeOffset = long.MaxValue - 100;
-        var buffer = new byte[1000];
+        long largeOffset = long.MaxValue - 100;
+        byte[] buffer = new byte[1000];
 
         // Act
-        var act = () => service.Read(largeOffset, buffer);
+        Action act = () => service.Read(largeOffset, buffer);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -268,11 +269,11 @@ public sealed class MmapServiceTests : IDisposable
     public void TryRead_ValidRange_ReturnsSuccess()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[5];
 
         // Act
-        var (success, error) = service.TryRead(0, buffer);
+        (bool success, string? error) = service.TryRead(0, buffer);
 
         // Assert
         success.Should().BeTrue();
@@ -284,11 +285,11 @@ public sealed class MmapServiceTests : IDisposable
     public void TryRead_NegativeOffset_ReturnsFailure()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[1];
 
         // Act
-        var (success, error) = service.TryRead(-1, buffer);
+        (bool success, string? error) = service.TryRead(-1, buffer);
 
         // Assert
         success.Should().BeFalse();
@@ -299,11 +300,11 @@ public sealed class MmapServiceTests : IDisposable
     public void TryRead_OutOfRange_ReturnsFailure()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         Span<byte> buffer = stackalloc byte[TestContent.Length + 1];
 
         // Act
-        var (success, error) = service.TryRead(0, buffer);
+        (bool success, string? error) = service.TryRead(0, buffer);
 
         // Assert
         success.Should().BeFalse();
@@ -314,13 +315,13 @@ public sealed class MmapServiceTests : IDisposable
     public void TryRead_LargeOffsetAndLength_ReturnsFailure()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
         // Using values that would overflow if added: offset + length would wrap around
-        var largeOffset = long.MaxValue - 100;
-        var buffer = new byte[1000];
+        long largeOffset = long.MaxValue - 100;
+        byte[] buffer = new byte[1000];
 
         // Act
-        var (success, error) = service.TryRead(largeOffset, buffer);
+        (bool success, string? error) = service.TryRead(largeOffset, buffer);
 
         // Assert
         success.Should().BeFalse();
@@ -331,12 +332,12 @@ public sealed class MmapServiceTests : IDisposable
     public void TryRead_AfterDispose_ReturnsFailure()
     {
         // Arrange
-        var service = MmapService.Open(_testFilePath).Value;
+        MmapService service = MmapService.Open(_testFilePath).Value;
         service.Dispose();
         Span<byte> buffer = stackalloc byte[1];
 
         // Act
-        var (success, error) = service.TryRead(0, buffer);
+        (bool success, string? error) = service.TryRead(0, buffer);
 
         // Assert
         success.Should().BeFalse();
@@ -347,10 +348,10 @@ public sealed class MmapServiceTests : IDisposable
     public void Length_AfterOpen_ReturnsFileSize()
     {
         // Arrange
-        using var service = MmapService.Open(_testFilePath).Value;
+        using MmapService service = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var length = service.Length;
+        long length = service.Length;
 
         // Assert
         length.Should().Be(TestContent.Length);
@@ -360,11 +361,11 @@ public sealed class MmapServiceTests : IDisposable
     public void Length_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var service = MmapService.Open(_testFilePath).Value;
+        MmapService service = MmapService.Open(_testFilePath).Value;
         service.Dispose();
 
         // Act
-        var act = () => service.Length;
+        Func<long> act = () => service.Length;
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -374,12 +375,12 @@ public sealed class MmapServiceTests : IDisposable
     public void Read_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        var service = MmapService.Open(_testFilePath).Value;
+        MmapService service = MmapService.Open(_testFilePath).Value;
         service.Dispose();
-        var buffer = new byte[1];
+        byte[] buffer = new byte[1];
 
         // Act
-        var act = () => service.Read(0, buffer);
+        Action act = () => service.Read(0, buffer);
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -389,10 +390,10 @@ public sealed class MmapServiceTests : IDisposable
     public void Dispose_CalledMultipleTimes_DoesNotThrow()
     {
         // Arrange
-        var service = MmapService.Open(_testFilePath).Value;
+        MmapService service = MmapService.Open(_testFilePath).Value;
 
         // Act
-        var act = () =>
+        Action act = () =>
         {
             service.Dispose();
             service.Dispose();

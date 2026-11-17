@@ -20,7 +20,7 @@ public class DataRowIndexerProgressBenchmarks : RowIndexerProgressBenchmarksBase
     private protected override void WriteRows(StreamWriter writer, int rowCount)
     {
         writer.Write("id,name,email,age,city,note\n");
-        for (var i = 0; i < rowCount; i++)
+        for (int i = 0; i < rowCount; i++)
         {
             writer.Write($"{i},User{i},user{i}@example.com,{20 + (i % 50)},City{i % 100},short padding text for row width\n");
         }

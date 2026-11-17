@@ -25,7 +25,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, "name,age\nalice,1\nbob,2\nalice,3");
-        var filterIndexer = CreateFilterIndexer();
+        FilterRowIndexer filterIndexer = CreateFilterIndexer();
 
         // Act
         await filterIndexer.BuildIndexAsync(CancellationToken.None);
@@ -43,10 +43,10 @@ public sealed class FilterRowIndexerTests : IDisposable
     {
         // Arrange
         File.WriteAllText(_testFilePath, csvContent);
-        var filterIndexer = CreateFilterIndexer();
+        FilterRowIndexer filterIndexer = CreateFilterIndexer();
 
         // Act
-        var act = async () => await filterIndexer.BuildIndexAsync(CancellationToken.None);
+        Func<Task> act = async () => await filterIndexer.BuildIndexAsync(CancellationToken.None);
 
         // Assert
         await act.Should().ThrowAsync<InvalidDataException>();
@@ -56,7 +56,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WithSingleBatch_FiresProgressChangedOnceWithFinalCounts()
     {
         // Arrange
-        var (filterIndexer, events) = await CreateFilterIndexerAsync(["a", "b"]);
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync(["a", "b"]);
 
         // Act
         await filterIndexer.BuildIndexAsync(CancellationToken.None);
@@ -71,7 +71,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WithMultipleBatches_ProgressReportsEveryBatchBoundary()
     {
         // Arrange
-        var (filterIndexer, events) = await CreateFilterIndexerAsync(
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync(
             [.. Enumerable.Range(0, 2500).Select(static _ => "a")]);
 
         // Act
@@ -87,7 +87,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WithManyRows_SkipsBatchesBelowOnePercentAndReportsShortFinalBatch()
     {
         // Arrange — each 1000-row batch is below 1% of 150001 rows, so some batches are skipped
-        var (filterIndexer, events) = await CreateFilterIndexerAsync(
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync(
             [.. Enumerable.Range(0, 150_001).Select(static _ => "a")]);
 
         // Act
@@ -106,7 +106,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WithEmptySource_CompletesWithoutProgress()
     {
         // Arrange — a header-only file has no data rows to scan
-        var (filterIndexer, events) = await CreateFilterIndexerAsync([]);
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync([]);
 
         // Act
         await filterIndexer.BuildIndexAsync(CancellationToken.None);
@@ -123,7 +123,7 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_AtBatchBoundary_ReportsFinalCountsAndMatchesEveryRow(int rowCount)
     {
         // Arrange
-        var (filterIndexer, events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, rowCount).Select(static _ => "a")]);
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, rowCount).Select(static _ => "a")]);
 
         // Act
         await filterIndexer.BuildIndexAsync(CancellationToken.None);
@@ -138,12 +138,12 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WhenCanceledAfterFirstProgress_ThrowsWithoutFurtherProgress()
     {
         // Arrange
-        var (filterIndexer, events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, 2500).Select(static _ => "a")]);
-        using var cts = new CancellationTokenSource();
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, 2500).Select(static _ => "a")]);
+        using CancellationTokenSource cts = new();
         filterIndexer.ProgressChanged += (_, _) => cts.Cancel();
 
         // Act
-        var act = async () => await filterIndexer.BuildIndexAsync(cts.Token);
+        Func<Task> act = async () => await filterIndexer.BuildIndexAsync(cts.Token);
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -154,15 +154,15 @@ public sealed class FilterRowIndexerTests : IDisposable
     public async Task BuildIndexAsync_WhenCanceledWhileYielded_ThrowsWithoutReportingProgress()
     {
         // Arrange — a single batch is the final one, which would always notify if not guarded
-        var (filterIndexer, events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, 2).Select(static _ => "a")]);
-        using var cts = new CancellationTokenSource();
-        var context = new YieldCapturingSynchronizationContext();
-        var scan = context.Start(() => filterIndexer.BuildIndexAsync(cts.Token));
+        (FilterRowIndexer? filterIndexer, List<(int scannedRows, int totalRows)>? events) = await CreateFilterIndexerAsync([.. Enumerable.Range(0, 2).Select(static _ => "a")]);
+        using CancellationTokenSource cts = new();
+        YieldCapturingSynchronizationContext context = new();
+        Task scan = context.Start(() => filterIndexer.BuildIndexAsync(cts.Token));
 
         // Act — cancel while the scan is suspended at the yield, then resume it
         cts.Cancel();
         context.RunNext();
-        var act = async () => await scan;
+        Func<Task> act = async () => await scan;
 
         // Assert
         await act.Should().ThrowAsync<OperationCanceledException>();
@@ -171,7 +171,7 @@ public sealed class FilterRowIndexerTests : IDisposable
 
     private FilterRowIndexer CreateFilterIndexer()
     {
-        var rowIndexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer rowIndexer = new(_testFilePath);
         rowIndexer.BuildIndex();
         FilterSpec spec = new(0, ColumnType.Text, FilterOperator.Equals, "alice");
         return new FilterRowIndexer(rowIndexer, sourceColumnCount: 2, [spec]);
@@ -181,9 +181,9 @@ public sealed class FilterRowIndexerTests : IDisposable
         CreateFilterIndexerAsync(IReadOnlyList<string> dataRows)
     {
         await File.WriteAllLinesAsync(_testFilePath, ["col1", .. dataRows]);
-        var rowIndexer = new DataRowIndexer(_testFilePath);
+        DataRowIndexer rowIndexer = new(_testFilePath);
         rowIndexer.BuildIndex();
-        var filterIndexer = new FilterRowIndexer(rowIndexer, sourceColumnCount: 1, [MakeSpec("a")]);
+        FilterRowIndexer filterIndexer = new(rowIndexer, sourceColumnCount: 1, [MakeSpec("a")]);
         List<(int scannedRows, int totalRows)> events = [];
         filterIndexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
         return (filterIndexer, events);

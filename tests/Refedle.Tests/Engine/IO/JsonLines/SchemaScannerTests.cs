@@ -8,7 +8,7 @@ namespace Refedle.Tests.Engine.IO.JsonLines;
 public sealed partial class SchemaScannerTests
 {
     private static JsonRawBytes Line(string json) =>
-        new JsonRawBytes(
+        new(
             JsonSerializer.SerializeToUtf8Bytes(JsonElement.Parse(json))
         );
 
@@ -21,7 +21,7 @@ public sealed partial class SchemaScannerTests
     )
     {
         schema.Columns.Should().HaveCountGreaterThan(index);
-        var column = schema.Columns[index];
+        ColumnSchema column = schema.Columns[index];
         column.Name.Should().Be(expectedName);
         column.Type.Should().Be(expectedType);
         column.IsNullable.Should().Be(expectedNullable);

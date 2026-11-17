@@ -18,8 +18,8 @@ public sealed class JsonLinesRecordWriterTests
     public async Task WriteRecord_WithSingleCell_WritesJsonObjectLineWithNewline()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
+        using MemoryStream stream = new();
+        using JsonLinesRecordWriter writer = new(stream, _outputSchema);
         await writer.WriteStartRecordAsync(default);
 
         // Act
@@ -28,7 +28,7 @@ public sealed class JsonLinesRecordWriterTests
         await writer.FlushAsync(default);
 
         // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
+        string output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("{\"value\":\"hello\"}\n");
     }
 
@@ -36,8 +36,8 @@ public sealed class JsonLinesRecordWriterTests
     public async Task WriteMultipleRecords_WritesOneObjectPerLine()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
+        using MemoryStream stream = new();
+        using JsonLinesRecordWriter writer = new(stream, _outputSchema);
 
         // Act
         await writer.WriteStartRecordAsync(default);
@@ -50,7 +50,7 @@ public sealed class JsonLinesRecordWriterTests
         await writer.FlushAsync(default);
 
         // Assert
-        var output = Encoding.UTF8.GetString(stream.ToArray());
+        string output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("{\"value\":\"a\"}\n{\"value\":\"b\"}\n");
     }
 
@@ -58,8 +58,8 @@ public sealed class JsonLinesRecordWriterTests
     public async Task WriteFooterAsync_IsNoOp()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonLinesRecordWriter(stream, _outputSchema);
+        using MemoryStream stream = new();
+        using JsonLinesRecordWriter writer = new(stream, _outputSchema);
         await writer.WriteStartRecordAsync(default);
         writer.WriteCellData(0, new CellData("x", CellPresence.Value, CellEncoding.PlainText));
         await writer.WriteEndRecordAsync(default);
@@ -69,7 +69,7 @@ public sealed class JsonLinesRecordWriterTests
         await writer.FlushAsync(default);
 
         // Assert — no closing frame is appended.
-        var output = Encoding.UTF8.GetString(stream.ToArray());
+        string output = Encoding.UTF8.GetString(stream.ToArray());
         output.Should().Be("{\"value\":\"x\"}\n");
     }
 
@@ -77,15 +77,15 @@ public sealed class JsonLinesRecordWriterTests
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        var writer = new JsonLinesRecordWriter(stream, _outputSchema);
+        using MemoryStream stream = new();
+        JsonLinesRecordWriter writer = new(stream, _outputSchema);
         writer.Dispose();
 
         // Act
         Action act = () => writer.ThrowIfDisposed();
 
         // Assert
-        var exception = act.Should().Throw<ObjectDisposedException>().Which;
+        ObjectDisposedException exception = act.Should().Throw<ObjectDisposedException>().Which;
         exception.ObjectName.Should().Be(typeof(JsonLinesRecordWriter).FullName);
     }
 }

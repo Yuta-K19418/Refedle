@@ -1,5 +1,7 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
+using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 
 namespace Refedle.Tests.Engine.IO.DrillDown;
@@ -14,7 +16,7 @@ public sealed class DrillDownSchemaExtractorTests
             "[{\"name\": \"Alice\", \"age\": 30}, {\"name\": \"Bob\", \"age\": 25}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -30,7 +32,7 @@ public sealed class DrillDownSchemaExtractorTests
             "[{\"name\": \"Alice\", \"role\": \"admin\"}, {\"name\": \"Bob\"}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -45,7 +47,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[{\"name\": \"Alice\"}, 42]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -58,7 +60,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -71,7 +73,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[{}, {}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -85,7 +87,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[invalid]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -98,7 +100,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[{\"key\": \"value\"}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonArray);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonArray);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -112,11 +114,11 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[{\"age\": null}, {\"age\": 30}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var ageColumn = result.Value.schema.Columns.Single(c => c.Name == "age");
+        ColumnSchema ageColumn = result.Value.schema.Columns.Single(c => c.Name == "age");
         ageColumn.Type.Should().Be(ColumnType.WholeNumber);
         ageColumn.IsNullable.Should().BeTrue();
     }
@@ -128,7 +130,7 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "{\"key\": \"value\"}"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -142,11 +144,11 @@ public sealed class DrillDownSchemaExtractorTests
             "[{\"name\": \"Alice\", \"tag\": null}, {\"name\": \"Bob\", \"tag\": null}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var tagColumn = result.Value.schema.Columns.Single(c => c.Name == "tag");
+        ColumnSchema tagColumn = result.Value.schema.Columns.Single(c => c.Name == "tag");
         tagColumn.IsNullable.Should().BeTrue();
         tagColumn.Type.Should().Be(ColumnType.Text);
     }
@@ -158,11 +160,11 @@ public sealed class DrillDownSchemaExtractorTests
         JsonRawBytes nodeBytes = "[{\"name\": null}, {\"name\": \"Bob\"}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
-        var nameColumn = result.Value.schema.Columns.Single(c => c.Name == "name");
+        ColumnSchema nameColumn = result.Value.schema.Columns.Single(c => c.Name == "name");
         nameColumn.IsNullable.Should().BeTrue();
         nameColumn.Type.Should().Be(ColumnType.Text);
     }
@@ -175,7 +177,7 @@ public sealed class DrillDownSchemaExtractorTests
             "[{\"name\": \"Alice\", \"meta\": {\"dept\": \"Eng\"}}, {\"name\": \"Bob\", \"meta\": {\"dept\": \"HR\"}}]"u8.ToArray();
 
         // Act
-        var result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
+        Result<(TableSchema schema, IReadOnlyList<JsonRawBytes> childRawValues)> result = DrillDownSchemaExtractor.ExtractFromNode(nodeBytes, DataFormat.JsonLines);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

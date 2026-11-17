@@ -18,7 +18,7 @@ public sealed class ColumnTypeLabelTests
     {
         // Arrange
         // Act
-        var result = ColumnTypeLabel.ToLabel(type);
+        string result = ColumnTypeLabel.ToLabel(type);
         // Assert
         result.Should().Be(expected);
     }

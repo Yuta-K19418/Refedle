@@ -16,7 +16,7 @@ public sealed partial class FilePathBarTests
 
     private static FilePathBar AddBar(View parent)
     {
-        var bar = new FilePathBar();
+        FilePathBar bar = new();
         parent.Add(bar);
         parent.Layout();
         return bar;
@@ -26,11 +26,11 @@ public sealed partial class FilePathBarTests
     public void Text_BeforeAnyPathIsSet_IsEmpty()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
-        var text = bar.Text;
+        string text = bar.Text;
 
         // Assert
         text.Should().BeEmpty();
@@ -40,10 +40,10 @@ public sealed partial class FilePathBarTests
     public void Layout_WhenAdded_StartsAfterFileMenuLabelOnFirstRow()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
+        using View parent = CreateParent(ParentWidth);
 
         // Act
-        using var bar = AddBar(parent);
+        using FilePathBar bar = AddBar(parent);
 
         // Assert
         bar.Frame.X.Should().Be(7);
@@ -56,8 +56,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathShorterThanWidth_ShowsPathUnchanged()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/data/orders.csv");
@@ -70,9 +70,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathExactlyAsWideAsBar_ShowsPathUnchanged()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = new string('a', BarWidth - 4) + ".csv";
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = new string('a', BarWidth - 4) + ".csv";
 
         // Act
         bar.SetFilePath(path);
@@ -85,8 +85,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathWiderThanBar_ElidesLeadingPartAndKeepsFileNameSide()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/home/user/projects/data/customer_orders_2026.csv");
@@ -99,8 +99,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathWiderThanBar_ShowsTextExactlyAsWideAsBar()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/home/user/projects/data/customer_orders_2026.csv");
@@ -113,9 +113,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathOneColumnWiderThanBar_ReplacesFirstTwoCharactersWithEllipsis()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = new string('a', BarWidth - 4) + "b.csv";
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = new string('a', BarWidth - 4) + "b.csv";
 
         // Act
         bar.SetFilePath(path);
@@ -128,8 +128,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithUnderscoresInPath_ShowsPathUnchanged()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/a_b/my_file.csv");
@@ -142,8 +142,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithEmptyString_ClearsPreviouslyShownPath()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
         bar.SetFilePath("/data/orders.csv");
 
         // Act
@@ -157,8 +157,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WhenCalledAgain_ReplacesPreviousPath()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
         bar.SetFilePath("/data/first.csv");
 
         // Act
@@ -172,8 +172,8 @@ public sealed partial class FilePathBarTests
     public void Width_WhenParentIsNarrowed_ElidesPreviouslyFullyShownPath()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
         bar.SetFilePath("/data/orders_2026.csv");
 
         // Act
@@ -188,8 +188,8 @@ public sealed partial class FilePathBarTests
     public void Width_WhenParentIsWidened_ShowsPreviouslyElidedPathInFull()
     {
         // Arrange
-        using var parent = CreateParent(20);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(20);
+        using FilePathBar bar = AddBar(parent);
         bar.SetFilePath("/data/orders_2026.csv");
 
         // Act
@@ -204,9 +204,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithWideCjkPathThatFitsByCharCountButNotByColumns_ElidesToFitBarColumns()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = "/データ/顧客注文一覧/売上.csv"; // 20 chars, 30 columns
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = "/データ/顧客注文一覧/売上.csv"; // 20 chars, 30 columns
 
         // Act
         bar.SetFilePath(path);
@@ -220,9 +220,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithWideCjkPathWhoseTailFitsExactly_FillsBarColumns()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = "/a/顧客注文一覧一覧一覧一覧.csv"; // tail after "…" has 22 columns available
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = "/a/顧客注文一覧一覧一覧一覧.csv"; // tail after "…" has 22 columns available
 
         // Act
         bar.SetFilePath(path);
@@ -238,8 +238,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithEmojiNearElisionBoundary_FitsBarColumnsWithoutSplittingSurrogatePairs(string path)
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath(path);
@@ -255,9 +255,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithPathWithinBarColumnsButContainingWideCharacters_ShowsPathUnchanged()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = "/顧客/注文.csv"; // 12 columns
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = "/顧客/注文.csv"; // 12 columns
 
         // Act
         bar.SetFilePath(path);
@@ -270,8 +270,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithWidePathWiderThanBarByColumns_ShowsEllipsisAndFileNameSide()
     {
         // Arrange
-        using var parent = CreateParent(18); // bar viewport width: 11 columns
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(18); // bar viewport width: 11 columns
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/a/日本語.csv"); // 10 chars, 13 columns
@@ -284,8 +284,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithNonNormalizedRelativePath_ShowsInputUnchanged()
     {
         // Arrange
-        using var parent = CreateParent(40);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(40);
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("./data/../data/orders.csv");
@@ -298,8 +298,8 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithOverlongPathAndOneColumnBar_ShowsOnlyEllipsis()
     {
         // Arrange
-        using var parent = CreateParent(8); // bar viewport width: 1 column
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(8); // bar viewport width: 1 column
+        using FilePathBar bar = AddBar(parent);
 
         // Act
         bar.SetFilePath("/data/orders.csv");
@@ -312,9 +312,9 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithCombiningAccentNearElisionBoundary_KeepsBaseLetterAndAccentTogether()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
-        var path = "/a/dir/dir/dir/dir/dir/dir/e\u0301e\u0301e\u0301.csv";
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
+        string path = "/a/dir/dir/dir/dir/dir/dir/e\u0301e\u0301e\u0301.csv";
 
         // Act
         bar.SetFilePath(path);
@@ -330,10 +330,10 @@ public sealed partial class FilePathBarTests
     public void SetFilePath_WithZwjEmojiNearElisionBoundary_KeepsEmojiSequenceWholeAndWithinBarColumns()
     {
         // Arrange
-        using var parent = CreateParent(ParentWidth);
-        using var bar = AddBar(parent);
+        using View parent = CreateParent(ParentWidth);
+        using FilePathBar bar = AddBar(parent);
         const string family = "👨\u200D👩\u200D👧";
-        var path = "/a/" + string.Concat(Enumerable.Repeat(family, 12)) + ".csv"; // each sequence is 2 columns
+        string path = "/a/" + string.Concat(Enumerable.Repeat(family, 12)) + ".csv"; // each sequence is 2 columns
 
         // Act
         bar.SetFilePath(path);

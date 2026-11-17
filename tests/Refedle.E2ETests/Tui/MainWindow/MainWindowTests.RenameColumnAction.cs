@@ -10,13 +10,13 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_RenameColumnOnCsvTable_RendersNewHeaderWithUnchangedValues()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
@@ -34,7 +34,7 @@ public sealed partial class MainWindowTests
         // longer than a short fixed delay would allow; wait for it to fully land before submitting.
         await Harness.WaitForContentsAsync("New name: years");
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("years (text)");
+        string[] lines = await Harness.WaitForContentsAsync("years (text)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("years (text)", StringComparison.Ordinal));
@@ -46,14 +46,14 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_RenameColumnOnFocusedTable_RendersNewHeaderWithUnchangedValues()
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25},
               {"name":"Charlie","age":35}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -75,7 +75,7 @@ public sealed partial class MainWindowTests
         // longer than a short fixed delay would allow; wait for it to fully land before submitting.
         await Harness.WaitForContentsAsync("New name: years");
         Harness.SendKey(KeyCode.Enter);
-        var lines = await Harness.WaitForContentsAsync("years (text)");
+        string[] lines = await Harness.WaitForContentsAsync("years (text)");
 
         // Assert
         lines.Should().Contain(line => line.Contains("years (text)", StringComparison.Ordinal));

@@ -15,7 +15,7 @@ internal sealed class YieldCapturingSynchronizationContext : SynchronizationCont
     /// <summary>Starts <paramref name="start"/> with this context current, then restores the previous one.</summary>
     public Task Start(Func<Task> start)
     {
-        var previous = Current;
+        SynchronizationContext? previous = Current;
         SetSynchronizationContext(this);
         try
         {
@@ -30,7 +30,7 @@ internal sealed class YieldCapturingSynchronizationContext : SynchronizationCont
     /// <summary>Runs the oldest captured continuation.</summary>
     public void RunNext()
     {
-        var (callback, state) = _posted.Dequeue();
+        (SendOrPostCallback? callback, object? state) = _posted.Dequeue();
         callback(state);
     }
 }

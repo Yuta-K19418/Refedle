@@ -10,12 +10,12 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FormatTimestampColumnOnCsvTable_RendersReformattedTimestamps()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,joined
             Alice,2026-01-15T10:30:00
             Bob,2026-03-02T08:05:00
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Alice", "2026-01-15T10:30:00");
 
@@ -37,7 +37,7 @@ public sealed partial class MainWindowTests
         // The original values already contain "2026-01-15" as a prefix, so poll for "T10:30:00"
         // disappearing instead. The dialog's own text also hides it while open, so its title's
         // absence is checked too, so the wait doesn't return before the confirming key lands.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("T10:30:00", StringComparison.Ordinal) && !line.Contains("Format Timestamp", StringComparison.Ordinal)),
             "dialog closed and \"T10:30:00\" reformatted away");
 
@@ -51,13 +51,13 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_FormatTimestampColumnOnFocusedTable_RendersReformattedTimestamps()
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","joined":"2026-01-15T10:30:00"},
               {"name":"Bob","joined":"2026-03-02T08:05:00"}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -84,7 +84,7 @@ public sealed partial class MainWindowTests
         // The original values already contain "2026-01-15" as a prefix, so poll for "T10:30:00"
         // disappearing instead. The dialog's own text also hides it while open, so its title's
         // absence is checked too, so the wait doesn't return before the confirming key lands.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("T10:30:00", StringComparison.Ordinal) && !line.Contains("Format Timestamp", StringComparison.Ordinal)),
             "dialog closed and \"T10:30:00\" reformatted away");
 

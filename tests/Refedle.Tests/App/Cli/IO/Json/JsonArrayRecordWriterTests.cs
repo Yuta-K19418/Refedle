@@ -16,8 +16,8 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteArray_WithNoRecords_WritesEmptyArray()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        using JsonArrayRecordWriter writer = new(stream, _oneColumn);
 
         // Act
         await writer.WriteHeaderAsync(default);
@@ -32,8 +32,8 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteArray_WithSingleRecord_WrapsTheObjectInArrayBrackets()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        using JsonArrayRecordWriter writer = new(stream, _oneColumn);
 
         // Act
         await writer.WriteHeaderAsync(default);
@@ -51,8 +51,8 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteArray_WithMultipleRecords_SeparatesObjectsWithCommas()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        using JsonArrayRecordWriter writer = new(stream, _oneColumn);
 
         // Act
         await writer.WriteHeaderAsync(default);
@@ -77,11 +77,11 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteArray_WithMultiColumnRecord_WritesEveryColumnAsAProperty()
     {
         // Arrange
-        var twoColumns = new BatchOutputSchema(
+        BatchOutputSchema twoColumns = new(
             [new BatchOutputColumn("id", "id"), new BatchOutputColumn("name", "name")],
             []);
-        using var stream = new MemoryStream();
-        using var writer = new JsonArrayRecordWriter(stream, twoColumns);
+        using MemoryStream stream = new();
+        using JsonArrayRecordWriter writer = new(stream, twoColumns);
 
         // Act
         await writer.WriteHeaderAsync(default);
@@ -100,8 +100,8 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteArray_WithMissingCell_WritesValidEmptyObjectWithoutBreakingFraming()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        using var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        using JsonArrayRecordWriter writer = new(stream, _oneColumn);
 
         // Act
         await writer.WriteHeaderAsync(default);
@@ -119,15 +119,15 @@ public sealed class JsonArrayRecordWriterTests
     public void ThrowIfDisposed_AfterDispose_ThrowsWithConcreteTypeName()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        JsonArrayRecordWriter writer = new(stream, _oneColumn);
         writer.Dispose();
 
         // Act
         Action act = () => writer.ThrowIfDisposed();
 
         // Assert
-        var exception = act.Should().Throw<ObjectDisposedException>().Which;
+        ObjectDisposedException exception = act.Should().Throw<ObjectDisposedException>().Which;
         exception.ObjectName.Should().Be(typeof(JsonArrayRecordWriter).FullName);
     }
 
@@ -135,12 +135,12 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteFooterAsync_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        JsonArrayRecordWriter writer = new(stream, _oneColumn);
         writer.Dispose();
 
         // Act
-        var act = async () => await writer.WriteFooterAsync(default);
+        Func<Task> act = async () => await writer.WriteFooterAsync(default);
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();
@@ -150,12 +150,12 @@ public sealed class JsonArrayRecordWriterTests
     public async Task WriteFooterAsync_AfterDisposeAsync_ThrowsObjectDisposedException()
     {
         // Arrange
-        using var stream = new MemoryStream();
-        var writer = new JsonArrayRecordWriter(stream, _oneColumn);
+        using MemoryStream stream = new();
+        JsonArrayRecordWriter writer = new(stream, _oneColumn);
         await writer.DisposeAsync();
 
         // Act
-        var act = async () => await writer.WriteFooterAsync(default);
+        Func<Task> act = async () => await writer.WriteFooterAsync(default);
 
         // Assert
         await act.Should().ThrowAsync<ObjectDisposedException>();

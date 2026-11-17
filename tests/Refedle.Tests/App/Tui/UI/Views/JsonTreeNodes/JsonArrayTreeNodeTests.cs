@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonTreeNodes;
 
@@ -14,11 +15,11 @@ public sealed class JsonArrayTreeNodeTests
     public void Constructor_WithValidJsonArray_SetsCorrectDisplayText()
     {
         // Arrange
-        var json = "[1, 2, 3]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "[1, 2, 3]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("[Array: 3 items]");
@@ -28,11 +29,11 @@ public sealed class JsonArrayTreeNodeTests
     public void Constructor_WithEmptyJsonArray_SetsCorrectDisplayTextForZeroItems()
     {
         // Arrange
-        var json = "[]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "[]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("[Array: 0 items]");
@@ -42,11 +43,11 @@ public sealed class JsonArrayTreeNodeTests
     public void Constructor_WithInvalidJson_SetsInvalidArrayDisplayText()
     {
         // Arrange
-        var json = "not an array";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "not an array";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("[Invalid Array]");
@@ -56,12 +57,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_OnFirstAccess_LoadsChildNodes()
     {
         // Arrange
-        var json = "[1, 2]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[1, 2]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(2);
@@ -71,13 +72,13 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_OnSubsequentAccess_DoesNotReloadChildNodes()
     {
         // Arrange
-        var json = "[1]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[1]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var firstAccess = node.Children;
-        var secondAccess = node.Children;
+        IList<ITreeNode> firstAccess = node.Children;
+        IList<ITreeNode> secondAccess = node.Children;
 
         // Assert
         firstAccess.Should().BeSameAs(secondAccess);
@@ -87,12 +88,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForEmptyArray_ReturnsEmptyList()
     {
         // Arrange
-        var json = "[]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().BeEmpty();
@@ -102,12 +103,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForArrayWithPrimitiveValues_CreatesCorrectValueNodes()
     {
         // Arrange
-        var json = "[\"text\", 123, true, null]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[\"text\", 123, true, null]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(4);
@@ -123,12 +124,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForArrayWithNestedObject_CreatesJsonObjectNode()
     {
         // Arrange
-        var json = "[{}]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[{}]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -139,12 +140,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForArrayWithNestedArray_CreatesJsonArrayNode()
     {
         // Arrange
-        var json = "[[]]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[[]]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -155,12 +156,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForArrayWithMixedContentTypes_CreatesCorrectNodes()
     {
         // Arrange
-        var json = "[1, {}, []]";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "[1, {}, []]";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(3);
@@ -173,12 +174,12 @@ public sealed class JsonArrayTreeNodeTests
     public void Children_ForInvalidJsonArray_ReturnsSingleErrorNode()
     {
         // Arrange
-        var json = "invalid";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonArrayTreeNode(rawJson);
+        string json = "invalid";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -191,10 +192,10 @@ public sealed class JsonArrayTreeNodeTests
     public void KeyName_IsSetViaInitializer_ReturnsExpectedKeyName()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[1, 2, 3]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[1, 2, 3]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson) { KeyName = "tags" };
+        JsonArrayTreeNode node = new(rawJson) { KeyName = "tags" };
 
         // Assert
         node.KeyName.Should().Be("tags");
@@ -204,10 +205,10 @@ public sealed class JsonArrayTreeNodeTests
     public void RecordPosition_IsSetViaInitializer_ReturnsExpectedRecordPosition()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[1, 2, 3]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[1, 2, 3]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson) { RecordPosition = 99 };
+        JsonArrayTreeNode node = new(rawJson) { RecordPosition = 99 };
 
         // Assert
         node.RecordPosition.Should().Be(99);
@@ -217,10 +218,10 @@ public sealed class JsonArrayTreeNodeTests
     public void RawJson_ReturnsUnderlyingBytes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[1, 2]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[1, 2]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
+        JsonArrayTreeNode node = new(rawJson);
 
         // Assert
         node.RawJson.ToArray().Should().Equal(rawJson);
@@ -230,11 +231,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithRecordPosition_PropagatesRecordPositionToChildObjectNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[{}]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[{}]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson) { RecordPosition = 5 };
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson) { RecordPosition = 5 };
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -246,11 +247,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithRecordPosition_PropagatesRecordPositionToChildArrayNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[[]]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[[]]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson) { RecordPosition = 5 };
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson) { RecordPosition = 5 };
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -262,11 +263,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithNullRecordPosition_PropagatesNullToChildObjectNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[{}]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[{}]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -278,11 +279,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithNullRecordPosition_PropagatesNullToChildArrayNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[[]]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[[]]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -294,11 +295,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithNestedObject_SetsKeyNameOnChildObjectNode()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[{}]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[{}]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert — array element children carry their index label as KeyName (e.g. "[0]")
         children.Should().HaveCount(1);
@@ -310,11 +311,11 @@ public sealed class JsonArrayTreeNodeTests
     public void LoadChildren_WithNestedArray_SetsKeyNameOnChildArrayNode()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("[[]]");
+        byte[] rawJson = Encoding.UTF8.GetBytes("[[]]");
 
         // Act
-        var node = new JsonArrayTreeNode(rawJson);
-        var children = node.Children;
+        JsonArrayTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert — array element children carry their index label as KeyName (e.g. "[0]")
         children.Should().HaveCount(1);

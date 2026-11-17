@@ -12,14 +12,14 @@ public sealed partial class MainWindowTests
         // Arrange: each element contributes a different property, so a regression that reads
         // only the first element's schema (instead of the union) would still pass a
         // same-schema fixture — this heterogeneous one renders "email" only via a real union.
-        var content = """
+        string content = """
             [
               {"name":"Item1","age":1},
               {"name":"Item2","email":"item2@example.com"},
               {"age":3,"email":"item3@example.com"}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
 
@@ -29,7 +29,7 @@ public sealed partial class MainWindowTests
         // The union header stays readable above the dialog, so a contents-only wait can return
         // while the Actions dialog still covers the table rows; require the dialog to be gone
         // so the asserted frame is the settled one.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.Any(line => line.Contains("name (text)", StringComparison.Ordinal)
                 && line.Contains("age (number)", StringComparison.Ordinal)
                 && line.Contains("email (text)", StringComparison.Ordinal))
@@ -53,14 +53,14 @@ public sealed partial class MainWindowTests
     public async Task DrillDownBack_FromFocusedTable_ReturnsToOriginatingJsonArrayTree()
     {
         // Arrange
-        var content = """
+        string content = """
             [
               {"name":"Item1","age":1},
               {"name":"Item2","email":"item2@example.com"},
               {"age":3,"email":"item3@example.com"}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -76,7 +76,7 @@ public sealed partial class MainWindowTests
 
         // Act
         Harness.SendKey(KeyCode.Backspace);
-        var lines = await Harness.WaitForContentsAsync("[0]:");
+        string[] lines = await Harness.WaitForContentsAsync("[0]:");
 
         // Assert
         lines.Should().Contain(line => line.Contains("[0]:", StringComparison.Ordinal));

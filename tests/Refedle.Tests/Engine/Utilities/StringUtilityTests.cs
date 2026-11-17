@@ -20,10 +20,10 @@ public sealed partial class StringUtilityTests
     public void IsWhiteSpace_WithAsciiBytes_ReturnsExpectedResult(string value, bool expected)
     {
         // Arrange
-        var bytes = Encoding.UTF8.GetBytes(value);
+        byte[] bytes = Encoding.UTF8.GetBytes(value);
 
         // Act
-        var result = StringUtility.IsWhiteSpace(bytes);
+        bool result = StringUtility.IsWhiteSpace(bytes);
 
         // Assert
         result.Should().Be(expected);
@@ -39,7 +39,7 @@ public sealed partial class StringUtilityTests
         // Arrange
 
         // Act
-        var result = StringUtility.QuoteString(value);
+        string result = StringUtility.QuoteString(value);
 
         // Assert
         result.Should().Be(expected);
@@ -71,7 +71,7 @@ public sealed partial class StringUtilityTests
         // Arrange
 
         // Act
-        var result = StringUtility.UnquoteString(value);
+        string result = StringUtility.UnquoteString(value);
 
         // Assert
         result.Should().Be(expected);
@@ -85,7 +85,7 @@ public sealed partial class StringUtilityTests
         // Arrange
 
         // Act
-        var result = StringUtility.UnquoteString(value);
+        string result = StringUtility.UnquoteString(value);
 
         // Assert
         result.Should().Be(expected);
@@ -115,7 +115,7 @@ public sealed partial class StringUtilityTests
         // Arrange
 
         // Act
-        var result = StringUtility.UnquoteString(StringUtility.QuoteString(value));
+        string result = StringUtility.UnquoteString(StringUtility.QuoteString(value));
 
         // Assert
         result.Should().Be(value);

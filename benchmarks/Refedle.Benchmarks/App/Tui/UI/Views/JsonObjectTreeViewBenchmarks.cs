@@ -35,16 +35,16 @@ internal static class JsonObjectTreeViewBenchmarkInput
     /// </summary>
     internal static void LogInput(int keyCount, JsonObjectEntry[] entries)
     {
-        var builder = new StringBuilder();
-        for (var i = 0; i < keyCount; i++)
+        StringBuilder builder = new();
+        for (int i = 0; i < keyCount; i++)
         {
             builder.Append(i == 0 ? "{\"" : ",\"");
             builder.Append(string.Create(CultureInfo.InvariantCulture, $"key{i}\":{i}"));
         }
 
         builder.Append('}');
-        var json = Encoding.UTF8.GetBytes(builder.ToString());
-        var hash = Convert.ToHexString(SHA256.HashData(json));
+        byte[] json = Encoding.UTF8.GetBytes(builder.ToString());
+        string hash = Convert.ToHexString(SHA256.HashData(json));
         Console.WriteLine(
             $"// INPUT keys={keyCount} entries={entries.Length} jsonBytes={json.Length} sha256={hash}");
         Console.WriteLine(

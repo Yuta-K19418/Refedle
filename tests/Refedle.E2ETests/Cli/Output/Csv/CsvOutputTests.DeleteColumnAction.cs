@@ -9,30 +9,30 @@ public sealed partial class CsvOutputTests
     public async Task Run_CsvToCsv_WithDeleteColumnAction_ExitsWithZeroAndWritesOutputWithoutDeletedColumn()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var recipeYaml = """
+        string recipeYaml = """
             name: Delete age
             actions:
               - type: Delete
                 columnName: age
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
-        var recipeFile = _testDirectory.CreateFile("recipe.yaml", recipeYaml);
-        var outputFile = Path.Combine(_testDirectory.Path, "output.csv");
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string recipeFile = _testDirectory.CreateFile("recipe.yaml", recipeYaml);
+        string outputFile = Path.Combine(_testDirectory.Path, "output.csv");
 
         // Act
-        var result = await CliProcess.RunAsync(inputFile, recipeFile, outputFile, _testDirectory.Path);
+        CliProcessResult result = await CliProcess.RunAsync(inputFile, recipeFile, outputFile, _testDirectory.Path);
 
         // Assert
         result.ExitCode.Should().Be(0);
         result.StandardError.Should().BeEmpty();
         File.Exists(outputFile).Should().BeTrue();
-        var lines = await OutputFile.ReadLinesAsync(outputFile);
+        IReadOnlyList<string> lines = await OutputFile.ReadLinesAsync(outputFile);
         lines.Should().Equal(
             "name", // header without "age"
             "Alice",

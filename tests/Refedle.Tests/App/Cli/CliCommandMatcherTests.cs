@@ -17,7 +17,7 @@ public sealed class CliCommandMatcherTests
         // Arrange
 
         // Act
-        var isMatch = CliCommandMatcher.TryMatch(arguments, out var command);
+        bool isMatch = CliCommandMatcher.TryMatch(arguments, out CliCommand command);
 
         // Assert
         isMatch.Should().BeTrue();
@@ -33,7 +33,7 @@ public sealed class CliCommandMatcherTests
         // Arrange
 
         // Act
-        var isMatch = CliCommandMatcher.TryMatch(arguments, out var command);
+        bool isMatch = CliCommandMatcher.TryMatch(arguments, out CliCommand command);
 
         // Assert
         isMatch.Should().BeTrue();
@@ -48,7 +48,7 @@ public sealed class CliCommandMatcherTests
         // Arrange
 
         // Act
-        var isMatch = CliCommandMatcher.TryMatch(arguments, out var command);
+        bool isMatch = CliCommandMatcher.TryMatch(arguments, out CliCommand command);
 
         // Assert
         isMatch.Should().BeTrue();
@@ -63,7 +63,7 @@ public sealed class CliCommandMatcherTests
         // Arrange
 
         // Act
-        var isMatch = CliCommandMatcher.TryMatch(arguments, out var command);
+        bool isMatch = CliCommandMatcher.TryMatch(arguments, out CliCommand command);
 
         // Assert
         isMatch.Should().BeTrue();
@@ -80,7 +80,7 @@ public sealed class CliCommandMatcherTests
         // Arrange
 
         // Act
-        var isMatch = CliCommandMatcher.TryMatch(arguments, out _);
+        bool isMatch = CliCommandMatcher.TryMatch(arguments, out _);
 
         // Assert
         isMatch.Should().BeFalse();

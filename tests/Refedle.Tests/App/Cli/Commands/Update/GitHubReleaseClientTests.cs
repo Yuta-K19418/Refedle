@@ -14,7 +14,7 @@ public sealed class GitHubReleaseClientTests
         // Arrange
 
         // Act
-        var extracted = GitHubReleaseClient.TryExtractTag(location, out var tag);
+        bool extracted = GitHubReleaseClient.TryExtractTag(location, out string? tag);
 
         // Assert
         extracted.Should().BeTrue();
@@ -31,7 +31,7 @@ public sealed class GitHubReleaseClientTests
         // Arrange
 
         // Act
-        var extracted = GitHubReleaseClient.TryExtractTag(location, out var tag);
+        bool extracted = GitHubReleaseClient.TryExtractTag(location, out string? tag);
 
         // Assert
         extracted.Should().BeFalse();

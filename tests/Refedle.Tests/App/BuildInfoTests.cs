@@ -11,7 +11,7 @@ public sealed class BuildInfoTests
         // Arrange
 
         // Act
-        var version = BuildInfo.Version;
+        string version = BuildInfo.Version;
 
         // Assert
         version.Should().NotBeNullOrEmpty();

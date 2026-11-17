@@ -30,7 +30,7 @@ public sealed class Utf8BomUtilityTests
         // (bytes supplied by the theory data)
 
         // Act
-        var result = Utf8BomUtility.StartsWithUtf8Bom(bytes);
+        bool result = Utf8BomUtility.StartsWithUtf8Bom(bytes);
 
         // Assert
         result.Should().Be(expected);
@@ -57,7 +57,7 @@ public sealed class Utf8BomUtilityTests
     public void SkipUtf8Bom_VariousStreams_LeavesStreamAtExpectedPosition(byte[] content, long expectedPosition)
     {
         // Arrange
-        using var stream = new MemoryStream(content);
+        using MemoryStream stream = new(content);
 
         // Act
         Utf8BomUtility.SkipUtf8Bom(stream);
@@ -70,7 +70,7 @@ public sealed class Utf8BomUtilityTests
     public void SkipUtf8Bom_NonZeroStartPositionWithoutBom_RestoresStartPosition()
     {
         // Arrange
-        using var stream = new MemoryStream(Encoding.ASCII.GetBytes("xxabcd"));
+        using MemoryStream stream = new(Encoding.ASCII.GetBytes("xxabcd"));
         stream.Position = 2;
 
         // Act
@@ -84,7 +84,7 @@ public sealed class Utf8BomUtilityTests
     public void SkipUtf8Bom_NonZeroStartPositionWithBom_AdvancesPastBom()
     {
         // Arrange
-        using var stream = new MemoryStream([(byte)'x', (byte)'x', 0xEF, 0xBB, 0xBF, (byte)'{']);
+        using MemoryStream stream = new([(byte)'x', (byte)'x', 0xEF, 0xBB, 0xBF, (byte)'{']);
         stream.Position = 2;
 
         // Act
@@ -101,7 +101,7 @@ public sealed class Utf8BomUtilityTests
         Stream stream = null!;
 
         // Act
-        var act = () => Utf8BomUtility.SkipUtf8Bom(stream);
+        Action act = () => Utf8BomUtility.SkipUtf8Bom(stream);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();

@@ -10,10 +10,10 @@ public sealed class SchemaTests
     public void GetColumn_WithExistingName_ReturnsColumn()
     {
         // Arrange
-        var schema = CreateTableSchema();
+        TableSchema schema = CreateTableSchema();
 
         // Act
-        var column = schema.GetColumn("name");
+        ColumnSchema? column = schema.GetColumn("name");
 
         // Assert
         column.Should().NotBeNull();
@@ -25,10 +25,10 @@ public sealed class SchemaTests
     public void GetColumn_WithMissingName_ReturnsNull()
     {
         // Arrange
-        var schema = CreateTableSchema();
+        TableSchema schema = CreateTableSchema();
 
         // Act
-        var column = schema.GetColumn("missing");
+        ColumnSchema? column = schema.GetColumn("missing");
 
         // Assert
         column.Should().BeNull();
@@ -38,11 +38,11 @@ public sealed class SchemaTests
     public void ContainsColumn_WithExistingAndMissingNames_ReturnsExpectedValues()
     {
         // Arrange
-        var schema = CreateTableSchema();
+        TableSchema schema = CreateTableSchema();
 
         // Act
-        var containsId = schema.ContainsColumn("id");
-        var containsMissing = schema.ContainsColumn("missing");
+        bool containsId = schema.ContainsColumn("id");
+        bool containsMissing = schema.ContainsColumn("missing");
 
         // Assert
         containsId.Should().BeTrue();
@@ -53,10 +53,10 @@ public sealed class SchemaTests
     public void ColumnCount_WithThreeColumns_ReturnsThree()
     {
         // Arrange
-        var schema = CreateTableSchema();
+        TableSchema schema = CreateTableSchema();
 
         // Act
-        var count = schema.ColumnCount;
+        int count = schema.ColumnCount;
 
         // Assert
         count.Should().Be(3);
@@ -66,7 +66,7 @@ public sealed class SchemaTests
     public void Constructor_WithDuplicateColumnNames_ThrowsArgumentException()
     {
         // Arrange & Act
-        var act = () => new TableSchema
+        Func<TableSchema> act = () => new TableSchema
         {
             Columns =
             [
@@ -84,7 +84,7 @@ public sealed class SchemaTests
     public void Constructor_WithMultipleDuplicateColumnNames_ThrowsArgumentException()
     {
         // Arrange & Act
-        var act = () => new TableSchema
+        Func<TableSchema> act = () => new TableSchema
         {
             Columns =
             [
@@ -107,7 +107,7 @@ public sealed class SchemaTests
     public void ColumnSchema_WithoutValidName_ThrowsArgumentException(string? name)
     {
         // Arrange & Act
-        var act = () => new ColumnSchema { Name = name!, Type = ColumnType.Text, ColumnIndex = 0 };
+        Func<ColumnSchema> act = () => new ColumnSchema { Name = name!, Type = ColumnType.Text, ColumnIndex = 0 };
 
         // Assert
         act.Should().Throw<ArgumentException>();
@@ -117,7 +117,7 @@ public sealed class SchemaTests
     public void ColumnSchema_WithNegativeColumnIndex_ThrowsArgumentOutOfRangeException()
     {
         // Arrange & Act
-        var act = () => new ColumnSchema { Name = "test", Type = ColumnType.Text, ColumnIndex = -1 };
+        Func<ColumnSchema> act = () => new ColumnSchema { Name = "test", Type = ColumnType.Text, ColumnIndex = -1 };
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -127,7 +127,7 @@ public sealed class SchemaTests
     public void TableSchema_WithNoColumns_ThrowsArgumentException()
     {
         // Arrange & Act
-        var act = () => new TableSchema { Columns = [], SourceFormat = DataFormat.JsonArray };
+        Func<TableSchema> act = () => new TableSchema { Columns = [], SourceFormat = DataFormat.JsonArray };
 
         // Assert
         act.Should().Throw<ArgumentException>().WithParameterName("value");
@@ -137,7 +137,7 @@ public sealed class SchemaTests
     public void Constructor_WithValidColumns_DoesNotThrow()
     {
         // Arrange & Act
-        var act = () => new TableSchema
+        Func<TableSchema> act = () => new TableSchema
         {
             Columns = [new() { Name = "id", Type = ColumnType.WholeNumber, ColumnIndex = 0 }],
             SourceFormat = DataFormat.JsonArray,

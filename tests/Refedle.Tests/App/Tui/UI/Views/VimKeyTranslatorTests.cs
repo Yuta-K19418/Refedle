@@ -21,11 +21,11 @@ public sealed class VimKeyTranslatorTests
     public void Translate_VimNavigationAndScrollKeys_ReturnExpectedAction(KeyCode keyCode, int expectedRaw)
     {
         // Arrange
-        var translator = new VimKeyTranslator();
-        var expected = (VimAction)expectedRaw;
+        VimKeyTranslator translator = new();
+        VimAction expected = (VimAction)expectedRaw;
 
         // Act
-        var result = translator.Translate(keyCode);
+        VimAction result = translator.Translate(keyCode);
 
         // Assert
         result.Should().Be(expected);
@@ -35,10 +35,10 @@ public sealed class VimKeyTranslatorTests
     public void Translate_UnrecognizedKey_ReturnsNone()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
 
         // Act
-        var result = translator.Translate(KeyCode.A);
+        VimAction result = translator.Translate(KeyCode.A);
 
         // Assert
         result.Should().Be(VimAction.None);
@@ -52,10 +52,10 @@ public sealed class VimKeyTranslatorTests
     public void Translate_ShiftG_ReturnsGoToEnd()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
 
         // Act
-        var result = translator.Translate(KeyCode.G | KeyCode.ShiftMask);
+        VimAction result = translator.Translate(KeyCode.G | KeyCode.ShiftMask);
 
         // Assert
         result.Should().Be(VimAction.GoToEnd);
@@ -65,11 +65,11 @@ public sealed class VimKeyTranslatorTests
     public void Translate_ShiftG_ClearsPendingGState()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
         _ = translator.Translate(KeyCode.G); // start pending
 
         // Act
-        var result = translator.Translate(KeyCode.G | KeyCode.ShiftMask);
+        VimAction result = translator.Translate(KeyCode.G | KeyCode.ShiftMask);
 
         // Assert
         result.Should().Be(VimAction.GoToEnd);
@@ -83,10 +83,10 @@ public sealed class VimKeyTranslatorTests
     public void Translate_FirstG_ReturnsPendingGSequence()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
 
         // Act
-        var result = translator.Translate(KeyCode.G);
+        VimAction result = translator.Translate(KeyCode.G);
 
         // Assert
         result.Should().Be(VimAction.PendingGSequence);
@@ -97,13 +97,13 @@ public sealed class VimKeyTranslatorTests
     {
         // Arrange — timeout of 500 ms; do not advance time (elapsed is 0 ms)
         long fakeTime = 0;
-        var translator = new VimKeyTranslator(() => fakeTime, timeoutMs: 500);
+        VimKeyTranslator translator = new(() => fakeTime, timeoutMs: 500);
 
         _ = translator.Translate(KeyCode.G); // first g
         // fakeTime stays at 0 — 0 ms elapsed, well within the 500 ms timeout
 
         // Act
-        var result = translator.Translate(KeyCode.G); // second g
+        VimAction result = translator.Translate(KeyCode.G); // second g
 
         // Assert
         result.Should().Be(VimAction.GoToFirst);
@@ -118,13 +118,13 @@ public sealed class VimKeyTranslatorTests
     {
         // Arrange — timeout of 500 ms; advance fake time by 1 second (1000 ms > 500 ms)
         long fakeTime = 0;
-        var translator = new VimKeyTranslator(() => fakeTime, timeoutMs: 500);
+        VimKeyTranslator translator = new(() => fakeTime, timeoutMs: 500);
 
         _ = translator.Translate(KeyCode.G); // first g
         fakeTime += Stopwatch.Frequency; // advance by exactly 1 second, exceeds 500 ms timeout
 
         // Act
-        var result = translator.Translate(KeyCode.G); // second g (timed out)
+        VimAction result = translator.Translate(KeyCode.G); // second g (timed out)
 
         // Assert — treated as a new first 'g', not GoToFirst
         result.Should().Be(VimAction.PendingGSequence);
@@ -138,11 +138,11 @@ public sealed class VimKeyTranslatorTests
     public void Translate_GPlusJ_ResetsAndReturnsMoveDown()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
         _ = translator.Translate(KeyCode.G); // first g
 
         // Act
-        var result = translator.Translate(KeyCode.J);
+        VimAction result = translator.Translate(KeyCode.J);
 
         // Assert — pending cleared; 'j' is processed normally
         result.Should().Be(VimAction.MoveDown);
@@ -152,11 +152,11 @@ public sealed class VimKeyTranslatorTests
     public void Translate_GPlusUnrecognizedKey_ResetsAndReturnsNone()
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
         _ = translator.Translate(KeyCode.G); // first g
 
         // Act
-        var result = translator.Translate(KeyCode.A);
+        VimAction result = translator.Translate(KeyCode.A);
 
         // Assert
         result.Should().Be(VimAction.None);
@@ -171,7 +171,7 @@ public sealed class VimKeyTranslatorTests
     {
         // Arrange
         long fakeTime = 0;
-        var translator = new VimKeyTranslator(
+        VimKeyTranslator translator = new(
             () => fakeTime,
             timeoutMs: VimKeyTranslator.DefaultTimeoutMs
         );
@@ -180,7 +180,7 @@ public sealed class VimKeyTranslatorTests
         _ = translator.Translate(KeyCode.G); // gg → GoToFirst
 
         // Act — next 'g' should start a fresh pending sequence
-        var result = translator.Translate(KeyCode.G);
+        VimAction result = translator.Translate(KeyCode.G);
 
         // Assert
         result.Should().Be(VimAction.PendingGSequence);
@@ -200,10 +200,10 @@ public sealed class VimKeyTranslatorTests
     public void Translate_VimNavigationKeysWithShift_ReturnsNone(KeyCode keyCode)
     {
         // Arrange
-        var translator = new VimKeyTranslator();
+        VimKeyTranslator translator = new();
 
         // Act — uppercase H/J/K/L/D/U (shift held) should not trigger vim moves
-        var result = translator.Translate(keyCode | KeyCode.ShiftMask);
+        VimAction result = translator.Translate(keyCode | KeyCode.ShiftMask);
 
         // Assert
         result.Should().Be(VimAction.None);
@@ -218,13 +218,13 @@ public sealed class VimKeyTranslatorTests
     {
         // Arrange — timeout of 500 ms; advance fake time by exactly 500 ms
         long fakeTime = 0;
-        var translator = new VimKeyTranslator(() => fakeTime, timeoutMs: 500);
+        VimKeyTranslator translator = new(() => fakeTime, timeoutMs: 500);
 
         _ = translator.Translate(KeyCode.G); // first g
         fakeTime += (long)(Stopwatch.Frequency * 0.5); // advance by exactly 500 ms
 
         // Act
-        var result = translator.Translate(KeyCode.G); // second g at boundary
+        VimAction result = translator.Translate(KeyCode.G); // second g at boundary
 
         // Assert — exactly at timeout should still trigger GoToFirst (<= boundary protection)
         result.Should().Be(VimAction.GoToFirst);
@@ -239,14 +239,14 @@ public sealed class VimKeyTranslatorTests
     {
         // Arrange — timeout of 500 ms
         long fakeTime = 0;
-        var translator = new VimKeyTranslator(() => fakeTime, timeoutMs: 500);
+        VimKeyTranslator translator = new(() => fakeTime, timeoutMs: 500);
 
         _ = translator.Translate(KeyCode.G); // first g
         fakeTime += Stopwatch.Frequency; // advance by 1 second, exceeds timeout
 
         // Act
-        var result1 = translator.Translate(KeyCode.G); // second g (treated as new first g)
-        var result2 = translator.Translate(KeyCode.G); // third g
+        VimAction result1 = translator.Translate(KeyCode.G); // second g (treated as new first g)
+        VimAction result2 = translator.Translate(KeyCode.G); // third g
 
         // Assert — after timeout reset, the sequence starts fresh
         result1.Should().Be(VimAction.PendingGSequence);

@@ -27,7 +27,7 @@ public sealed class BackgroundSchemaScanTests
             return Results.Failure<TableSchema>("refine failed");
         }
 
-        var refinedSchema = schema with
+        TableSchema refinedSchema = schema with
         {
             Columns = [.. schema.Columns, new ColumnSchema { Name = row, Type = ColumnType.Text }],
         };
@@ -53,7 +53,7 @@ public sealed class BackgroundSchemaScanTests
         {
             try
             {
-                foreach (var row in rows)
+                foreach (string row in rows)
                 {
                     yield return row;
                 }
@@ -69,11 +69,11 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WithAllRowsRefinable_ReadsRowsOnceAndReturnsSchemaRefinedWithEveryRow()
     {
         // Arrange
-        var trackedRows = new TrackedRows("a", "b", "c");
-        var readRowsCallCount = 0;
+        TrackedRows trackedRows = new("a", "b", "c");
+        int readRowsCallCount = 0;
 
         // Act
-        var schema = BackgroundSchemaScan.Execute(
+        TableSchema schema = BackgroundSchemaScan.Execute(
             CreateInitialSchema(),
             () =>
             {
@@ -92,11 +92,11 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WithNoRows_ReturnsCurrentSchema()
     {
         // Arrange
-        var currentSchema = CreateInitialSchema();
-        var trackedRows = new TrackedRows();
+        TableSchema currentSchema = CreateInitialSchema();
+        TrackedRows trackedRows = new();
 
         // Act
-        var schema = BackgroundSchemaScan.Execute(
+        TableSchema schema = BackgroundSchemaScan.Execute(
             currentSchema,
             trackedRows.Read,
             AppendColumnNamedAfterRow,
@@ -110,10 +110,10 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenRefineFailsForARow_IgnoresThatRowAndKeepsRefiningOthers()
     {
         // Arrange
-        var trackedRows = new TrackedRows("a", FailingRow, "c");
+        TrackedRows trackedRows = new("a", FailingRow, "c");
 
         // Act
-        var schema = BackgroundSchemaScan.Execute(
+        TableSchema schema = BackgroundSchemaScan.Execute(
             CreateInitialSchema(),
             trackedRows.Read,
             AppendColumnNamedAfterRow,
@@ -127,13 +127,13 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenCancelledBeforeStart_ReturnsCurrentSchemaWithoutCallingReadRows()
     {
         // Arrange
-        var currentSchema = CreateInitialSchema();
-        using var cts = new CancellationTokenSource();
+        TableSchema currentSchema = CreateInitialSchema();
+        using CancellationTokenSource cts = new();
         cts.Cancel();
-        var readRowsCallCount = 0;
+        int readRowsCallCount = 0;
 
         // Act
-        var schema = BackgroundSchemaScan.Execute<string>(
+        TableSchema schema = BackgroundSchemaScan.Execute<string>(
             currentSchema,
             () =>
             {
@@ -152,11 +152,11 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenCancelledAfterRowIsAcquired_DoesNotRefineThatRow()
     {
         // Arrange
-        var currentSchema = CreateInitialSchema();
-        using var cts = new CancellationTokenSource();
+        TableSchema currentSchema = CreateInitialSchema();
+        using CancellationTokenSource cts = new();
 
         // Act
-        var schema = BackgroundSchemaScan.Execute(
+        TableSchema schema = BackgroundSchemaScan.Execute(
             currentSchema,
             () => CancelBeforeYieldingRow(cts, "a"),
             AppendColumnNamedAfterRow,
@@ -170,16 +170,16 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenCancelledWhileRefining_DoesNotRefineLaterRows()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        var trackedRows = new TrackedRows("a", "b", "c", "d");
+        using CancellationTokenSource cts = new();
+        TrackedRows trackedRows = new("a", "b", "c", "d");
 
         // Act
-        var schema = BackgroundSchemaScan.Execute(
+        TableSchema schema = BackgroundSchemaScan.Execute(
             CreateInitialSchema(),
             trackedRows.Read,
             (currentSchema, row) =>
             {
-                var refineResult = AppendColumnNamedAfterRow(currentSchema, row);
+                Result<TableSchema> refineResult = AppendColumnNamedAfterRow(currentSchema, row);
                 cts.Cancel();
                 return refineResult;
             },
@@ -193,8 +193,8 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenCancelledWhileRefining_DisposesRowEnumerator()
     {
         // Arrange
-        using var cts = new CancellationTokenSource();
-        var trackedRows = new TrackedRows("a", "b", "c");
+        using CancellationTokenSource cts = new();
+        TrackedRows trackedRows = new("a", "b", "c");
 
         // Act
         _ = BackgroundSchemaScan.Execute(
@@ -215,7 +215,7 @@ public sealed class BackgroundSchemaScanTests
     public void Execute_WhenAllRowsAreRead_DisposesRowEnumerator()
     {
         // Arrange
-        var trackedRows = new TrackedRows("a", "b");
+        TrackedRows trackedRows = new("a", "b");
 
         // Act
         _ = BackgroundSchemaScan.Execute(

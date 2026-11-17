@@ -10,13 +10,13 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_DeleteColumnOnCsvTable_RemovesColumnFromRenderedTable()
     {
         // Arrange
-        var csvContent = """
+        string csvContent = """
             name,age
             Alice,30
             Bob,25
             Charlie,35
             """;
-        var inputFile = _testDirectory.CreateFile("input.csv", csvContent);
+        string inputFile = _testDirectory.CreateFile("input.csv", csvContent);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("Charlie", "35");
 
@@ -28,7 +28,7 @@ public sealed partial class MainWindowTests
         Harness.SendKey(KeyCode.Enter);
         // "name (text)" disappearing (rather than some new text appearing) is the observable
         // effect of the deletion, so poll for its absence instead of a fixed delay.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("name (text)", StringComparison.Ordinal)),
             "\"name (text)\" column removed");
 
@@ -42,14 +42,14 @@ public sealed partial class MainWindowTests
     public async Task ActionMenu_DeleteColumnOnFocusedTable_RemovesColumnFromRenderedTable()
     {
         // Arrange: DrillDown from a JSON Array tree into the FocusedTable view.
-        var content = """
+        string content = """
             [
               {"name":"Alice","age":30},
               {"name":"Bob","age":25},
               {"name":"Charlie","age":35}
             ]
             """;
-        var inputFile = _testDirectory.CreateFile("input.json", content);
+        string inputFile = _testDirectory.CreateFile("input.json", content);
         Harness.MainWindow.ScheduleStartupLoad(new TuiStartupOptions(inputFile));
         await Harness.WaitForContentsAsync("[0]:");
         Harness.SendKey(KeyCode.X);
@@ -66,7 +66,7 @@ public sealed partial class MainWindowTests
         // The dialog hides the table while open, so also require it to be absent, or the
         // predicate can succeed before the confirming key lands and hand a dialog frame to the
         // assertions below.
-        var lines = await Harness.WaitForConditionAsync(
+        string[] lines = await Harness.WaitForConditionAsync(
             l => l.All(line => !line.Contains("name (text)", StringComparison.Ordinal) && !line.Contains("Delete column", StringComparison.Ordinal)),
             "dialog closed and \"name (text)\" column removed");
 

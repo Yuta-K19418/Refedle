@@ -20,10 +20,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValuePlainText_WritesJsonString()
     {
         // Arrange
-        var cell = new CellData("hello", CellPresence.Value, CellEncoding.PlainText);
+        CellData cell = new("hello", CellPresence.Value, CellEncoding.PlainText);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":"hello"}""");
@@ -33,10 +33,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValuePlainTextWithSpecialCharacters_EscapesQuotesAndControlCharsAndKeepsNonAscii()
     {
         // Arrange — quote and newline must be JSON-escaped; non-ASCII passes through unescaped.
-        var cell = new CellData("he said \"hi\"\ncafé 日本語", CellPresence.Value, CellEncoding.PlainText);
+        CellData cell = new("he said \"hi\"\ncafé 日本語", CellPresence.Value, CellEncoding.PlainText);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("{\"value\":\"he said \\\"hi\\\"\\ncafé 日本語\"}");
@@ -46,10 +46,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValueRaw_WritesRawJson()
     {
         // Arrange
-        var cell = new CellData("""{"nested":1}""", CellPresence.Value, CellEncoding.Raw);
+        CellData cell = new("""{"nested":1}""", CellPresence.Value, CellEncoding.Raw);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":{"nested":1}}""");
@@ -59,10 +59,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValueNumericInteger_WritesJsonNumber()
     {
         // Arrange
-        var cell = new CellData("007", CellPresence.Value, CellEncoding.Numeric);
+        CellData cell = new("007", CellPresence.Value, CellEncoding.Numeric);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":7}""");
@@ -72,10 +72,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValueNumericFloatingPoint_WritesJsonNumber()
     {
         // Arrange
-        var cell = new CellData("3.50", CellPresence.Value, CellEncoding.Numeric);
+        CellData cell = new("3.50", CellPresence.Value, CellEncoding.Numeric);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":3.5}""");
@@ -85,10 +85,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_ValueBoolean_WritesJsonBoolean()
     {
         // Arrange
-        var cell = new CellData("TRUE", CellPresence.Value, CellEncoding.Boolean);
+        CellData cell = new("TRUE", CellPresence.Value, CellEncoding.Boolean);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":true}""");
@@ -98,10 +98,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_Null_WritesJsonNull()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Null);
+        CellData cell = new([], CellPresence.Null);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":null}""");
@@ -111,10 +111,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_Invalid_WritesEmptyString()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Invalid);
+        CellData cell = new([], CellPresence.Invalid);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("""{"value":""}""");
@@ -124,10 +124,10 @@ public sealed class JsonCellWriterTests
     public void WriteCellData_Missing_OmitsProperty()
     {
         // Arrange
-        var cell = new CellData([], CellPresence.Missing);
+        CellData cell = new([], CellPresence.Missing);
 
         // Act
-        var json = WriteSingleCell(cell);
+        string json = WriteSingleCell(cell);
 
         // Assert
         json.Should().Be("{}");
@@ -135,8 +135,8 @@ public sealed class JsonCellWriterTests
 
     private static string WriteSingleCell(CellData cell)
     {
-        var buffer = new ArrayBufferWriter<byte>();
-        using var writer = new Utf8JsonWriter(
+        ArrayBufferWriter<byte> buffer = new();
+        using Utf8JsonWriter writer = new(
             buffer,
             new JsonWriterOptions { SkipValidation = false, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
         writer.WriteStartObject();

@@ -28,7 +28,7 @@ internal static class CliProcess
     /// <exception cref="TimeoutException">Thrown when the process does not exit in time.</exception>
     public static async Task<CliProcessResult> RunAsync(string inputFile, string recipeFile, string outputFile, string workingDirectory)
     {
-        var startInfo = CreateStartInfo(workingDirectory);
+        ProcessStartInfo startInfo = CreateStartInfo(workingDirectory);
         startInfo.ArgumentList.Add("apply");
         startInfo.ArgumentList.Add("--input");
         startInfo.ArgumentList.Add(inputFile);
@@ -48,8 +48,8 @@ internal static class CliProcess
     /// <exception cref="TimeoutException">Thrown when the process does not exit in time.</exception>
     public static async Task<CliProcessResult> RunWithArgumentsAsync(IReadOnlyList<string> arguments)
     {
-        var startInfo = CreateStartInfo(workingDirectory: null);
-        foreach (var argument in arguments)
+        ProcessStartInfo startInfo = CreateStartInfo(workingDirectory: null);
+        foreach (string argument in arguments)
         {
             startInfo.ArgumentList.Add(argument);
         }
@@ -59,7 +59,7 @@ internal static class CliProcess
 
     private static ProcessStartInfo CreateStartInfo(string? workingDirectory)
     {
-        var startInfo = new ProcessStartInfo
+        ProcessStartInfo startInfo = new()
         {
             FileName = "dotnet",
             WorkingDirectory = workingDirectory ?? string.Empty,
@@ -74,13 +74,13 @@ internal static class CliProcess
 
     private static async Task<CliProcessResult> RunProcessAsync(ProcessStartInfo startInfo)
     {
-        using var process = new Process { StartInfo = startInfo };
+        using Process process = new() { StartInfo = startInfo };
         process.Start();
 
-        var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-        var standardErrorTask = process.StandardError.ReadToEndAsync();
+        Task<string> standardOutputTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> standardErrorTask = process.StandardError.ReadToEndAsync();
 
-        using var timeoutCts = new CancellationTokenSource(_timeout);
+        using CancellationTokenSource timeoutCts = new(_timeout);
         try
         {
             await process.WaitForExitAsync(timeoutCts.Token).ConfigureAwait(false);
@@ -93,8 +93,8 @@ internal static class CliProcess
             throw new TimeoutException($"The refedle CLI process did not exit within {_timeout}.");
         }
 
-        var standardOutput = await standardOutputTask.ConfigureAwait(false);
-        var standardError = await standardErrorTask.ConfigureAwait(false);
+        string standardOutput = await standardOutputTask.ConfigureAwait(false);
+        string standardError = await standardErrorTask.ConfigureAwait(false);
         return new CliProcessResult(process.ExitCode, standardOutput, standardError);
     }
 }

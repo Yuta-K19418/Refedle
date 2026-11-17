@@ -3,8 +3,11 @@ using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.Workers;
+using Refedle.Engine;
+using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.Engine.Models;
 using Refedle.Tests.App.Tui.Workers.Schema;
 
 namespace Refedle.Tests.App.Tui.UI;
@@ -33,7 +36,7 @@ public sealed class ModeControllerTests : IDisposable
         // (no setup required)
 
         // Act
-        var act = () => new ModeController(null!, action => action(), TestSchemaScannerFactories.JsonLines);
+        Func<ModeController> act = () => new ModeController(null!, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -43,10 +46,10 @@ public sealed class ModeControllerTests : IDisposable
     public void Constructor_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var act = () => new ModeController(state, null!, TestSchemaScannerFactories.JsonLines);
+        Func<ModeController> act = () => new ModeController(state, null!, TestSchemaScannerFactories.JsonLines);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -56,10 +59,10 @@ public sealed class ModeControllerTests : IDisposable
     public void Constructor_WithNullScannerFactory_ThrowsArgumentNullException()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
 
         // Act
-        var act = () => new ModeController(state, action => action(), null!);
+        Func<ModeController> act = () => new ModeController(state, action => action(), null!);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -70,17 +73,17 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
+        TaskCompletionSource<TableSchema> refined = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var indexer = new RowIndexer(_jsonlFilePath);
+        RowIndexer indexer = new(_jsonlFilePath);
         indexer.BuildIndex();
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
         state.SetSchemaRefinedCallback(schema => refined.TrySetResult(schema));
-        var invokeCount = 0;
-        var controller = new ModeController(
+        int invokeCount = 0;
+        ModeController controller = new(
             state,
             action =>
             {
@@ -90,8 +93,8 @@ public sealed class ModeControllerTests : IDisposable
             TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
-        var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        Result result = await controller.ToggleJsonLinesModeAsync();
+        TableSchema refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -105,15 +108,15 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        var refined = new TaskCompletionSource<Refedle.Engine.Models.TableSchema>(
+        TaskCompletionSource<TableSchema> refined = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        var callbackThreadId = 0;
-        var uiThreadId = 0;
-        await using var session = await LivePumpTestSession.StartAsync((app, _) =>
+        int callbackThreadId = 0;
+        int uiThreadId = 0;
+        await using LivePumpTestSession<ModeController> session = await LivePumpTestSession.StartAsync((app, _) =>
         {
-            var indexer = new RowIndexer(_jsonlFilePath);
+            RowIndexer indexer = new(_jsonlFilePath);
             indexer.BuildIndex();
-            var state = new AppState();
+            AppState state = new();
             state.StartNewFile(_jsonlFilePath);
             state.BeginIndexedTreeLoad(indexer);
             state.EnterJsonLinesTree();
@@ -131,7 +134,7 @@ public sealed class ModeControllerTests : IDisposable
             uiThreadId = Environment.CurrentManagedThreadId;
             return controller.ToggleJsonLinesModeAsync().AsTask();
         });
-        var refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        TableSchema refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Assert
         callbackThreadId.Should().Be(uiThreadId);
@@ -143,18 +146,18 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        var scanner = new GatedSchemaScanner(CreateIdSchema());
+        GatedSchemaScanner scanner = new(CreateIdSchema());
         scanner.Release();
-        var indexer = new RowIndexer(_jsonlFilePath);
-        using var state = new AppState();
+        RowIndexer indexer = new(_jsonlFilePath);
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, action => action(), _ => scanner);
+        ModeController controller = new(state, action => action(), _ => scanner);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
-        var startedBeforeIndexing = scanner.BackgroundScanStarted.IsCompleted;
+        Result result = await controller.ToggleJsonLinesModeAsync();
+        bool startedBeforeIndexing = scanner.BackgroundScanStarted.IsCompleted;
         indexer.BuildIndex();
         await scanner.BackgroundScanStarted.WaitAsync(TimeSpan.FromSeconds(10));
 
@@ -168,15 +171,15 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        var indexer = new RowIndexer(_jsonlFilePath);
+        RowIndexer indexer = new(_jsonlFilePath);
         indexer.BuildIndex();
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        var queuedInvokes = new List<Action>();
-        var posted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var controller = new ModeController(
+        List<Action> queuedInvokes = [];
+        TaskCompletionSource posted = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ModeController controller = new(
             state,
             action =>
             {
@@ -186,13 +189,13 @@ public sealed class ModeControllerTests : IDisposable
             TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
         await posted.Task.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Replace the session before the queued UI action runs; the file path stays
         // the scanned one, as in a same-file reopen.
         state.RenewCtsWithCancel();
-        var replacementSchema = new Refedle.Engine.Models.TableSchema
+        TableSchema replacementSchema = new()
         {
             Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
             SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
@@ -213,27 +216,27 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenSessionIsReplacedDuringInitialScan_KeepsReplacementFileState()
     {
         // Arrange
-        var scannedSchema = CreateIdSchema();
-        var scanner = new GatedSchemaScanner(scannedSchema);
-        var indexer = new RowIndexer(_jsonlFilePath);
-        using var state = new AppState();
+        TableSchema scannedSchema = CreateIdSchema();
+        GatedSchemaScanner scanner = new(scannedSchema);
+        RowIndexer indexer = new(_jsonlFilePath);
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        var invokeCount = 0;
-        var controller = new ModeController(state, _ => Interlocked.Increment(ref invokeCount), _ => scanner);
+        int invokeCount = 0;
+        ModeController controller = new(state, _ => Interlocked.Increment(ref invokeCount), _ => scanner);
 
         // Act
-        var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+        Task<Result> toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
         await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Replace the session while the gated initial scan is still pending.
         state.RenewCtsWithCancel();
-        var replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
-        var result = await toggleTask;
+        Result result = await toggleTask;
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -246,25 +249,25 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenInitialScanFailsAfterSessionReplacement_SuppressesStaleError()
     {
         // Arrange
-        var scanner = new GatedSchemaScanner(CreateIdSchema(), new InvalidOperationException("scan failed"));
-        var indexer = new RowIndexer(_jsonlFilePath);
-        using var state = new AppState();
+        GatedSchemaScanner scanner = new(CreateIdSchema(), new InvalidOperationException("scan failed"));
+        RowIndexer indexer = new(_jsonlFilePath);
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, _ => { }, _ => scanner);
+        ModeController controller = new(state, _ => { }, _ => scanner);
 
         // Act
-        var toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
+        Task<Result> toggleTask = controller.ToggleJsonLinesModeAsync().AsTask();
         await scanner.Started.WaitAsync(TimeSpan.FromSeconds(10));
 
         // Replace the session, then let the old scan fail.
         state.RenewCtsWithCancel();
-        var replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
-        var result = await toggleTask;
+        Result result = await toggleTask;
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -291,9 +294,9 @@ public sealed class ModeControllerTests : IDisposable
     /// </summary>
     private static async Task WriteRefinementFixtureAsync(string path)
     {
-        var initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
-        var refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
-        var content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
+        IEnumerable<string> initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
+        IEnumerable<string> refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
+        string content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
         await File.WriteAllTextAsync(path, content);
     }
 
@@ -301,12 +304,12 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WithRowIndexerNull_DoesNothing()
     {
         // Arrange
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -317,14 +320,14 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WithUnrelatedMode_DoesNothing()
     {
         // Arrange
-        var indexer = RowIndexerFactory.Create(Refedle.Engine.Types.DataFormat.Csv, _jsonlFilePath);
-        var schema = CreateCsvSchema();
-        using var state = new AppState();
+        IRowIndexer indexer = RowIndexerFactory.Create(Refedle.Engine.Types.DataFormat.Csv, _jsonlFilePath);
+        TableSchema schema = CreateCsvSchema();
+        using AppState state = new();
         state.CompleteCsvLoad(indexer, schema);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -335,22 +338,22 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WithCachedSchema_ReusesSchema()
     {
         // Arrange
-        var cachedSchema = new Refedle.Engine.Models.TableSchema
+        TableSchema cachedSchema = new()
         {
             Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
             SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
         };
 
-        var indexer = new RowIndexer(_jsonlFilePath);
-        using var state = new AppState();
+        RowIndexer indexer = new(_jsonlFilePath);
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.ApplyRefinedSchema(cachedSchema);
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -364,15 +367,15 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"name\":\"Alice\"}\n{\"name\":\"Bob\"}");
-        var indexer = new RowIndexer(_jsonlFilePath);
-        using var state = new AppState();
+        RowIndexer indexer = new(_jsonlFilePath);
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -384,13 +387,13 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_FromTableMode_RestoresTreeMode()
     {
         // Arrange
-        var schema = CreateIdSchema();
-        using var state = new AppState();
+        TableSchema schema = CreateIdSchema();
+        using AppState state = new();
         state.CompleteJsonLinesSchemaScan(schema);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = await controller.ToggleJsonLinesModeAsync();
+        Result result = await controller.ToggleJsonLinesModeAsync();
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -403,19 +406,19 @@ public sealed class ModeControllerTests : IDisposable
     public void DrillDown_JsonObjectWithChildren_PopulatesAllRowsAndSwitchesToFocusedTable(int childCount)
     {
         // Arrange
-        var children = string.Join(",", Enumerable.Range(0, childCount).Select(i => $$"""{"id":{{i}}}"""));
+        string children = string.Join(",", Enumerable.Range(0, childCount).Select(i => $$"""{"id":{{i}}}"""));
         JsonRawBytes nodeBytes = Encoding.UTF8.GetBytes($"[{children}]");
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
             KeyPath: [],
             InitialActionStack: []);
-        using var state = new AppState();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var expectedHashValues = Enumerable.Range(0, childCount).Select(i => $"[{i}]");
+        using AppState state = new();
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        IEnumerable<string> expectedHashValues = Enumerable.Range(0, childCount).Select(i => $"[{i}]");
 
         // Act
-        var result = controller.DrillDown(request);
+        Result result = controller.DrillDown(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -429,16 +432,16 @@ public sealed class ModeControllerTests : IDisposable
         // Arrange
         await File.WriteAllTextAsync(
             _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}\n{\"user\":{\"name\":\"Bob\"}}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var request = new FullAggregationDrillDownRequest(
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        FullAggregationDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
 
         // Act
-        var result = await controller.FullAggregationDrillDownAsync(request);
+        Result<DrillDownState> result = await controller.FullAggregationDrillDownAsync(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -453,16 +456,16 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var request = new FullAggregationDrillDownRequest(
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        FullAggregationDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("missing", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
 
         // Act
-        var result = await controller.FullAggregationDrillDownAsync(request);
+        Result<DrillDownState> result = await controller.FullAggregationDrillDownAsync(request);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -476,17 +479,17 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         JsonRawBytes nodeBytes = Encoding.UTF8.GetBytes("""[{"id":1}]""");
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
             KeyPath: [],
             InitialActionStack: []);
-        using var state = new AppState();
+        using AppState state = new();
         state.EnterJsonObjectTree([]);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = controller.DrillDown(request);
+        Result result = controller.DrillDown(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -500,17 +503,17 @@ public sealed class ModeControllerTests : IDisposable
         // Arrange
         await File.WriteAllTextAsync(
             _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
         state.EnterJsonLinesTree();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        var request = new FullAggregationDrillDownRequest(
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        FullAggregationDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
 
         // Act
-        var result = await controller.FullAggregationDrillDownAsync(request);
+        Result<DrillDownState> result = await controller.FullAggregationDrillDownAsync(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -521,30 +524,30 @@ public sealed class ModeControllerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_WhenStartedOnWorkerThread_UsesStateAsOfCallbackExecution()
     {
         // Arrange
-        var initialPath = _jsonlFilePath;
-        var laterPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+        string initialPath = _jsonlFilePath;
+        string laterPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
         try
         {
             await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
             await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
-            using var state = new AppState();
+            using AppState state = new();
             state.StartNewFile(initialPath);
             state.EnterPlaceholderMode();
-            var callbackHandoff = new TaskCompletionSource<Action>(TaskCreationOptions.RunContinuationsAsynchronously);
-            var controller = new ModeController(
+            TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
+            ModeController controller = new(
                 state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
-            var request = new FullAggregationDrillDownRequest(
+            FullAggregationDrillDownRequest request = new(
                 Format: Refedle.Engine.Types.DataFormat.JsonLines,
                 KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
                 InitialActionStack: []);
 
             // Act
-            var pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
-            var callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+            Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+            Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
             state.StartNewFile(laterPath);
             state.EnterJsonLinesTree();
             callback();
-            var result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+            Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
 
             // Assert
             result.IsSuccess.Should().BeTrue();
@@ -562,22 +565,22 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await File.WriteAllTextAsync(_jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var callbackHandoff = new TaskCompletionSource<Action>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var controller = new ModeController(
+        TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ModeController controller = new(
             state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
             InitialActionStack: []);
 
         // Act
-        var pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
-        var callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+        Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
         state.RenewCtsWithCancel();
         callback();
-        var result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+        Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -590,16 +593,16 @@ public sealed class ModeControllerTests : IDisposable
         // Arrange
         JsonRawBytes nodeBytes = Encoding.UTF8.GetBytes("""[{"id":1}]""");
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("orders", KeyPathSegmentKind.Key)];
-        var request = new SingleDrillDownRequest(
+        SingleDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonObject,
             NodeBytes: nodeBytes,
             KeyPath: keyPath,
             InitialActionStack: []);
-        using var state = new AppState();
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using AppState state = new();
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
 
         // Act
-        var result = controller.DrillDown(request);
+        Result result = controller.DrillDown(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -612,17 +615,17 @@ public sealed class ModeControllerTests : IDisposable
         // Arrange
         await File.WriteAllTextAsync(
             _jsonlFilePath, "{\"user\":{\"name\":\"Alice\"}}");
-        using var state = new AppState();
+        using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        var controller = new ModeController(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
-        var request = new FullAggregationDrillDownRequest(
+        FullAggregationDrillDownRequest request = new(
             Format: Refedle.Engine.Types.DataFormat.JsonLines,
             KeyPath: keyPath,
             InitialActionStack: []);
 
         // Act
-        var result = await controller.FullAggregationDrillDownAsync(request);
+        Result<DrillDownState> result = await controller.FullAggregationDrillDownAsync(request);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

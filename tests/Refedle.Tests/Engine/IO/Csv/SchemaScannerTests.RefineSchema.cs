@@ -1,4 +1,5 @@
 using AwesomeAssertions;
+using Refedle.Engine;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
@@ -11,7 +12,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_CallsMarkNullableOnly_WhenNonNullableColumnHasEmptyValue()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -21,10 +22,10 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[] { "".AsMemory() };
+        ReadOnlyMemory<char>[] row = ["".AsMemory()];
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -36,7 +37,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_MismatchedColumnCount_ReturnsFailure()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -51,10 +52,10 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[] { "123".AsMemory() };
+        ReadOnlyMemory<char>[] row = ["123".AsMemory()];
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -65,7 +66,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_NullSchema_ThrowsException()
     {
         // Arrange
-        var row = new[] { "123".AsMemory() };
+        ReadOnlyMemory<char>[] row = ["123".AsMemory()];
 
         // Act & Assert
         Action action = () => SchemaScanner.RefineSchema(null!, row);
@@ -76,7 +77,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_NullRow_ThrowsException()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -94,7 +95,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_WithNoChanges_ReturnsSameInstance()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -104,10 +105,10 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[] { "123".AsMemory() };
+        ReadOnlyMemory<char>[] row = ["123".AsMemory()];
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -121,7 +122,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_WithNullableUpdate_ReturnsNewInstance()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -131,10 +132,10 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[] { "".AsMemory() }; // empty value
+        ReadOnlyMemory<char>[] row = ["".AsMemory()]; // empty value
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -147,7 +148,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_WithTypeUpdate_ReturnsNewInstance()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -157,10 +158,10 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[] { "123.45".AsMemory() }; // parsable as floating point
+        ReadOnlyMemory<char>[] row = ["123.45".AsMemory()]; // parsable as floating point
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -173,7 +174,7 @@ public sealed partial class SchemaScannerTests
     public void RefineSchema_PartialColumnUpdates_PreservesUnchangedColumns()
     {
         // Arrange
-        var schema = CreateTestSchema([
+        TableSchema schema = CreateTestSchema([
             new ColumnSchema
             {
                 Name = "id",
@@ -197,15 +198,15 @@ public sealed partial class SchemaScannerTests
             },
         ]);
 
-        var row = new[]
-        {
+        ReadOnlyMemory<char>[] row =
+        [
             "123".AsMemory(), // id - unchanged (WholeNumber)
             "".AsMemory(), // name - updated to nullable
             "25.5".AsMemory(), // age - updated to FloatingPoint
-        };
+        ];
 
         // Act
-        var result = SchemaScanner.RefineSchema(schema, row);
+        Result<TableSchema> result = SchemaScanner.RefineSchema(schema, row);
 
         // Assert
         result.IsSuccess.Should().BeTrue();

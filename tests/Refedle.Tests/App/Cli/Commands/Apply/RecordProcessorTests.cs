@@ -34,10 +34,10 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithValidData_WritesCorrectRecords()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var writtenHeader = false;
+        List<string[]> writtenRecords = [];
+        bool writtenHeader = false;
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -45,13 +45,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -69,14 +69,14 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFilter_ExcludesNonMatchingRecords()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var filters = new List<FilterSpec>
-        {
+        List<FilterSpec> filters =
+        [
             new(1, ColumnType.WholeNumber, FilterOperator.GreaterThan, "25")
-        };
+        ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -85,13 +85,13 @@ public sealed partial class RecordProcessorTests
             filters
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -103,15 +103,15 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithMultipleFilters_ExcludesNonMatchingRecords()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var filters = new List<FilterSpec>
-        {
+        List<FilterSpec> filters =
+        [
             new(1, ColumnType.WholeNumber, FilterOperator.GreaterThan, "20"),
             new(0, ColumnType.Text, FilterOperator.Contains, "a")
-        };
+        ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -120,13 +120,13 @@ public sealed partial class RecordProcessorTests
             filters
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -139,15 +139,15 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithAllRecordsFiltered_WritesOnlyHeader()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var writtenHeader = false;
+        List<string[]> writtenRecords = [];
+        bool writtenHeader = false;
 
-        var filters = new List<FilterSpec>
-        {
+        List<FilterSpec> filters =
+        [
             new(1, ColumnType.WholeNumber, FilterOperator.GreaterThan, "100")
-        };
+        ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -155,13 +155,13 @@ public sealed partial class RecordProcessorTests
             filters
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -177,9 +177,9 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithPartialColumns_WritesOnlySpecifiedColumns()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY", "Extra1"],
                 ["Bob", "25", "CA", "Extra2"],
@@ -187,13 +187,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _twoColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _twoColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -206,9 +206,9 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithSingleColumn_WritesOnlyFirstColumn()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -216,13 +216,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _oneColumn, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _oneColumn, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -239,21 +239,21 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithNoRecords_WritesOnlyHeader()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var writtenHeader = false;
+        List<string[]> writtenRecords = [];
+        bool writtenHeader = false;
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -269,11 +269,11 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithCancellation_BeforeWritingRecords_WritesOnlyHeader()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var writtenHeader = false;
-        var cts = new CancellationTokenSource();
+        List<string[]> writtenRecords = [];
+        bool writtenHeader = false;
+        CancellationTokenSource cts = new();
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -283,13 +283,13 @@ public sealed partial class RecordProcessorTests
             0
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+        OperationCanceledException exception = await Assert.ThrowsAsync<OperationCanceledException>(
             async () => await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, cts.Token));
 
         // Assert
@@ -303,10 +303,10 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithCancellation_AfterWritingSomeRecords_StopsProcessing()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var cts = new CancellationTokenSource();
+        List<string[]> writtenRecords = [];
+        CancellationTokenSource cts = new();
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
@@ -317,13 +317,13 @@ public sealed partial class RecordProcessorTests
             2
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var exception = await Assert.ThrowsAsync<OperationCanceledException>(
+        OperationCanceledException exception = await Assert.ThrowsAsync<OperationCanceledException>(
             async () => await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, cts.Token));
 
         // Assert
@@ -342,9 +342,9 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithEmptyCells_WritesEmptyStrings()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["", "", ""],
                 ["NonEmpty", "Value", "Here"],
@@ -352,13 +352,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -371,22 +371,22 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithWhitespaceCells_WritesWhitespace()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["  spaces  ", "\ttabs\t", " mixed "],
             ],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, _threeColumns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -402,14 +402,14 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFillTransform_SingleColumn_OverwritesCellValues()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new FillSpec("ANON")),
             new BatchOutputColumn("col1", "col1"),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30"],
                 ["Bob", "25"],
@@ -417,13 +417,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -436,7 +436,7 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFillTransform_MultiColumnRecipe_OverwritesOnlyTargetColumn()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0"),
@@ -444,7 +444,7 @@ public sealed partial class RecordProcessorTests
             new BatchOutputColumn("col2", "col2"),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "alice@example.com", "NY"],
                 ["Bob", "bob@example.com", "CA"],
@@ -452,13 +452,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -471,18 +471,18 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFillTransform_FilteredRowsAreNotWritten()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var filters = new List<FilterSpec>
-        {
+        List<string[]> writtenRecords = [];
+        List<FilterSpec> filters =
+        [
             new(1, ColumnType.WholeNumber, FilterOperator.GreaterThan, "25")
-        };
+        ];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new FillSpec("ANON")),
             new BatchOutputColumn("col1", "col1"),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["Alice", "30"],
                 ["Bob", "20"],
@@ -490,13 +490,13 @@ public sealed partial class RecordProcessorTests
             filters
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -508,25 +508,25 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFillTransform_EmptyStringValue_WritesEmptyStrings()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new FillSpec("")),
             new BatchOutputColumn("col1", "col1"),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [["Alice", "30"]],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -538,22 +538,22 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithFillTransform_EmptyDataset_WritesOnlyHeader()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
-        var writtenHeader = false;
+        List<string[]> writtenRecords = [];
+        bool writtenHeader = false;
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new FillSpec("FILL")),
         ];
 
-        var reader = new TestRecordReader([], []);
+        TestRecordReader reader = new([], []);
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -569,13 +569,13 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_ISO8601_ToCustomFormat_ReformatsCorrectly()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["2024-03-15T10:30:00"],
                 ["2023-12-25T00:00:00"],
@@ -583,13 +583,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -602,24 +602,24 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_DifferentSourceFormat_ReformatsCorrectly()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy-MM-dd")),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [["03/15/2024"]],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -634,24 +634,24 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_UnparseableCell_PassesRawValueThrough(string rawValue)
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [[rawValue]],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -663,13 +663,13 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_MixedParseableAndUnparseableCells_WritesAllRows()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [
                 ["2024-03-15T10:30:00"],
                 ["not-a-date"],
@@ -678,13 +678,13 @@ public sealed partial class RecordProcessorTests
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -698,22 +698,22 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_EmptyDataset_WritesOnlyHeader()
     {
         // Arrange
-        var writtenHeader = false;
-        var writtenRecords = new List<string[]>();
+        bool writtenHeader = false;
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0", new TimestampFormatSpec("yyyy/MM/dd")),
         ];
 
-        var reader = new TestRecordReader([], []);
+        TestRecordReader reader = new([], []);
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             () => writtenHeader = true,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -725,7 +725,7 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithTimestampFormatSpec_MultiColumnRecipe_OtherColumnsPassThrough()
     {
         // Arrange
-        var writtenRecords = new List<string[]>();
+        List<string[]> writtenRecords = [];
         IReadOnlyList<BatchOutputColumn> columns =
         [
             new BatchOutputColumn("col0", "col0"),
@@ -733,18 +733,18 @@ public sealed partial class RecordProcessorTests
             new BatchOutputColumn("col2", "col2"),
         ];
 
-        var reader = new TestRecordReader(
+        TestRecordReader reader = new(
             [["Alice", "2024-03-15T10:30:00", "NY"]],
             []
         );
 
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             null,
             (record) => writtenRecords.Add([.. record])
         );
 
         // Act
-        var result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
+        BatchRunResult result = await RecordProcessor.ProcessAsync(reader, writer, columns, default);
 
         // Assert
         result.ExitCode.Should().Be(ExitCode.Success);
@@ -760,14 +760,14 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_CallsWriteFooterOnce_AfterTheRecordLoopAndBeforeFlush()
     {
         // Arrange
-        var events = new List<string>();
-        var reader = new TestRecordReader(
+        List<string> events = [];
+        TestRecordReader reader = new(
             [
                 ["Alice", "30", "NY"],
                 ["Bob", "25", "CA"],
             ],
             []);
-        var writer = new TestRecordWriter(
+        TestRecordWriter writer = new(
             writeHeaderCallback: () => events.Add("header"),
             writeCellCallback: _ => events.Add("record"),
             writeFooterCallback: () => events.Add("footer"),
@@ -784,9 +784,9 @@ public sealed partial class RecordProcessorTests
     public async Task ProcessAsync_WithNoRecords_StillCallsWriteFooterBeforeFlush()
     {
         // Arrange
-        var events = new List<string>();
-        var reader = new TestRecordReader([], []);
-        var writer = new TestRecordWriter(
+        List<string> events = [];
+        TestRecordReader reader = new([], []);
+        TestRecordWriter writer = new(
             writeHeaderCallback: () => events.Add("header"),
             writeCellCallback: _ => events.Add("record"),
             writeFooterCallback: () => events.Add("footer"),

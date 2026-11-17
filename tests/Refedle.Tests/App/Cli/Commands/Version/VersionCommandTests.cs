@@ -19,7 +19,7 @@ public sealed class VersionCommandTests
         // Arrange
 
         // Act
-        var isMatch = VersionCommand.IsMatch(arguments);
+        bool isMatch = VersionCommand.IsMatch(arguments);
 
         // Assert
         isMatch.Should().Be(expected);
@@ -32,11 +32,11 @@ public sealed class VersionCommandTests
     public async Task RunAsync_WithVersion_WritesSingleVersionLineAndReturnsSuccess(string version)
     {
         // Arrange
-        var logger = new TestAppLogger();
-        var command = new VersionCommand(version, logger);
+        TestAppLogger logger = new();
+        VersionCommand command = new(version, logger);
 
         // Act
-        var exitCode = await command.RunAsync();
+        ExitCode exitCode = await command.RunAsync();
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);

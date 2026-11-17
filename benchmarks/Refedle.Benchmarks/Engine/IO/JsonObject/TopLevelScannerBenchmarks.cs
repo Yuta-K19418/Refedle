@@ -24,7 +24,7 @@ public class TopLevelScannerBenchmarks
     [GlobalSetup]
     public void GlobalSetup()
     {
-        var id = Guid.NewGuid();
+        Guid id = Guid.NewGuid();
         _tempFilePath10Keys = Path.Combine(
             Path.GetTempPath(),
             $"jsonobject_bench_10_{id}.json"
@@ -94,9 +94,9 @@ public class TopLevelScannerBenchmarks
 
     private static void WriteKeyValues(string path, int count, Func<int, string> valueFactory)
     {
-        using var writer = new StreamWriter(path);
+        using StreamWriter writer = new(path);
         writer.Write('{');
-        for (var i = 0; i < count; i++)
+        for (int i = 0; i < count; i++)
         {
             if (i > 0)
             {
@@ -111,7 +111,7 @@ public class TopLevelScannerBenchmarks
 
     private static string GenerateNestedObject(int seed)
     {
-        var fields = string.Join(",", Enumerable.Range(0, 1000).Select(j => $"\"f{j}\":{seed + j}"));
+        string fields = string.Join(",", Enumerable.Range(0, 1000).Select(j => $"\"f{j}\":{seed + j}"));
         return $"{{{fields}}}";
     }
 }

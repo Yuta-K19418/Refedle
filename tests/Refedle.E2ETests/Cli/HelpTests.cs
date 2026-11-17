@@ -25,7 +25,7 @@ public sealed class HelpTests
         // Arrange
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync([argument]);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync([argument]);
 
         // Assert
         AssertHelpOutput(result);
@@ -40,7 +40,7 @@ public sealed class HelpTests
         string[] arguments = ["apply", helpFlag];
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync(arguments);
 
         // Assert
         AssertHelpOutput(result);
@@ -53,7 +53,7 @@ public sealed class HelpTests
         string[] arguments = ["--version", "--help"];
 
         // Act
-        var result = await CliProcess.RunWithArgumentsAsync(arguments);
+        CliProcessResult result = await CliProcess.RunWithArgumentsAsync(arguments);
 
         // Assert
         AssertHelpOutput(result);

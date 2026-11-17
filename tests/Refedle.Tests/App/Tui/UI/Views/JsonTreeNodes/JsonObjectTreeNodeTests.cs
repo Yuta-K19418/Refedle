@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
+using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonTreeNodes;
 
@@ -14,11 +15,11 @@ public sealed class JsonObjectTreeNodeTests
     public void Constructor_WithValidJsonObject_SetsCorrectDisplayText()
     {
         // Arrange
-        var json = "{\"key\": \"value\"}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "{\"key\": \"value\"}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("{Object: 1 properties}");
@@ -28,11 +29,11 @@ public sealed class JsonObjectTreeNodeTests
     public void Constructor_WithEmptyJsonObject_SetsCorrectDisplayTextForZeroProperties()
     {
         // Arrange
-        var json = "{}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "{}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("{Object: 0 properties}");
@@ -42,11 +43,11 @@ public sealed class JsonObjectTreeNodeTests
     public void Constructor_WithInvalidJson_SetsInvalidObjectDisplayText()
     {
         // Arrange
-        var json = "not an object";
-        var rawJson = Encoding.UTF8.GetBytes(json);
+        string json = "not an object";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Assert
         node.Text.Should().Be("{Invalid Object}");
@@ -56,12 +57,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_OnFirstAccess_LoadsChildNodes()
     {
         // Arrange
-        var json = "{\"a\": 1, \"b\": 2}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"a\": 1, \"b\": 2}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(2);
@@ -71,13 +72,13 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_OnSubsequentAccess_DoesNotReloadChildNodes()
     {
         // Arrange
-        var json = "{\"a\": 1}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"a\": 1}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var firstAccess = node.Children;
-        var secondAccess = node.Children;
+        IList<ITreeNode> firstAccess = node.Children;
+        IList<ITreeNode> secondAccess = node.Children;
 
         // Assert
         firstAccess.Should().BeSameAs(secondAccess);
@@ -87,12 +88,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForEmptyObject_ReturnsEmptyList()
     {
         // Arrange
-        var json = "{}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().BeEmpty();
@@ -102,12 +103,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForObjectWithPrimitiveProperties_CreatesCorrectValueNodes()
     {
         // Arrange
-        var json = "{\"str\": \"text\", \"num\": 123, \"bool\": true, \"null\": null}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"str\": \"text\", \"num\": 123, \"bool\": true, \"null\": null}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(4);
@@ -124,12 +125,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForObjectWithNestedObject_CreatesJsonObjectNode()
     {
         // Arrange
-        var json = "{\"nested\": {}}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"nested\": {}}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -140,12 +141,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForObjectWithNestedArray_CreatesJsonArrayNode()
     {
         // Arrange
-        var json = "{\"arr\": []}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"arr\": []}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -156,12 +157,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForObjectWithMixedProperties_CreatesCorrectNodes()
     {
         // Arrange
-        var json = "{\"a\": 1, \"b\": {}, \"c\": []}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"a\": 1, \"b\": {}, \"c\": []}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(3);
@@ -174,12 +175,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForInvalidJsonObject_ReturnsSingleErrorNode()
     {
         // Arrange
-        var json = "invalid";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "invalid";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -192,12 +193,12 @@ public sealed class JsonObjectTreeNodeTests
     public void Children_ForJsonObjectWithMissingValue_HandlesGracefully()
     {
         // Arrange
-        var json = "{\"key\": null}";
-        var rawJson = Encoding.UTF8.GetBytes(json);
-        var node = new JsonObjectTreeNode(rawJson);
+        string json = "{\"key\": null}";
+        byte[] rawJson = Encoding.UTF8.GetBytes(json);
+        JsonObjectTreeNode node = new(rawJson);
 
         // Act
-        var children = node.Children;
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -210,10 +211,10 @@ public sealed class JsonObjectTreeNodeTests
     public void KeyName_IsSetViaInitializer_ReturnsExpectedKeyName()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"key\": \"value\"}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"key\": \"value\"}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson) { KeyName = "name" };
+        JsonObjectTreeNode node = new(rawJson) { KeyName = "name" };
 
         // Assert
         node.KeyName.Should().Be("name");
@@ -223,10 +224,10 @@ public sealed class JsonObjectTreeNodeTests
     public void RecordPosition_IsSetViaInitializer_ReturnsExpectedRecordPosition()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"key\": \"value\"}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"key\": \"value\"}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson) { RecordPosition = 42 };
+        JsonObjectTreeNode node = new(rawJson) { RecordPosition = 42 };
 
         // Assert
         node.RecordPosition.Should().Be(42);
@@ -236,11 +237,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithRecordPosition_PropagatesRecordPositionToChildObjectNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson) { RecordPosition = 7 };
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson) { RecordPosition = 7 };
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -252,11 +253,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithRecordPosition_PropagatesRecordPositionToChildArrayNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson) { RecordPosition = 7 };
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson) { RecordPosition = 7 };
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -268,11 +269,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithNullRecordPosition_PropagatesNullToChildObjectNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -284,11 +285,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithNullRecordPosition_PropagatesNullToChildArrayNodes()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -300,11 +301,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithNestedObject_SetsKeyNameOnChildObjectNode()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"nested\": {}}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);
@@ -316,11 +317,11 @@ public sealed class JsonObjectTreeNodeTests
     public void LoadChildren_WithNestedArray_SetsKeyNameOnChildArrayNode()
     {
         // Arrange
-        var rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
+        byte[] rawJson = Encoding.UTF8.GetBytes("{\"arr\": []}");
 
         // Act
-        var node = new JsonObjectTreeNode(rawJson);
-        var children = node.Children;
+        JsonObjectTreeNode node = new(rawJson);
+        IList<ITreeNode> children = node.Children;
 
         // Assert
         children.Should().HaveCount(1);

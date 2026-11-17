@@ -13,7 +13,7 @@ internal static class TestAppFactory
 {
     public static IApplication Create()
     {
-        var app = Application.Create();
+        IApplication app = Application.Create();
         app.Init(DriverRegistry.Names.ANSI);
         Assert.NotNull(app.Driver);
         app.Driver.SetScreenSize(80, 25);

@@ -9,8 +9,8 @@ public sealed class CacheEntryTests
     public void Clear_WhenCalled_SetsRowIndexToMinusOne()
     {
         // Arrange
-        var entry = new CacheEntry<int> { RowIndex = 5, Value = 100 };
-        var emptyValue = -1;
+        CacheEntry<int> entry = new() { RowIndex = 5, Value = 100 };
+        int emptyValue = -1;
 
         // Act
         entry.Clear(emptyValue);
@@ -23,8 +23,8 @@ public sealed class CacheEntryTests
     public void Clear_WhenCalled_SetsValueToEmptyValue()
     {
         // Arrange
-        var entry = new CacheEntry<string> { RowIndex = 5, Value = "test" };
-        var emptyValue = string.Empty;
+        CacheEntry<string> entry = new() { RowIndex = 5, Value = "test" };
+        string emptyValue = string.Empty;
 
         // Act
         entry.Clear(emptyValue);

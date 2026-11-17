@@ -15,10 +15,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithUnescapedToken_ReturnsTranscodedText(string json, string expected)
     {
         // Arrange
-        var bytes = Encoding.UTF8.GetBytes(json);
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var result = Decode(bytes);
+        string result = Decode(bytes);
 
         // Assert
         result.Should().Be(expected);
@@ -39,10 +39,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithEscapedToken_ResolvesEscapeSequences(string json, string expected)
     {
         // Arrange
-        var bytes = Encoding.UTF8.GetBytes(json);
+        byte[] bytes = Encoding.UTF8.GetBytes(json);
 
         // Act
-        var result = Decode(bytes);
+        string result = Decode(bytes);
 
         // Assert
         result.Should().Be(expected);
@@ -55,7 +55,7 @@ public sealed partial class StringUtilityTests
         ReadOnlySpan<byte> json = [0x22, 0x61, 0xFF, 0x62, 0x22];
 
         // Act
-        var result = Decode(json);
+        string result = Decode(json);
 
         // Assert
         result.Should().Be("a\uFFFDb");
@@ -65,10 +65,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithUnpairedSurrogateEscape_ReturnsRawText()
     {
         // Arrange: "\uD800" is a lone high surrogate escape, which cannot be decoded
-        var json = "\"\\uD800\""u8;
+        ReadOnlySpan<byte> json = "\"\\uD800\""u8;
 
         // Act
-        var result = Decode(json);
+        string result = Decode(json);
 
         // Assert
         result.Should().Be("\\uD800");
@@ -81,7 +81,7 @@ public sealed partial class StringUtilityTests
         ReadOnlySpan<byte> json = [0x22, 0x61, 0x5C, 0x6E, 0xFF, 0x22];
 
         // Act
-        var result = Decode(json);
+        string result = Decode(json);
 
         // Assert
         result.Should().Be("a\\n\uFFFD");
@@ -91,10 +91,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithUnescapedTokenSpanningSegments_ThrowsNotSupportedException()
     {
         // Arrange: the unescaped string token "hello" is split across two segments
-        var sequence = CreateSegmentedSequence("\"hel"u8.ToArray(), "lo\""u8.ToArray());
+        ReadOnlySequence<byte> sequence = CreateSegmentedSequence("\"hel"u8.ToArray(), "lo\""u8.ToArray());
 
         // Act
-        var act = () => Decode(sequence);
+        Func<string> act = () => Decode(sequence);
 
         // Assert
         act.Should().Throw<NotSupportedException>();
@@ -104,10 +104,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithEscapedTokenSpanningSegments_ThrowsNotSupportedException()
     {
         // Arrange: the escaped token "a\n<0xFF>" is split across two segments
-        var sequence = CreateSegmentedSequence("\"a\\n"u8.ToArray(), [0xFF, 0x22]);
+        ReadOnlySequence<byte> sequence = CreateSegmentedSequence("\"a\\n"u8.ToArray(), [0xFF, 0x22]);
 
         // Act
-        var act = () => Decode(sequence);
+        Func<string> act = () => Decode(sequence);
 
         // Assert
         act.Should().Throw<NotSupportedException>();
@@ -117,10 +117,10 @@ public sealed partial class StringUtilityTests
     public void DecodeJsonString_WithTokenContainedInSingleSegment_ResolvesEscapeSequences()
     {
         // Arrange: the sequence has two segments but the token lies entirely in the second one
-        var sequence = CreateSegmentedSequence(" "u8.ToArray(), "\"caf\\u00e9\""u8.ToArray());
+        ReadOnlySequence<byte> sequence = CreateSegmentedSequence(" "u8.ToArray(), "\"caf\\u00e9\""u8.ToArray());
 
         // Act
-        var result = Decode(sequence);
+        string result = Decode(sequence);
 
         // Assert
         result.Should().Be("café");
@@ -128,22 +128,22 @@ public sealed partial class StringUtilityTests
 
     private static string Decode(ReadOnlySpan<byte> json)
     {
-        var reader = new Utf8JsonReader(json);
+        Utf8JsonReader reader = new(json);
         reader.Read();
         return StringUtility.DecodeJsonString(ref reader);
     }
 
     private static string Decode(ReadOnlySequence<byte> json)
     {
-        var reader = new Utf8JsonReader(json);
+        Utf8JsonReader reader = new(json);
         reader.Read();
         return StringUtility.DecodeJsonString(ref reader);
     }
 
     private static ReadOnlySequence<byte> CreateSegmentedSequence(byte[] first, byte[] second)
     {
-        var head = new SequenceSegment(first);
-        var tail = head.Append(new SequenceSegment(second));
+        SequenceSegment head = new(first);
+        SequenceSegment tail = head.Append(new SequenceSegment(second));
         return new ReadOnlySequence<byte>(head, 0, tail, tail.Memory.Length);
     }
 

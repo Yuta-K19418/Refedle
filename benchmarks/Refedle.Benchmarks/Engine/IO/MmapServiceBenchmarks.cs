@@ -22,7 +22,7 @@ public class MmapServiceBenchmarks : IDisposable
     public MmapServiceBenchmarks()
     {
         _testFilePath = Path.Combine(Path.GetTempPath(), $"bench_{Guid.NewGuid()}.dat");
-        var data = new byte[FileSize];
+        byte[] data = new byte[FileSize];
         Random.Shared.NextBytes(data);
         File.WriteAllBytes(_testFilePath, data);
         _service = MmapService.Open(_testFilePath).Value;
@@ -36,8 +36,8 @@ public class MmapServiceBenchmarks : IDisposable
     {
         Span<byte> buffer = stackalloc byte[1024];
         _service.Read(0, buffer);
-        var sum = 0;
-        foreach (var b in buffer)
+        int sum = 0;
+        foreach (byte b in buffer)
         {
             sum += b;
         }
@@ -53,8 +53,8 @@ public class MmapServiceBenchmarks : IDisposable
     {
         Span<byte> buffer = stackalloc byte[64 * 1024];
         _service.Read(0, buffer);
-        var sum = 0;
-        foreach (var b in buffer)
+        int sum = 0;
+        foreach (byte b in buffer)
         {
             sum += b;
         }
@@ -68,10 +68,10 @@ public class MmapServiceBenchmarks : IDisposable
     [Benchmark]
     public int Read_LargeChunk()
     {
-        var buffer = new byte[1024 * 1024];
+        byte[] buffer = new byte[1024 * 1024];
         _service.Read(0, buffer);
-        var sum = 0;
-        foreach (var b in buffer)
+        int sum = 0;
+        foreach (byte b in buffer)
         {
             sum += b;
         }
@@ -86,11 +86,11 @@ public class MmapServiceBenchmarks : IDisposable
     public int TryRead_WithValidation()
     {
         Span<byte> buffer = stackalloc byte[1024];
-        var (success, _) = _service.TryRead(0, buffer);
+        (bool success, string _) = _service.TryRead(0, buffer);
         if (success)
         {
-            var sum = 0;
-            foreach (var b in buffer)
+            int sum = 0;
+            foreach (byte b in buffer)
             {
                 sum += b;
             }

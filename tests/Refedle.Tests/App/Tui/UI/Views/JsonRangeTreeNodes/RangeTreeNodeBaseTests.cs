@@ -11,7 +11,7 @@ public sealed class RangeTreeNodeBaseTests
     public void EnsureChildrenLoaded_OnSuccess_IsIdempotent()
     {
         // Arrange
-        var node = new StubRangeNode(4);
+        StubRangeNode node = new(4);
 
         // Act
         node.EnsureChildrenLoaded();
@@ -36,7 +36,7 @@ public sealed class RangeTreeNodeBaseTests
         {
             List<ITreeNode> children = [];
 
-            for (var i = 0; i < Count; i++)
+            for (int i = 0; i < Count; i++)
             {
                 children.Add(new JsonValueTreeNode($"child {i}"));
             }

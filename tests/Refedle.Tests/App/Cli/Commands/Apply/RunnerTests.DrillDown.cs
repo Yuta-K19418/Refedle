@@ -11,19 +11,19 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonObjectToCsv_WithDrillDownRecipe_WritesTheDrilledDownRows()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("id,item\n1,a\n2,b\n");
     }
 
@@ -31,21 +31,21 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonObjectToJsonLines_WithDrillDownFilterRecipe_AppliesTheActionToTheDrilledDownRows()
     {
         // Arrange — the Filter targets a column of the drilled-down table, not the base object.
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"},{"id":3,"item":"c"}]}""");
-        var recipeFile = CreateTestFile(
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"},{"id":3,"item":"c"}]}""");
+        string recipeFile = CreateTestFile(
             "recipe.yaml",
             "name: DrillDown Filter\nactions:\n  - type: Filter\n    columnName: id\n    operator: GreaterThan\n    comparisonType: Number\n    value: 1\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.jsonl");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string outputFile = Path.Combine(_testDir, "output.jsonl");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("{\"id\":2,\"item\":\"b\"}\n{\"id\":3,\"item\":\"c\"}\n");
     }
 
@@ -53,19 +53,19 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonObjectToJson_WithDrillDownRecipe_WritesTheDrilledDownRowsAsAJsonArray()
     {
         // Arrange
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.json");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        string outputFile = Path.Combine(_testDir, "output.json");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("""[{"id":1,"item":"a"},{"id":2,"item":"b"}]""");
     }
 
@@ -73,20 +73,20 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonObjectToCsv_WithUtf8BomPrefixedInput_WritesTheDrilledDownRows()
     {
         // Arrange — a UTF-8 BOM at the start of the input must not break KeyPath resolution.
-        var inputFile = CreateTestFileWithUtf8Bom(
+        string inputFile = CreateTestFileWithUtf8Bom(
             "input.json", """{"orders":[{"id":1,"item":"a"},{"id":2,"item":"b"}]}""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("id,item\n1,a\n2,b\n");
     }
 
@@ -94,21 +94,21 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonArrayToJson_WithUtf8BomPrefixedInput_WritesTheFullAggregationRows()
     {
         // Arrange — a UTF-8 BOM at the start of the input must not break element indexing.
-        var inputFile = CreateTestFileWithUtf8Bom(
+        string inputFile = CreateTestFileWithUtf8Bom(
             "input.json",
             """[{"orders":[{"id":1,"item":"a"}]},{"orders":[{"id":2,"item":"b"},{"id":3,"item":"c"}]}]""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.json");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        string outputFile = Path.Combine(_testDir, "output.json");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("""[{"id":1,"item":"a"},{"id":2,"item":"b"},{"id":3,"item":"c"}]""");
     }
 
@@ -116,21 +116,21 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonArrayToJson_WithDrillDownRecipe_WritesTheFullAggregationRowsAsAJsonArray()
     {
         // Arrange — Full Aggregation: the KeyPath is traversed for every top-level array element.
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.json",
             """[{"orders":[{"id":1,"item":"a"}]},{"orders":[{"id":2,"item":"b"},{"id":3,"item":"c"}]}]""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.json");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string recipeFile = CreateTestFile("recipe.yaml", "name: DrillDown\nactions: []\ndrillDownKeyPath:\n  - key: orders");
+        string outputFile = Path.Combine(_testDir, "output.json");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("""[{"id":1,"item":"a"},{"id":2,"item":"b"},{"id":3,"item":"c"}]""");
     }
 
@@ -139,23 +139,23 @@ public sealed partial class RunnerTests
     {
         // Arrange — exercises the full JSON Array aggregation path with an action:
         // FullAggregationSchemaScanner -> ColumnNameResolver -> ActionApplier -> JsonArray reader filter.
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.json",
             """[{"orders":[{"id":1}]},{"orders":[{"id":2},{"id":3}]}]""");
-        var recipeFile = CreateTestFile(
+        string recipeFile = CreateTestFile(
             "recipe.yaml",
             "name: DrillDown Filter\nactions:\n  - type: Filter\n    columnName: id\n    operator: GreaterThan\n    comparisonType: Number\n    value: 1\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.json");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string outputFile = Path.Combine(_testDir, "output.json");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("""[{"id":2},{"id":3}]""");
     }
 
@@ -164,23 +164,23 @@ public sealed partial class RunnerTests
     {
         // Arrange — before Phase 6 the Runner ignored recipe.DrillDownKeyPath for JSON Lines and
         // applied the recipe against the KeyPath-less base schema (the silent bug this fixes).
-        var inputFile = CreateTestFile(
+        string inputFile = CreateTestFile(
             "input.jsonl",
             "{\"orders\":[{\"id\":1}]}\n{\"orders\":[{\"id\":2},{\"id\":3}]}\n");
-        var recipeFile = CreateTestFile(
+        string recipeFile = CreateTestFile(
             "recipe.yaml",
             "name: DrillDown Filter\nactions:\n  - type: Filter\n    columnName: id\n    operator: GreaterThan\n    comparisonType: Number\n    value: 1\ndrillDownKeyPath:\n  - key: orders");
-        var outputFile = Path.Combine(_testDir, "output.json");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string outputFile = Path.Combine(_testDir, "output.json");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Success);
         logger.Errors.Count.Should().Be(0);
-        var output = await File.ReadAllTextAsync(outputFile);
+        string output = await File.ReadAllTextAsync(outputFile);
         output.Should().Be("""[{"id":2},{"id":3}]""");
     }
 
@@ -188,14 +188,14 @@ public sealed partial class RunnerTests
     public async Task RunAsync_JsonObjectInput_WithBaseTableRecipe_ReturnsExitCode1()
     {
         // Arrange — a recipe with no DrillDown scope cannot be replayed against JSON Object input.
-        var inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
-        var recipeFile = CreateTestFile("recipe.yaml", "name: Base\nactions: []");
-        var outputFile = Path.Combine(_testDir, "output.csv");
-        var args = new Arguments { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
-        var logger = new TestAppLogger();
+        string inputFile = CreateTestFile("input.json", """{"orders":[{"id":1}]}""");
+        string recipeFile = CreateTestFile("recipe.yaml", "name: Base\nactions: []");
+        string outputFile = Path.Combine(_testDir, "output.csv");
+        Arguments args = new() { InputFile = inputFile, RecipeFile = recipeFile, OutputFile = outputFile };
+        TestAppLogger logger = new();
 
         // Act
-        var exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
+        ExitCode exitCode = await Runner.RunAsync(args, logger, new GeneratedFormatDispatcher(), new TempOutputPathProvider(), new TestStatusReporter());
 
         // Assert
         exitCode.Should().Be(ExitCode.Failure);
