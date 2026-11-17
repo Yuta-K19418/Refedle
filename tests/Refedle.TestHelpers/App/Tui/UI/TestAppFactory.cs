@@ -1,7 +1,8 @@
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
+using Xunit;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.TestHelpers.App.Tui.UI;
 
 /// <summary>
 /// Creates the headless ANSI-driver <see cref="IApplication"/> shared by UI tests, with the

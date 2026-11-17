@@ -2,7 +2,8 @@ using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.Workers;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 

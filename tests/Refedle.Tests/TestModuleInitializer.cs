@@ -7,7 +7,7 @@ namespace Refedle.Tests;
 /// Assembly-level setup that the runtime executes exactly once, before any other code in
 /// this assembly (including static constructors and xUnit fixture creation), so it is
 /// guaranteed to run before the first <c>Application.Init</c> in
-/// <see cref="App.Tui.UI.TestAppFactory"/> or any test class.
+/// <c>TestAppFactory</c> or any test class.
 /// </summary>
 /// <remarks>
 /// Terminal.Gui's ANSI input pipeline picks between real-console I/O and a degraded

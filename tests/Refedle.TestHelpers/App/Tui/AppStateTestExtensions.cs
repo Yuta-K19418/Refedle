@@ -1,6 +1,6 @@
 using Refedle.App.Tui;
 
-namespace Refedle.IntegrationTests.App.Tui;
+namespace Refedle.TestHelpers.App.Tui;
 
 internal static class AppStateTestExtensions
 {

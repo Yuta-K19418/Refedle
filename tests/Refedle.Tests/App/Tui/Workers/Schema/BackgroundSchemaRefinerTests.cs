@@ -4,6 +4,7 @@ using Refedle.App.Tui.Workers.Schema;
 using Refedle.App.Tui.Workers.Schema.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema;
 

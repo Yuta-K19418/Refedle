@@ -8,7 +8,8 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 
 namespace Refedle.Tests.App.Tui.UI;
 

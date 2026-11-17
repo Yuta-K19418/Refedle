@@ -11,7 +11,9 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui;
+using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Views;
@@ -103,7 +105,7 @@ public sealed class AppKeyHandlerTests
         using Window window = new();
         ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using TestTableView view = new() { Table = null };
+        using PlainMorphTableView view = new() { Table = null };
         window.Add(view);
         FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
@@ -125,7 +127,7 @@ public sealed class AppKeyHandlerTests
         using Window window = new();
         ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using TestTableView view = new()
+        using PlainMorphTableView view = new()
         {
             Table = new NonExtendedTableSource(),
             OnMorphAction = _ => { },
@@ -153,7 +155,7 @@ public sealed class AppKeyHandlerTests
         using Window window = new();
         ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using TestTableView view = new() { Table = new PagedTableSource(new TestTableSource()) };
+        using PlainMorphTableView view = new() { Table = new PagedTableSource(new TestTableSource()) };
         window.Add(view);
         FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
         RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
@@ -175,7 +177,7 @@ public sealed class AppKeyHandlerTests
         using Window window = new();
         ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
         using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        using TestTableView view = new()
+        using PlainMorphTableView view = new()
         {
             Table = new PagedTableSource(new TestTableSource()),
             OnMorphAction = _ => { }
@@ -382,12 +384,7 @@ public sealed class AppKeyHandlerTests
     }
 
     /// <summary>
-    /// Testable concrete implementation of MorphTableView.
-    /// </summary>
-    private sealed class TestTableView : MorphTableView;
-
-    /// <summary>
-    /// Simple TableSource implementation for testing.
+    /// Simple TenRowTableSource implementation for testing.
     /// </summary>
     private sealed class TestTableSource : IExtendedTableSource
     {

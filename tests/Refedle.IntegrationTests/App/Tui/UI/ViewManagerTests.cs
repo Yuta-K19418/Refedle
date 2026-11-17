@@ -14,7 +14,9 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.IntegrationTests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui;
+using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 

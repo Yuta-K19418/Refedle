@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -17,7 +18,7 @@ public sealed class ColumnActionHandlerTests
         IMorphAction? capturedAction = null;
         await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            TableSource table = new(["amount (number)"], ["amount"]);
+            TenRowTableSource table = new(["amount (number)"], ["amount"]);
             ColumnActionHandler handler = new(
                 app, table, 0,
                 action => capturedAction = action,
@@ -46,7 +47,7 @@ public sealed class ColumnActionHandlerTests
         string? shownBody = null;
         await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            TableSource table = new(["Col1"], ["Col1"]);
+            TenRowTableSource table = new(["Col1"], ["Col1"]);
             ColumnActionHandler handler = new(
                 app, table, 0,
                 _ => actionCalled = true,
@@ -76,7 +77,7 @@ public sealed class ColumnActionHandlerTests
         string? shownTitle = null;
         await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            TableSource table = new(["Col1"], ["Col1"]);
+            TenRowTableSource table = new(["Col1"], ["Col1"]);
             ColumnActionHandler handler = new(app, table, 0, _ => { }, DataFormat.Csv, () => true);
             CaptureTopDialogThenSend(app, (t, _) => shownTitle = t, Key.Esc);
             return handler;
@@ -100,7 +101,7 @@ public sealed class ColumnActionHandlerTests
         string? shownTitle = null;
         await using LivePumpTestSession<ColumnActionHandler> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            TableSource table = new(["Col1"], ["Col1"]);
+            TenRowTableSource table = new(["Col1"], ["Col1"]);
             ColumnActionHandler handler = new(app, table, 0, _ => { }, DataFormat.Csv);
             CaptureTopDialogThenSend(app, (t, _) => shownTitle = t, Key.Esc);
             return handler;
@@ -133,20 +134,5 @@ public sealed class ColumnActionHandlerTests
         }
 
         app.Iteration += OnIteration;
-    }
-
-    private sealed class TableSource(string[] columnNames, string[] rawColumnNames) : IExtendedTableSource
-    {
-        public long TotalRows => 10;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => rawColumnNames;
-        public object this[long row, int col] => $"R{row}C{col}";
-
-        public static void AddColumn(string _) { }
-        public static void AddRow() { }
-        public static void RemoveColumn(int _) { }
-        public static void RemoveRow(int _) { }
-        public static void Clear() { }
     }
 }

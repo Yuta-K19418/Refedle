@@ -6,6 +6,7 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.App.Tui;
 
 namespace Refedle.Tests.App.Tui;
 

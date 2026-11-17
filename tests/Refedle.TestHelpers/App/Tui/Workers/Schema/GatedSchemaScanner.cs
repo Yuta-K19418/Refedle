@@ -1,7 +1,7 @@
 using Refedle.App.Tui.Workers.Schema;
 using Refedle.Engine.Models;
 
-namespace Refedle.IntegrationTests.App.Tui.Workers.Schema;
+namespace Refedle.TestHelpers.App.Tui.Workers.Schema;
 
 /// <summary>
 /// A scanner whose initial scan stays pending until <see cref="Release"/> is called, then

@@ -6,7 +6,8 @@ using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 

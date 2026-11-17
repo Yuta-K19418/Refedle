@@ -1,5 +1,6 @@
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;

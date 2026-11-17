@@ -3,7 +3,7 @@ using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
-using Refedle.IntegrationTests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 

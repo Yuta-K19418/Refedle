@@ -12,7 +12,7 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
-using Refedle.IntegrationTests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;

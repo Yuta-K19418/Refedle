@@ -3,6 +3,7 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 

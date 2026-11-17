@@ -1,6 +1,7 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
@@ -24,7 +25,7 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        TableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
+        TenRowTableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         bool actionCalled = false;
         ColumnActionHandler handler = new(
             app, table, 0,
@@ -55,7 +56,7 @@ public sealed class ColumnActionHandlerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        TableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
+        TenRowTableSource table = new(["Col1", "Col2", "Col3"], ["Raw1", "Raw2", "Raw3"]);
         ColumnActionHandler handler = new(
             app, table, 0,
             _ => { },
@@ -67,20 +68,5 @@ public sealed class ColumnActionHandlerTests
 
         // Assert
         exception.Should().BeNull();
-    }
-
-    private sealed class TableSource(string[] columnNames, string[] rawColumnNames) : IExtendedTableSource
-    {
-        public long TotalRows => 10;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => rawColumnNames;
-        public object this[long row, int col] => $"R{row}C{col}";
-
-        public static void AddColumn(string _) { }
-        public static void AddRow() { }
-        public static void RemoveColumn(int _) { }
-        public static void RemoveRow(int _) { }
-        public static void Clear() { }
     }
 }

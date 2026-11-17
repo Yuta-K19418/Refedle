@@ -1,6 +1,7 @@
 using System.Text;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.Drivers;
