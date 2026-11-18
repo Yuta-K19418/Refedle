@@ -50,7 +50,8 @@ public sealed class JsonObjectScanRunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentFilePath_ThrowsFileNotFoundException()
     {
         // Arrange
-        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string nonExistentPath = tempFile.Path;
 
         // Act
         Func<Task<IReadOnlyList<JsonObjectEntry>>> act = async () => await JsonObjectScanRunner.RunAsync(nonExistentPath, CancellationToken.None);

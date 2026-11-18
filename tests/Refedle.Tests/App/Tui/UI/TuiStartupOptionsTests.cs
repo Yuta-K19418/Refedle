@@ -10,15 +10,21 @@ public sealed class TuiStartupOptionsTests : IDisposable
 
     private readonly string _existingFile;
 
+    private readonly TempFile _missingTempFile = TempFile.ReservePath("");
+
     private readonly string _missingFile;
 
     public TuiStartupOptionsTests()
     {
         _existingFile = _tempFile.Path;
-        _missingFile = Path.Combine(Path.GetTempPath(), $"refedle-missing-{Guid.NewGuid():N}");
+        _missingFile = _missingTempFile.Path;
     }
 
-    public void Dispose() => _tempFile.Dispose();
+    public void Dispose()
+    {
+        _tempFile.Dispose();
+        _missingTempFile.Dispose();
+    }
 
     [Fact]
     public void FindMissingFileError_WhenNoFilesReferenced_ReturnsNull()

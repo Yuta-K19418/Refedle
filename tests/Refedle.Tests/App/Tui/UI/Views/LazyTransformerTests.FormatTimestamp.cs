@@ -4,6 +4,7 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.IO;
 using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
@@ -225,44 +226,38 @@ public sealed partial class LazyTransformerTests
     public void FormatTimestampAction_OverJsonLinesSource_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        string path = Path.GetTempFileName();
-        try
-        {
-            File.WriteAllLines(
-                path,
-                ["{\"created_at\":\"2024-01-15T09:30:00\",\"updated_at\":\"2024-03-20T14:05:33\"}"]
-            );
-            RowIndexer indexer = new(path);
-            indexer.BuildIndex();
-            using RowByteCache cache = new(indexer);
-            TableSchema schema = MakeCsvSchema(
-                ("created_at", ColumnType.Timestamp),
-                ("updated_at", ColumnType.Timestamp)
-            );
-            // The transformer disposes its wrapped source; the using guards the
-            // transformer-construction gap (double dispose is a guarded no-op).
-            using JsonLinesTableSource source = new(cache, schema);
-            IReadOnlyList<IMorphAction> actions =
-            [
-                new FormatTimestampAction
-                {
-                    ColumnName = "created_at",
-                    TargetFormat = "yyyy/MM/dd",
-                },
-            ];
-            using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
+        using TempFile tempFile = TempFile.CreateEmpty(".tmp");
+        string path = tempFile.Path;
+        File.WriteAllLines(
+            path,
+            ["{\"created_at\":\"2024-01-15T09:30:00\",\"updated_at\":\"2024-03-20T14:05:33\"}"]
+        );
+        RowIndexer indexer = new(path);
+        indexer.BuildIndex();
+        using RowByteCache cache = new(indexer);
+        TableSchema schema = MakeCsvSchema(
+            ("created_at", ColumnType.Timestamp),
+            ("updated_at", ColumnType.Timestamp)
+        );
+        // The transformer disposes its wrapped source; the using guards the
+        // transformer-construction gap (double dispose is a guarded no-op).
+        using JsonLinesTableSource source = new(cache, schema);
+        IReadOnlyList<IMorphAction> actions =
+        [
+            new FormatTimestampAction
+            {
+                ColumnName = "created_at",
+                TargetFormat = "yyyy/MM/dd",
+            },
+        ];
+        using LazyTransformer transformer = LazyTransformer.Create(source, schema, actions);
 
-            // Act
-            object targeted = transformer[0, 0];
-            object untouched = transformer[0, 1];
+        // Act
+        object targeted = transformer[0, 0];
+        object untouched = transformer[0, 1];
 
-            // Assert
-            targeted.Should().Be("2024/01/15");
-            untouched.Should().Be("2024-03-20T14:05:33");
-        }
-        finally
-        {
-            File.Delete(path);
-        }
+        // Assert
+        targeted.Should().Be("2024/01/15");
+        untouched.Should().Be("2024-03-20T14:05:33");
     }
 }

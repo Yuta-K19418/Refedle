@@ -12,6 +12,7 @@ conventions in [testing.md](testing.md) also apply.
 - Test classes must **mirror the directory hierarchy** of the production code they test
 - Example: a test for `src/Engine/IO/Csv/DataRowIndexer.cs` belongs in `tests/Refedle.Tests/Engine/IO/Csv/`
 - A test file placed at the wrong level makes it hard to locate and signals that the test may be covering the wrong abstraction
+- TUI tests that check several connected components' behavior and state together belong in `tests/Refedle.IntegrationTests`, not here. See [tui-test-layers.md](tui-test-layers.md)
 
 ## Coverage
 - Focus on **100% coverage for the "Hot Paths"** (data processing logic)

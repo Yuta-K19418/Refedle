@@ -10,6 +10,7 @@ using Refedle.Engine.Types;
 using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
@@ -309,11 +310,12 @@ public sealed partial class ViewManagerTests
     {
         private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
         private readonly Window _window = new();
+        private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
         private readonly StatusBar _statusBar = new();
 
         public LazyScanHarness(FilterAction filter)
         {
-            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+            FilePath = _tempFile.Path;
             File.WriteAllText(FilePath, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"a\", \"col2\": \"y\"}\n");
             State.StartNewFile(FilePath);
             State.AddMorphAction(filter);
@@ -347,7 +349,7 @@ public sealed partial class ViewManagerTests
             _statusBar.Dispose();
             State.Dispose();
             _app.Dispose();
-            File.Delete(FilePath);
+            _tempFile.Dispose();
         }
     }
 }

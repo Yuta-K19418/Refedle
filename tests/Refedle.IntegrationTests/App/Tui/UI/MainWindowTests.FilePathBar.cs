@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -52,22 +53,16 @@ public sealed partial class MainWindowTests
     public async Task OpenFile_WithValidJsonLinesFile_ShowsSelectedFileNameInFilePathBar()
     {
         // Arrange
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+        using TempFile tempFile = TempFile.ReservePath(".jsonl");
+        string filePath = tempFile.Path;
         await File.WriteAllTextAsync(filePath, "{\"id\":1}\n");
 
-        try
-        {
-            // Act
-            string text = await OpenFileAndReadFilePathBarTextAsync(filePath);
+        // Act
+        string text = await OpenFileAndReadFilePathBarTextAsync(filePath);
 
-            // Assert
-            // The start of a long path may be elided, but the randomly named file always fits.
-            string selectedFileName = Path.GetFileName(filePath);
-            text.Should().EndWith(selectedFileName);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        // The start of a long path may be elided, but the randomly named file always fits.
+        string selectedFileName = Path.GetFileName(filePath);
+        text.Should().EndWith(selectedFileName);
     }
 }

@@ -13,6 +13,7 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -29,58 +30,46 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WhenTableActionSelected_ClosesMenuBeforeActionDialogOpens()
     {
         // Arrange
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        using TempFile tempFile = TempFile.ReservePath(".csv");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
-        try
+        MenuClosedProbe probe = new();
+        await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            MenuClosedProbe probe = new();
-            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
-            {
-                LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
-                probe.Attach(app);
-                return context;
-            });
+            LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
+            probe.Attach(app);
+            return context;
+        });
 
-            // Act
-            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+        // Act
+        bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
-            // Assert
-            result.Should().BeTrue();
-            probe.MenuRunningWhenActionDialogOpened.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        result.Should().BeTrue();
+        probe.MenuRunningWhenActionDialogOpened.Should().BeFalse();
     }
 
     [Fact]
     public async Task HandleActionMenu_WhenTableMenuCancelled_RunsNoAction()
     {
         // Arrange
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.csv");
+        using TempFile tempFile = TempFile.ReservePath(".csv");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "Col1,Col2,Col3\n1,2,3\n");
-        try
+        await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
-            {
-                LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
-                ModalKeys.SendOnceOnTop(app, window, Key.Esc);
-                return context;
-            });
+            LiveTestContext<AppKeyHandler> context = CreateTableMenuContext(app, window, filePath);
+            ModalKeys.SendOnceOnTop(app, window, Key.Esc);
+            return context;
+        });
 
-            // Act
-            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+        // Act
+        bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
-            // Assert
-            int actionCount = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.Count));
-            result.Should().BeTrue();
-            actionCount.Should().Be(0);
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        int actionCount = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.State.ActionStack.Count));
+        result.Should().BeTrue();
+        actionCount.Should().Be(0);
     }
 
     /// <summary>
@@ -144,41 +133,35 @@ public sealed class AppKeyHandlerTests
     public async Task HandleActionMenu_WithJsonObjectFormatAndArrayNode_DispatchesSingleDrillDown()
     {
         // Arrange
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
-        try
+        await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
-            {
-                AppState state = new();
-                state.StartNewFile(filePath);
-                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-                viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
-                MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
-                treeView.SelectedObject = JsonObjectRangeTreeNode.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
-                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
-                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
-                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
-                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
-            });
+            AppState state = new();
+            state.StartNewFile(filePath);
+            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+            viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
+            MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
+            treeView.SelectedObject = JsonObjectRangeTreeNode.CreateKeyNode("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray());
+            FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+            RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+            AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+            ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+            return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+        });
 
-            // Act — HandleActionMenu detects JsonObject format and dispatches to HandleSingleDrillDown,
-            // which runs an ActionMenuDialog confirmed here via the Enter-key pattern.
-            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+        // Act — HandleActionMenu detects JsonObject format and dispatches to HandleSingleDrillDown,
+        // which runs an ActionMenuDialog confirmed here via the Enter-key pattern.
+        bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
-            // Assert
-            result.Should().BeTrue();
-            (ViewMode mode, Type? viewType) = await session.InvokeAsync((_, ctx) =>
-                Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
-            mode.Should().Be(ViewMode.FocusedTable);
-            viewType.Should().Be<FocusedTableView>();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        result.Should().BeTrue();
+        (ViewMode mode, Type? viewType) = await session.InvokeAsync((_, ctx) =>
+            Task.FromResult((ctx.State.CurrentMode, ctx.ViewManager.GetCurrentView()?.GetType())));
+        mode.Should().Be(ViewMode.FocusedTable);
+        viewType.Should().Be<FocusedTableView>();
     }
 
     [Fact]
@@ -187,82 +170,70 @@ public sealed class AppKeyHandlerTests
         // Arrange — a range node is a paging container whose KeyPath is empty, so the action
         // menu must not open for it. Enter auto-closes the dialog if the guard ever regresses,
         // making the assertion fail instead of the test hanging on the modal loop.
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+        using TempFile tempFile = TempFile.ReservePath(".jsonl");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "{\"id\":1}\n{\"id\":2}");
-        try
+        // The test owns the reader behind the range node; declaring it before the session
+        // makes it dispose after the session ends but before the temp file is deleted.
+        using RowReader reader = new(filePath);
+        await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            // The test owns the reader behind the range node; declaring it before the session
-            // makes it dispose after the session ends but before the temp file is deleted.
-            using RowReader reader = new(filePath);
-            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
-            {
-                AppState state = new();
-                state.StartNewFile(filePath);
-                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-                JsonLinesRowIndexer indexer = new(filePath);
-                indexer.BuildIndex();
-                viewManager.SwitchToJsonLinesTree(indexer);
-                MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonLinesTree");
-                treeView.SelectedObject = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2L);
-                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
-                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
-                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
-                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
-            });
+            AppState state = new();
+            state.StartNewFile(filePath);
+            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+            JsonLinesRowIndexer indexer = new(filePath);
+            indexer.BuildIndex();
+            viewManager.SwitchToJsonLinesTree(indexer);
+            MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonLinesTree");
+            treeView.SelectedObject = new JsonLinesRangeTreeNode(indexer, reader, 0L, 2L);
+            FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+            RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+            AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+            ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+            return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+        });
 
-            // Act
-            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+        // Act
+        bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
-            // Assert
-            result.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        result.Should().BeFalse();
     }
 
     [Fact]
     public async Task HandleActionMenu_WhenJsonArrayRangeNodeSelected_ReturnsFalse()
     {
         // Arrange — same regression guard as the JSON Lines case, on the JSON Array tree view.
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "[1,2]");
-        try
+        // The test owns the reader behind the range node; declaring it before the session
+        // makes it dispose after the session ends but before the temp file is deleted.
+        using ElementReader reader = new(filePath);
+        await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
-            // The test owns the reader behind the range node; declaring it before the session
-            // makes it dispose after the session ends but before the temp file is deleted.
-            using ElementReader reader = new(filePath);
-            await using LivePumpTestSession<LiveTestContext<AppKeyHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
-            {
-                AppState state = new();
-                state.StartNewFile(filePath);
-                ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-                ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-                JsonArrayRowIndexer indexer = new(filePath);
-                indexer.BuildIndex();
-                viewManager.SwitchToJsonArrayTree(indexer);
-                MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonArrayTree");
-                treeView.SelectedObject = new JsonArrayRangeTreeNode(indexer, reader, 0L, 2L);
-                FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-                RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
-                AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
-                ModalKeys.SendOnceOnTop(app, window, Key.Enter);
-                return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
-            });
+            AppState state = new();
+            state.StartNewFile(filePath);
+            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+            ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+            JsonArrayRowIndexer indexer = new(filePath);
+            indexer.BuildIndex();
+            viewManager.SwitchToJsonArrayTree(indexer);
+            MorphTreeView treeView = GetCurrentTreeViewOrThrow(viewManager, "SwitchToJsonArrayTree");
+            treeView.SelectedObject = new JsonArrayRangeTreeNode(indexer, reader, 0L, 2L);
+            FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+            RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+            AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+            ModalKeys.SendOnceOnTop(app, window, Key.Enter);
+            return new LiveTestContext<AppKeyHandler>(state, viewManager, handler);
+        });
 
-            // Act
-            bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
+        // Act
+        bool result = await session.InvokeAsync((_, ctx) => Task.FromResult(ctx.Handler.HandleActionMenu()));
 
-            // Assert
-            result.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        result.Should().BeFalse();
     }
 
     /// <summary>

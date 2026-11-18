@@ -14,6 +14,7 @@ using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Views;
@@ -335,33 +336,27 @@ public sealed class AppKeyHandlerTests
         // Arrange — drive the guards indirectly through HandleActionMenu (same pattern as
         // HandleActionMenu_WhenCurrentViewIsNotMorphTableView_ReturnsFalse). The guard clauses
         // return before the ActionMenuDialog is shown, so no Enter-key confirmation is needed.
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string filePath = tempFile.Path;
         File.WriteAllText(filePath, "{\"orders\":[{\"id\":1},{\"id\":2}]}");
-        try
-        {
-            using IApplication app = TestAppFactory.Create();
-            using AppState state = new();
-            state.StartNewFile(filePath);
-            using Window window = new();
-            ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-            using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-            viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
-            MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
-            treeView.SelectedObject = selectedNode;
-            FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
-            RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
-            using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
+        using IApplication app = TestAppFactory.Create();
+        using AppState state = new();
+        state.StartNewFile(filePath);
+        using Window window = new();
+        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
+        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
+        viewManager.SwitchToJsonObjectTree([new JsonObjectEntry("orders", "[{\"id\":1},{\"id\":2}]"u8.ToArray())]);
+        MorphTreeView treeView = (MorphTreeView)viewManager.GetCurrentView()!;
+        treeView.SelectedObject = selectedNode;
+        FileDialogHandler fileDialogHandler = new(app, state, viewManager, _ => { }, () => { }, TestSchemaScannerFactories.Csv, _ => { });
+        RecipeCommandHandler recipeCommandHandler = new(app, state, viewManager);
+        using AppKeyHandler handler = new(app, state, viewManager, fileDialogHandler, recipeCommandHandler);
 
-            // Act
-            bool result = handler.HandleActionMenu();
+        // Act
+        bool result = handler.HandleActionMenu();
 
-            // Assert
-            result.Should().BeFalse();
-        }
-        finally
-        {
-            File.Delete(filePath);
-        }
+        // Assert
+        result.Should().BeFalse();
     }
 
     /// <summary>

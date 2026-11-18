@@ -462,39 +462,33 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         string initialPath = _jsonlFilePath;
-        string laterPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
-        try
-        {
-            await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
-            await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
-            using AppState state = new();
-            state.StartNewFile(initialPath);
-            state.EnterPlaceholderMode();
-            TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            ModeController controller = new(
-                state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
-            FullAggregationDrillDownRequest request = new(
-                Format: Refedle.Engine.Types.DataFormat.JsonLines,
-                KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
-                InitialActionStack: []);
+        using TempFile tempFile = TempFile.ReservePath(".jsonl");
+        string laterPath = tempFile.Path;
+        await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
+        await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
+        using AppState state = new();
+        state.StartNewFile(initialPath);
+        state.EnterPlaceholderMode();
+        TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ModeController controller = new(
+            state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
+        FullAggregationDrillDownRequest request = new(
+            Format: Refedle.Engine.Types.DataFormat.JsonLines,
+            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
-            // Act
-            Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
-            Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
-            state.StartNewFile(laterPath);
-            state.EnterJsonLinesTree();
-            callback();
-            Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+        // Act
+        Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+        Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        state.StartNewFile(laterPath);
+        state.EnterJsonLinesTree();
+        callback();
+        Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
 
-            // Assert
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Rows.Should().HaveCount(2);
-            result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
-        }
-        finally
-        {
-            File.Delete(laterPath);
-        }
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Rows.Should().HaveCount(2);
+        result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
     }
 
     [Fact]

@@ -60,7 +60,8 @@ public sealed class FullAggregationScanRunnerTests : IDisposable
     public async Task RunAsync_WithJsonObjectFormat_ReturnsScannerFailureResult()
     {
         // Arrange
-        string path = Path.Combine(Path.GetTempPath(), "does-not-need-to-exist.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string path = tempFile.Path;
         IReadOnlyList<KeyPathSegment> keyPath = [new KeyPathSegment("user", KeyPathSegmentKind.Key)];
 
         // Act

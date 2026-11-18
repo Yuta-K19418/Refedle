@@ -28,6 +28,12 @@ namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests : IDisposable
 {
+    /// <summary>
+    /// Grace period for the negative queue assertions: wide enough for a late queueing to
+    /// arrive and fail the test, short enough to keep the suite fast.
+    /// </summary>
+    private static readonly TimeSpan NothingQueuedGrace = TimeSpan.FromMilliseconds(250);
+
     private readonly TempFileCollection _tempFiles = new();
 
     public void Dispose() => _tempFiles.Dispose();
@@ -3000,7 +3006,8 @@ public sealed partial class ViewManagerTests : IDisposable
     /// </summary>
     private sealed class SchemaRefinementHarness : IDisposable
     {
-        private readonly string _filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+        private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+        private readonly string _filePath;
         private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
         private readonly ViewManager _viewManager;
 
@@ -3011,6 +3018,7 @@ public sealed partial class ViewManagerTests : IDisposable
 
         public SchemaRefinementHarness(IReadOnlyList<IMorphAction> actions, long totalRows, params string[] initialColumns)
         {
+            _filePath = _tempFile.Path;
             File.WriteAllText(_filePath, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"x\", \"col2\": \"y\"}\n");
             State.StartNewFile(_filePath);
             State.SetActionStack(actions);
@@ -3040,7 +3048,7 @@ public sealed partial class ViewManagerTests : IDisposable
             Window.Dispose();
             State.Dispose();
             _app.Dispose();
-            File.Delete(_filePath);
+            _tempFile.Dispose();
         }
     }
 

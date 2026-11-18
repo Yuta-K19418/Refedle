@@ -18,12 +18,6 @@ namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests
 {
-    /// <summary>
-    /// Grace period for the negative queue assertions: wide enough for a late queueing to
-    /// arrive and fail the test, short enough to keep the suite fast.
-    /// </summary>
-    private static readonly TimeSpan NothingQueuedGrace = TimeSpan.FromMilliseconds(250);
-
     [Theory]
     [InlineData("a", "1 items")]
     [InlineData("missing", "0 items")]

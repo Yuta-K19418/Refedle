@@ -145,7 +145,8 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_Constructor_WithNonexistentFile_ThrowsFileNotFoundException()
     {
         // Arrange
-        string nonexistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".csv");
+        using TempFile tempFile = TempFile.ReservePath(".csv");
+        string nonexistentPath = tempFile.Path;
         IncrementalSchemaScanner scanner = new(nonexistentPath);
 
         // Act & Assert
