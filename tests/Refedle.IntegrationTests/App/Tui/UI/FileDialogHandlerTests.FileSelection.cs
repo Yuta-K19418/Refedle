@@ -16,6 +16,7 @@ using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Refedle.IntegrationTests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -399,7 +400,7 @@ public sealed class FileDialogHandlerTests : IDisposable
     public async Task HandleFileSelectedAsync_CsvFile_StartsBackgroundScanOnlyAfterIndexingCompletes()
     {
         // Arrange
-        GatedSchemaScanner scanner = new(CreateCsvSchema());
+        GatedSchemaScanner scanner = new(CreateCsvTextColumnSchema());
         scanner.Release();
         TaskCompletionSource<IRowIndexer> indexerStarted = new(
             TaskCreationOptions.RunContinuationsAsynchronously);
@@ -424,12 +425,6 @@ public sealed class FileDialogHandlerTests : IDisposable
         startedBeforeIndexing.Should().BeFalse();
     }
 
-    private static TableSchema CreateCsvSchema() => new()
-    {
-        Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
-        SourceFormat = DataFormat.Csv
-    };
-
     [Fact]
     public async Task HandleFileSelectedAsync_CsvSessionReplacedDuringInitialScan_KeepsReplacementFileState()
     {
@@ -438,7 +433,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         try
         {
             await File.WriteAllTextAsync(csvPath, "col1\ndata1");
-            GatedSchemaScanner scanner = new(CreateCsvSchema());
+            GatedSchemaScanner scanner = new(CreateCsvTextColumnSchema());
             TableSchema? callbackSchema = null;
             int indexerStartCount = 0;
             await using LivePumpTestSession<LiveTestContext<FileDialogHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
@@ -498,7 +493,7 @@ public sealed class FileDialogHandlerTests : IDisposable
         try
         {
             await File.WriteAllTextAsync(csvPath, "col1\ndata1");
-            GatedSchemaScanner scanner = new(CreateCsvSchema(), new InvalidOperationException("scan failed"));
+            GatedSchemaScanner scanner = new(CreateCsvTextColumnSchema(), new InvalidOperationException("scan failed"));
             TableSchema? callbackSchema = null;
             int indexerStartCount = 0;
             await using LivePumpTestSession<LiveTestContext<FileDialogHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>

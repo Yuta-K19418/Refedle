@@ -16,6 +16,7 @@ using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Refedle.IntegrationTests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -58,7 +59,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, _recipeFile);
 
             IRowIndexer indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
-            TableSchema csvSchema = CreateCsvSchema();
+            TableSchema csvSchema = CreateCsvTextColumnSchema();
             AppState state = new();
             state.StartNewFile(_csvFile);
             state.CompleteCsvLoad(indexer, csvSchema);
@@ -89,7 +90,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, _recipeFile);
 
             IRowIndexer indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
-            TableSchema csvSchema = CreateCsvSchema();
+            TableSchema csvSchema = CreateCsvTextColumnSchema();
             AppState state = new();
             state.StartNewFile(_csvFile);
             state.CompleteCsvLoad(indexer, csvSchema);
@@ -177,7 +178,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, recipeFile);
 
             IRowIndexer indexer = RowIndexerFactory.Create(DataFormat.Csv, csvFile);
-            TableSchema csvSchema = CreateCsvSchema();
+            TableSchema csvSchema = CreateCsvTextColumnSchema();
             AppState state = new();
             state.StartNewFile(csvFile);
             state.CompleteCsvLoad(indexer, csvSchema);
@@ -245,7 +246,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, _recipeFile);
 
             IRowIndexer indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
-            TableSchema csvSchema = CreateCsvSchema();
+            TableSchema csvSchema = CreateCsvTextColumnSchema();
             AppState state = new();
             state.StartNewFile(_csvFile);
             state.CompleteCsvLoad(indexer, csvSchema);
@@ -278,12 +279,6 @@ public sealed partial class RecipeCommandHandlerTests
             KeyPath: [],
             ActionStack: [new RenameColumnAction { OldName = "drill", NewName = "renamed_drill" }],
             HasUnsavedChanges: true);
-
-    private static TableSchema CreateCsvSchema() => new()
-    {
-        Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
-        SourceFormat = DataFormat.Csv
-    };
 
     [Fact]
     public async Task SaveAsync_FromFocusedTable_ThenDrillDownEdit_MarksDrillDownUnsavedAgain()
@@ -361,7 +356,7 @@ public sealed partial class RecipeCommandHandlerTests
             AcceptModalDialogs(app, window, unreachableRecipeFile);
 
             IRowIndexer indexer = RowIndexerFactory.Create(DataFormat.Csv, _csvFile);
-            TableSchema csvSchema = CreateCsvSchema();
+            TableSchema csvSchema = CreateCsvTextColumnSchema();
             AppState state = new();
             state.StartNewFile(_csvFile);
             state.CompleteCsvLoad(indexer, csvSchema);

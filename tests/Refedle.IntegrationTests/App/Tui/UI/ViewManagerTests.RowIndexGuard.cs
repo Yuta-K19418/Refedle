@@ -4,8 +4,10 @@ using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Types;
+using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 

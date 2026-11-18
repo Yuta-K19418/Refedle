@@ -3,47 +3,18 @@ using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
-using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
-using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
-using Refedle.TestHelpers.IO;
 using Terminal.Gui.ViewBase;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
-public sealed partial class RecipeCommandHandlerTests : IDisposable
+public sealed partial class RecipeCommandHandlerTests
 {
-    private readonly TempFileCollection _tempFiles = new();
-
-    private readonly string _jsonObjectFile;
-
-    private readonly string _jsonLinesFile;
-
-    private readonly string _csvFile;
-
-    private readonly string _recipeFile;
-
-    public RecipeCommandHandlerTests()
-    {
-        _jsonObjectFile = _tempFiles.ReservePath(".json");
-        _jsonLinesFile = _tempFiles.ReservePath(".jsonl");
-        _csvFile = _tempFiles.ReservePath(".csv");
-        _recipeFile = _tempFiles.ReservePath(".yaml");
-    }
-
-    public void Dispose() => _tempFiles.Dispose();
-
-    private static async Task SaveRecipeAsync(Recipe recipe, string path)
-    {
-        Result saveResult = await new RecipeManager().SaveAsync(recipe, path);
-        saveResult.IsSuccess.Should().BeTrue();
-    }
-
     [Fact]
     public async Task LoadFromPathAsync_NonDrillDownRecipe_SetsBaseActionStack()
     {

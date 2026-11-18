@@ -14,12 +14,15 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestViews;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -154,7 +157,7 @@ public sealed partial class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        viewManager.SwitchToCsvTable(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToCsvTable(new CompletedStubRowIndexer(filePath), schema);
 
         // Act
         viewManager.RefreshStatusBarHints();
@@ -199,7 +202,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        MockRowIndexer indexer = new("test.jsonl");
+        CompletedStubRowIndexer indexer = new("test.jsonl");
         using AppState state = new();
         state.BeginIndexedTreeLoad(indexer);
         state.EnterJsonLinesTree();
@@ -233,7 +236,7 @@ public sealed partial class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        MockRowIndexer indexer = new(filePath);
+        CompletedStubRowIndexer indexer = new(filePath);
         state.BeginIndexedTreeLoad(indexer);
         state.CompleteJsonLinesSchemaScan(schema);
 
@@ -264,7 +267,7 @@ public sealed partial class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.JsonLines,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }]
         };
-        MockRowIndexer indexer = new(filePath);
+        CompletedStubRowIndexer indexer = new(filePath);
         state.BeginIndexedTreeLoad(indexer);
         state.ApplyRefinedSchema(schema);
 
@@ -368,7 +371,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Arrange
         string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
-        MockRowIndexer indexer = new("test.csv", 5000);
+        CompletedStubRowIndexer indexer = new("test.csv", 5000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -395,7 +398,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Arrange
         string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
-        MockRowIndexer indexer = new("test.csv", 5000);
+        CompletedStubRowIndexer indexer = new("test.csv", 5000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -419,7 +422,7 @@ public sealed partial class ViewManagerTests : IDisposable
         // Arrange
         string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
-        MockRowIndexer indexer = new("test.csv", 1000);
+        CompletedStubRowIndexer indexer = new("test.csv", 1000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -437,7 +440,7 @@ public sealed partial class ViewManagerTests : IDisposable
         window.SubViews.OfType<Label>().First(l => l.Text == "1000 items").Text.Should().Be("1000 items");
 
         // Act — replace indexer with one that has a different row count
-        MockRowIndexer reloadedIndexer = new("test.csv", 5000);
+        CompletedStubRowIndexer reloadedIndexer = new("test.csv", 5000);
         state.CompleteCsvLoad(reloadedIndexer, schema);
         viewManager.RefreshStatusBarHints();
 
@@ -476,7 +479,7 @@ public sealed partial class ViewManagerTests : IDisposable
         viewManager.Dispose();
 
         // Act
-        Action act = () => viewManager.SwitchToJsonArrayTree(new MockRowIndexer("test.json"));
+        Action act = () => viewManager.SwitchToJsonArrayTree(new CompletedStubRowIndexer("test.json"));
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
@@ -715,7 +718,7 @@ public sealed partial class ViewManagerTests : IDisposable
         };
 
         // Act
-        viewManager.SwitchToCsvTable(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToCsvTable(new CompletedStubRowIndexer(filePath), schema);
 
         // Assert
         state.CurrentKeyPath.Should().BeEmpty();
@@ -848,7 +851,7 @@ public sealed partial class ViewManagerTests : IDisposable
         };
 
         // Act
-        viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToJsonLinesTableView(new CompletedStubRowIndexer(filePath), schema);
 
         // Assert
         state.CurrentKeyPath.Should().BeEmpty();
@@ -875,7 +878,7 @@ public sealed partial class ViewManagerTests : IDisposable
         };
 
         // Act
-        viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToJsonLinesTableView(new CompletedStubRowIndexer(filePath), schema);
 
         // Assert
         CapturingFilterScanRunner.Call call = runner.Calls.Should().ContainSingle().Subject;
@@ -902,7 +905,7 @@ public sealed partial class ViewManagerTests : IDisposable
         };
 
         // Act
-        viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToJsonLinesTableView(new CompletedStubRowIndexer(filePath), schema);
 
         // Assert
         runner.Calls.Should().BeEmpty();
@@ -1072,13 +1075,6 @@ public sealed partial class ViewManagerTests : IDisposable
         harness.Runner.Calls.Should().BeEmpty();
     }
 
-    private static TableSchema CreateJsonLinesSchema(params string[] columnNames) =>
-        new()
-        {
-            SourceFormat = DataFormat.JsonLines,
-            Columns = [.. columnNames.Select((name, index) => new ColumnSchema { Name = name, Type = ColumnType.Text, ColumnIndex = index })],
-        };
-
     private static LazyTransformer GetLazyTransformer(ViewManager viewManager)
     {
         JsonLinesTableView view = viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
@@ -1226,17 +1222,6 @@ public sealed partial class ViewManagerTests : IDisposable
         view.Table.ColumnNames.Should().Contain("label (text)");
     }
 
-    private static DrillDownState CreateNumberedDrillDown(int rowCount)
-    {
-        TableSchema schema = new()
-        {
-            SourceFormat = DataFormat.JsonArray,
-            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
-        };
-        FocusedTableRow[] rows = [.. Enumerable.Range(0, rowCount).Select(index => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"Alice{index}\"}}"), $"[{index}]"))];
-        return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
-    }
-
     private static async Task<Action> WaitForCallbackAsync(System.Collections.Concurrent.ConcurrentQueue<Action> captured)
     {
         DateTime deadline = DateTime.UtcNow.AddSeconds(10);
@@ -1290,26 +1275,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     /// <summary>
-    /// DrillDown with 1250 rows (two indexer batches of 1000 + 250) whose "name" values
-    /// contain "Match" exactly <paramref name="matchedInFirstBatch"/> /
-    /// <paramref name="matchedInSecondBatch"/> times per batch, for threshold-boundary tests.
-    /// </summary>
-    private static DrillDownState CreateMixedDrillDown(int matchedInFirstBatch, int matchedInSecondBatch)
-    {
-        TableSchema schema = new()
-        {
-            SourceFormat = DataFormat.JsonArray,
-            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
-        };
-        IEnumerable<string> names = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
-            .Concat(Enumerable.Range(0, 1000 - matchedInFirstBatch).Select(static i => $"Other{i}"))
-            .Concat(Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}"))
-            .Concat(Enumerable.Range(0, 250 - matchedInSecondBatch).Select(static i => $"Other{1000 + i}"));
-        FocusedTableRow[] rows = [.. names.Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
-        return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
-    }
-
-    /// <summary>
     /// Waits until the captured invoke queue holds <paramref name="expectedCount"/> callbacks
     /// without executing any of them, so their effect stays pending for the test to apply.
     /// </summary>
@@ -1330,36 +1295,6 @@ public sealed partial class ViewManagerTests : IDisposable
         view.Table.Should().BeOfType<PagedTableSource>().Which
             .Inner.Should().BeOfType<ColumnWidthStabilizingTableSource>().Which
             .Inner.Should().BeOfType<FocusedTableTransformer>().Subject;
-
-    /// <summary>
-    /// DrillDown of 1000-row batches whose "name" values contain "Match" the given number of
-    /// times per batch ("Other…" otherwise), wrapped in a row list whose read of the row at
-    /// <paramref name="gateRowIndex"/> (the first row of the second batch by default) blocks
-    /// until released — the worker is provably mid-flight while the gate is closed.
-    /// </summary>
-    private static (DrillDownState DrillDown, GatedDrillDownRows Rows) CreateGatedDrillDown(
-        int matchedInFirstBatch,
-        int matchedInSecondBatch,
-        int totalBatches,
-        int gateRowIndex = 1000)
-    {
-        TableSchema schema = new()
-        {
-            SourceFormat = DataFormat.JsonArray,
-            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
-        };
-        IEnumerable<string> firstBatch = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
-            .Concat(Enumerable.Range(0, 1000 - matchedInFirstBatch).Select(static i => $"Other{i}"));
-        IEnumerable<string> secondBatch = Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}")
-            .Concat(Enumerable.Range(0, 1000 - matchedInSecondBatch).Select(static i => $"Other{1000 + i}"));
-        IEnumerable<string> laterBatches = Enumerable.Range(2000, (totalBatches - 2) * 1000).Select(static i => $"Other{i}");
-        FocusedTableRow[] rows = [.. firstBatch
-            .Concat(secondBatch)
-            .Concat(laterBatches)
-            .Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
-        GatedDrillDownRows gated = new(rows, gateRowIndex);
-        return (new DrillDownState(gated, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []), gated);
-    }
 
     /// <summary>
     /// DrillDown whose first <paramref name="matchedRows"/> rows match a "Match" filter and
@@ -2543,7 +2478,7 @@ public sealed partial class ViewManagerTests : IDisposable
             drillDown.ActionStack,
             200);
         FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using CancellationTokenSource parentCts = new();
         ConcurrentQueue<Action> captured = new();
         await using DirectScanScope scope = new(rows, runner);
@@ -2592,7 +2527,7 @@ public sealed partial class ViewManagerTests : IDisposable
             drillDown.ActionStack,
             200);
         FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using CancellationTokenSource parentCts = new();
         ConcurrentQueue<Action> captured = new();
         await using DirectScanScope scope = new(rows, runner);
@@ -2755,7 +2690,7 @@ public sealed partial class ViewManagerTests : IDisposable
             SourceFormat = DataFormat.Csv,
             Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
         };
-        viewManager.SwitchToCsvTable(new MockRowIndexer(filePath), schema);
+        viewManager.SwitchToCsvTable(new CompletedStubRowIndexer(filePath), schema);
         CsvTableView view = viewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
         RenameColumnAction action = new() { OldName = "col1", NewName = "renamed" };
 
@@ -3060,28 +2995,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     /// <summary>
-    /// Mock IRowIndexer for testing.
-    /// </summary>
-    private sealed class MockRowIndexer(string filePath, long totalRows = 10) : IRowIndexer
-    {
-        public string FilePath => filePath;
-        public long FileSize => 1000;
-        public long BytesRead => 1000;
-        public long TotalRows => totalRows;
-        public bool IsIndexingCompleted => true;
-
-#pragma warning disable CS0067
-        public event Action? FirstCheckpointReached;
-        public event Action<long, long>? ProgressChanged;
-        public event Action? BuildIndexCompleted;
-#pragma warning restore CS0067
-
-        public void BuildIndex(CancellationToken cancellationToken = default) { }
-
-        public (long byteOffset, int rowOffset) GetCheckPoint(long targetRow) => (0, 0);
-    }
-
-    /// <summary>
     /// Loads a single-row JSON Lines table with the given actions and exposes the schema
     /// refinement callback registered by <see cref="ViewManager"/>.
     /// </summary>
@@ -3103,7 +3016,7 @@ public sealed partial class ViewManagerTests : IDisposable
             State.SetActionStack(actions);
             ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
             _viewManager = new ViewManager(Window, State, modeController, Runner, action => action());
-            _viewManager.SwitchToJsonLinesTableView(new MockRowIndexer(_filePath, totalRows), CreateJsonLinesSchema(initialColumns));
+            _viewManager.SwitchToJsonLinesTableView(new CompletedStubRowIndexer(_filePath, totalRows), CreateJsonLinesSchema(initialColumns));
             View = _viewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
         }
 
@@ -3185,7 +3098,7 @@ public sealed partial class ViewManagerTests : IDisposable
         public AppState State { get; } = new();
         public Window Window { get; } = new();
         public System.Collections.Concurrent.ConcurrentQueue<Action> Captured { get; } = [];
-        public RecordingFilterScanRunner Runner { get; } = new();
+        public TaskRecordingFilterScanRunner Runner { get; } = new();
         public ViewManager ViewManager { get; }
 
         public FilterScanHarness()
@@ -3200,93 +3113,6 @@ public sealed partial class ViewManagerTests : IDisposable
             Window.Dispose();
             State.Dispose();
         }
-    }
-
-    /// <summary>
-    /// <see cref="IFilterScanRunner"/> double that delegates to a real
-    /// <see cref="FilterIndexingRunner"/> while recording each started task in start order,
-    /// so a test can await a specific scan's task and observe how it terminated —
-    /// a deterministic replacement for read-count probing of the gated rows.
-    /// </summary>
-    private sealed class RecordingFilterScanRunner : IFilterScanRunner
-    {
-        private sealed record Run(IFilterRowIndexer Indexer, Task Task);
-
-        private readonly FilterIndexingRunner _inner = new();
-        private readonly Lock _lock = new();
-        private readonly List<Run> _runs = [];
-
-        public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
-        {
-            Task task = _inner.RunAsync(filterIndexer, ct);
-            lock (_lock)
-            {
-                _runs.Add(new Run(filterIndexer, task));
-            }
-
-            return task;
-        }
-
-        /// <summary>The task of the scan started at <paramref name="index"/>, in start order.</summary>
-        public Task TaskAt(int index)
-        {
-            lock (_lock)
-            {
-                return _runs[index].Task;
-            }
-        }
-
-        /// <summary>Snapshot of every started scan task, in start order.</summary>
-        public IReadOnlyList<Task> Tasks()
-        {
-            lock (_lock)
-            {
-                return [.. _runs.Select(static run => run.Task)];
-            }
-        }
-    }
-
-    /// <summary>
-    /// Row list whose read of one configured row blocks until released, so ViewManager-level
-    /// tests can hold the filter-scan worker mid-batch. Every cell read of a row — the "#"
-    /// column and data columns alike — goes through this indexer, and reads are counted so a
-    /// test can prove the worker stopped reading further batches.
-    /// </summary>
-    private sealed class GatedDrillDownRows(FocusedTableRow[] rows, int gateRowIndex)
-        : IReadOnlyList<FocusedTableRow>, IDisposable
-    {
-        private readonly ManualResetEventSlim _gate = new(false);
-        private long _readCount;
-
-        public TaskCompletionSource GateReached { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        public int Count => rows.Length;
-
-        public long ReadCount => Interlocked.Read(ref _readCount);
-
-        public FocusedTableRow this[int index]
-        {
-            get
-            {
-                Interlocked.Increment(ref _readCount);
-                if (index == gateRowIndex)
-                {
-                    GateReached.TrySetResult();
-                    _gate.Wait();
-                }
-
-                return rows[index];
-            }
-        }
-
-        public IEnumerator<FocusedTableRow> GetEnumerator() => ((IReadOnlyList<FocusedTableRow>)rows).GetEnumerator();
-
-        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
-            rows.GetEnumerator();
-
-        public void ReleaseGate() => _gate.Set();
-
-        public void Dispose() => _gate.Dispose();
     }
 
     /// <summary>
@@ -3318,7 +3144,7 @@ public sealed partial class ViewManagerTests : IDisposable
     /// Cleanup failures surface only after the test body completed (<see cref="BodyCompleted"/>);
     /// otherwise they are dropped so they cannot replace the failure already propagating.
     /// </summary>
-    private sealed class DirectScanScope(GatedDrillDownRows rows, RecordingFilterScanRunner runner) : IAsyncDisposable
+    private sealed class DirectScanScope(GatedDrillDownRows rows, TaskRecordingFilterScanRunner runner) : IAsyncDisposable
     {
         public FilterScanManager? Manager { get; set; }
 

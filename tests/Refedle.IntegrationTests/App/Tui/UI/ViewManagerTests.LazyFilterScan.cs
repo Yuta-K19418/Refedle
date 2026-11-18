@@ -7,11 +7,14 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestViews;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -41,27 +44,6 @@ public sealed partial class ViewManagerTests
         act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("overlayHost");
     }
 
-    private static IEnumerable<View> SelfAndDescendants(View view)
-    {
-        Stack<View> pending = new();
-        pending.Push(view);
-
-        while (pending.Count > 0)
-        {
-            View current = pending.Pop();
-            yield return current;
-
-            foreach (View child in current.SubViews)
-            {
-                pending.Push(child);
-            }
-        }
-    }
-
-    // The overlay has no progress bar; its percentage label is the one view that is unique to it
-    private static bool IsProgressOverlayLabel(View view) =>
-        view is Label label && label.Text.StartsWith(" Filtering", StringComparison.Ordinal);
-
     private static Label? FindProgressOverlayLabel(View? view) =>
         view is null ? null : SelfAndDescendants(view).OfType<Label>().FirstOrDefault(IsProgressOverlayLabel);
 
@@ -70,7 +52,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
+        OutcomeFilterScanRunner runner = new();
         DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\nb\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
@@ -99,9 +81,9 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
+        OutcomeFilterScanRunner runner = new();
         string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
-        MockRowIndexer indexer = new(filePath, 1);
+        CompletedStubRowIndexer indexer = new(filePath, 1);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
         // Act
@@ -125,7 +107,7 @@ public sealed partial class ViewManagerTests
         using LazyScanHarness harness = new(
             FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "a").Value);
         harness.ViewManager.SwitchToJsonLinesTableView(
-            new MockRowIndexer(harness.FilePath, 2),
+            new CompletedStubRowIndexer(harness.FilePath, 2),
             CreateJsonLinesSchema("col1"));
         JsonLinesTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
         ITableSource? oldTable = view.Table;
@@ -155,7 +137,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
+        OutcomeFilterScanRunner runner = new();
         DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
@@ -192,7 +174,7 @@ public sealed partial class ViewManagerTests
         string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
@@ -228,7 +210,7 @@ public sealed partial class ViewManagerTests
         string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         GrowableRowIndexer indexer = new(filePath, firstRowByteOffset: 0);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
@@ -264,7 +246,7 @@ public sealed partial class ViewManagerTests
         string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
@@ -348,9 +330,9 @@ public sealed partial class ViewManagerTests
 
         public ViewManager ViewManager { get; }
 
-        public RecordingFilterScanRunner Runner { get; } = new();
+        public TaskRecordingFilterScanRunner Runner { get; } = new();
 
-        public CallbackQueue Queue { get; } = new();
+        public SteppableCallbackQueue Queue { get; } = new();
 
         public void Refine(params string[] columns)
         {
