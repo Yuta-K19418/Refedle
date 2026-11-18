@@ -258,7 +258,7 @@ public sealed partial class MainWindowTests
     [Fact]
     public void KeyDown_WithQKey_AfterRootRecipeSaved_QuitsWithoutConfirmation()
     {
-        // Arrange — the issue #340 scenario: a non-empty ActionStack that was just saved to a
+        // Arrange — a non-empty ActionStack that was just saved to a
         // recipe; the count-based check would prompt, the unsaved-changes flag must not
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();

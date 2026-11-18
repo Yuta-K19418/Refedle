@@ -84,7 +84,7 @@ public sealed partial class RecipeCommandHandlerTests
     [Fact]
     public async Task SaveAsync_WithAcceptedDialog_ClearsRootUnsavedChangesFlag()
     {
-        // Arrange — the issue #340 scenario: actions applied (dirty), then saved successfully
+        // Arrange — actions applied (dirty), then saved successfully
         await using LivePumpTestSession<LiveTestContext<RecipeCommandHandler>> session = await LivePumpTestSession.StartAsync((app, window) =>
         {
             AcceptModalDialogs(app, window, _recipeFile);
