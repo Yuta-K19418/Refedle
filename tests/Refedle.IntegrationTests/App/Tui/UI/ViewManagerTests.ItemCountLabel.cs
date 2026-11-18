@@ -55,7 +55,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".csv", "col1\na\nb\n");
+        string filePath = _tempFiles.Create(".csv", "col1\na\nb\n");
         DataRowIndexer indexer = BuildCsvIndexer(filePath);
         using ItemCountHarness harness = new(filePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
 
@@ -76,7 +76,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n{\"col1\": \"b\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n{\"col1\": \"b\"}\n");
         MockRowIndexer indexer = new(filePath, 2);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), CreateColumnFilter(filterValue));
 
@@ -96,7 +96,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\nb\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act
@@ -117,7 +117,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         MockRowIndexer indexer = new(filePath, 1);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
@@ -139,7 +139,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -162,7 +162,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         MockRowIndexer indexer = new(filePath, 1);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
         TableSchema schema = CreateItemCountSchema(DataFormat.JsonLines);
@@ -189,7 +189,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -211,7 +211,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         TableSchema schema = CreateItemCountSchema(DataFormat.Csv);
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
@@ -236,14 +236,14 @@ public sealed partial class ViewManagerTests
         // Arrange - the view is still the old one while the next file loads
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
         View? oldView = harness.ViewManager.GetCurrentView();
         runner.End(0, ScanOutcome.Faulted);
         Action callback = await harness.Queue.NextAsync();
-        string nextFilePath = CreateTempFile(".csv", "col1\nb\n");
+        string nextFilePath = _tempFiles.Create(".csv", "col1\nb\n");
         harness.State.StartNewFile(nextFilePath);
 
         // Act
@@ -262,7 +262,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -284,7 +284,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         TableSchema schema = CreateItemCountSchema(DataFormat.Csv);
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, schema);
@@ -310,7 +310,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -329,7 +329,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
         harness.State.EnterFocusedTable(drillDown);
@@ -350,7 +350,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         FilterAction filter = FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, filterValue).Value;
         DrillDownState drillDown = CreateNumberedDrillDown(rowCount: 12) with { ActionStack = [filter] };
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, new MockRowIndexer(filePath, 5000), new FilterIndexingRunner(), filter: null);
@@ -371,7 +371,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
         DrillDownState drillDown = CreateMixedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 50)
             with

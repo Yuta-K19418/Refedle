@@ -11,6 +11,7 @@ using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
@@ -20,6 +21,8 @@ namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed class FileDialogHandlerTests : IDisposable
 {
+    private readonly TempFileCollection _tempFiles = new();
+
     private readonly string _jsonLinesFile;
 
     private readonly string _jsonObjectFile;
@@ -32,49 +35,32 @@ public sealed class FileDialogHandlerTests : IDisposable
 
     public FileDialogHandlerTests()
     {
-        _jsonLinesFile = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
-        File.WriteAllText(_jsonLinesFile, "{\"id\":1}\n");
-
-        _jsonObjectFile = Path.ChangeExtension(Path.GetTempFileName(), ".json");
-        File.WriteAllText(_jsonObjectFile, "{\"name\":\"test\",\"count\":42}");
-
-        _csvFile = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
-        File.WriteAllText(_csvFile, "header\ndata");
-
-        _jsonArrayFile = Path.ChangeExtension(Path.GetTempFileName(), ".json");
-        File.WriteAllText(_jsonArrayFile, "[{\"id\":1}]");
-
-        _unsupportedFile = Path.ChangeExtension(Path.GetTempFileName(), ".txt");
-        File.WriteAllText(_unsupportedFile, "not a data file");
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(_jsonLinesFile))
+        // xUnit does not dispose a fixture whose constructor throws, so release the files created so far.
+        try
         {
-            File.Delete(_jsonLinesFile);
+            _jsonLinesFile = _tempFiles.ReservePath(".jsonl");
+            File.WriteAllText(_jsonLinesFile, "{\"id\":1}\n");
+
+            _jsonObjectFile = _tempFiles.ReservePath(".json");
+            File.WriteAllText(_jsonObjectFile, "{\"name\":\"test\",\"count\":42}");
+
+            _csvFile = _tempFiles.ReservePath(".csv");
+            File.WriteAllText(_csvFile, "header\ndata");
+
+            _jsonArrayFile = _tempFiles.ReservePath(".json");
+            File.WriteAllText(_jsonArrayFile, "[{\"id\":1}]");
+
+            _unsupportedFile = _tempFiles.ReservePath(".txt");
+            File.WriteAllText(_unsupportedFile, "not a data file");
         }
-
-        if (File.Exists(_jsonObjectFile))
+        catch
         {
-            File.Delete(_jsonObjectFile);
-        }
-
-        if (File.Exists(_csvFile))
-        {
-            File.Delete(_csvFile);
-        }
-
-        if (File.Exists(_jsonArrayFile))
-        {
-            File.Delete(_jsonArrayFile);
-        }
-
-        if (File.Exists(_unsupportedFile))
-        {
-            File.Delete(_unsupportedFile);
+            _tempFiles.Dispose();
+            throw;
         }
     }
+
+    public void Dispose() => _tempFiles.Dispose();
 
     /// <summary>
     /// Waits for the next <see cref="OpenDialog"/> to become the active runnable, then sets its

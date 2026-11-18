@@ -16,7 +16,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        DataRowIndexer indexer = new(CreateTempFile(".csv", "col1\na\nb\n"));
+        DataRowIndexer indexer = new(_tempFiles.Create(".csv", "col1\na\nb\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, new FilterIndexingRunner(), null);
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         CsvTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Which;
@@ -38,7 +38,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        RowIndexer indexer = new(CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n"));
+        RowIndexer indexer = new(_tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.JsonLines, indexer, new FilterIndexingRunner(), null);
         harness.ViewManager.SwitchToJsonLinesTableView(indexer, CreateItemCountSchema(DataFormat.JsonLines));
         JsonLinesTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Which;

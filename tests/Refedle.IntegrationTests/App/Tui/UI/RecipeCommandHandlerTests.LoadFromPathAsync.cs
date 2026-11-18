@@ -11,47 +11,32 @@ using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.ViewBase;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class RecipeCommandHandlerTests : IDisposable
 {
+    private readonly TempFileCollection _tempFiles = new();
+
     private readonly string _jsonObjectFile;
+
     private readonly string _jsonLinesFile;
+
     private readonly string _csvFile;
+
     private readonly string _recipeFile;
 
     public RecipeCommandHandlerTests()
     {
-        _jsonObjectFile = Path.ChangeExtension(Path.GetTempFileName(), ".json");
-        _jsonLinesFile = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
-        _csvFile = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
-        _recipeFile = Path.ChangeExtension(Path.GetTempFileName(), ".yaml");
+        _jsonObjectFile = _tempFiles.ReservePath(".json");
+        _jsonLinesFile = _tempFiles.ReservePath(".jsonl");
+        _csvFile = _tempFiles.ReservePath(".csv");
+        _recipeFile = _tempFiles.ReservePath(".yaml");
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_jsonObjectFile))
-        {
-            File.Delete(_jsonObjectFile);
-        }
-
-        if (File.Exists(_jsonLinesFile))
-        {
-            File.Delete(_jsonLinesFile);
-        }
-
-        if (File.Exists(_csvFile))
-        {
-            File.Delete(_csvFile);
-        }
-
-        if (File.Exists(_recipeFile))
-        {
-            File.Delete(_recipeFile);
-        }
-    }
+    public void Dispose() => _tempFiles.Dispose();
 
     private static async Task SaveRecipeAsync(Recipe recipe, string path)
     {

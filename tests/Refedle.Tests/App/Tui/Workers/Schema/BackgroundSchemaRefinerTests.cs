@@ -5,25 +5,22 @@ using Refedle.App.Tui.Workers.Schema.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema;
 
 public sealed class BackgroundSchemaRefinerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _jsonlFilePath;
 
     public BackgroundSchemaRefinerTests()
     {
-        _jsonlFilePath = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        _jsonlFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_jsonlFilePath))
-        {
-            File.Delete(_jsonlFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task Start_WithFreshSession_PublishesRefinedSchemaThroughUiThreadInvoke()

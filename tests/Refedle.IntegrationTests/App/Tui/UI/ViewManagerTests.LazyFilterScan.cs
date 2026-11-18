@@ -71,7 +71,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\nb\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act
@@ -100,7 +100,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         MockRowIndexer indexer = new(filePath, 1);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
@@ -156,7 +156,7 @@ public sealed partial class ViewManagerTests
         // Arrange
         using IApplication app = TestAppFactory.Create();
         ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -189,7 +189,7 @@ public sealed partial class ViewManagerTests
         // Not appended mid-test: the CSV table keeps the file open (FileShare.Read) while shown,
         // so a write fails on Windows with an IOException (sharing violation). JSON Lines closes
         // the file after mapping, so its variant can append.
-        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
         RecordingFilterScanRunner runner = new();
@@ -225,7 +225,7 @@ public sealed partial class ViewManagerTests
     {
         // Arrange — same deferred-start scenario on the JSON Lines table view
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         GrowableRowIndexer indexer = new(filePath, firstRowByteOffset: 0);
         indexer.AddRows(1);
         RecordingFilterScanRunner runner = new();
@@ -261,7 +261,7 @@ public sealed partial class ViewManagerTests
         // Arrange — the file holds two matching rows, but the completion event fires with
         // only the first row indexed, modeling an index that ended before the whole file
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
         RecordingFilterScanRunner runner = new();

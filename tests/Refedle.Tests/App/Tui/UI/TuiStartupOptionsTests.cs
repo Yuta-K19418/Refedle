@@ -1,26 +1,24 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class TuiStartupOptionsTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.CreateEmpty(".tmp");
+
     private readonly string _existingFile;
+
     private readonly string _missingFile;
 
     public TuiStartupOptionsTests()
     {
-        _existingFile = Path.GetTempFileName();
+        _existingFile = _tempFile.Path;
         _missingFile = Path.Combine(Path.GetTempPath(), $"refedle-missing-{Guid.NewGuid():N}");
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_existingFile))
-        {
-            File.Delete(_existingFile);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public void FindMissingFileError_WhenNoFilesReferenced_ReturnsNull()

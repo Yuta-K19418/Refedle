@@ -10,25 +10,23 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
+using static Refedle.TestHelpers.IO.RefinementFixtureFile;
 
 namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class ModeControllerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _jsonlFilePath;
 
     public ModeControllerTests()
     {
-        _jsonlFilePath = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        _jsonlFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_jsonlFilePath))
-        {
-            File.Delete(_jsonlFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public void Constructor_WithNullState_ThrowsArgumentNullException()
@@ -249,19 +247,6 @@ public sealed class ModeControllerTests : IDisposable
         Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
         SourceFormat = Refedle.Engine.Types.DataFormat.Csv
     };
-
-    /// <summary>
-    /// Writes a JSON Lines fixture whose first 200 lines fit the initial scan (single
-    /// "name" column) and whose remaining lines introduce an "age" column, so the
-    /// background refinement must produce a schema that differs from the initial one.
-    /// </summary>
-    private static async Task WriteRefinementFixtureAsync(string path)
-    {
-        IEnumerable<string> initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
-        IEnumerable<string> refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
-        string content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
-        await File.WriteAllTextAsync(path, content);
-    }
 
     [Fact]
     public async Task ToggleJsonLinesModeAsync_WithRowIndexerNull_DoesNothing()

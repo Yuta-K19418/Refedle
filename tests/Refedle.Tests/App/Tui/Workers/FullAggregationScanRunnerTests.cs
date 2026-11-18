@@ -4,25 +4,22 @@ using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers;
 
 public sealed class FullAggregationScanRunnerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _testFilePath;
 
     public FullAggregationScanRunnerTests()
     {
-        _testFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_testFilePath))
-        {
-            File.Delete(_testFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task RunAsync_WithMatchingRecords_ReturnsScanResult()

@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.IO.JsonArray;
 using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
@@ -10,32 +11,9 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed partial class JsonArrayTreeViewTests : IDisposable
 {
-    private readonly List<string> _tempFiles = [];
-    private bool _disposed;
+    private readonly TempFileCollection _tempFiles = new(".json");
 
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            foreach (string file in _tempFiles)
-            {
-                if (File.Exists(file))
-                {
-                    File.Delete(file);
-                }
-            }
-
-            _disposed = true;
-        }
-    }
-
-    private string CreateTempFile(string content)
-    {
-        string filePath = Path.Combine(Path.GetTempPath(), $"jsonarray_treeview_{Guid.NewGuid()}.json");
-        File.WriteAllText(filePath, content);
-        _tempFiles.Add(filePath);
-        return filePath;
-    }
+    public void Dispose() => _tempFiles.Dispose();
 
     private static void SynchronousUiThreadInvoke(Action action) => action();
 
@@ -43,7 +21,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void HandleAccepted_NonRangeNode_DoesNotThrow()
     {
         // Arrange
-        string filePath = CreateTempFile("[{\"a\":1}]");
+        string filePath = _tempFiles.Create("[{\"a\":1}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -64,7 +42,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void Dispose_UnsubscribesEventHandlers()
     {
         // Arrange — view created with event subscriptions via in-progress indexer
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -90,7 +68,7 @@ public sealed partial class JsonArrayTreeViewTests : IDisposable
     public void Dispose_FastPath_DoesNotThrow()
     {
         // Arrange — IsIndexingCompleted == true at creation (fast-path, no event subscriptions)
-        string filePath = CreateTempFile("[1, 2, 3]");
+        string filePath = _tempFiles.Create("[1, 2, 3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();

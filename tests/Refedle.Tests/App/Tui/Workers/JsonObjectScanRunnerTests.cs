@@ -1,25 +1,22 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.JsonObject;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers;
 
 public sealed class JsonObjectScanRunnerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".json");
+
     private readonly string _testFilePath;
 
     public JsonObjectScanRunnerTests()
     {
-        _testFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_testFilePath))
-        {
-            File.Delete(_testFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task RunAsync_WithJsonObjectFile_ReturnsTopLevelEntries()

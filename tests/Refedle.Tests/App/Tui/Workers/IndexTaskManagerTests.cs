@@ -2,6 +2,7 @@ using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers;
 
@@ -9,20 +10,16 @@ public sealed class IndexTaskManagerTests : IDisposable
 {
     private static readonly TimeSpan _waitTimeout = TimeSpan.FromMinutes(1);
 
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _testFilePath;
 
     public IndexTaskManagerTests()
     {
-        _testFilePath = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_testFilePath))
-        {
-            File.Delete(_testFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task Start_StartsIndexing()

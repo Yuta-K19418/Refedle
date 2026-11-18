@@ -17,6 +17,7 @@ using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
 
@@ -24,32 +25,9 @@ namespace Refedle.IntegrationTests.App.Tui.UI;
 
 public sealed partial class ViewManagerTests : IDisposable
 {
-    private readonly List<string> _tempFiles = [];
-    private bool _disposed;
+    private readonly TempFileCollection _tempFiles = new();
 
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            foreach (string file in _tempFiles)
-            {
-                if (File.Exists(file))
-                {
-                    File.Delete(file);
-                }
-            }
-
-            _disposed = true;
-        }
-    }
-
-    private string CreateTempFile(string extension, string content)
-    {
-        string filePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}{extension}");
-        File.WriteAllText(filePath, content);
-        _tempFiles.Add(filePath);
-        return filePath;
-    }
+    public void Dispose() => _tempFiles.Dispose();
 
     [Fact]
     public void RefreshStatusBarHints_WithNoFilePath_UsesDefaultHints()
@@ -81,7 +59,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithCsvFilePath_UsesDefaultHints()
     {
         // Arrange
-        string filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
+        string filePath = _tempFiles.Create(".csv", "col1,col2\nvalue1,value2\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -109,7 +87,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonLinesPath_IncludesToggleHint()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -135,7 +113,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonArrayFilePath_IncludesToggleHint()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -161,7 +139,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithMorphTableView_IncludesMenuHint()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -194,7 +172,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithFocusedTableMode_IncludesBackHint()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
         DrillDownState drillDown = new([new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
@@ -241,7 +219,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenModeBecomesTree_SwitchesToTreeView()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -271,7 +249,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenModeBecomesTable_SwitchesToTableView()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -338,7 +316,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_WithValidIndexer_SetsCurrentView()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -359,7 +337,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonArrayTree_WithValidIndexer_DoesNotShowTotalCountBeforeIndexCompletion()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -388,7 +366,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithNoParam_RemovesExistingItemCountLabel()
     {
         // Arrange
-        string filePath = CreateTempFile(".csv", "col1\nval1");
+        string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
         MockRowIndexer indexer = new("test.csv", 5000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
@@ -415,7 +393,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithCompletedIndexer_ShowsItemCountLabel()
     {
         // Arrange
-        string filePath = CreateTempFile(".csv", "col1\nval1");
+        string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
         MockRowIndexer indexer = new("test.csv", 5000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
@@ -439,7 +417,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithUpdatedIndexer_ReplacesCountOnSubsequentCall()
     {
         // Arrange
-        string filePath = CreateTempFile(".csv", "col1\nval1");
+        string filePath = _tempFiles.Create(".csv", "col1\nval1");
         using IApplication app = TestAppFactory.Create();
         MockRowIndexer indexer = new("test.csv", 1000);
         TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
@@ -567,7 +545,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void RefreshStatusBarHints_WithJsonObjectFilePath_DoesNotIncludeToggleHint()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "{\"id\":1}");
+        string filePath = _tempFiles.Create(".json", "{\"id\":1}");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -600,7 +578,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — real file + matching KeyPath; ModeController is sealed and can't be mocked, so
         // success is driven by an actual scan over an actual file.
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -626,7 +604,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_WhenScanFails_ShowsErrorPlaceholder()
     {
         // Arrange — real file + non-matching KeyPath, so the sealed ModeController's scan fails.
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -652,7 +630,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — inject a deferred-capture uiThreadInvoke so state changes only happen once the
         // captured callback runs, mirroring how a real TUI posts work to the UI thread.
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -689,7 +667,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — a success scan is required to reach SwitchToFocusedTable's dispose guard;
         // dispose before invoking the captured callback to simulate the race.
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -722,7 +700,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into CsvTable
-        string filePath = CreateTempFile(".csv", "col1\nvalue1\n");
+        string filePath = _tempFiles.Create(".csv", "col1\nvalue1\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -748,7 +726,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenDisplayedRowsHaveMismatchedColumnCount_ShowsErrorViewOnceAfterDraw()
     {
         // Arrange
-        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1,val2\nval3\nval4,val5\n"));
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(_tempFiles.Create(".csv", "col1,col2\nval1,val2\nval3\nval4,val5\n"));
         int queuedBeforeRead = fixture.Queued.Count;
         CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
@@ -772,7 +750,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenModeChangedBeforeQueuedErrorRuns_KeepsCurrentView()
     {
         // Arrange
-        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(_tempFiles.Create(".csv", "col1,col2\nval1\n"));
         int queuedBeforeRead = fixture.Queued.Count;
         CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
@@ -791,7 +769,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenViewReplacedByAnotherCsvViewBeforeQueuedErrorRuns_KeepsNewView()
     {
         // Arrange
-        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(_tempFiles.Create(".csv", "col1,col2\nval1\n"));
         int queuedBeforeRead = fixture.Queued.Count;
         CsvTableView oldView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         oldView.Table.Should().NotBeNull();
@@ -813,13 +791,13 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenNewFileSessionStartsBeforeQueuedErrorRuns_KeepsCurrentSession()
     {
         // Arrange - the old view is still current while the next file loads
-        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(_tempFiles.Create(".csv", "col1,col2\nval1\n"));
         int queuedBeforeRead = fixture.Queued.Count;
         CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
         _ = csvView.Table[0, 0];
         Action callback = fixture.Queued.Skip(queuedBeforeRead).ToList().Should().ContainSingle().Subject;
-        string nextFilePath = CreateTempFile(".csv", "col1,col2\nval1,val2\n");
+        string nextFilePath = _tempFiles.Create(".csv", "col1,col2\nval1,val2\n");
         fixture.State.StartNewFile(nextFilePath);
 
         // Act
@@ -835,7 +813,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToCsvTable_WhenViewManagerDisposedBeforeQueuedErrorRuns_DoesNothing()
     {
         // Arrange
-        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(CreateTempFile(".csv", "col1,col2\nval1\n"));
+        using RaggedCsvFixture fixture = RaggedCsvFixture.Create(_tempFiles.Create(".csv", "col1,col2\nval1\n"));
         int queuedBeforeRead = fixture.Queued.Count;
         CsvTableView csvView = fixture.ViewManager.GetCurrentView().Should().BeOfType<CsvTableView>().Subject;
         csvView.Table.Should().NotBeNull();
@@ -855,7 +833,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithStaleKeyPath_ResetsCurrentKeyPath()
     {
         // Arrange — a leftover KeyPath from a prior Tree/FocusedTable session must not leak into JsonLinesTable
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -881,7 +859,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithFilterAction_StartsFilterScanWithIndexerAndStateToken()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -909,7 +887,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void SwitchToJsonLinesTableView_WithoutActions_DoesNotStartFilterScan()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -1158,7 +1136,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_WithIndexSegmentInKeyPath_RendersCollapsedIndexInBreadcrumb()
     {
         // Arrange — FullAggregationDrillDownRequest (Phase 2) collapses array indices to [*]
-        string filePath = CreateTempFile(".jsonl", "{\"list\":[{\"a\":1}]}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"list\":[{\"a\":1}]}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -1993,7 +1971,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task SwitchToFocusedTable_WithStaleFailureCallbackAfterReturn_KeepsRestoredTree()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2106,7 +2084,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WithQueuedScanCallbacks_IgnoresStaleCallbacks()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2224,7 +2202,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_AfterScanFinishedWithStagedTable_IgnoresQueuedCompletionAndDisposesOldTransformer()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2326,7 +2304,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WhileWorkerBlocked_StopsWorkerAfterInFlightBatch()
     {
         // Arrange — JsonArrayTree backing data so the drill-down can return to the tree
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2474,7 +2452,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task ReturnFromDrillDown_WhileWorkerBlockedOnStagedTable_StopsWorkerAndDisposesOldTransformer()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2756,7 +2734,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — an error view replaced FocusedTable, then the base table was shown again;
         // the action must go to the base stack and no DrillDown session may remain
-        string filePath = CreateTempFile(".csv", "col1,col2\nvalue1,value2\n");
+        string filePath = _tempFiles.Create(".csv", "col1,col2\nvalue1,value2\n");
         using IApplication app = TestAppFactory.Create();
         RenameColumnAction drillDownAction = new() { OldName = "x", NewName = "y" };
         DrillDownState drillDown = new(
@@ -2846,7 +2824,7 @@ public sealed partial class ViewManagerTests : IDisposable
     {
         // Arrange — the base table's ActionStack must survive entering a DrillDown, and the fresh
         // DrillDownState must start with its own empty ActionStack
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -2873,7 +2851,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public async Task FullAggregationDrillDownAsync_OnFailure_LeavesActionStackUntouched()
     {
         // Arrange — a non-matching KeyPath forces the scan to fail
-        string filePath = CreateTempFile(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"user\":{\"name\":\"Alice\"}}\n");
         using IApplication app = TestAppFactory.Create();
         using AppState state = new();
         state.StartNewFile(filePath);
@@ -2899,7 +2877,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithJsonLinesTreePreviousMode_RestoresJsonLinesTree()
     {
         // Arrange
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"value\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
         using IApplication app = TestAppFactory.Create();
         Refedle.Engine.IO.JsonLines.RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -2927,7 +2905,7 @@ public sealed partial class ViewManagerTests : IDisposable
     public void ReturnFromDrillDown_WithJsonArrayTreePreviousMode_RestoresJsonArrayTree()
     {
         // Arrange
-        string filePath = CreateTempFile(".json", "[1,2,3]");
+        string filePath = _tempFiles.Create(".json", "[1,2,3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
