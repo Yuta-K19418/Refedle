@@ -6,6 +6,7 @@ using Refedle.Engine.Models;
 using Refedle.Engine.Types;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Refedle.TestHelpers.IO;
+using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema;
 
@@ -136,7 +137,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(
             initialSchema,
             backgroundFailure: new InvalidOperationException("background scan failed"));
@@ -163,7 +164,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema, backgroundCanceled: true);
         int invokeCount = 0;
 
@@ -186,7 +187,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
     public void Start_WithNullState_ThrowsArgumentNullException()
     {
         // Arrange
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
@@ -212,7 +213,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
@@ -237,7 +238,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        GatedSchemaScanner scanner = new(CreateIdSchema());
+        GatedSchemaScanner scanner = new(CreateJsonLinesIdSchema());
 
         // Act
         // A statement body keeps the lambda Action-returning, so Throw asserts a synchronous throw.
@@ -262,7 +263,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
@@ -288,7 +289,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema);
         TaskCompletionSource indexingCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -315,7 +316,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema);
         TaskCompletionSource indexingCompleted = new(TaskCreationOptions.RunContinuationsAsynchronously);
         int invokeCount = 0;
@@ -343,7 +344,7 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         // Arrange
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
-        TableSchema initialSchema = CreateIdSchema();
+        TableSchema initialSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(initialSchema);
 
         // Act
@@ -375,10 +376,4 @@ public sealed class BackgroundSchemaRefinerTests : IDisposable
         string content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
         await File.WriteAllTextAsync(_jsonlFilePath, content);
     }
-
-    private static TableSchema CreateIdSchema() => new()
-    {
-        Columns = [new ColumnSchema { Name = "id", Type = ColumnType.WholeNumber }],
-        SourceFormat = DataFormat.JsonLines
-    };
 }

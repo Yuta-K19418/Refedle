@@ -6,16 +6,13 @@ using Terminal.Gui.App;
 using Terminal.Gui.Drawing;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.OverlayTestViews;
 using Attribute = Terminal.Gui.Drawing.Attribute;
 
 namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class FilterScanProgressOverlayTests
 {
-    private static Window CreateParent() => new() { Width = Dim.Fill(), Height = Dim.Fill() };
-
-    private static Label GetLabel(View parent) => parent.SubViews.OfType<Label>().Single();
-
     [Fact]
     public void Show_WithParent_AddsSpinnerAndLabelWithoutProgressBar()
     {

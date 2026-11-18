@@ -5,24 +5,12 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class LazyTransformerTests
 {
-    // -------------------------------------------------------------------------
-    // Test double
-    // -------------------------------------------------------------------------
-
-    private sealed class FakeTableSource(string[][] data, string[] columnNames) : IExtendedTableSource
-    {
-        public long TotalRows => data.Length;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => columnNames;
-        public object this[long row, int col] => data[(int)row][col];
-    }
-
     /// <summary>
     /// A synchronous stub that returns pre-computed matched row indices without any filtering logic.
     /// </summary>
@@ -39,38 +27,8 @@ public sealed class LazyTransformerTests
         public Task BuildIndexAsync(CancellationToken ct) => Task.CompletedTask;
     }
 
-    private sealed class DisposableFakeTableSource(string[][] data, string[] columnNames)
-        : IExtendedTableSource, IDisposable
-    {
-        public bool IsDisposed { get; private set; }
-        public long TotalRows => data.Length;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => columnNames;
-        public object this[long row, int col] => data[(int)row][col];
-        public void Dispose() => IsDisposed = true;
-    }
-
-    private static TableSchema MakeSchema(params (string name, ColumnType type)[] cols) =>
-        new()
-        {
-            Columns =
-            [
-                .. cols.Select(
-                    (c, i) =>
-                        new ColumnSchema
-                        {
-                            Name = c.name,
-                            Type = c.type,
-                            ColumnIndex = i,
-                        }
-                ),
-            ],
-            SourceFormat = DataFormat.Csv,
-        };
-
     private static LazyTransformer MakeFilteredTransformer(
-        FakeTableSource source,
+        StringRowsFakeTableSource source,
         TableSchema schema,
         IReadOnlyList<IMorphAction> actions,
         IReadOnlyList<int> matchedRows
@@ -84,7 +42,7 @@ public sealed class LazyTransformerTests
     public void Create_WithNullSource_ThrowsArgumentNullException()
     {
         // Arrange
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
 
         // Act
         Func<LazyTransformer> act = () => LazyTransformer.Create(null!, schema, []);
@@ -97,7 +55,7 @@ public sealed class LazyTransformerTests
     public void Create_WithNullOriginalSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello"],
             ],
@@ -115,13 +73,13 @@ public sealed class LazyTransformerTests
     public void Create_WithNullActions_ThrowsArgumentNullException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
 
         // Act
         Func<LazyTransformer> act = () => LazyTransformer.Create(source, schema, null!);
@@ -138,13 +96,13 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameAction_OutputSchemaReflectsNewName()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -162,13 +120,13 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameAction_SourceColumnIndexPreserved()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -190,13 +148,13 @@ public sealed class LazyTransformerTests
     public void Create_WithDeleteAction_DeletedColumnAbsentFromOutputSchema()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -215,13 +173,13 @@ public sealed class LazyTransformerTests
     public void Create_WithDeleteAction_SourceColumnIndicesMappedCorrectly()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -240,13 +198,13 @@ public sealed class LazyTransformerTests
     public void Create_AllColumnsDeleted_ColumnsIsZero()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "A" }];
 
         // Act
@@ -264,13 +222,13 @@ public sealed class LazyTransformerTests
     public void Create_WithCastAction_OutputSchemaReflectsNewType()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -292,13 +250,13 @@ public sealed class LazyTransformerTests
     public void Create_WithRenameFollowedByDelete_OperatesOnRenamedName()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -321,13 +279,13 @@ public sealed class LazyTransformerTests
     public void Indexer_EmptyActionStack_ReturnsSameValueAsSource()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -353,13 +311,13 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
@@ -384,13 +342,13 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = targetType },
@@ -408,13 +366,13 @@ public sealed class LazyTransformerTests
     public void Indexer_CastToText_ReturnsRawValue()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["007"],
             ],
             ["count"]
         );
-        TableSchema schema = MakeSchema(("count", ColumnType.WholeNumber));
+        TableSchema schema = MakeCsvSchema(("count", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "count", TargetType = ColumnType.Text },
@@ -434,13 +392,13 @@ public sealed class LazyTransformerTests
     public void Indexer_CastToJsonValueTypes_ReturnsRawValue(ColumnType targetType, string rawValue)
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 [rawValue],
             ],
             ["value"]
         );
-        TableSchema schema = MakeSchema(("value", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("value", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "value", TargetType = targetType },
@@ -462,13 +420,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnOneTimestampColumn_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00", "2024-03-20T14:05:33"],
             ],
             ["created_at", "updated_at"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("created_at", ColumnType.Timestamp),
             ("updated_at", ColumnType.Timestamp)
         );
@@ -495,13 +453,13 @@ public sealed class LazyTransformerTests
     public void Indexer_WithActionOnOneColumn_UntouchedNumberAndBoolColumnsStayRaw()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00", "007", "1.50", "TRUE"],
             ],
             ["created_at", "count", "price", "active"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("created_at", ColumnType.Timestamp),
             ("count", ColumnType.WholeNumber),
             ("price", ColumnType.FloatingPoint),
@@ -532,13 +490,13 @@ public sealed class LazyTransformerTests
     public void CastAction_ToTimestamp_WithoutFormatTimestamp_UsesDefaultFormat()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-03-20T14:05:33"],
             ],
             ["updated_at"]
         );
-        TableSchema schema = MakeSchema(("updated_at", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("updated_at", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "updated_at", TargetType = ColumnType.Timestamp },
@@ -556,13 +514,13 @@ public sealed class LazyTransformerTests
     public void CastAction_AfterFormatTimestamp_DoesNotResetFormatString()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
@@ -582,11 +540,11 @@ public sealed class LazyTransformerTests
     public void Indexer_CastThenRenameAndDelete_PreservesTargetColumnFormatting()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [["discard", "007", "1.50"]],
             ["drop", "count", "price"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("drop", ColumnType.Text),
             ("count", ColumnType.Text),
             ("price", ColumnType.FloatingPoint)
@@ -616,13 +574,13 @@ public sealed class LazyTransformerTests
     public void Create_ActionTargetingNonExistentColumn_IsSilentlySkipped()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "DoesNotExist" },
@@ -639,13 +597,13 @@ public sealed class LazyTransformerTests
     public void Create_CastTargetingNonExistentColumn_IsSkippedAndOtherColumnsUnchanged()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["007"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "DoesNotExist", TargetType = ColumnType.WholeNumber },
@@ -668,13 +626,13 @@ public sealed class LazyTransformerTests
     public void Indexer_NegativeRow_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -688,13 +646,13 @@ public sealed class LazyTransformerTests
     public void Indexer_NegativeCol_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -708,13 +666,13 @@ public sealed class LazyTransformerTests
     public void Indexer_RowExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -728,13 +686,13 @@ public sealed class LazyTransformerTests
     public void Indexer_ColExceedsBounds_ThrowsArgumentOutOfRangeException()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -752,7 +710,7 @@ public sealed class LazyTransformerTests
     public void Rows_DelegatesToUnderlyingSource()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a"],
                 ["b"],
@@ -762,7 +720,7 @@ public sealed class LazyTransformerTests
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act
@@ -776,13 +734,13 @@ public sealed class LazyTransformerTests
     public void Columns_ReflectsTransformedSchemaColumnCount()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -801,13 +759,13 @@ public sealed class LazyTransformerTests
     public void ColumnNames_ReflectsTransformedSchemaNames()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -829,7 +787,7 @@ public sealed class LazyTransformerTests
     public void Filter_EqualsOperator_OnlyMatchingRowsReturned()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
@@ -837,7 +795,7 @@ public sealed class LazyTransformerTests
             ],
             ["Name"]
         );
-        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
@@ -856,7 +814,7 @@ public sealed class LazyTransformerTests
     public void Filter_ContainsOperator_SubstringMatchingRowsReturned()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["apple"],
                 ["banana"],
@@ -865,7 +823,7 @@ public sealed class LazyTransformerTests
             ],
             ["Fruit"]
         );
-        TableSchema schema = MakeSchema(("Fruit", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Fruit", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Fruit", FilterOperator.Contains, ComparisonType.Text, "ap").Value,
@@ -888,7 +846,7 @@ public sealed class LazyTransformerTests
     public void Filter_MultipleFilterActions_AppliesAndSemantics()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["Alice", "30"],
                 ["Bob", "25"],
@@ -897,7 +855,7 @@ public sealed class LazyTransformerTests
             ],
             ["Name", "Age"]
         );
-        TableSchema schema = MakeSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Name", ColumnType.Text), ("Age", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Alice").Value,
@@ -917,14 +875,14 @@ public sealed class LazyTransformerTests
     public void Filter_NoMatchingRows_RowsIsZero()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
             ],
             ["Name"]
         );
-        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Name", FilterOperator.Equals, ComparisonType.Text, "Charlie").Value,
@@ -945,14 +903,14 @@ public sealed class LazyTransformerTests
     public void Filter_TargetingRenamedColumn_CorrectlyResolved()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["Alice"],
                 ["Bob"],
             ],
             ["Name"]
         );
-        TableSchema schema = MakeSchema(("Name", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "Name", NewName = "FullName" },
@@ -971,14 +929,14 @@ public sealed class LazyTransformerTests
     public void Filter_TargetingDeletedColumn_SilentlySkipped()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["Alice", "active"],
                 ["Bob", "inactive"],
             ],
             ["Name", "Status"]
         );
-        TableSchema schema = MakeSchema(("Name", ColumnType.Text), ("Status", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Name", ColumnType.Text), ("Status", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new DeleteColumnAction { ColumnName = "Status" },
@@ -1002,7 +960,7 @@ public sealed class LazyTransformerTests
     public void Filter_GreaterThanOnWholeNumberColumn_ReturnsMatchingRows()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["10"],
                 ["50"],
@@ -1011,7 +969,7 @@ public sealed class LazyTransformerTests
             ],
             ["Score"]
         );
-        TableSchema schema = MakeSchema(("Score", ColumnType.WholeNumber));
+        TableSchema schema = MakeCsvSchema(("Score", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Score", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
@@ -1030,14 +988,14 @@ public sealed class LazyTransformerTests
     public void Filter_NumericOperatorOnTextColumn_ExcludesAllRows()
     {
         // Arrange — GreaterThan on a Text column always returns false, excluding all rows
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello"],
                 ["world"],
             ],
             ["Word"]
         );
-        TableSchema schema = MakeSchema(("Word", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Word", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("Word", FilterOperator.GreaterThan, ComparisonType.Number, "20").Value,
@@ -1058,7 +1016,7 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_SingleColumn_AllCellsReturnFillValue()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1"],
                 ["a2"],
@@ -1066,7 +1024,7 @@ public sealed class LazyTransformerTests
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
@@ -1085,13 +1043,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_NonExistentColumn_IsIgnored()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "DoesNotExist", Value = "FILLED" },
@@ -1108,14 +1066,14 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_EmptyString_AllCellsReturnEmpty()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1"],
                 ["a2"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = string.Empty },
@@ -1133,13 +1091,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_WithRename_FillAppliedAfterRename()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1", "b1"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -1159,13 +1117,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_SameColumnFilledTwice_LastValueWins()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["original"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "first" },
@@ -1183,13 +1141,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_MultipleColumns_OnlyTargetColumnFilled()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1", "b1", "c1"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1212,13 +1170,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_FillBeforeRename_FillPreservedAfterRename()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "FILLED" },
@@ -1237,13 +1195,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_WithCast_FillValueBypassesCastFormatting()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -1262,13 +1220,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_BeforeCast_FillValueBypassesCastFormatting()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["42"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = "hello" },
@@ -1287,13 +1245,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_AfterCastAndRename_FillValueOverridesAndNeighborStaysRaw()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["007", "1.50"],
             ],
             ["count", "price"]
         );
-        TableSchema schema = MakeSchema(("count", ColumnType.Text), ("price", ColumnType.FloatingPoint));
+        TableSchema schema = MakeCsvSchema(("count", ColumnType.Text), ("price", ColumnType.FloatingPoint));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "count", TargetType = ColumnType.WholeNumber },
@@ -1313,13 +1271,13 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_ColumnNames_PreservesAllColumnNames()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a1", "b1", "c1"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1349,13 +1307,13 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_EmptyActionStack_ReturnsSchemaNames()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["42", "hello"],
             ],
             ["Age", "Name"]
         );
-        TableSchema schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
 
         // Act
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
@@ -1369,13 +1327,13 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_WithRenameAction_ReflectsNewName()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello", "world"],
             ],
             ["A", "B"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text), ("B", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "A", NewName = "X" },
@@ -1393,13 +1351,13 @@ public sealed class LazyTransformerTests
     public void RawColumnNames_WithDeleteAction_ExcludesDeletedColumn()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["a", "b", "c"],
             ],
             ["A", "B", "C"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeCsvSchema(
             ("A", ColumnType.Text),
             ("B", ColumnType.Text),
             ("C", ColumnType.Text)
@@ -1417,8 +1375,8 @@ public sealed class LazyTransformerTests
     public void ColumnNames_WithCastAction_ReflectsNewTypeLabel()
     {
         // Arrange
-        FakeTableSource source = new([["42"]], ["A"]);
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        StringRowsFakeTableSource source = new([["42"]], ["A"]);
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "A", TargetType = ColumnType.WholeNumber },
@@ -1436,13 +1394,13 @@ public sealed class LazyTransformerTests
     public void ColumnNames_EmptyActionStack_ReturnsLabeledNames()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["42", "hello"],
             ],
             ["Age", "Name"]
         );
-        TableSchema schema = MakeSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("Age", ColumnType.WholeNumber), ("Name", ColumnType.Text));
 
         // Act
         using LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
@@ -1468,13 +1426,13 @@ public sealed class LazyTransformerTests
     )
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["original"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.WholeNumber));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "A", Value = fillValue },
@@ -1492,8 +1450,8 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_NumberColumnFilledWithText_TypeChangesToText()
     {
         // Arrange
-        FakeTableSource source = new([["100"]], ["Price"]);
-        TableSchema schema = MakeSchema(("Price", ColumnType.WholeNumber));
+        StringRowsFakeTableSource source = new([["100"]], ["Price"]);
+        TableSchema schema = MakeCsvSchema(("Price", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Price", Value = "N/A" },
@@ -1511,8 +1469,8 @@ public sealed class LazyTransformerTests
     public void FillColumnAction_TextColumnFilledWithNumber_TypeChangesToNumber()
     {
         // Arrange
-        FakeTableSource source = new([["hello"]], ["Value"]);
-        TableSchema schema = MakeSchema(("Value", ColumnType.Text));
+        StringRowsFakeTableSource source = new([["hello"]], ["Value"]);
+        TableSchema schema = MakeCsvSchema(("Value", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FillColumnAction { ColumnName = "Value", Value = "42" },
@@ -1534,13 +1492,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnTimestampColumn_FormatsValueWithTargetFormat()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1562,13 +1520,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_OnNonExistentColumn_IsSkipped()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["hello"],
             ],
             ["A"]
         );
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1589,13 +1547,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_AfterCastToTimestamp_FormatsCorrectly()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Text));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
         [
             new CastColumnAction { ColumnName = "created_at", TargetType = ColumnType.Timestamp },
@@ -1617,13 +1575,13 @@ public sealed class LazyTransformerTests
     public void MultipleFormatTimestampActions_LastOneWins()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1649,13 +1607,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_WithInvalidTimestampValue_ReturnsInvalidMarker()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["not-a-date"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1676,13 +1634,13 @@ public sealed class LazyTransformerTests
     public void FormatTimestampAction_WithEmptyTargetFormat_UsesDefaultFormat()
     {
         // Arrange
-        FakeTableSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["2024-01-15T09:30:00"],
             ],
             ["created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeCsvSchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -1714,7 +1672,7 @@ public sealed class LazyTransformerTests
             RowIndexer indexer = new(path);
             indexer.BuildIndex();
             using RowByteCache cache = new(indexer);
-            TableSchema schema = MakeSchema(
+            TableSchema schema = MakeCsvSchema(
                 ("created_at", ColumnType.Timestamp),
                 ("updated_at", ColumnType.Timestamp)
             );
@@ -1756,7 +1714,7 @@ public sealed class LazyTransformerTests
             RowIndexer indexer = new(path);
             indexer.BuildIndex();
             using RowByteCache cache = new(indexer);
-            TableSchema schema = MakeSchema(
+            TableSchema schema = MakeCsvSchema(
                 ("price", ColumnType.FloatingPoint),
                 ("amount", ColumnType.FloatingPoint)
             );
@@ -1796,7 +1754,7 @@ public sealed class LazyTransformerTests
             using RowByteCache cache = new(indexer);
             // Schema types mirror the schema scan's inference: "1e3" -> Text,
             // "1.0" -> FloatingPoint, "1000" -> WholeNumber.
-            TableSchema schema = MakeSchema(
+            TableSchema schema = MakeCsvSchema(
                 ("exponent", ColumnType.Text),
                 ("integral", ColumnType.FloatingPoint),
                 ("plain", ColumnType.WholeNumber)
@@ -1833,8 +1791,8 @@ public sealed class LazyTransformerTests
     public void Dispose_DisposesUnderlyingSource()
     {
         // Arrange
-        using DisposableFakeTableSource source = new([["a"]], ["A"]);
-        TableSchema schema = MakeSchema(("A", ColumnType.Text));
+        using StringRowsFlagDisposableTableSource source = new([["a"]], ["A"]);
+        TableSchema schema = MakeCsvSchema(("A", ColumnType.Text));
         LazyTransformer transformer = LazyTransformer.Create(source, schema, []);
 
         // Act

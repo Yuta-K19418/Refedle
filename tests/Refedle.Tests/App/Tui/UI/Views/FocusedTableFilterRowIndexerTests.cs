@@ -8,15 +8,6 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class FocusedTableFilterRowIndexerTests
 {
-    private sealed class FakeFocusedSource(string[][] data) : IExtendedTableSource
-    {
-        public long TotalRows => data.Length;
-        public int Columns => data.Length > 0 ? data[0].Length : 0;
-        public string[] ColumnNames => [];
-        public string[] RawColumnNames => [];
-        public object this[long row, int col] => data[(int)row][col];
-    }
-
     /// <summary>
     /// Source whose read of a configured row blocks until released, so tests can cancel
     /// the scan while a batch is in flight without sleeping.
@@ -99,7 +90,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void Constructor_WithNullFilterSpecs_ThrowsArgumentNullException()
     {
         // Act
-        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), null!, RevealThreshold);
+        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new NoColumnNamesFakeTableSource([]), null!, RevealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentNullException>();
@@ -111,7 +102,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void Constructor_WithNonPositiveRevealThreshold_ThrowsArgumentOutOfRangeException(int revealThreshold)
     {
         // Act
-        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new FakeFocusedSource([]), [], revealThreshold);
+        Func<FocusedTableFilterRowIndexer> act = () => new FocusedTableFilterRowIndexer(new NoColumnNamesFakeTableSource([]), [], revealThreshold);
 
         // Assert
         act.Should().Throw<ArgumentOutOfRangeException>();
@@ -121,7 +112,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_MatchesOnlyRowsSatisfyingFilter()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A"], ["[1]", "B"], ["[2]", "A"]]);
+        NoColumnNamesFakeTableSource source = new([["[0]", "A"], ["[1]", "B"], ["[2]", "A"]]);
         FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
@@ -137,7 +128,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithMultipleSpecs_UsesAndSemantics()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A", "x"], ["[1]", "A", "y"], ["[2]", "B", "y"]]);
+        NoColumnNamesFakeTableSource source = new([["[0]", "A", "x"], ["[1]", "A", "y"], ["[2]", "B", "y"]]);
         FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A"), MakeSpec(1, "y")], RevealThreshold);
 
         // Act
@@ -153,7 +144,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     {
         // Arrange
         string[][] rows = [.. Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", i % 2 == 0 ? "A" : "B" })];
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource(rows), [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);
@@ -167,7 +158,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WhenCancelled_ThrowsOperationCanceledException()
     {
         // Arrange
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -183,7 +174,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithSingleBatch_FiresProgressChangedOnceWithFinalCounts()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A"], ["[1]", "B"]]);
+        NoColumnNamesFakeTableSource source = new([["[0]", "A"], ["[1]", "B"]]);
         FocusedTableFilterRowIndexer indexer = new(source, [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
@@ -200,7 +191,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     {
         // Arrange
         string[][] rows = [.. Enumerable.Range(0, 2500).Select(i => new[] { $"[{i}]", "A" })];
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource(rows), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -216,7 +207,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     {
         // Arrange — each 1000-row batch is below 1% of 150001 rows, so some batches are skipped
         string[][] rows = [.. Enumerable.Range(0, 150_001).Select(i => new[] { $"[{i}]", "A" })];
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource(rows), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource(rows), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -236,7 +227,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithEmptySource_CompletesWithoutProgress()
     {
         // Arrange
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource([]), [MakeSpec(0, "A")], RevealThreshold);
         List<(int scannedRows, int totalRows)> events = [];
         indexer.ProgressChanged += (scannedRows, totalRows) => events.Add((scannedRows, totalRows));
 
@@ -252,7 +243,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public async Task BuildIndexAsync_WithEmptySourceAndCancelledToken_ThrowsOperationCanceledException()
     {
         // Arrange
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource([]), [MakeSpec(0, "A")], RevealThreshold);
         using CancellationTokenSource cts = new();
         await cts.CancelAsync();
 
@@ -336,7 +327,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     public void GetSourceRow_BeforeBuildOrOutOfRange_ReturnsMinusOne(int filteredRow)
     {
         // Arrange
-        FocusedTableFilterRowIndexer indexer = new(new FakeFocusedSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
+        FocusedTableFilterRowIndexer indexer = new(new NoColumnNamesFakeTableSource([["[0]", "A"]]), [MakeSpec(0, "A")], RevealThreshold);
 
         // Act
         int sourceRow = indexer.GetSourceRow(filteredRow);
@@ -377,7 +368,7 @@ public sealed class FocusedTableFilterRowIndexerTests
     {
         // Arrange — a single match never reaches the threshold of 2
         FocusedTableFilterRowIndexer indexer = new(
-            new FakeFocusedSource([["[0]", "A"], ["[1]", "B"]]), [MakeSpec(0, "A")], 2);
+            new NoColumnNamesFakeTableSource([["[0]", "A"], ["[1]", "B"]]), [MakeSpec(0, "A")], 2);
 
         // Act
         await indexer.BuildIndexAsync(CancellationToken.None);

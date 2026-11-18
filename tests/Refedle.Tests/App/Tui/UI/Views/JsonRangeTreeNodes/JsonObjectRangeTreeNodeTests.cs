@@ -1,25 +1,14 @@
-using System.Globalization;
-using System.Text;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO.JsonObject;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.JsonObjectTestData;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonRangeTreeNodes;
 
 public sealed class JsonObjectRangeTreeNodeTests
 {
-    private static JsonRawBytes ToBytes(string json) =>
-        Encoding.UTF8.GetBytes(json);
-
-    private static List<JsonObjectEntry> CreateNumberedEntries(int count) =>
-        [.. Enumerable
-            .Range(0, count)
-            .Select(i => new JsonObjectEntry(
-                string.Create(CultureInfo.InvariantCulture, $"k{i}"),
-                ToBytes(i.ToString(CultureInfo.InvariantCulture))))];
-
     // --- Constructor tests ---
 
     [Fact]

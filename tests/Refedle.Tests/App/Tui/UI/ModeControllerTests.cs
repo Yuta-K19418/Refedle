@@ -12,6 +12,7 @@ using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Refedle.TestHelpers.IO;
 using static Refedle.TestHelpers.IO.RefinementFixtureFile;
+using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.UI;
 
@@ -107,7 +108,7 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        GatedSchemaScanner scanner = new(CreateIdSchema());
+        GatedSchemaScanner scanner = new(CreateJsonLinesIdSchema());
         scanner.Release();
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
@@ -177,7 +178,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenSessionIsReplacedDuringInitialScan_KeepsReplacementFileState()
     {
         // Arrange
-        TableSchema scannedSchema = CreateIdSchema();
+        TableSchema scannedSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(scannedSchema);
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
@@ -193,7 +194,7 @@ public sealed class ModeControllerTests : IDisposable
 
         // Replace the session while the gated initial scan is still pending.
         state.RenewCtsWithCancel();
-        TableSchema replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateJsonLinesIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
@@ -210,7 +211,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenInitialScanFailsAfterSessionReplacement_SuppressesStaleError()
     {
         // Arrange
-        GatedSchemaScanner scanner = new(CreateIdSchema(), new InvalidOperationException("scan failed"));
+        GatedSchemaScanner scanner = new(CreateJsonLinesIdSchema(), new InvalidOperationException("scan failed"));
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
@@ -224,7 +225,7 @@ public sealed class ModeControllerTests : IDisposable
 
         // Replace the session, then let the old scan fail.
         state.RenewCtsWithCancel();
-        TableSchema replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateJsonLinesIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
@@ -235,18 +236,6 @@ public sealed class ModeControllerTests : IDisposable
         state.Schema.Should().BeSameAs(replacementSchema);
         state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
     }
-
-    private static Refedle.Engine.Models.TableSchema CreateIdSchema() => new()
-    {
-        Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
-        SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
-    };
-
-    private static Refedle.Engine.Models.TableSchema CreateCsvSchema() => new()
-    {
-        Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
-        SourceFormat = Refedle.Engine.Types.DataFormat.Csv
-    };
 
     [Fact]
     public async Task ToggleJsonLinesModeAsync_WithRowIndexerNull_DoesNothing()
@@ -269,7 +258,7 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         IRowIndexer indexer = RowIndexerFactory.Create(Refedle.Engine.Types.DataFormat.Csv, _jsonlFilePath);
-        TableSchema schema = CreateCsvSchema();
+        TableSchema schema = CreateCsvIdSchema();
         using AppState state = new();
         state.CompleteCsvLoad(indexer, schema);
         ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -335,7 +324,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_FromTableMode_RestoresTreeMode()
     {
         // Arrange
-        TableSchema schema = CreateIdSchema();
+        TableSchema schema = CreateJsonLinesIdSchema();
         using AppState state = new();
         state.CompleteJsonLinesSchemaScan(schema);
         ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);

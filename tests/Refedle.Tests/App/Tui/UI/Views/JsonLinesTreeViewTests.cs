@@ -6,6 +6,7 @@ using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.UiThreadInvokes;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -14,8 +15,6 @@ public sealed partial class JsonLinesTreeViewTests : IDisposable
     private readonly TempFileCollection _tempFiles = new(".jsonl");
 
     public void Dispose() => _tempFiles.Dispose();
-
-    private static void SynchronousUiThreadInvoke(Action action) => action();
 
     [Fact]
     public void HandleAccepted_NonRangeNode_DoesNotThrow()

@@ -10,22 +10,13 @@ namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class FilterScanSessionTests
 {
-    private sealed class FakeFocusedSource(string[][] data, string[] columnNames) : IExtendedTableSource
-    {
-        public long TotalRows => data.Length;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => columnNames;
-        public object this[long row, int col] => data[(int)row][col];
-    }
-
     private sealed class Fixture : IDisposable
     {
         private int _progressCalls;
 
         public Fixture()
         {
-            FakeFocusedSource source = new(
+            StringRowsFakeTableSource source = new(
                 [["[0]", "A"], ["[1]", "B"]],
                 ["#", "name"]);
             TableSchema schema = new()

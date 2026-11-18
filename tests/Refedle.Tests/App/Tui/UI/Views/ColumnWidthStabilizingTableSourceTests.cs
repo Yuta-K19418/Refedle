@@ -7,15 +7,6 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class ColumnWidthStabilizingTableSourceTests
 {
-    private sealed class FakeTableSource(string[] columnNames, IReadOnlyList<IReadOnlyList<object>> rows) : IExtendedTableSource
-    {
-        public long TotalRows => rows.Count;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => columnNames;
-        public object this[long row, int col] => rows[(int)row][col];
-    }
-
     private sealed class MutableFakeTableSource(
         string[] columnNames,
         string[] rawColumnNames,
@@ -39,17 +30,6 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         }
     }
 
-    private sealed class DisposableFakeTableSource : IExtendedTableSource, IDisposable
-    {
-        public bool IsDisposed { get; private set; }
-        public long TotalRows => 0;
-        public int Columns => 0;
-        public string[] ColumnNames => [];
-        public string[] RawColumnNames => [];
-        public object this[long row, int col] => throw new NotImplementedException();
-        public void Dispose() => IsDisposed = true;
-    }
-
     private sealed class CountingDisposableFakeTableSource : IExtendedTableSource, IDisposable
     {
         public int DisposeCount { get; private set; }
@@ -65,7 +45,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_SetsInitialMinWidthToHeaderLength()
     {
         // Arrange
-        FakeTableSource inner = new(["short", "muchLongerHeader"], []);
+        ObjectRowsFakeTableSource inner = new(["short", "muchLongerHeader"], []);
         TableStyle style = new();
 
         // Act
@@ -80,7 +60,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_ExistingMinWidthGreaterThanHeader_PreservesExistingMinWidth()
     {
         // Arrange
-        FakeTableSource inner = new(["a"], []);
+        ObjectRowsFakeTableSource inner = new(["a"], []);
         TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MinWidth = 20;
 
@@ -95,7 +75,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_HeaderWiderThanConfiguredMaximum_ClampsInitialMinWidth()
     {
         // Arrange
-        FakeTableSource inner = new([new string('h', 20)], []);
+        ObjectRowsFakeTableSource inner = new([new string('h', 20)], []);
         TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MaxWidth = 10;
 
@@ -110,7 +90,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_ZeroColumnSource_CreatesNoColumnStylesAndDisposesSafely()
     {
         // Arrange
-        FakeTableSource inner = new([], []);
+        ObjectRowsFakeTableSource inner = new([], []);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -127,7 +107,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["a"], ["muchLongerValue"]];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -143,7 +123,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["muchLongerValue"], ["a"]];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
         _ = source[0, 0];
@@ -160,7 +140,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [[new string('x', 11)]];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         style.GetOrCreateColumnStyle(0).MaxWidth = 10;
         using ColumnWidthStabilizingTableSource source = new(inner, style);
@@ -177,7 +157,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["value"]];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -197,7 +177,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [[cellValue]];
-        FakeTableSource inner = new([""], rows);
+        ObjectRowsFakeTableSource inner = new([""], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -212,7 +192,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Constructor_WideCjkHeader_TracksDisplayColumnsNotUtf16Length()
     {
         // Arrange — 2 CJK characters occupy 4 terminal columns but only 2 UTF-16 code units.
-        FakeTableSource inner = new(["名前"], []);
+        ObjectRowsFakeTableSource inner = new(["名前"], []);
         TableStyle style = new();
 
         // Act
@@ -229,7 +209,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         // Arrange
         const string value = "日本語テスト";
         IReadOnlyList<IReadOnlyList<object>> rows = [[value]];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -279,7 +259,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange
         IReadOnlyList<IReadOnlyList<object>> rows = [["v1", "v2"], ["v3", "v4"], ["v5", "v6"]];
-        FakeTableSource inner = new(["a", "b"], rows);
+        ObjectRowsFakeTableSource inner = new(["a", "b"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -299,7 +279,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     {
         // Arrange — source is the sole owner of inner; it is not independently wrapped in a
         // using so this test's single Dispose() call is the only disposal that occurs.
-        DisposableFakeTableSource inner = new();
+        EmptyFlagDisposableTableSource inner = new();
         TableStyle style = new();
         ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -314,7 +294,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
     public void Dispose_DoesNotThrow_WhenInnerIsNotDisposable()
     {
         // Arrange
-        FakeTableSource inner = new(["col"], []);
+        ObjectRowsFakeTableSource inner = new(["col"], []);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
 
@@ -350,7 +330,7 @@ public sealed class ColumnWidthStabilizingTableSourceTests
         // observed-width comparison and the MinWidth write one atomic section.
         int[] widths = [50, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         IReadOnlyList<IReadOnlyList<object>> rows = [.. widths.Select(w => (IReadOnlyList<object>)[new string('x', w)])];
-        FakeTableSource inner = new(["col"], rows);
+        ObjectRowsFakeTableSource inner = new(["col"], rows);
         TableStyle style = new();
         using ColumnWidthStabilizingTableSource source = new(inner, style);
         using Barrier barrier = new(rows.Count);

@@ -6,6 +6,7 @@ using Refedle.Engine.IO.JsonLines;
 using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.UiThreadInvokes;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
