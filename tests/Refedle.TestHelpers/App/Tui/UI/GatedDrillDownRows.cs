@@ -1,6 +1,6 @@
 using Refedle.Engine.IO.DrillDown;
 
-namespace Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
+namespace Refedle.TestHelpers.App.Tui.UI;
 
 /// <summary>
 /// Row list whose read of one configured row blocks until released, so ViewManager-level

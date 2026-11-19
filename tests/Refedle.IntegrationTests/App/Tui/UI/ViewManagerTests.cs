@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text;
+using System.Threading.Channels;
 using AwesomeAssertions;
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
@@ -14,15 +15,14 @@ using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
-using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
-using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestViews;
+using static Refedle.TestHelpers.App.Tui.UI.GatedDrillDownData;
+using static Refedle.TestHelpers.App.Tui.UI.ProgressOverlayViews;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 
@@ -37,112 +37,6 @@ public sealed partial class ViewManagerTests : IDisposable
     private readonly TempFileCollection _tempFiles = new();
 
     public void Dispose() => _tempFiles.Dispose();
-
-    [Fact]
-    public void RefreshStatusBarHints_WithNoFilePath_UsesDefaultHints()
-    {
-        // Arrange
-        using IApplication app = TestAppFactory.Create();
-        using AppState state = new();
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        IEnumerable<string> hints = Enumerable.Select(
-                Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
-                s => s.HelpText);
-        hints.Should().BeEquivalentTo(
-            ["o:Open", "s:Save", "q:Quit", "?:Help"],
-            opts => opts.WithStrictOrdering());
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithCsvFilePath_UsesDefaultHints()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".csv", "col1,col2\nvalue1,value2\n");
-        using IApplication app = TestAppFactory.Create();
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        IEnumerable<string> hints = Enumerable.Select(
-                Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
-                s => s.HelpText);
-        hints.Should().BeEquivalentTo(
-            ["o:Open", "s:Save", "q:Quit", "?:Help"],
-            opts => opts.WithStrictOrdering());
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithJsonLinesPath_IncludesToggleHint()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
-        using IApplication app = TestAppFactory.Create();
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        IEnumerable<string> hints = Enumerable.Select(
-                Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
-                s => s.HelpText);
-        hints.Should().Contain("t:Tree/Table");
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithJsonArrayFilePath_IncludesToggleHint()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".json", "[1,2,3]");
-        using IApplication app = TestAppFactory.Create();
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        IEnumerable<string> hints = Enumerable.Select(
-                Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
-                s => s.HelpText);
-        hints.Should().Contain("t:Tree/Table");
-    }
 
     [Fact]
     public void RefreshStatusBarHints_WithMorphTableView_IncludesMenuHint()
@@ -175,32 +69,6 @@ public sealed partial class ViewManagerTests : IDisposable
                 Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
                 s => s.HelpText);
         hints.Should().Contain("x:Menu");
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithFocusedTableMode_IncludesBackHint()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"value\"}\n");
-        using IApplication app = TestAppFactory.Create();
-        TableSchema schema = new() { SourceFormat = DataFormat.JsonLines, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        DrillDownState drillDown = new([new FocusedTableRow(JsonRawBytes.Empty, "[0]")], schema, ViewMode.JsonLinesTree, KeyPath: [], ActionStack: []);
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        state.EnterFocusedTable(drillDown);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        currentStatusBar.SubViews.OfType<Shortcut>().Select(s => s.HelpText).Should().Contain("bs:Back");
     }
 
     [Fact]
@@ -372,90 +240,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public void RefreshStatusBarHints_WithNoParam_RemovesExistingItemCountLabel()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".csv", "col1\nval1");
-        using IApplication app = TestAppFactory.Create();
-        CompletedStubRowIndexer indexer = new("test.csv", 5000);
-        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        state.CompleteCsvLoad(indexer, schema);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        viewManager.RefreshStatusBarHints();
-        window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
-
-        // Act — clear RowIndexer so the label won't be re-added
-        state.BeginJsonObjectLoad();
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        window.SubViews.OfType<Label>().Should().NotContain(l => l.Text == "5000 items");
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithCompletedIndexer_ShowsItemCountLabel()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".csv", "col1\nval1");
-        using IApplication app = TestAppFactory.Create();
-        CompletedStubRowIndexer indexer = new("test.csv", 5000);
-        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        state.CompleteCsvLoad(indexer, schema);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithUpdatedIndexer_ReplacesCountOnSubsequentCall()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".csv", "col1\nval1");
-        using IApplication app = TestAppFactory.Create();
-        CompletedStubRowIndexer indexer = new("test.csv", 1000);
-        TableSchema schema = new() { SourceFormat = DataFormat.Csv, Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }] };
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        state.CompleteCsvLoad(indexer, schema);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-
-        // Act — first call
-        viewManager.RefreshStatusBarHints();
-
-        // Assert — shows count from first indexer
-        window.SubViews.OfType<Label>().First(l => l.Text == "1000 items").Text.Should().Be("1000 items");
-
-        // Act — replace indexer with one that has a different row count
-        CompletedStubRowIndexer reloadedIndexer = new("test.csv", 5000);
-        state.CompleteCsvLoad(reloadedIndexer, schema);
-        viewManager.RefreshStatusBarHints();
-
-        // Assert — shows updated count, old count is gone
-        window.SubViews.OfType<Label>().First(l => l.Text == "5000 items").Text.Should().Be("5000 items");
-        window.SubViews.OfType<Label>().Should().NotContain(l => l.Text == "1000 items");
-    }
-
-    [Fact]
     public void SwitchToJsonArrayTree_WithNullIndexer_ThrowsArgumentNullException()
     {
         // Arrange
@@ -548,38 +332,6 @@ public sealed partial class ViewManagerTests : IDisposable
 
         // Assert
         act.Should().Throw<ObjectDisposedException>();
-    }
-
-    [Fact]
-    public void RefreshStatusBarHints_WithJsonObjectFilePath_DoesNotIncludeToggleHint()
-    {
-        // Arrange
-        string filePath = _tempFiles.Create(".json", "{\"id\":1}");
-        using IApplication app = TestAppFactory.Create();
-        using AppState state = new();
-        state.StartNewFile(filePath);
-        using Window window = new();
-        using StatusBar statusBar = new();
-        window.Add(statusBar);
-        ModeController modeController = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
-        using ViewManager viewManager = new(window, state, modeController, new FilterIndexingRunner(), action => action());
-        IReadOnlyList<JsonObjectEntry> entries =
-        [
-            new JsonObjectEntry("id", System.Text.Encoding.UTF8.GetBytes("1")),
-        ];
-        state.EnterJsonObjectTree(entries);
-        viewManager.SwitchToJsonObjectTree(entries);
-
-        // Act
-        viewManager.RefreshStatusBarHints();
-
-        // Assert
-        StatusBar? currentStatusBar = viewManager.GetCurrentStatusBar();
-        currentStatusBar.Should().NotBeNull();
-        IEnumerable<string> hints = Enumerable.Select(
-            Enumerable.OfType<Shortcut>(currentStatusBar.SubViews),
-            s => s.HelpText);
-        hints.Should().NotContainMatch("*Tree/Table*");
     }
 
     [Fact]
@@ -961,72 +713,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public void SchemaRefined_WithActionsApplied_KeepsSelectedCell()
-    {
-        // Arrange
-        using SchemaRefinementHarness harness = new(
-            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
-            "col1",
-            "col2");
-        ITableSource? oldTable = harness.View.Table;
-        harness.View.SetSelection(1, 0, false);
-
-        // Act
-        harness.Refine("col1", "col2", "col3");
-
-        // Assert
-        harness.View.Table.Should().NotBeSameAs(oldTable);
-        harness.Table.Columns.Should().Be(3);
-        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, 0));
-    }
-
-    [Fact]
-    public void SchemaRefined_WithScrolledView_KeepsRowOffsetAndSelection()
-    {
-        // Arrange
-        using SchemaRefinementHarness harness = new(
-            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
-            10,
-            "col1",
-            "col2");
-        harness.View.SetSelection(1, 3, false);
-        harness.View.RowOffset = 2;
-        ITableSource? oldTable = harness.View.Table;
-        harness.View.RowOffset.Should().Be(2);
-
-        // Act
-        harness.Refine("col1", "col2", "col3");
-
-        // Assert
-        harness.View.Table.Should().NotBeSameAs(oldTable);
-        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, 3));
-        harness.View.RowOffset.Should().Be(2);
-    }
-
-    [Fact]
-    public void SchemaRefined_WithLaterPageSelected_KeepsPageAndSelection()
-    {
-        // Arrange
-        using SchemaRefinementHarness harness = new(
-            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
-            1_500_000_000,
-            "col1",
-            "col2");
-        int pageSize = PagedTableSource.DefaultPageSize;
-        harness.View.SetSelection(1, pageSize + 5, false);
-        long pageBefore = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject.CurrentPageNumber;
-
-        // Act
-        harness.Refine("col1", "col2", "col3");
-
-        // Assert
-        PagedTableSource paged = harness.View.Table.Should().BeOfType<PagedTableSource>().Subject;
-        pageBefore.Should().Be(2);
-        paged.CurrentPageNumber.Should().Be(pageBefore);
-        harness.Selection.SelectedCell.Should().Be(new System.Drawing.Point(1, pageSize + 5));
-    }
-
-    [Fact]
     public void SchemaRefined_AfterViewReplaced_LeavesCurrentViewUntouched()
     {
         // Arrange
@@ -1044,25 +730,6 @@ public sealed partial class ViewManagerTests : IDisposable
         exception.Should().BeNull();
         harness.ViewManager.GetCurrentView().Should().BeSameAs(currentView);
         currentView.Should().BeOfType<FileSelectionView>();
-    }
-
-    [Fact]
-    public void SchemaRefined_WithEmptyTable_SwapsTableWithoutSelection()
-    {
-        // Arrange
-        using SchemaRefinementHarness harness = new(
-            [new RenameColumnAction { OldName = "col1", NewName = "renamed" }],
-            0,
-            "col1");
-        ITableSource? oldTable = harness.View.Table;
-
-        // Act
-        harness.Refine("col1", "col2");
-
-        // Assert
-        harness.View.Table.Should().NotBeSameAs(oldTable);
-        harness.Table.Columns.Should().Be(2);
-        harness.View.Value.Should().BeNull();
     }
 
     [Fact]
@@ -2469,102 +2136,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     [Fact]
-    public async Task FilterScanManagerDispose_CalledTwiceWithActiveScan_CancelsScanDisposesSessionAndDoesNotThrow()
-    {
-        // Arrange — the manager is driven directly, so only its own guard can make the
-        // second Dispose safe (ViewManager.Dispose short-circuits repeated calls)
-        using IApplication app = TestAppFactory.Create();
-        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using GatedDrillDownRows rows = gated.Rows;
-        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(
-            new FocusedTableSource(drillDown),
-            drillDown.Schema,
-            drillDown.ActionStack,
-            200);
-        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        TaskRecordingFilterScanRunner runner = new();
-        using CancellationTokenSource parentCts = new();
-        ConcurrentQueue<Action> captured = new();
-        await using DirectScanScope scope = new(rows, runner);
-        FilterScanManager manager = new(
-            runner,
-            captured.Enqueue,
-            () => parentCts.Token,
-            static (_, _) => throw new InvalidOperationException("The table view must not be created in this test."),
-            view => scope.LoadingView = view,
-            static () => { },
-            static _ => { },
-            scope.Host,
-            static () => null);
-        scope.Manager = manager;
-        manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
-
-        // Act
-        manager.Dispose();
-        Action disposeAgain = () => manager.Dispose();
-        rows.ReleaseGate();
-
-        // Assert — the worker observed the cancellation after batches 1–2 only, and the
-        // session-owned transformer is disposed
-        disposeAgain.Should().NotThrow();
-        Func<Task> assertScan = () => runner.TaskAt(0);
-        await assertScan.Should().ThrowAsync<OperationCanceledException>();
-        rows.ReadCount.Should().Be(2000);
-        Func<object> readDisposedTransformer = () => transformer[0, 1];
-        readDisposedTransformer.Should().Throw<ObjectDisposedException>();
-        scope.BodyCompleted = true;
-    }
-
-    [Fact]
-    public async Task FilterScanManagerProgress_WhenCurrentSessionIsCanceled_DoesNotUpdateOverlay()
-    {
-        // Arrange — the session stays the current one; only its CTS is canceled (parent token)
-        using IApplication app = TestAppFactory.Create();
-        (DrillDownState DrillDown, GatedDrillDownRows Rows) gated = CreateGatedDrillDown(matchedInFirstBatch: 200, matchedInSecondBatch: 0, totalBatches: 3);
-        using GatedDrillDownRows rows = gated.Rows;
-        FilterAction filter = FilterAction.Create("name", FilterOperator.Contains, ComparisonType.Text, "Match").Value;
-        DrillDownState drillDown = gated.DrillDown with { ActionStack = [filter] };
-        using FocusedTableTransformer transformer = FocusedTableTransformer.Create(
-            new FocusedTableSource(drillDown),
-            drillDown.Schema,
-            drillDown.ActionStack,
-            200);
-        FocusedTableFilterRowIndexer indexer = transformer.FilterRowIndexer.Should().BeOfType<FocusedTableFilterRowIndexer>().Subject;
-        TaskRecordingFilterScanRunner runner = new();
-        using CancellationTokenSource parentCts = new();
-        ConcurrentQueue<Action> captured = new();
-        await using DirectScanScope scope = new(rows, runner);
-        FilterScanManager manager = new(
-            runner,
-            captured.Enqueue,
-            () => parentCts.Token,
-            static (_, _) => throw new InvalidOperationException("The table view must not be created in this test."),
-            view => scope.LoadingView = view,
-            static () => { },
-            static _ => { },
-            scope.Host,
-            static () => null);
-        scope.Manager = manager;
-        manager.StartScan(transformer, indexer, new TableStyle { AlwaysShowHeaders = true });
-        await rows.GateReached.Task.WaitAsync(TimeSpan.FromSeconds(30));
-        // the threshold reveal and the first progress tick are both queued once the worker is blocked
-        await WaitForCallbacksAsync(captured, expectedCount: 2);
-        Label label = scope.Host.SubViews.OfType<Label>().Where(IsProgressOverlayLabel).Should().ContainSingle().Subject;
-        string textBefore = label.Text;
-
-        // Act
-        parentCts.Cancel();
-        ExecuteRemainingCallbacks(captured);
-
-        // Assert
-        label.Text.Should().Be(textBefore);
-        scope.BodyCompleted = true;
-    }
-
-    [Fact]
     public void HandleMorphAction_WithFocusedTableModeAndDrillDown_AppendsToDrillDownActionStack()
     {
         // Arrange
@@ -3146,61 +2717,6 @@ public sealed partial class ViewManagerTests : IDisposable
     }
 
     /// <summary>
-    /// Cleanup scope for tests that drive a <see cref="FilterScanManager"/> directly: on every
-    /// exit it releases the gate, disposes the manager, joins the started workers with a
-    /// bounded wait and disposes the loading view, running every step even if one fails.
-    /// Cleanup failures surface only after the test body completed (<see cref="BodyCompleted"/>);
-    /// otherwise they are dropped so they cannot replace the failure already propagating.
-    /// </summary>
-    private sealed class DirectScanScope(GatedDrillDownRows rows, TaskRecordingFilterScanRunner runner) : IAsyncDisposable
-    {
-        public FilterScanManager? Manager { get; set; }
-
-        public Terminal.Gui.ViewBase.View Host { get; } = new();
-
-        public Terminal.Gui.ViewBase.View? LoadingView { get; set; }
-
-        public bool BodyCompleted { get; set; }
-
-        public async ValueTask DisposeAsync()
-        {
-            List<Exception> failures = [];
-            Capture(failures, rows.ReleaseGate);
-            Capture(failures, () => Manager?.Dispose());
-            foreach (Task task in runner.Tasks())
-            {
-                // WhenAny observes a canceled or faulted worker without throwing
-                await Task.WhenAny(task.WaitAsync(TimeSpan.FromSeconds(10))).ConfigureAwait(false);
-                if (!task.IsCompleted)
-                {
-                    failures.Add(new TimeoutException("A scan worker did not terminate within the bounded cleanup wait."));
-                }
-            }
-
-            Capture(failures, () => LoadingView?.Dispose());
-            Capture(failures, Host.Dispose);
-            if (BodyCompleted && failures.Count > 0)
-            {
-                throw new AggregateException(failures);
-            }
-        }
-
-#pragma warning disable CA1031 // Every cleanup step must run; failures are collected and reported by the caller
-        private static void Capture(List<Exception> failures, Action step)
-        {
-            try
-            {
-                step();
-            }
-            catch (Exception exception)
-            {
-                failures.Add(exception);
-            }
-        }
-#pragma warning restore CA1031
-    }
-
-    /// <summary>
     /// Row list whose read of the configured row throws, so ViewManager-level tests can
     /// fault the background filter scan at a chosen row without any timing dependency.
     /// </summary>
@@ -3216,5 +2732,194 @@ public sealed partial class ViewManagerTests : IDisposable
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
             rows.GetEnumerator();
+    }
+
+    private static TableSchema CreateItemCountSchema(DataFormat format) => new()
+    {
+        SourceFormat = format,
+        Columns = [new ColumnSchema { Name = "col1", Type = ColumnType.Text }],
+    };
+
+    private static FilterAction CreateColumnFilter(string value) =>
+        FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, value).Value;
+
+    private static DataRowIndexer BuildCsvIndexer(string filePath)
+    {
+        DataRowIndexer indexer = new(filePath);
+        indexer.BuildIndex();
+        return indexer;
+    }
+
+    private static TableSchema CreateJsonLinesSchema(params string[] columnNames) =>
+        new()
+        {
+            SourceFormat = DataFormat.JsonLines,
+            Columns = [.. columnNames.Select((name, index) => new ColumnSchema { Name = name, Type = ColumnType.Text, ColumnIndex = index })],
+        };
+
+    private static DrillDownState CreateNumberedDrillDown(int rowCount)
+    {
+        TableSchema schema = new()
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        FocusedTableRow[] rows = [.. Enumerable.Range(0, rowCount).Select(index => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"Alice{index}\"}}"), $"[{index}]"))];
+        return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
+    }
+
+    /// <summary>
+    /// DrillDown with 1250 rows (two indexer batches of 1000 + 250) whose "name" values
+    /// contain "Match" exactly <paramref name="matchedInFirstBatch"/> /
+    /// <paramref name="matchedInSecondBatch"/> times per batch, for threshold-boundary tests.
+    /// </summary>
+    private static DrillDownState CreateMixedDrillDown(int matchedInFirstBatch, int matchedInSecondBatch)
+    {
+        TableSchema schema = new()
+        {
+            SourceFormat = DataFormat.JsonArray,
+            Columns = [new ColumnSchema { Name = "name", Type = ColumnType.Text }],
+        };
+        IEnumerable<string> names = Enumerable.Range(0, matchedInFirstBatch).Select(static i => $"Match{i}")
+            .Concat(Enumerable.Range(0, 1000 - matchedInFirstBatch).Select(static i => $"Other{i}"))
+            .Concat(Enumerable.Range(0, matchedInSecondBatch).Select(static i => $"Match{1000 + i}"))
+            .Concat(Enumerable.Range(0, 250 - matchedInSecondBatch).Select(static i => $"Other{1000 + i}"));
+        FocusedTableRow[] rows = [.. names.Select(static (name, index) => new FocusedTableRow(Encoding.UTF8.GetBytes($"{{\"name\":\"{name}\"}}"), $"[{index}]"))];
+        return new DrillDownState(rows, schema, ViewMode.JsonArrayTree, KeyPath: [], ActionStack: []);
+    }
+
+    private static IEnumerable<Terminal.Gui.ViewBase.View> SelfAndDescendants(Terminal.Gui.ViewBase.View view)
+    {
+        Stack<Terminal.Gui.ViewBase.View> pending = new();
+        pending.Push(view);
+
+        while (pending.Count > 0)
+        {
+            Terminal.Gui.ViewBase.View current = pending.Pop();
+            yield return current;
+
+            foreach (Terminal.Gui.ViewBase.View child in current.SubViews)
+            {
+                pending.Push(child);
+            }
+        }
+    }
+
+    private static string? GetItemCountText(Window window) =>
+        window.SubViews
+            .OfType<Label>()
+            .Select(static label => label.Text)
+            .SingleOrDefault(static text => text.EndsWith(" items", StringComparison.Ordinal));
+
+    /// <summary>
+    /// Signal-based replacement for polling: each captured UI-thread callback is read from a channel
+    /// with a bounded wait, so a callback that never arrives fails the test instead of hanging it.
+    /// </summary>
+    private sealed class SteppableCallbackQueue
+    {
+        private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
+        private readonly Channel<Action> _channel = Channel.CreateUnbounded<Action>();
+
+        public void Enqueue(Action callback) => _channel.Writer.TryWrite(callback);
+
+        public async Task<Action> NextAsync()
+        {
+            using CancellationTokenSource cts = new(Timeout);
+            return await _channel.Reader.ReadAsync(cts.Token);
+        }
+
+        public async Task RunNextAsync() => (await NextAsync())();
+
+        public async Task RunUntilAsync(Func<bool> isDone)
+        {
+            while (!isDone())
+            {
+                await RunNextAsync();
+            }
+        }
+
+        /// <summary>
+        /// Fails when any callback arrives within <paramref name="grace"/>; a callback that
+        /// arrives later than the grace period is not detected by this check.
+        /// </summary>
+        public async Task AssertNothingQueuedAsync(TimeSpan grace)
+        {
+            using CancellationTokenSource cts = new(grace);
+            Func<Task<Action>> read = async () => await _channel.Reader.ReadAsync(cts.Token);
+            await read.Should().ThrowAsync<OperationCanceledException>(
+                "no callback must be queued within the grace period");
+        }
+    }
+
+    /// <summary>
+    /// <see cref="IFilterScanRunner"/> double whose scans stay pending until the test completes,
+    /// faults or cancels the call with the given index.
+    /// </summary>
+    private sealed class OutcomeFilterScanRunner : IFilterScanRunner
+    {
+        private readonly List<TaskCompletionSource> _scans = [];
+
+        public Task RunAsync(IFilterRowIndexer filterIndexer, CancellationToken ct)
+        {
+            TaskCompletionSource scan = new();
+            _scans.Add(scan);
+            return scan.Task;
+        }
+
+        public void Complete(int callIndex) => _scans[callIndex].SetResult();
+
+        public void End(int callIndex, ScanOutcome outcome)
+        {
+            _ = outcome == ScanOutcome.Faulted
+                ? _scans[callIndex].TrySetException(new InvalidOperationException("scan failed"))
+                : _scans[callIndex].TrySetCanceled();
+        }
+    }
+
+    /// <summary>
+    /// ViewManager whose UI-thread invoke is captured in a <see cref="SteppableCallbackQueue"/>, so scan
+    /// notifications run only when the test executes them. The optional filter is put on the Action Stack.
+    /// </summary>
+    private sealed class ItemCountHarness : IDisposable
+    {
+        private readonly StatusBar _statusBar = new();
+
+        public ItemCountHarness(
+            string filePath,
+            DataFormat format,
+            IRowIndexer rawIndexer,
+            IFilterScanRunner runner,
+            FilterAction? filter)
+        {
+            State.StartNewFile(filePath);
+            State.CompleteCsvLoad(rawIndexer, CreateItemCountSchema(format));
+            if (filter is not null)
+            {
+                State.AddMorphAction(filter);
+            }
+
+            Window.Add(_statusBar);
+            ModeController modeController = new(State, action => action(), TestSchemaScannerFactories.JsonLines);
+            ViewManager = new ViewManager(Window, State, modeController, runner, Queue.Enqueue);
+        }
+
+        public AppState State { get; } = new();
+        public Window Window { get; } = new();
+        public SteppableCallbackQueue Queue { get; } = new();
+        public ViewManager ViewManager { get; }
+
+        public void Dispose()
+        {
+            ViewManager.Dispose();
+            Window.Dispose();
+            _statusBar.Dispose();
+            State.Dispose();
+        }
+    }
+
+    private enum ScanOutcome
+    {
+        Faulted,
+        Canceled,
     }
 }

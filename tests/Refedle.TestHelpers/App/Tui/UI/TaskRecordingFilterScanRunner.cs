@@ -1,7 +1,7 @@
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.Filtering;
 
-namespace Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
+namespace Refedle.TestHelpers.App.Tui.UI;
 
 /// <summary>
 /// <see cref="IFilterScanRunner"/> double that delegates to a real
