@@ -7,15 +7,13 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
 using Refedle.TestHelpers.App.Tui.UI;
 using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
-using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestViews;
+using static Refedle.TestHelpers.App.Tui.UI.ProgressOverlayViews;
 
 namespace Refedle.IntegrationTests.App.Tui.UI;
 

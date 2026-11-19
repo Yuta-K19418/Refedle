@@ -1,6 +1,6 @@
 using Refedle.Engine.IO;
 
-namespace Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
+namespace Refedle.TestHelpers.App.Tui.UI;
 
 /// <summary>
 /// Mock IRowIndexer for testing.
