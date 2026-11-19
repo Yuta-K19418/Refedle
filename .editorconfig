@@ -347,10 +347,6 @@ dotnet_naming_style.begins_with_underscore.capitalization = camel_case
 # Source code files
 [src/**/*.cs]
 
-# CA2007: Consider calling ConfigureAwait on awaited task
-# Application code doesn't need ConfigureAwait in modern .NET (no synchronization context in CLI apps)
-dotnet_diagnostic.CA2007.severity = none
-
 # Test files
 [tests/**/*.cs]
 
