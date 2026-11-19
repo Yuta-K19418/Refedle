@@ -145,20 +145,35 @@ public sealed class LazyTransformerRebuilderTests
 #pragma warning disable CA2000 // The paged source is owned by the view and disposed with it
         public Fixture(long totalRows, params string[] columns)
         {
-            File.WriteAllText(_file.Path, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"x\", \"col2\": \"y\"}\n");
-            _state.SetActionStack(RenameActions);
-            TableSchema schema = CreateSchema(columns);
-            _cache = new RowByteCache(new CompletedStubRowIndexer(_file.Path, totalRows));
-            _source = new JsonLinesTableSource(_cache, schema);
-            _lazy = LazyTransformer.Create(_source, schema, RenameActions);
-            TableStyle style = new() { AlwaysShowHeaders = true };
-            View = new JsonLinesTableView
+            // xUnit does not dispose a fixture whose constructor throws, so release what exists here.
+            try
             {
-                Table = new PagedTableSource(new ColumnWidthStabilizingTableSource(_lazy, style)),
-                Style = style,
-            };
-            CurrentView = View;
-            _rebuilder = new LazyTransformerRebuilder(_state, () => CurrentView);
+                File.WriteAllText(_file.Path, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"x\", \"col2\": \"y\"}\n");
+                _state.SetActionStack(RenameActions);
+                TableSchema schema = CreateSchema(columns);
+                _cache = new RowByteCache(new CompletedStubRowIndexer(_file.Path, totalRows));
+                _source = new JsonLinesTableSource(_cache, schema);
+                _lazy = LazyTransformer.Create(_source, schema, RenameActions);
+                TableStyle style = new() { AlwaysShowHeaders = true };
+                View = new JsonLinesTableView
+                {
+                    Table = new PagedTableSource(new ColumnWidthStabilizingTableSource(_lazy, style)),
+                    Style = style,
+                };
+                CurrentView = View;
+                _rebuilder = new LazyTransformerRebuilder(_state, () => CurrentView);
+            }
+            catch
+            {
+                View?.Dispose();
+                _lazy?.Dispose();
+                _source?.Dispose();
+                _cache?.Dispose();
+                _state.Dispose();
+                _app.Dispose();
+                _file.Dispose();
+                throw;
+            }
         }
 #pragma warning restore CA2000
 
