@@ -37,6 +37,7 @@
     <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
     <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
     <ProjectReference Include="..\..\src\Generators\Refedle.Generators.csproj" />
+    <ProjectReference Include="..\Refedle.TestHelpers\Refedle.TestHelpers.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 using Refedle.App.Tui.Workers.Schema;
 
-namespace Refedle.Tests.App.Tui.Workers.Schema;
+namespace Refedle.TestHelpers.App.Tui.Workers.Schema;
 
 /// <summary>
 /// Factories that create the real schema scanners for tests that do not need to control scan timing.

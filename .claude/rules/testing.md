@@ -8,6 +8,7 @@ paths:
 Shared conventions for all test projects. Project-specific rules live in
 [unit-testing.md](unit-testing.md) (`tests/Refedle.Tests`) and
 [e2e-testing.md](e2e-testing.md) (`tests/Refedle.E2ETests`).
+The TUI tests are also organized into layers: see [tui-test-layers.md](tui-test-layers.md) and [tui-test-helpers.md](tui-test-helpers.md).
 
 ## Framework
 - Use **xUnit** as the primary testing framework
@@ -16,7 +17,7 @@ Shared conventions for all test projects. Project-specific rules live in
 
 ### Test Class Names
 - **Pattern**: `[ClassName]Tests` (sealed class)
-- **Partial Classes**: For large test classes, split by method group using partial files
+- **Partial Classes**: For large test classes, split by method group using partial files (the class name and the test names stay the same)
   - `CsvDataRowIndexerTests.cs` (base)
   - `CsvDataRowIndexerTests.BuildIndex.cs` (method-specific)
 
@@ -51,6 +52,7 @@ Shared conventions for all test projects. Project-specific rules live in
 
 ## Resource Cleanup
 - When tests create external resources (files, streams, connections, etc.), ensure they are properly cleaned up after the test completes
+- For temp files in the TUI unit and integration tests, use the helpers described in [tui-test-helpers.md](tui-test-helpers.md#temp-files)
 
 ## No Test-Only Code in Production
 - Do NOT add hooks, seams, or static mutable state to production code for the sake of tests. Inject an interface and use a test double instead

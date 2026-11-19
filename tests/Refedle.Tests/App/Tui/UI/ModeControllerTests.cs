@@ -8,26 +8,26 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
+using static Refedle.TestHelpers.IO.RefinementFixtureFile;
+using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.UI;
 
 public sealed class ModeControllerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _jsonlFilePath;
 
     public ModeControllerTests()
     {
-        _jsonlFilePath = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
+        _jsonlFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_jsonlFilePath))
-        {
-            File.Delete(_jsonlFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public void Constructor_WithNullState_ThrowsArgumentNullException()
@@ -104,49 +104,11 @@ public sealed class ModeControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task ToggleJsonLinesModeAsync_BackgroundSchemaCompletes_RaisesSchemaRefinedOnUiThread()
-    {
-        // Arrange
-        await WriteRefinementFixtureAsync(_jsonlFilePath);
-        TaskCompletionSource<TableSchema> refined = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-        int callbackThreadId = 0;
-        int uiThreadId = 0;
-        await using LivePumpTestSession<ModeController> session = await LivePumpTestSession.StartAsync((app, _) =>
-        {
-            RowIndexer indexer = new(_jsonlFilePath);
-            indexer.BuildIndex();
-            AppState state = new();
-            state.StartNewFile(_jsonlFilePath);
-            state.BeginIndexedTreeLoad(indexer);
-            state.EnterJsonLinesTree();
-            state.SetSchemaRefinedCallback(schema =>
-            {
-                callbackThreadId = Environment.CurrentManagedThreadId;
-                refined.TrySetResult(schema);
-            });
-            return new ModeController(state, app.Invoke, TestSchemaScannerFactories.JsonLines);
-        });
-
-        // Act
-        await session.InvokeAsync((_, controller) =>
-        {
-            uiThreadId = Environment.CurrentManagedThreadId;
-            return controller.ToggleJsonLinesModeAsync().AsTask();
-        });
-        TableSchema refinedSchema = await refined.Task.WaitAsync(TimeSpan.FromSeconds(10));
-
-        // Assert
-        callbackThreadId.Should().Be(uiThreadId);
-        refinedSchema.Columns.Select(c => c.Name).Should().Contain("age");
-    }
-
-    [Fact]
     public async Task ToggleJsonLinesModeAsync_WithIndexingInProgress_StartsBackgroundScanOnlyAfterIndexingCompletes()
     {
         // Arrange
         await WriteRefinementFixtureAsync(_jsonlFilePath);
-        GatedSchemaScanner scanner = new(CreateIdSchema());
+        GatedSchemaScanner scanner = new(CreateJsonLinesIdSchema());
         scanner.Release();
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
@@ -216,7 +178,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenSessionIsReplacedDuringInitialScan_KeepsReplacementFileState()
     {
         // Arrange
-        TableSchema scannedSchema = CreateIdSchema();
+        TableSchema scannedSchema = CreateJsonLinesIdSchema();
         GatedSchemaScanner scanner = new(scannedSchema);
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
@@ -232,7 +194,7 @@ public sealed class ModeControllerTests : IDisposable
 
         // Replace the session while the gated initial scan is still pending.
         state.RenewCtsWithCancel();
-        TableSchema replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateJsonLinesIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
@@ -249,7 +211,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_WhenInitialScanFailsAfterSessionReplacement_SuppressesStaleError()
     {
         // Arrange
-        GatedSchemaScanner scanner = new(CreateIdSchema(), new InvalidOperationException("scan failed"));
+        GatedSchemaScanner scanner = new(CreateJsonLinesIdSchema(), new InvalidOperationException("scan failed"));
         RowIndexer indexer = new(_jsonlFilePath);
         using AppState state = new();
         state.StartNewFile(_jsonlFilePath);
@@ -263,7 +225,7 @@ public sealed class ModeControllerTests : IDisposable
 
         // Replace the session, then let the old scan fail.
         state.RenewCtsWithCancel();
-        TableSchema replacementSchema = CreateIdSchema();
+        TableSchema replacementSchema = CreateJsonLinesIdSchema();
         state.ApplyRefinedSchema(replacementSchema);
         scanner.Release();
 
@@ -273,31 +235,6 @@ public sealed class ModeControllerTests : IDisposable
         result.IsSuccess.Should().BeTrue();
         state.Schema.Should().BeSameAs(replacementSchema);
         state.CurrentMode.Should().Be(ViewMode.JsonLinesTree);
-    }
-
-    private static Refedle.Engine.Models.TableSchema CreateIdSchema() => new()
-    {
-        Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
-        SourceFormat = Refedle.Engine.Types.DataFormat.JsonLines
-    };
-
-    private static Refedle.Engine.Models.TableSchema CreateCsvSchema() => new()
-    {
-        Columns = [new Refedle.Engine.Models.ColumnSchema { Name = "id", Type = Refedle.Engine.Types.ColumnType.WholeNumber }],
-        SourceFormat = Refedle.Engine.Types.DataFormat.Csv
-    };
-
-    /// <summary>
-    /// Writes a JSON Lines fixture whose first 200 lines fit the initial scan (single
-    /// "name" column) and whose remaining lines introduce an "age" column, so the
-    /// background refinement must produce a schema that differs from the initial one.
-    /// </summary>
-    private static async Task WriteRefinementFixtureAsync(string path)
-    {
-        IEnumerable<string> initialLines = Enumerable.Range(0, 200).Select(i => $"{{\"name\":\"user{i}\"}}");
-        IEnumerable<string> refinedLines = Enumerable.Range(0, 5).Select(i => $"{{\"name\":\"user{i}\",\"age\":{i}}}");
-        string content = string.Join("\n", initialLines.Concat(refinedLines)) + "\n";
-        await File.WriteAllTextAsync(path, content);
     }
 
     [Fact]
@@ -321,7 +258,7 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         IRowIndexer indexer = RowIndexerFactory.Create(Refedle.Engine.Types.DataFormat.Csv, _jsonlFilePath);
-        TableSchema schema = CreateCsvSchema();
+        TableSchema schema = CreateCsvIdSchema();
         using AppState state = new();
         state.CompleteCsvLoad(indexer, schema);
         ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -387,7 +324,7 @@ public sealed class ModeControllerTests : IDisposable
     public async Task ToggleJsonLinesModeAsync_FromTableMode_RestoresTreeMode()
     {
         // Arrange
-        TableSchema schema = CreateIdSchema();
+        TableSchema schema = CreateJsonLinesIdSchema();
         using AppState state = new();
         state.CompleteJsonLinesSchemaScan(schema);
         ModeController controller = new(state, action => action(), TestSchemaScannerFactories.JsonLines);
@@ -525,39 +462,33 @@ public sealed class ModeControllerTests : IDisposable
     {
         // Arrange
         string initialPath = _jsonlFilePath;
-        string laterPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.jsonl");
-        try
-        {
-            await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
-            await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
-            using AppState state = new();
-            state.StartNewFile(initialPath);
-            state.EnterPlaceholderMode();
-            TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
-            ModeController controller = new(
-                state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
-            FullAggregationDrillDownRequest request = new(
-                Format: Refedle.Engine.Types.DataFormat.JsonLines,
-                KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
-                InitialActionStack: []);
+        using TempFile tempFile = TempFile.ReservePath(".jsonl");
+        string laterPath = tempFile.Path;
+        await File.WriteAllTextAsync(initialPath, "{\"user\":{\"name\":\"Alice\"}}");
+        await File.WriteAllTextAsync(laterPath, "{\"user\":{\"name\":\"Bob\"}}\n{\"user\":{\"name\":\"Carol\"}}");
+        using AppState state = new();
+        state.StartNewFile(initialPath);
+        state.EnterPlaceholderMode();
+        TaskCompletionSource<Action> callbackHandoff = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        ModeController controller = new(
+            state, action => callbackHandoff.TrySetResult(action), TestSchemaScannerFactories.JsonLines);
+        FullAggregationDrillDownRequest request = new(
+            Format: Refedle.Engine.Types.DataFormat.JsonLines,
+            KeyPath: [new KeyPathSegment("user", KeyPathSegmentKind.Key)],
+            InitialActionStack: []);
 
-            // Act
-            Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
-            Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
-            state.StartNewFile(laterPath);
-            state.EnterJsonLinesTree();
-            callback();
-            Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
+        // Act
+        Task<Result<DrillDownState>> pending = Task.Run(() => controller.FullAggregationDrillDownAsync(request).AsTask());
+        Action callback = await callbackHandoff.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        state.StartNewFile(laterPath);
+        state.EnterJsonLinesTree();
+        callback();
+        Result<DrillDownState> result = await pending.WaitAsync(TimeSpan.FromSeconds(15));
 
-            // Assert
-            result.IsSuccess.Should().BeTrue();
-            result.Value.Rows.Should().HaveCount(2);
-            result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
-        }
-        finally
-        {
-            File.Delete(laterPath);
-        }
+        // Assert
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Rows.Should().HaveCount(2);
+        result.Value.PreviousMode.Should().Be(ViewMode.JsonLinesTree);
     }
 
     [Fact]

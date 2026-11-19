@@ -1,6 +1,7 @@
 using System.Drawing;
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
@@ -11,31 +12,22 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 // Paging behavior of MorphTableView over a PagedTableSource with a small page size.
 public sealed partial class MorphTableViewTests
 {
-    private sealed class NumberedTableSource(long totalRows) : IExtendedTableSource
-    {
-        public long TotalRows { get; set; } = totalRows;
-        public int Columns => 3;
-        public string[] ColumnNames => ["a", "b", "c"];
-        public string[] RawColumnNames => ["a", "b", "c"];
-        public object this[long row, int col] => $"row{row}";
-    }
-
     private sealed class PagedViewFixture : IDisposable
     {
         public PagedViewFixture(long totalRows, int pageSize)
         {
-            Source = new NumberedTableSource(totalRows);
+            Source = new ThreeColumnNumberedTableSource(totalRows);
             Paged = new PagedTableSource(Source, pageSize);
-            View = new ConcreteMorphTableView
+            View = new KeyProcessingMorphTableView
             {
                 Table = Paged,
             };
             View.SetSelection(0, 0, false);
         }
 
-        public NumberedTableSource Source { get; }
+        public ThreeColumnNumberedTableSource Source { get; }
         public PagedTableSource Paged { get; }
-        public ConcreteMorphTableView View { get; }
+        public KeyProcessingMorphTableView View { get; }
 
         public void Dispose() => View.Dispose();
     }
@@ -48,7 +40,7 @@ public sealed partial class MorphTableViewTests
         return fixture.Paged.WindowStart + selectedCell.Y;
     }
 
-    private static void PressKey(ConcreteMorphTableView view, KeyCode keyCode, int times)
+    private static void PressKey(KeyProcessingMorphTableView view, KeyCode keyCode, int times)
     {
         for (int press = 0; press < times; press++)
         {
@@ -63,7 +55,7 @@ public sealed partial class MorphTableViewTests
         using IApplication app = TestAppFactory.Create();
 
         // Act
-        using ConcreteMorphTableView view = new();
+        using KeyProcessingMorphTableView view = new();
 
         // Assert
         view.CollectionNavigator.Should().BeNull();
@@ -75,7 +67,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — page size 3: page 1 window spans rows 0-5, page 2 starts at row 3
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         PagedTableSource paged = fixture.Paged;
 
         // Act
@@ -93,7 +85,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — already on page 2 (window rows 0-5); row 6 opens page 3
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         PagedTableSource paged = fixture.Paged;
         view.SetSelection(0, 3, false);
 
@@ -113,7 +105,7 @@ public sealed partial class MorphTableViewTests
         // (6 rows), so a direct SetSelection to row 6 would be rejected by the bounds check
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         PagedTableSource paged = fixture.Paged;
         view.SetSelection(0, 3, false);
         view.SetSelection(0, 6, false);
@@ -133,7 +125,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — seven j presses walk the cursor from row 0 to row 7 (page 3)
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         PagedTableSource paged = fixture.Paged;
 
         // Act
@@ -199,7 +191,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — start on page 3 in column 1; the initial window only spans pages 1-2
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         view.SetSelection(1, 3, false);
         view.SetSelection(1, 6, false);
 
@@ -221,7 +213,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — 20 rows in pages of 3: page 7 ends at row 19, window rows 15-19
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         view.SetSelection(1, 0, false);
 
         // Act
@@ -325,7 +317,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — park on page 3, then let the background index append rows
         using IApplication app = TestAppFactory.Create();
         using PagedViewFixture fixture = CreatePagedView(totalRows: 20);
-        ConcreteMorphTableView view = fixture.View;
+        KeyProcessingMorphTableView view = fixture.View;
         PressKey(view, KeyCode.J, times: 7);
         long pageBefore = fixture.Paged.CurrentPageNumber;
         long windowStartBefore = fixture.Paged.WindowStart;

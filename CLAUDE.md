@@ -12,5 +12,7 @@ All development guidelines have been organized into `.claude/rules/` for better 
 - **TUI Layer Dependencies**: See [.claude/rules/tui-layer-dependencies.md](.claude/rules/tui-layer-dependencies.md)
 - **Testing (shared)**: See [.claude/rules/testing.md](.claude/rules/testing.md)
 - **Unit Testing**: See [.claude/rules/unit-testing.md](.claude/rules/unit-testing.md)
+- **TUI Test Layers**: See [.claude/rules/tui-test-layers.md](.claude/rules/tui-test-layers.md)
+- **TUI Test Helpers**: See [.claude/rules/tui-test-helpers.md](.claude/rules/tui-test-helpers.md)
 - **End-to-End Testing**: See [.claude/rules/e2e-testing.md](.claude/rules/e2e-testing.md)
 - **Benchmarking**: See [.claude/rules/benchmarking.md](.claude/rules/benchmarking.md)

@@ -2,25 +2,22 @@ using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class VirtualTableSourceTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".csv");
+
     private readonly string _testFilePath;
 
     public VirtualTableSourceTests()
     {
-        _testFilePath = Path.Combine(Path.GetTempPath(), $"virtualTableSource_{Guid.NewGuid()}.csv");
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_testFilePath))
-        {
-            File.Delete(_testFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public void Dispose_DisposesCacheAndReader()

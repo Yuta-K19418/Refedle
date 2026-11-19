@@ -3,6 +3,7 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
+using static Refedle.Tests.App.Tui.UI.TestSchemas;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -12,38 +13,6 @@ public sealed class FocusedTableTransformerTests
     private const int FilterRevealThreshold = 200;
 
     // -------------------------------------------------------------------------
-    // Test double — mirrors FocusedTableSource's shape: column 0 is the "#" hash,
-    // data columns start at index 1.
-    // -------------------------------------------------------------------------
-
-    private sealed class FakeFocusedSource(string[][] data, string[] columnNames) : IExtendedTableSource
-    {
-        public long TotalRows => data.Length;
-        public int Columns => columnNames.Length;
-        public string[] ColumnNames => columnNames;
-        public string[] RawColumnNames => columnNames;
-        public object this[long row, int col] => data[(int)row][col];
-    }
-
-    private static TableSchema MakeSchema(params (string name, ColumnType type)[] cols) =>
-        new()
-        {
-            Columns =
-            [
-                .. cols.Select(
-                    (c, i) =>
-                        new ColumnSchema
-                        {
-                            Name = c.name,
-                            Type = c.type,
-                            ColumnIndex = i,
-                        }
-                ),
-            ],
-            SourceFormat = DataFormat.JsonArray,
-        };
-
-    // -------------------------------------------------------------------------
     // Create — null guards
     // -------------------------------------------------------------------------
 
@@ -51,7 +20,7 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullSource_ThrowsArgumentNullException()
     {
         // Arrange
-        TableSchema schema = MakeSchema(("name", ColumnType.Text));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text));
 
         // Act
         Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(null!, schema, [], FilterRevealThreshold);
@@ -64,7 +33,7 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullOriginalSchema_ThrowsArgumentNullException()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
+        StringRowsFakeTableSource source = new([["[0]", "A"]], ["#", "name"]);
 
         // Act
         Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(source, null!, [], FilterRevealThreshold);
@@ -77,8 +46,8 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithNullActions_ThrowsArgumentNullException()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
-        TableSchema schema = MakeSchema(("name", ColumnType.Text));
+        StringRowsFakeTableSource source = new([["[0]", "A"]], ["#", "name"]);
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text));
 
         // Act
         Func<FocusedTableTransformer> act = () => FocusedTableTransformer.Create(source, schema, null!, FilterRevealThreshold);
@@ -95,14 +64,14 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithEmptyActions_PrependsHashColumnToLabeledSchema()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
 
         // Act
         using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
@@ -118,13 +87,13 @@ public sealed class FocusedTableTransformerTests
     public void HashColumn_WhenActionsTargetLiteralHashName_IsSilentlySkipped()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "#", NewName = "hash" },
@@ -149,14 +118,14 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithRenameAction_RenamesColumnAndKeepsValuesUnchanged()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new RenameColumnAction { OldName = "name", NewName = "label" }];
 
         // Act
@@ -177,14 +146,14 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithDeleteAction_RemovesColumnAndResolvesRemainingColumnsAtOffset()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new DeleteColumnAction { ColumnName = "name" }];
 
         // Act
@@ -205,13 +174,13 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithCastAction_UpdatesTypeLabelAndFormatsCellValues()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1.50"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.Text));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
             [new CastColumnAction { ColumnName = "val", TargetType = ColumnType.FloatingPoint }];
 
@@ -231,7 +200,7 @@ public sealed class FocusedTableTransformerTests
     public async Task Create_WithFilterAction_RowsNarrowToMatchingSourceRows()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
@@ -239,7 +208,7 @@ public sealed class FocusedTableTransformerTests
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
             [FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value];
 
@@ -259,7 +228,7 @@ public sealed class FocusedTableTransformerTests
     public async Task Filter_MultipleFilterActions_CombinesWithAndSemantics()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
@@ -267,7 +236,7 @@ public sealed class FocusedTableTransformerTests
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value,
@@ -290,14 +259,14 @@ public sealed class FocusedTableTransformerTests
     public async Task Filter_AfterRename_UsesCurrentActionStackColumnNames()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions =
         [
             new RenameColumnAction { OldName = "name", NewName = "label" },
@@ -318,8 +287,8 @@ public sealed class FocusedTableTransformerTests
     public void FilterRowIndexer_WithoutFilterAction_IsNull()
     {
         // Arrange
-        FakeFocusedSource source = new([["[0]", "A"]], ["#", "name"]);
-        TableSchema schema = MakeSchema(("name", ColumnType.Text));
+        StringRowsFakeTableSource source = new([["[0]", "A"]], ["#", "name"]);
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text));
 
         // Act
         using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
@@ -332,14 +301,14 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFilterAction_DoesNotScanRowsUntilIndexIsBuilt()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A"],
                 ["[1]", "B"],
             ],
             ["#", "name"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text));
         IReadOnlyList<IMorphAction> actions =
             [FilterAction.Create("name", FilterOperator.Equals, ComparisonType.Text, "B").Value];
 
@@ -359,14 +328,14 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFillAction_AllCellsOfColumnReturnFillValue()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
                 ["[1]", "B", "2"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         IReadOnlyList<IMorphAction> actions = [new FillColumnAction { ColumnName = "val", Value = "N/A" }];
 
         // Act
@@ -386,13 +355,13 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFormatTimestampAction_ReformatsTimestampCells()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "2024-01-02T03:04:05"],
             ],
             ["#", "created_at"]
         );
-        TableSchema schema = MakeSchema(("created_at", ColumnType.Timestamp));
+        TableSchema schema = MakeJsonArraySchema(("created_at", ColumnType.Timestamp));
         IReadOnlyList<IMorphAction> actions =
         [
             new FormatTimestampAction
@@ -415,13 +384,13 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithFormatTimestampAction_LeavesOtherTimestampColumnsRaw()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "2024-01-15T09:30:00", "2024-03-20T14:05:33"],
             ],
             ["#", "created_at", "updated_at"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeJsonArraySchema(
             ("created_at", ColumnType.Timestamp),
             ("updated_at", ColumnType.Timestamp)
         );
@@ -450,11 +419,11 @@ public sealed class FocusedTableTransformerTests
     public void Create_WithCastAndDelete_FormatsOnlyTargetAfterHashColumn()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [["[0]", "discard", "007", "1.50"]],
             ["#", "drop", "count", "price"]
         );
-        TableSchema schema = MakeSchema(
+        TableSchema schema = MakeJsonArraySchema(
             ("drop", ColumnType.Text),
             ("count", ColumnType.Text),
             ("price", ColumnType.FloatingPoint)
@@ -486,13 +455,13 @@ public sealed class FocusedTableTransformerTests
     public void Indexer_OutOfBounds_ThrowsArgumentOutOfRangeException(int row, int col)
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         using FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
 
         // Act
@@ -506,13 +475,13 @@ public sealed class FocusedTableTransformerTests
     public void Indexer_AfterDispose_ThrowsObjectDisposedException()
     {
         // Arrange
-        FakeFocusedSource source = new(
+        StringRowsFakeTableSource source = new(
             [
                 ["[0]", "A", "1"],
             ],
             ["#", "name", "val"]
         );
-        TableSchema schema = MakeSchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
+        TableSchema schema = MakeJsonArraySchema(("name", ColumnType.Text), ("val", ColumnType.WholeNumber));
         FocusedTableTransformer transformer = FocusedTableTransformer.Create(source, schema, [], FilterRevealThreshold);
         transformer.Dispose();
 

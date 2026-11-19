@@ -23,18 +23,6 @@ public sealed class PagedTableSourceTests
         }
     }
 
-    private sealed class DisposableTableSource : IExtendedTableSource, IDisposable
-    {
-        public bool IsDisposed => DisposeCount > 0;
-        public int DisposeCount { get; private set; }
-        public long TotalRows => 0;
-        public int Columns => 0;
-        public string[] ColumnNames => [];
-        public string[] RawColumnNames => [];
-        public object this[long row, int col] => throw new NotImplementedException();
-        public void Dispose() => DisposeCount++;
-    }
-
     [Fact]
     public void Constructor_WithNullInner_ThrowsArgumentNullException()
     {
@@ -383,7 +371,7 @@ public sealed class PagedTableSourceTests
     public void Dispose_CalledTwice_DisposesInnerSourceOnce()
     {
         // Arrange
-        DisposableTableSource inner = new();
+        EmptyCountingDisposableTableSource inner = new();
         PagedTableSource source = new(inner);
         source.Dispose();
 
@@ -398,7 +386,7 @@ public sealed class PagedTableSourceTests
     public void Dispose_DisposesInnerSource()
     {
         // Arrange
-        DisposableTableSource inner = new();
+        EmptyCountingDisposableTableSource inner = new();
         PagedTableSource source = new(inner);
 
         // Act

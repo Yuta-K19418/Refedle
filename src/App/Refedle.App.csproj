@@ -28,6 +28,8 @@
     <InternalsVisibleTo Include="Refedle.Benchmarks" />
     <InternalsVisibleTo Include="Refedle.Tests" />
     <InternalsVisibleTo Include="Refedle.E2ETests" />
+    <InternalsVisibleTo Include="Refedle.IntegrationTests" />
+    <InternalsVisibleTo Include="Refedle.TestHelpers" />
   </ItemGroup>
 
   <PropertyGroup>

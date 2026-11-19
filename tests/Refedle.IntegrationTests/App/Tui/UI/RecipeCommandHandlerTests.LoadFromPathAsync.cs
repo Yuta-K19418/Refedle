@@ -3,61 +3,18 @@ using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
-using Refedle.Engine;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
-using Refedle.Engine.Recipes;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.App.Tui;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
 using Terminal.Gui.ViewBase;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
-public sealed partial class RecipeCommandHandlerTests : IDisposable
+public sealed partial class RecipeCommandHandlerTests
 {
-    private readonly string _jsonObjectFile;
-    private readonly string _jsonLinesFile;
-    private readonly string _csvFile;
-    private readonly string _recipeFile;
-
-    public RecipeCommandHandlerTests()
-    {
-        _jsonObjectFile = Path.ChangeExtension(Path.GetTempFileName(), ".json");
-        _jsonLinesFile = Path.ChangeExtension(Path.GetTempFileName(), ".jsonl");
-        _csvFile = Path.ChangeExtension(Path.GetTempFileName(), ".csv");
-        _recipeFile = Path.ChangeExtension(Path.GetTempFileName(), ".yaml");
-    }
-
-    public void Dispose()
-    {
-        if (File.Exists(_jsonObjectFile))
-        {
-            File.Delete(_jsonObjectFile);
-        }
-
-        if (File.Exists(_jsonLinesFile))
-        {
-            File.Delete(_jsonLinesFile);
-        }
-
-        if (File.Exists(_csvFile))
-        {
-            File.Delete(_csvFile);
-        }
-
-        if (File.Exists(_recipeFile))
-        {
-            File.Delete(_recipeFile);
-        }
-    }
-
-    private static async Task SaveRecipeAsync(Recipe recipe, string path)
-    {
-        Result saveResult = await new RecipeManager().SaveAsync(recipe, path);
-        saveResult.IsSuccess.Should().BeTrue();
-    }
-
     [Fact]
     public async Task LoadFromPathAsync_NonDrillDownRecipe_SetsBaseActionStack()
     {

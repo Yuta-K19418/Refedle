@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
+    <!-- Zero-Warning Policy -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Disable AOT for debugging -->
+    <PublishAot>false</PublishAot>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+
+    <!-- Shared helper library for the test projects; never a test project itself. -->
+    <IsTestProject>false</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageReference Include="xunit.assert" Version="2.9.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
+    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Refedle.Tests" />
+    <InternalsVisibleTo Include="Refedle.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The helpers here do not use the shared type aliases, so the file is excluded
+         (IDE0005 under the zero-warning policy). Revisit when a helper needs an alias. -->
+    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+  </ItemGroup>
+
+</Project>

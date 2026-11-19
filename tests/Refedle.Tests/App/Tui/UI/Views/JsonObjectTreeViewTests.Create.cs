@@ -4,6 +4,7 @@ using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonObject;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.JsonObjectTestData;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 

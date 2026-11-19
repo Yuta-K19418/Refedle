@@ -3,8 +3,10 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.UiThreadInvokes;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -28,7 +30,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile("{\"a\":1}");
+        string filePath = _tempFiles.Create("{\"a\":1}");
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
 
@@ -44,7 +46,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile("{\"a\":1}");
+        string filePath = _tempFiles.Create("{\"a\":1}");
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
 
@@ -60,7 +62,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile("{\"a\":1}");
+        string filePath = _tempFiles.Create("{\"a\":1}");
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
 
@@ -75,7 +77,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_OnSelectionChanged_InvokesOnPathChangedWithExpectedKeyPath()
     {
         // Arrange
-        string filePath = CreateTempFile("{\"a\":1}");
+        string filePath = _tempFiles.Create("{\"a\":1}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -99,7 +101,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_SmallFile_AddsLineNodesDirectly()
     {
         // Arrange
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -121,7 +123,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — 1000 lines is exactly the boundary, uses direct line nodes
         IEnumerable<string> lines = Enumerable.Range(0, 1000)
             .Select(i => $"{{\"id\":{i}}}");
-        string filePath = CreateTempFile(string.Join("\n", lines));
+        string filePath = _tempFiles.Create(string.Join("\n", lines));
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -143,7 +145,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — 1001 lines triggers range mode
         IEnumerable<string> lines = Enumerable.Range(0, 1001)
             .Select(i => $"{{\"id\":{i}}}");
-        string filePath = CreateTempFile(string.Join("\n", lines));
+        string filePath = _tempFiles.Create(string.Join("\n", lines));
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -165,7 +167,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — 2500 lines → 3 ranges: [0-999], [1000-1999], [2000-2499]
         IEnumerable<string> lines = Enumerable.Range(0, 2500)
             .Select(i => $"{{\"id\":{i}}}");
-        string filePath = CreateTempFile(string.Join("\n", lines));
+        string filePath = _tempFiles.Create(string.Join("\n", lines));
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -188,7 +190,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — non-empty file so RowReader can mmap, but stub reports 0 rows
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(" \n");
+        string filePath = _tempFiles.Create(" \n");
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
         StubRowIndexer stubIndexer = new(realIndexer, 0);
@@ -207,7 +209,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
         // Stub says TotalRows=3 but file only has 2 lines → GetRow(2) returns Empty
@@ -228,7 +230,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — indexer has already completed indexing with TotalRows > 1000
         IEnumerable<string> lines = Enumerable.Range(0, 2500)
             .Select(i => $"{{\"id\":{i}}}");
-        string filePath = CreateTempFile(string.Join("\n", lines));
+        string filePath = _tempFiles.Create(string.Join("\n", lines));
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -248,7 +250,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_IndexingCompleted_VeryLargeFile_AddsSuperRangeNodes()
     {
         // Arrange — indexer completed, file size suggests > 1M estimated rows
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -273,7 +275,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_IndexingInProgress_SubscribesToProgressChanged()
     {
         // Arrange — indexer is still building (IsIndexingCompleted == false)
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -305,7 +307,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — 1001 lines triggers range mode
         IEnumerable<string> lines = Enumerable.Range(0, 1001)
             .Select(i => $"{{\"id\":{i}}}");
-        string filePath = CreateTempFile(string.Join("\n", lines));
+        string filePath = _tempFiles.Create(string.Join("\n", lines));
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -325,7 +327,7 @@ public sealed partial class JsonLinesTreeViewTests
         // Arrange — indexer completes between FirstCheckpointReached and Create() call
         // ToctouStubRowIndexer returns false on first IsIndexingCompleted check,
         // then true on the TOCTOU re-check inside Create
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}\n{\"c\":3}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -349,7 +351,7 @@ public sealed partial class JsonLinesTreeViewTests
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 (small file size)
         // ProgressChanged adds 3 full group nodes, BuildIndexCompleted adds 1 remainder node → 4 total
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -385,7 +387,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_ProgressChanged_MultipleFires_DoNotDuplicateNodes()
     {
         // Arrange
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -416,7 +418,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_BuildIndexCompleted_MultipleFires_DoNotDuplicateRemainderNode()
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 → 3 full + 1 remainder = 4
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -445,7 +447,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_Disposed_BuildIndexCompletedDoesNotThrowOrAddNodes()
     {
         // Arrange
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -474,7 +476,7 @@ public sealed partial class JsonLinesTreeViewTests
     public void Create_BuildIndexCompleted_ZeroRemainder_AddsNoExtraNode()
     {
         // Arrange — TotalRows=3000 is an exact multiple of nodeGroupSize=1000 → remainder=0
-        string filePath = CreateTempFile("{\"a\":1}\n{\"b\":2}");
+        string filePath = _tempFiles.Create("{\"a\":1}\n{\"b\":2}");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();

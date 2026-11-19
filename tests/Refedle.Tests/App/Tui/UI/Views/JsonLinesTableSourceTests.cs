@@ -3,34 +3,39 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed class JsonLinesTableSourceTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.CreateEmpty(".tmp");
+
     private readonly string _testFilePath;
+
     private readonly RowIndexer _indexer;
-    private bool _disposed;
 
     public JsonLinesTableSourceTests()
     {
-        _testFilePath = Path.GetTempFileName();
-        File.WriteAllLines(
-            _testFilePath,
-            ["{\"id\":1,\"name\":\"Alice\"}", "{\"id\":2,\"name\":\"Bob\"}"]
-        );
-        _indexer = new RowIndexer(_testFilePath);
-        _indexer.BuildIndex();
-    }
-
-    public void Dispose()
-    {
-        if (!_disposed)
+        // xUnit does not dispose a fixture whose constructor throws, so release the temp file here.
+        try
         {
-            File.Delete(_testFilePath);
-            _disposed = true;
+            _testFilePath = _tempFile.Path;
+            File.WriteAllLines(
+                _testFilePath,
+                ["{\"id\":1,\"name\":\"Alice\"}", "{\"id\":2,\"name\":\"Bob\"}"]
+            );
+            _indexer = new RowIndexer(_testFilePath);
+            _indexer.BuildIndex();
+        }
+        catch
+        {
+            _tempFile.Dispose();
+            throw;
         }
     }
+
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public void Indexer_ExistingKey_ReturnsCellValue()

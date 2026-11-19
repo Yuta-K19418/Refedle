@@ -2,25 +2,22 @@ using AwesomeAssertions;
 using Refedle.App.Tui.Workers.Schema.Csv;
 using Refedle.Engine.Models;
 using Refedle.Engine.Types;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers.Schema.Csv;
 
 public sealed class IncrementalSchemaScannerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.CreateEmpty(".tmp");
+
     private readonly string _tempFilePath;
 
     public IncrementalSchemaScannerTests()
     {
-        _tempFilePath = Path.GetTempFileName();
+        _tempFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_tempFilePath))
-        {
-            File.Delete(_tempFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task InitialScanAsync_WithSimpleCsv_ReturnsSchema()
@@ -148,7 +145,8 @@ public sealed class IncrementalSchemaScannerTests : IDisposable
     public async Task InitialScanAsync_Constructor_WithNonexistentFile_ThrowsFileNotFoundException()
     {
         // Arrange
-        string nonexistentPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString() + ".csv");
+        using TempFile tempFile = TempFile.ReservePath(".csv");
+        string nonexistentPath = tempFile.Path;
         IncrementalSchemaScanner scanner = new(nonexistentPath);
 
         // Act & Assert

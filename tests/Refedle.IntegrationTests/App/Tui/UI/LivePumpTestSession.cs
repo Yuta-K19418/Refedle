@@ -1,11 +1,12 @@
 using Refedle.App.Tui;
 using Refedle.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
 /// <summary>
 /// Bundles the AppState/ViewManager/handler a live-pump test needs, built on the session's worker

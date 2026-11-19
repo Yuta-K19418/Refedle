@@ -1,12 +1,13 @@
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
+using Xunit;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.TestHelpers.App.Tui.UI;
 
 /// <summary>
 /// Creates the headless ANSI-driver <see cref="IApplication"/> shared by UI tests, with the
 /// driver initialized and the screen fixed at 80x25. Draw-only tests and
-/// <see cref="LivePumpTestSession{T}"/> both build on this factory so the initialization
+/// <c>LivePumpTestSession</c> both build on this factory so the initialization
 /// cannot drift apart.
 /// </summary>
 internal static class TestAppFactory

@@ -1,25 +1,22 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine.IO.JsonObject;
+using Refedle.TestHelpers.IO;
 
 namespace Refedle.Tests.App.Tui.Workers;
 
 public sealed class JsonObjectScanRunnerTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".json");
+
     private readonly string _testFilePath;
 
     public JsonObjectScanRunnerTests()
     {
-        _testFilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid():N}.json");
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (File.Exists(_testFilePath))
-        {
-            File.Delete(_testFilePath);
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     [Fact]
     public async Task RunAsync_WithJsonObjectFile_ReturnsTopLevelEntries()
@@ -53,7 +50,8 @@ public sealed class JsonObjectScanRunnerTests : IDisposable
     public async Task RunAsync_WithNonExistentFilePath_ThrowsFileNotFoundException()
     {
         // Arrange
-        string nonExistentPath = Path.Combine(Path.GetTempPath(), $"does_not_exist_{Guid.NewGuid()}.json");
+        using TempFile tempFile = TempFile.ReservePath(".json");
+        string nonExistentPath = tempFile.Path;
 
         // Act
         Func<Task<IReadOnlyList<JsonObjectEntry>>> act = async () => await JsonObjectScanRunner.RunAsync(nonExistentPath, CancellationToken.None);

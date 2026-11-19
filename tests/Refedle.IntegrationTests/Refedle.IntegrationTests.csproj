@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+
+    <!-- Zero-Warning Policy -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-all</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- Disable AOT for debugging -->
+    <PublishAot>false</PublishAot>
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="10.1.0" />
+    <PackageReference Include="AwesomeAssertions" Version="9.6.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="4.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only JsonRawBytes from the shared GlobalUsings.cs is used here; the unused CsvDataRow
+         would trip IDE0005 under the zero-warning policy, so the file is excluded and the
+         one alias is declared locally. -->
+    <Compile Remove="$(MSBuildThisFileDirectory)..\..\GlobalUsings.cs" />
+    <Using Include="System.ReadOnlyMemory&lt;byte&gt;" Alias="JsonRawBytes" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Engine\Refedle.Engine.csproj" />
+    <ProjectReference Include="..\..\src\App\Refedle.App.csproj" />
+    <ProjectReference Include="..\Refedle.TestHelpers\Refedle.TestHelpers.csproj" />
+  </ItemGroup>
+
+</Project>

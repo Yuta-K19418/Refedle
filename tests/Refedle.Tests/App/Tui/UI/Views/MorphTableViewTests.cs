@@ -1,5 +1,5 @@
 using AwesomeAssertions;
-using Refedle.App.Tui.UI.Views;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Drivers;
 using Terminal.Gui.Input;
@@ -9,12 +9,6 @@ namespace Refedle.Tests.App.Tui.UI.Views;
 
 public sealed partial class MorphTableViewTests
 {
-    private sealed class ConcreteMorphTableView : MorphTableView
-    {
-        // Exposes the protected OnKeyDown for characterization testing.
-        public bool ProcessKey(Key key) => OnKeyDown(key);
-    }
-
     // Minimal 2-row source so navigation commands (Down/Up) are valid and get consumed.
     private sealed class TwoRowTableSource : ITableSource
     {
@@ -22,16 +16,6 @@ public sealed partial class MorphTableViewTests
         public int Columns => 1;
         public string[] ColumnNames => ["c"];
         public object this[int row, int col] => row;
-    }
-
-    private sealed class DisposableTableSource : ITableSource, IDisposable
-    {
-        public bool IsDisposed { get; private set; }
-        public int Rows => 0;
-        public int Columns => 0;
-        public string[] ColumnNames => [];
-        public object this[int row, int col] => throw new NotImplementedException();
-        public void Dispose() => IsDisposed = true;
     }
 
     private sealed class NonDisposableTableSource : ITableSource
@@ -46,8 +30,8 @@ public sealed partial class MorphTableViewTests
     public void Dispose_DisposesTableIfIDisposable()
     {
         // Arrange
-        using ConcreteMorphTableView view = new();
-        using DisposableTableSource table = new();
+        using KeyProcessingMorphTableView view = new();
+        using FlagDisposableBasicTableSource table = new();
         view.Table = table;
 
         // Act
@@ -61,7 +45,7 @@ public sealed partial class MorphTableViewTests
     public void Dispose_DoesNotThrow_WhenTableIsNotIDisposable()
     {
         // Arrange
-        using ConcreteMorphTableView view = new();
+        using KeyProcessingMorphTableView view = new();
         NonDisposableTableSource table = new();
         view.Table = table;
 
@@ -85,7 +69,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — Table is null, so OnKeyDown short-circuits to the base view.
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new();
+        using KeyProcessingMorphTableView view = new();
 
         // Act
         Func<bool> act = () => view.ProcessKey(new Key(KeyCode.J));
@@ -105,7 +89,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
@@ -122,7 +106,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — first 'g' enters the pending state (PendingGSequence).
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
@@ -140,7 +124,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — 'gg' within the timeout resolves to GoToFirst. The view owns its own
         // translator with a 1000 ms timeout, so two synchronous presses stay well within it.
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
@@ -159,7 +143,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — Shift+G resolves to GoToEnd.
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
@@ -179,7 +163,7 @@ public sealed partial class MorphTableViewTests
     {
         // Arrange — global shortcuts must NOT be consumed so they reach AppKeyHandler.
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };
@@ -199,7 +183,7 @@ public sealed partial class MorphTableViewTests
         // Arrange — neither a vim key nor a global shortcut, so it falls through to base.OnKeyDown.
         // The return value depends on base TableView state, so only exception-safety is locked.
         using IApplication app = TestAppFactory.Create();
-        using ConcreteMorphTableView view = new()
+        using KeyProcessingMorphTableView view = new()
         {
             Table = new TwoRowTableSource(),
         };

@@ -3,8 +3,10 @@ using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.Engine.IO.DrillDown;
 using Refedle.Engine.IO.JsonArray;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Views;
+using static Refedle.Tests.App.Tui.UI.Views.UiThreadInvokes;
 
 namespace Refedle.Tests.App.Tui.UI.Views;
 
@@ -27,7 +29,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_WithNullOnTableModeToggle_ThrowsArgumentNullException()
     {
         // Arrange
-        string filePath = CreateTempFile("[1]");
+        string filePath = _tempFiles.Create("[1]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -43,7 +45,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_WithNullUiThreadInvoke_ThrowsArgumentNullException()
     {
         // Arrange
-        string filePath = CreateTempFile("[1]");
+        string filePath = _tempFiles.Create("[1]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -59,7 +61,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_WithNullOnPathChanged_ThrowsArgumentNullException()
     {
         // Arrange
-        string filePath = CreateTempFile("[1]");
+        string filePath = _tempFiles.Create("[1]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -75,7 +77,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_OnSelectionChanged_InvokesOnPathChangedWithExpectedKeyPath()
     {
         // Arrange
-        string filePath = CreateTempFile("[{\"a\":1}]");
+        string filePath = _tempFiles.Create("[{\"a\":1}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -99,7 +101,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_SmallArray_AddsElementNodesDirectly()
     {
         // Arrange
-        string filePath = CreateTempFile("[1, 2, 3, 4, 5]");
+        string filePath = _tempFiles.Create("[1, 2, 3, 4, 5]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -121,7 +123,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — 1000 elements is exactly the boundary, uses direct element nodes
         IEnumerable<string> elements = Enumerable.Range(0, 1000)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        string filePath = CreateTempFile($"[{string.Join(",", elements)}]");
+        string filePath = _tempFiles.Create($"[{string.Join(",", elements)}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -143,7 +145,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — 1001 elements triggers range mode
         IEnumerable<string> elements = Enumerable.Range(0, 1001)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        string filePath = CreateTempFile($"[{string.Join(",", elements)}]");
+        string filePath = _tempFiles.Create($"[{string.Join(",", elements)}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -165,7 +167,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — 2500 elements → 3 ranges: [0-999], [1000-1999], [2000-2499]
         IEnumerable<string> elements = Enumerable.Range(0, 2500)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        string filePath = CreateTempFile($"[{string.Join(",", elements)}]");
+        string filePath = _tempFiles.Create($"[{string.Join(",", elements)}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -187,7 +189,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_EmptyArray_AddsNoNodes()
     {
         // Arrange
-        string filePath = CreateTempFile("[]");
+        string filePath = _tempFiles.Create("[]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -206,7 +208,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
         // Stub says TotalRows=3 but file only has 2 elements → ReadElements returns only 2 elements
@@ -227,7 +229,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — 1001 elements triggers range mode
         IEnumerable<string> elements = Enumerable.Range(0, 1001)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        string filePath = CreateTempFile($"[{string.Join(",", elements)}]");
+        string filePath = _tempFiles.Create($"[{string.Join(",", elements)}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -247,7 +249,7 @@ public sealed partial class JsonArrayTreeViewTests
         // Arrange — indexer has already completed indexing with TotalRows > 1000
         IEnumerable<string> elements = Enumerable.Range(0, 2500)
             .Select(i => i.ToString(System.Globalization.CultureInfo.InvariantCulture));
-        string filePath = CreateTempFile($"[{string.Join(",", elements)}]");
+        string filePath = _tempFiles.Create($"[{string.Join(",", elements)}]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer indexer = new(filePath);
         indexer.BuildIndex();
@@ -267,7 +269,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_IndexingCompleted_VeryLargeArray_AddsSuperRangeNodes()
     {
         // Arrange — indexer completed, file size suggests > 1M estimated rows
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -292,7 +294,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_IndexingInProgress_SubscribesToProgressChanged()
     {
         // Arrange — indexer is still building (IsIndexingCompleted == false)
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -322,7 +324,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_IndexingInProgress_TOCTOU_CompletedBeforeSubscribe()
     {
         // Arrange — indexer completes between FirstCheckpointReached and Create() call
-        string filePath = CreateTempFile("[1, 2, 3]");
+        string filePath = _tempFiles.Create("[1, 2, 3]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -345,7 +347,7 @@ public sealed partial class JsonArrayTreeViewTests
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 (small file size)
         // ProgressChanged adds 3 full group nodes, BuildIndexCompleted adds 1 remainder node → 4 total
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -381,7 +383,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_ProgressChanged_MultipleFires_DoNotDuplicateNodes()
     {
         // Arrange
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -412,7 +414,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_BuildIndexCompleted_MultipleFires_DoNotDuplicateRemainderNode()
     {
         // Arrange — TotalRows=3500, nodeGroupSize=1000 → 3 full + 1 remainder = 4
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -441,7 +443,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_Disposed_BuildIndexCompletedDoesNotThrowOrAddNodes()
     {
         // Arrange
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();
@@ -470,7 +472,7 @@ public sealed partial class JsonArrayTreeViewTests
     public void Create_BuildIndexCompleted_ZeroRemainder_AddsNoExtraNode()
     {
         // Arrange — TotalRows=3000 is an exact multiple of nodeGroupSize=1000 → remainder=0
-        string filePath = CreateTempFile("[1, 2]");
+        string filePath = _tempFiles.Create("[1, 2]");
         using IApplication app = TestAppFactory.Create();
         RowIndexer realIndexer = new(filePath);
         realIndexer.BuildIndex();

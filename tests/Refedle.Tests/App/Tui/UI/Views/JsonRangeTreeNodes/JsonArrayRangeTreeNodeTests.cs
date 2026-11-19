@@ -4,35 +4,23 @@ using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.JsonArray;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonRangeTreeNodes;
 
 public sealed class JsonArrayRangeTreeNodeTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".json");
+
     private readonly string _testFilePath;
-    private bool _disposed;
 
     public JsonArrayRangeTreeNodeTests()
     {
-        _testFilePath = Path.Combine(
-            Path.GetTempPath(),
-            $"jsonarray_rangetreenode_{Guid.NewGuid()}.json"
-        );
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            if (File.Exists(_testFilePath))
-            {
-                File.Delete(_testFilePath);
-            }
-
-            _disposed = true;
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     private RowIndexer CreateAndBuildIndexer(string jsonContent)
     {

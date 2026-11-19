@@ -4,35 +4,23 @@ using Refedle.App.Tui.UI.Views.JsonRangeTreeNodes;
 using Refedle.App.Tui.UI.Views.JsonTreeNodes;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.JsonLines;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.Views;
 
 namespace Refedle.Tests.App.Tui.UI.Views.JsonRangeTreeNodes;
 
 public sealed class JsonLinesRangeTreeNodeTests : IDisposable
 {
+    private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
+
     private readonly string _testFilePath;
-    private bool _disposed;
 
     public JsonLinesRangeTreeNodeTests()
     {
-        _testFilePath = Path.Combine(
-            Path.GetTempPath(),
-            $"jsonlines_rangetreenode_{Guid.NewGuid()}.jsonl"
-        );
+        _testFilePath = _tempFile.Path;
     }
 
-    public void Dispose()
-    {
-        if (!_disposed)
-        {
-            if (File.Exists(_testFilePath))
-            {
-                File.Delete(_testFilePath);
-            }
-
-            _disposed = true;
-        }
-    }
+    public void Dispose() => _tempFile.Dispose();
 
     private RowIndexer CreateAndBuildIndexer(string content)
     {

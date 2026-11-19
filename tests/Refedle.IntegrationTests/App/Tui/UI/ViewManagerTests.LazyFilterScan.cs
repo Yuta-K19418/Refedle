@@ -7,12 +7,17 @@ using Refedle.Engine.IO;
 using Refedle.Engine.IO.Csv;
 using Refedle.Engine.Models.Actions;
 using Refedle.Engine.Types;
-using Refedle.Tests.App.Tui.Workers.Schema;
+using Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport;
+using Refedle.TestHelpers.App.Tui.UI;
+using Refedle.TestHelpers.App.Tui.Workers.Schema;
+using Refedle.TestHelpers.IO;
 using Terminal.Gui.App;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestData;
+using static Refedle.IntegrationTests.App.Tui.UI.ViewManagerSupport.ViewManagerTestViews;
 
-namespace Refedle.Tests.App.Tui.UI;
+namespace Refedle.IntegrationTests.App.Tui.UI;
 
 // Lazy filter scans of the CSV / JSON Lines table views: the progress overlay lifecycle on
 // the content container and its survival across the JSON Lines schema refinement rebuild.
@@ -40,27 +45,6 @@ public sealed partial class ViewManagerTests
         act.Should().Throw<ArgumentNullException>().Which.ParamName.Should().Be("overlayHost");
     }
 
-    private static IEnumerable<View> SelfAndDescendants(View view)
-    {
-        Stack<View> pending = new();
-        pending.Push(view);
-
-        while (pending.Count > 0)
-        {
-            View current = pending.Pop();
-            yield return current;
-
-            foreach (View child in current.SubViews)
-            {
-                pending.Push(child);
-            }
-        }
-    }
-
-    // The overlay has no progress bar; its percentage label is the one view that is unique to it
-    private static bool IsProgressOverlayLabel(View view) =>
-        view is Label label && label.Text.StartsWith(" Filtering", StringComparison.Ordinal);
-
     private static Label? FindProgressOverlayLabel(View? view) =>
         view is null ? null : SelfAndDescendants(view).OfType<Label>().FirstOrDefault(IsProgressOverlayLabel);
 
@@ -69,8 +53,8 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\nb\n"));
+        OutcomeFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\nb\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
         // Act
@@ -98,9 +82,9 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
-        MockRowIndexer indexer = new(filePath, 1);
+        OutcomeFilterScanRunner runner = new();
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
+        CompletedStubRowIndexer indexer = new(filePath, 1);
         using ItemCountHarness harness = new(filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
         // Act
@@ -124,7 +108,7 @@ public sealed partial class ViewManagerTests
         using LazyScanHarness harness = new(
             FilterAction.Create("col1", FilterOperator.Equals, ComparisonType.Text, "a").Value);
         harness.ViewManager.SwitchToJsonLinesTableView(
-            new MockRowIndexer(harness.FilePath, 2),
+            new CompletedStubRowIndexer(harness.FilePath, 2),
             CreateJsonLinesSchema("col1"));
         JsonLinesTableView view = harness.ViewManager.GetCurrentView().Should().BeOfType<JsonLinesTableView>().Subject;
         ITableSource? oldTable = view.Table;
@@ -154,8 +138,8 @@ public sealed partial class ViewManagerTests
     {
         // Arrange
         using IApplication app = TestAppFactory.Create();
-        ControllableFilterScanRunner runner = new();
-        DataRowIndexer indexer = BuildCsvIndexer(CreateTempFile(".csv", "col1\na\n"));
+        OutcomeFilterScanRunner runner = new();
+        DataRowIndexer indexer = BuildCsvIndexer(_tempFiles.Create(".csv", "col1\na\n"));
         using ItemCountHarness harness = new(indexer.FilePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
         harness.ViewManager.SwitchToCsvTable(indexer, CreateItemCountSchema(DataFormat.Csv));
         await harness.Queue.RunNextAsync(); // indexing already finished, so the scan begins
@@ -188,10 +172,10 @@ public sealed partial class ViewManagerTests
         // Not appended mid-test: the CSV table keeps the file open (FileShare.Read) while shown,
         // so a write fails on Windows with an IOException (sharing violation). JSON Lines closes
         // the file after mapping, so its variant can append.
-        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
@@ -224,10 +208,10 @@ public sealed partial class ViewManagerTests
     {
         // Arrange — same deferred-start scenario on the JSON Lines table view
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".jsonl", "{\"col1\": \"a\"}\n");
+        string filePath = _tempFiles.Create(".jsonl", "{\"col1\": \"a\"}\n");
         GrowableRowIndexer indexer = new(filePath, firstRowByteOffset: 0);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.JsonLines, indexer, runner, CreateColumnFilter("a"));
 
@@ -260,10 +244,10 @@ public sealed partial class ViewManagerTests
         // Arrange — the file holds two matching rows, but the completion event fires with
         // only the first row indexed, modeling an index that ended before the whole file
         using IApplication app = TestAppFactory.Create();
-        string filePath = CreateTempFile(".csv", "col1\na\na\n");
+        string filePath = _tempFiles.Create(".csv", "col1\na\na\n");
         GrowableRowIndexer indexer = new(filePath, "col1\n".Length);
         indexer.AddRows(1);
-        RecordingFilterScanRunner runner = new();
+        TaskRecordingFilterScanRunner runner = new();
         using ItemCountHarness harness = new(
             filePath, DataFormat.Csv, indexer, runner, CreateColumnFilter("a"));
 
@@ -326,11 +310,12 @@ public sealed partial class ViewManagerTests
     {
         private readonly Terminal.Gui.App.IApplication _app = TestAppFactory.Create();
         private readonly Window _window = new();
+        private readonly TempFile _tempFile = TempFile.ReservePath(".jsonl");
         private readonly StatusBar _statusBar = new();
 
         public LazyScanHarness(FilterAction filter)
         {
-            FilePath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.jsonl");
+            FilePath = _tempFile.Path;
             File.WriteAllText(FilePath, "{\"col1\": \"a\", \"col2\": \"b\"}\n{\"col1\": \"a\", \"col2\": \"y\"}\n");
             State.StartNewFile(FilePath);
             State.AddMorphAction(filter);
@@ -347,9 +332,9 @@ public sealed partial class ViewManagerTests
 
         public ViewManager ViewManager { get; }
 
-        public RecordingFilterScanRunner Runner { get; } = new();
+        public TaskRecordingFilterScanRunner Runner { get; } = new();
 
-        public CallbackQueue Queue { get; } = new();
+        public SteppableCallbackQueue Queue { get; } = new();
 
         public void Refine(params string[] columns)
         {
@@ -364,7 +349,7 @@ public sealed partial class ViewManagerTests
             _statusBar.Dispose();
             State.Dispose();
             _app.Dispose();
-            File.Delete(FilePath);
+            _tempFile.Dispose();
         }
     }
 }

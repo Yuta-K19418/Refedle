@@ -1,5 +1,6 @@
 using AwesomeAssertions;
 using Refedle.App.Tui.UI.Views.Dialogs;
+using Refedle.TestHelpers.App.Tui.UI;
 using Terminal.Gui.App;
 using Terminal.Gui.Input;
 using Terminal.Gui.Views;
