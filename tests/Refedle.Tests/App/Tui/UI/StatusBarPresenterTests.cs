@@ -77,6 +77,36 @@ public sealed class StatusBarPresenterTests : IDisposable
         fixture.Hints().Should().NotContain("t:Tree/Table");
     }
 
+    [Theory]
+    [InlineData(".jsonl", "")]
+    [InlineData(".txt", "unsupported")]
+    public void Refresh_WithFilePathButFormatDetectionFailing_DoesNotIncludeToggleHint(string extension, string content)
+    {
+        // Arrange
+        using Fixture fixture = new();
+        fixture.State.StartNewFile(_tempFiles.Create(extension, content));
+
+        // Act
+        fixture.Presenter.Refresh();
+
+        // Assert
+        fixture.Hints().Should().NotContain("t:Tree/Table");
+    }
+
+    [Fact]
+    public void Refresh_WithNonExistentFilePath_DoesNotIncludeToggleHint()
+    {
+        // Arrange
+        using Fixture fixture = new();
+        fixture.State.StartNewFile(_tempFiles.ReservePath(".jsonl"));
+
+        // Act
+        fixture.Presenter.Refresh();
+
+        // Assert
+        fixture.Hints().Should().NotContain("t:Tree/Table");
+    }
+
     [Fact]
     public void Refresh_WithMorphTableViewShown_IncludesMenuHint()
     {
@@ -186,6 +216,41 @@ public sealed class StatusBarPresenterTests : IDisposable
 
         // Assert
         fixture.ItemCountTexts().Should().Equal("5000 items");
+    }
+
+    [Fact]
+    public void Refresh_WithNonPagedTableShown_ShowsFileTotalAsItemCount()
+    {
+        // Arrange
+        using Fixture fixture = new();
+        fixture.State.CompleteCsvLoad(new CompletedStubRowIndexer("test.csv", 5000), CreateSchema());
+        using System.Data.DataTable dataTable = new();
+        using PlainMorphTableView view = new()
+        {
+            Table = new DataTableSource(dataTable),
+        };
+        fixture.CurrentView = view;
+
+        // Act
+        fixture.Presenter.Refresh();
+
+        // Assert
+        fixture.ItemCountTexts().Should().Equal("5000 items");
+    }
+
+    [Fact]
+    public void Refresh_WithFocusedTableModeOnJsonArrayFile_DoesNotIncludeToggleHint()
+    {
+        // Arrange
+        using Fixture fixture = new();
+        fixture.State.StartNewFile(_tempFiles.Create(".json", "[1,2,3]"));
+        fixture.State.EnterFocusedTable(CreateDrillDown([]));
+
+        // Act
+        fixture.Presenter.Refresh();
+
+        // Assert
+        fixture.Hints().Should().Contain("bs:Back").And.NotContain("t:Tree/Table");
     }
 
     [Fact]
