@@ -22,24 +22,6 @@ using System.Diagnostics.CodeAnalysis;
 // ViewManager
 [assembly: SuppressMessage(
     "Reliability",
-    "CA2213:Disposable fields should be disposed",
-    Scope = "member",
-    Target = "~F:Refedle.App.Tui.UI.ViewManager._breadcrumbBar",
-    Justification = "BreadcrumbBar is added to the Window (_container) and is disposed automatically when the Window is disposed.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2213:Disposable fields should be disposed",
-    Scope = "member",
-    Target = "~F:Refedle.App.Tui.UI.ViewManager._contentContainer",
-    Justification = "ContentContainer is added to the Window (_container) and is disposed automatically when the Window is disposed.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToCsvTable(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
-    Justification = "Child views are owned by the container and disposed via SwapView.")]
-[assembly: SuppressMessage(
-    "Reliability",
     "CA2000:Dispose objects before losing scope",
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToJsonLinesTree(Refedle.Engine.IO.IRowIndexer)",
@@ -57,18 +39,6 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToJsonObjectTree(System.Collections.Generic.IReadOnlyList{Refedle.Engine.IO.JsonObject.JsonObjectEntry})",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToJsonLinesTableView(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
-    Justification = "Child views are owned by the container and disposed via SwapView.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.ViewManager.RebuildLazyTransformer(Refedle.App.Tui.UI.Views.JsonLinesTableView,Refedle.App.Tui.UI.Views.JsonLinesTableSource,Refedle.App.Tui.UI.Views.LazyTransformer,Refedle.Engine.Models.TableSchema)",
-    Justification = "The new table source is owned by the view and disposed with it.")]
-[assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
@@ -81,23 +51,63 @@ using System.Diagnostics.CodeAnalysis;
     Target = "~M:Refedle.App.Tui.UI.ViewManager.ShowError(System.String)",
     Justification = "Child views are owned by the container and disposed via SwapView.")]
 [assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.ViewManager.SwitchToFocusedTable(Refedle.App.Tui.DrillDownState)",
-    Justification = "Owned by container via SwapView.")]
-[assembly: SuppressMessage(
-    "Reliability",
-    "CA2000:Dispose objects before losing scope",
-    Scope = "member",
-    Target = "~M:Refedle.App.Tui.UI.ViewManager.CreateFocusedTableView(Refedle.App.Tui.UI.Views.IExtendedTableSource,Terminal.Gui.Views.TableStyle)",
-    Justification = "Child views are owned by the container and disposed via SwapView.")]
-[assembly: SuppressMessage(
     "Style",
     "IDE0010:Populate switch",
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.ViewManager.ReturnFromDrillDown",
     Justification = "Only tree ViewMode values are valid PreviousMode; the default arm throws for any other member.")]
+
+// ContentViewHost
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~P:Refedle.App.Tui.UI.ContentViewHost.Container",
+    Justification = "The container is added to the Window and is disposed automatically when the Window is disposed.")]
+
+// BreadcrumbPresenter
+[assembly: SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Scope = "type",
+    Target = "~T:Refedle.App.Tui.UI.BreadcrumbPresenter",
+    Justification = "The BreadcrumbBar is added to the Window and is disposed automatically when the Window is disposed.")]
+
+// StatusBarPresenter
+[assembly: SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Scope = "type",
+    Target = "~T:Refedle.App.Tui.UI.StatusBarPresenter",
+    Justification = "The item count label is disposed by RemoveItemCountLabel, which ViewManager calls on dispose.")]
+
+// TableViewFactory
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.TableViewFactory.CreateCsvTable(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
+    Justification = "Child views are owned by the container and disposed via ContentViewHost.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.TableViewFactory.CreateJsonLinesTable(Refedle.Engine.IO.IRowIndexer,Refedle.Engine.Models.TableSchema)",
+    Justification = "Child views are owned by the container and disposed via ContentViewHost.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.TableViewFactory.CreateFocusedTableView(Refedle.App.Tui.UI.Views.IExtendedTableSource,Terminal.Gui.Views.TableStyle)",
+    Justification = "Child views are owned by the container and disposed via ContentViewHost.")]
+
+// LazyTransformerRebuilder
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2000:Dispose objects before losing scope",
+    Scope = "member",
+    Target = "~M:Refedle.App.Tui.UI.LazyTransformerRebuilder.Rebuild(Refedle.App.Tui.UI.Views.JsonLinesTableView,Refedle.App.Tui.UI.Views.JsonLinesTableSource,Refedle.App.Tui.UI.Views.LazyTransformer,Refedle.Engine.Models.TableSchema)",
+    Justification = "The new table source is owned by the view and disposed with it.")]
 
 // FilterScanManager
 [assembly: SuppressMessage(

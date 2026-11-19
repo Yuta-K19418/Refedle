@@ -1,21 +1,14 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Globalization;
-using System.Text;
 using Refedle.App.Tui.UI.Views;
 using Refedle.App.Tui.Workers;
 using Refedle.Engine;
-using Refedle.Engine.Filtering;
 using Refedle.Engine.IO;
 using Refedle.Engine.IO.DrillDown;
-using Refedle.Engine.IO.JsonLines;
 using Refedle.Engine.IO.JsonObject;
 using Refedle.Engine.Models;
 using Refedle.Engine.Models.Actions;
-using Refedle.Engine.Types;
 using Terminal.Gui.ViewBase;
 using Terminal.Gui.Views;
-using Key = Terminal.Gui.Input.Key;
 
 namespace Refedle.App.Tui.UI;
 
@@ -41,22 +34,15 @@ namespace Refedle.App.Tui.UI;
 /// </remarks>
 internal sealed class ViewManager : IDisposable
 {
-    /// <summary>
-    /// Matched rows the filter scan must produce before the table view replaces the loading
-    /// view; passed into the indexer so its threshold wait fires at the same count.
-    /// </summary>
-    private const int FilterScanInitialTableRows = 200;
-
-    private readonly Window _container;
     private readonly AppState _state;
     private readonly ModeController _modeController;
     private readonly Action<Action> _uiThreadInvoke;
-    private readonly BreadcrumbBar _breadcrumbBar;
-    private readonly View _contentContainer;
+    private readonly BreadcrumbPresenter _breadcrumb;
+    private readonly ContentViewHost _contentHost;
+    private readonly StatusBarPresenter _statusBar;
+    private readonly TableViewFactory _tableViewFactory;
     private readonly FilterScanManager _filterScanManager;
     private readonly LazyFilterScanTracker _lazyFilterScanTracker;
-    private View? _currentView;
-    private Label? _itemCountLabel;
     private bool _disposed;
 
     internal ViewManager(
@@ -71,31 +57,31 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(modeController);
         ArgumentNullException.ThrowIfNull(filterScanRunner);
         ArgumentNullException.ThrowIfNull(uiThreadInvoke);
-        _container = container;
         _state = state;
         _modeController = modeController;
         _uiThreadInvoke = uiThreadInvoke;
-        _breadcrumbBar = new BreadcrumbBar();
-        _contentContainer = new View
-        {
-            X = 0,
-            Y = Pos.Bottom(_breadcrumbBar),
-            Width = Dim.Fill(),
-            Height = Dim.Fill() - 1, // Leave room for StatusBar at the bottom
-            CanFocus = true,
-        };
-        _container.Add(_breadcrumbBar, _contentContainer);
+        _breadcrumb = new BreadcrumbPresenter(state);
+        _contentHost = new ContentViewHost(_breadcrumb.View);
+        container.Add(_breadcrumb.View, _contentHost.Container);
+        _statusBar = new StatusBarPresenter(container, state, GetCurrentView, IsFilterScanRunning);
+        _tableViewFactory = new TableViewFactory(
+            state,
+            uiThreadInvoke,
+            GetCurrentView,
+            new LazyTransformerRebuilder(state, GetCurrentView),
+            HandleMorphAction,
+            ShowRowReadError);
         // Narrow delegates keep FilterScanManager decoupled from ViewManager itself while
         // it drives the content view, status bar and error display on the UI thread.
         _filterScanManager = new FilterScanManager(
             filterScanRunner,
             uiThreadInvoke,
             () => state.Cts.Token,
-            CreateFocusedTableView,
+            _tableViewFactory.CreateFocusedTableView,
             SwapView,
             RefreshStatusBarHints,
             ShowError,
-            _contentContainer,
+            _contentHost.Container,
             GetCurrentView);
         // Same decoupling for the lazy scan of the CSV / JSON Lines table views. The scan
         // overlay rides the content container, whose content size is its viewport, so it
@@ -106,7 +92,7 @@ internal sealed class ViewManager : IDisposable
             () => state.Cts.Token,
             RefreshStatusBarHints,
             ShowError,
-            _contentContainer,
+            _contentHost.Container,
             GetCurrentView);
     }
 
@@ -114,106 +100,7 @@ internal sealed class ViewManager : IDisposable
     /// Refreshes the status bar hints based on the current application state.
     /// When indexing is complete, also shows an item count label at the right edge.
     /// </summary>
-    internal void RefreshStatusBarHints()
-    {
-        RemoveItemCountLabel();
-
-        StatusBar? statusBar = GetCurrentStatusBar();
-        if (statusBar is null)
-        {
-            return;
-        }
-
-        // Clear all existing shortcuts
-        statusBar.RemoveAll();
-
-        List<string> hints = ["o:Open", "s:Save", "q:Quit"];
-
-        if (!string.IsNullOrWhiteSpace(_state.CurrentFilePath))
-        {
-            AddContextualHints(hints);
-        }
-
-        hints.Add("?:Help");
-
-        PopulateShortcuts(statusBar, hints);
-        AddItemCountLabel(statusBar);
-    }
-
-    private void AddContextualHints(List<string> hints)
-    {
-        AddTreeToggleHint(hints);
-        AddMenuHint(hints);
-
-        int currentActionCount = _state.TryGetDrillDown(out DrillDownState? drillDown)
-            ? drillDown.ActionStack.Count
-            : _state.ActionStack.Count;
-
-        if (currentActionCount > 0)
-        {
-            hints.Add("c:Clear");
-        }
-
-        if (_state.CurrentMode == ViewMode.FocusedTable)
-        {
-            hints.Add("bs:Back");
-        }
-    }
-
-    private void AddTreeToggleHint(List<string> hints)
-    {
-        Result<DataFormat> format = FormatDetector.DetectInputFile(_state.CurrentFilePath);
-        if (format.IsSuccess
-            && format.Value is DataFormat.JsonLines or DataFormat.JsonArray
-            && _state.CurrentMode != ViewMode.FocusedTable)
-        {
-            hints.Add("t:Tree/Table");
-        }
-    }
-
-    private void AddMenuHint(List<string> hints)
-    {
-        View? currentView = GetCurrentView();
-        if ((currentView is MorphTableView && _state.CurrentMode != ViewMode.FocusedTable)
-            || currentView is MorphTreeView)
-        {
-            hints.Add("x:Menu");
-        }
-    }
-
-    private static void PopulateShortcuts(StatusBar statusBar, List<string> hints)
-    {
-        // Populate shortcuts with Key.Empty to suppress key indicator
-        List<Shortcut> shortcuts = [.. hints.Select(static hint => new Shortcut { Key = Key.Empty, HelpText = hint })];
-        foreach (Shortcut shortcut in shortcuts)
-        {
-            statusBar.Add(shortcut);
-        }
-    }
-
-    private void AddItemCountLabel(StatusBar statusBar)
-    {
-        if (_state.RowIndexer is not { IsIndexingCompleted: true } || IsFilterScanRunning())
-        {
-            return;
-        }
-
-        // A displayed table reports its own (possibly filtered) count; other views fall back to the file total.
-        long rowCount = _currentView is MorphTableView { Table: Views.PagedTableSource paged }
-            ? paged.TotalRows
-            : _state.RowIndexer.TotalRows;
-
-        _itemCountLabel = new Label
-        {
-            Text = string.Create(CultureInfo.InvariantCulture, $"{rowCount} items"),
-            // AnchorEnd places the right edge at the container boundary; subtract 1 to keep a margin
-            X = Pos.AnchorEnd() - 1,
-            // Place on the same row as the StatusBar (bottom line of the container)
-            Y = Pos.AnchorEnd(1),
-            SchemeName = statusBar.SchemeName,
-        };
-        _container.Add(_itemCountLabel);
-    }
+    internal void RefreshStatusBarHints() => _statusBar.Refresh();
 
     private bool IsFilterScanRunning() =>
         _filterScanManager.IsScanRunning || _lazyFilterScanTracker.IsRunningForCurrentView;
@@ -225,23 +112,15 @@ internal sealed class ViewManager : IDisposable
     /// <param name="collapseIndices">
     /// When <c>true</c>, array indices render as <c>"[*]"</c> (Full Aggregation DrillDown).
     /// </param>
-    internal void UpdateBreadcrumb(IReadOnlyList<KeyPathSegment> path, bool collapseIndices)
-    {
-        _state.SetCurrentKeyPath(path);
-        _breadcrumbBar.SetPath(path, collapseIndices);
-    }
+    internal void UpdateBreadcrumb(IReadOnlyList<KeyPathSegment> path, bool collapseIndices) =>
+        _breadcrumb.Update(path, collapseIndices);
 
     /// <summary>
     /// Blanks the breadcrumb bar and resets <see cref="AppState.CurrentKeyPath"/> for modes with no
-    /// JSON hierarchy (<see cref="ViewMode.CsvTable"/>, <see cref="ViewMode.JsonLinesTable"/>,
-    /// <see cref="ViewMode.FileSelection"/>). Unlike <see cref="UpdateBreadcrumb"/> with an empty
-    /// path, this does not render <c>"root"</c>.
+    /// JSON hierarchy. Unlike <see cref="UpdateBreadcrumb"/> with an empty path, this does not
+    /// render <c>"root"</c>.
     /// </summary>
-    internal void ClearBreadcrumb()
-    {
-        _state.SetCurrentKeyPath([]);
-        _breadcrumbBar.Clear();
-    }
+    internal void ClearBreadcrumb() => _breadcrumb.Clear();
 
     /// <summary>
     /// Toggles between JSON Lines Tree and Table view modes.
@@ -311,39 +190,10 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        // Assigned below; the queued error callback compares it with the then-current view.
-        // The token marks the callback stale once another file session has started.
-        Views.CsvTableView? view = null;
-        CancellationToken sessionToken = _state.Cts.Token;
-        IExtendedTableSource rawSource = new Views.VirtualTableSource(
-            indexer,
-            schema,
-            message => _uiThreadInvoke(() => ShowRowReadError(view, message, sessionToken)));
-        IExtendedTableSource source = _state.ActionStack.Count > 0
-            ? Views.LazyTransformer.Create(
-                rawSource,
-                schema,
-                _state.ActionStack,
-                filterSpecs => new Refedle.Engine.IO.Csv.FilterRowIndexer(
-                    indexer,
-                    schema.Columns.Count,
-                    filterSpecs
-                )
-            )
-            : rawSource;
-
-        TableStyle style = new() { AlwaysShowHeaders = true };
-        view = new Views.CsvTableView
-        {
-            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
-            Style = style,
-            OnMorphAction = HandleMorphAction,
-            IsRowIndexComplete = () => indexer.IsIndexingCompleted,
-        };
-        SetInitialSelectionWhenReady(view, indexer);
-        SwapView(view);
-        view.SetFocus();
-        StartLazyFilterScan(source, view, indexer);
+        TableViewResult table = _tableViewFactory.CreateCsvTable(indexer, schema);
+        SwapView(table.View);
+        table.View.SetFocus();
+        StartLazyFilterScan(table.Source, table.View, indexer);
     }
 
     /// <summary>
@@ -419,43 +269,10 @@ internal sealed class ViewManager : IDisposable
         ArgumentNullException.ThrowIfNull(schema);
         ClearBreadcrumb();
 
-        RowByteCache cache = new(indexer);
-        Views.JsonLinesTableSource source = new(cache, schema);
-
-        IExtendedTableSource tableSource = _state.ActionStack.Count > 0
-            ? Views.LazyTransformer.Create(
-                source,
-                schema,
-                _state.ActionStack,
-                filterSpecs => new Refedle.Engine.IO.JsonLines.FilterRowIndexer(
-                    indexer,
-                    indexer.FilePath,
-                    [.. schema.Columns.Select(static c => Encoding.UTF8.GetBytes(c.Name))],
-                    filterSpecs
-                )
-            )
-            : source;
-
-        TableStyle style = new() { AlwaysShowHeaders = true };
-        Views.JsonLinesTableView view = new()
-        {
-            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(tableSource, style)),
-            Style = style,
-            OnMorphAction = HandleMorphAction,
-            IsRowIndexComplete = () => indexer.IsIndexingCompleted,
-        };
-        _state.SetSchemaRefinedCallback(refined =>
-        {
-            source.UpdateSchema(refined);
-            if (tableSource is Views.LazyTransformer lazy)
-            {
-                RebuildLazyTransformer(view, source, lazy, refined);
-            }
-        });
-        SetInitialSelectionWhenReady(view, indexer);
-        SwapView(view);
-        view.SetFocus();
-        StartLazyFilterScan(tableSource, view, indexer);
+        TableViewResult table = _tableViewFactory.CreateJsonLinesTable(indexer, schema);
+        SwapView(table.View);
+        table.View.SetFocus();
+        StartLazyFilterScan(table.Source, table.View, indexer);
     }
 
     private void StartLazyFilterScan(IExtendedTableSource source, MorphTableView view, IRowIndexer rowIndexer)
@@ -472,45 +289,6 @@ internal sealed class ViewManager : IDisposable
         }
 
         RefreshStatusBarHints();
-    }
-
-    /// <summary>
-    /// Replaces only the table source of <paramref name="view"/> with a <see cref="Views.LazyTransformer"/>
-    /// built from the refined schema, so columns discovered after indexing become visible.
-    /// The existing filter row indexer is reused, and the page and selection are carried over.
-    /// </summary>
-    private void RebuildLazyTransformer(
-        Views.JsonLinesTableView view,
-        Views.JsonLinesTableSource source,
-        Views.LazyTransformer current,
-        TableSchema refined)
-    {
-        if (_currentView != view || view.Table is not Views.PagedTableSource oldPaged)
-        {
-            return;
-        }
-
-        long pageNumber = oldPaged.CurrentPageNumber;
-        Point? selection = view.Value?.SelectedCell;
-        int rowOffset = view.RowOffset;
-        int columnOffset = view.ColumnOffset;
-
-        Func<IReadOnlyList<FilterSpec>, IFilterRowIndexer>? reuseFilterIndexer =
-            current.FilterRowIndexer is { } filterIndexer ? _ => filterIndexer : null;
-        IExtendedTableSource rebuilt = Views.LazyTransformer.Create(source, refined, _state.ActionStack, reuseFilterIndexer);
-        view.Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(rebuilt, view.Style));
-        Views.PagedTableSource newPaged = (Views.PagedTableSource)view.Table;
-        newPaged.CurrentPageNumber = pageNumber;
-
-        if (selection is { } cell)
-        {
-            view.SetSelection(Math.Min(cell.X, newPaged.Columns - 1), cell.Y, false);
-            view.RowOffset = rowOffset;
-            view.ColumnOffset = columnOffset;
-            view.Update();
-        }
-
-        view.SetNeedsDraw();
     }
 
     /// <summary>
@@ -584,43 +362,12 @@ internal sealed class ViewManager : IDisposable
         if (_disposed
             || sessionToken.IsCancellationRequested
             || _state.CurrentMode is not ViewMode.CsvTable
-            || !ReferenceEquals(_currentView, erroredView))
+            || !ReferenceEquals(GetCurrentView(), erroredView))
         {
             return;
         }
 
         ShowError($"Error reading CSV: {message}");
-    }
-
-    private void SetInitialSelectionWhenReady(MorphTableView view, IRowIndexer indexer)
-    {
-        if (indexer.TotalRows > 0)
-        {
-            view.SetSelection(0, 0, false);
-            view.Update();
-            return;
-        }
-
-        void onReady()
-        {
-            // Unsubscribe immediately to ensure initial selection logic runs only once
-            // and to release the captured view reference for garbage collection.
-            indexer.FirstCheckpointReached -= onReady;
-
-            _uiThreadInvoke(() =>
-            {
-                // Only set if this view is still active and the user hasn't moved the cursor yet
-                if (_currentView == view && view.Table is not null && view.Table.Rows > 0
-                    && (view.Value is null || view.Value.SelectedCell.Y <= 0))
-                {
-                    view.SetSelection(0, 0, false);
-                    view.Update();
-                    view.SetNeedsDraw();
-                }
-            });
-        }
-
-        indexer.FirstCheckpointReached += onReady;
     }
 
     private void SwapView(View newView)
@@ -632,48 +379,20 @@ internal sealed class ViewManager : IDisposable
         // linger over the next content view; its host container survives the swap.
         _lazyFilterScanTracker.Detach();
 
-        if (_currentView is not null)
-        {
-            _contentContainer.Remove(_currentView);
-            _currentView.Dispose();
-        }
-
-        newView.X = 0;
-        newView.Y = 0;
-        newView.Width = Dim.Fill();
-        newView.Height = Dim.Fill();
-
-        _currentView = newView;
-        _contentContainer.Add(_currentView);
-        _contentContainer.SetNeedsDraw();
-    }
-
-    private void RemoveItemCountLabel()
-    {
-        if (_itemCountLabel is null)
-        {
-            return;
-        }
-
-        _container.Remove(_itemCountLabel);
-        _itemCountLabel.Dispose();
-        _itemCountLabel = null;
+        _contentHost.Replace(newView);
     }
 
     /// <summary>
     /// Gets the current view.
     /// </summary>
     /// <returns>The current <see cref="View"/>, or <c>null</c>.</returns>
-    internal View? GetCurrentView() => _currentView;
+    internal View? GetCurrentView() => _contentHost.CurrentView;
 
     /// <summary>
     /// Gets the current status bar.
     /// </summary>
     /// <returns>The current <see cref="StatusBar"/>, or <c>null</c>.</returns>
-    internal StatusBar? GetCurrentStatusBar()
-    {
-        return _container.SubViews.OfType<StatusBar>().FirstOrDefault();
-    }
+    internal StatusBar? GetCurrentStatusBar() => _statusBar.GetCurrentStatusBar();
 
     /// <summary>
     /// Orchestrates the Single DrillDown transition: delegates schema extraction to ModeController,
@@ -740,14 +459,7 @@ internal sealed class ViewManager : IDisposable
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
 
-        IExtendedTableSource rawSource = new Views.FocusedTableSource(drillDown);
-        IExtendedTableSource source = drillDown.ActionStack.Count > 0
-            ? Views.FocusedTableTransformer.Create(
-                rawSource,
-                drillDown.Schema,
-                drillDown.ActionStack,
-                FilterScanInitialTableRows)
-            : rawSource;
+        IExtendedTableSource source = TableViewFactory.CreateFocusedSource(drillDown);
 
         TableStyle style = new() { AlwaysShowHeaders = true };
         _state.SetSchemaRefinedCallback(null);
@@ -761,23 +473,12 @@ internal sealed class ViewManager : IDisposable
             return;
         }
 
-        FocusedTableView view = CreateFocusedTableView(source, style);
+        FocusedTableView view = _tableViewFactory.CreateFocusedTableView(source, style);
         view.SetSelection(0, 0, false);
         view.Update();
         SwapView(view);
         view.SetFocus();
         RefreshStatusBarHints();
-    }
-
-    private Views.FocusedTableView CreateFocusedTableView(IExtendedTableSource source, TableStyle style)
-    {
-        Views.FocusedTableView view = new()
-        {
-            Table = new Views.PagedTableSource(new Views.ColumnWidthStabilizingTableSource(source, style)),
-            Style = style,
-            OnMorphAction = HandleMorphAction,
-        };
-        return view;
     }
 
     /// <summary>
@@ -828,7 +529,7 @@ internal sealed class ViewManager : IDisposable
         _disposed = true;
         _filterScanManager.Dispose();
         _lazyFilterScanTracker.Dispose();
-        RemoveItemCountLabel();
-        _currentView?.Dispose();
+        _statusBar.RemoveItemCountLabel();
+        _contentHost.Dispose();
     }
 }
