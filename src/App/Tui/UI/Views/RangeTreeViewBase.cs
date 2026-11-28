@@ -9,7 +9,7 @@ namespace Refedle.App.Tui.UI.Views;
 /// Abstract base for range-based tree views (<see cref="JsonArrayTreeView"/>, <see cref="JsonLinesTreeView"/>).
 /// Handles progressive node loading, batch node addition, and event subscription lifecycle.
 /// </summary>
-internal abstract class RangeTreeViewBase : MorphTreeView
+internal closed class RangeTreeViewBase : MorphTreeView
 {
     private readonly Action<Action> _uiThreadInvoke;
     private readonly long _nodeGroupSize;
