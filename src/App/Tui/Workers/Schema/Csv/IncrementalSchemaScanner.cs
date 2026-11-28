@@ -14,17 +14,9 @@ namespace Refedle.App.Tui.Workers.Schema.Csv;
 ///   background scan, which keeps the schema inferred from the rows before it
 /// - Thread-safe schema updates via Copy-on-Write
 /// </summary>
-internal sealed class IncrementalSchemaScanner : IncrementalSchemaScannerBase
+/// <param name="filePath">Path to the CSV file.</param>
+internal sealed class IncrementalSchemaScanner(string filePath) : IncrementalSchemaScannerBase(filePath)
 {
-    /// <summary>
-    /// Creates a new incremental schema scanner.
-    /// </summary>
-    /// <param name="filePath">Path to the CSV file.</param>
-    public IncrementalSchemaScanner(string filePath)
-        : base(filePath)
-    {
-    }
-
     /// <inheritdoc/>
     protected override TableSchema ExecuteInitialScan()
     {

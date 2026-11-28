@@ -23,34 +23,46 @@ namespace Refedle.App.Tui.UI;
 /// touch any state; each queued callback re-verifies that its scan is still the current one
 /// and is discarded otherwise.
 /// </remarks>
-internal sealed class LazyFilterScanTracker(
-    IFilterScanRunner filterScanRunner,
-    Action<Action> uiThreadInvoke,
-    Func<CancellationToken> parentToken,
-    Action refreshStatusBarHints,
-    Action<string> showError,
-    View overlayHost,
-    Func<View?> getCurrentView) : IDisposable
+internal sealed class LazyFilterScanTracker : IDisposable
 {
-    private readonly IFilterScanRunner _filterScanRunner =
-        filterScanRunner ?? throw new ArgumentNullException(nameof(filterScanRunner));
-    private readonly Action<Action> _uiThreadInvoke =
-        uiThreadInvoke ?? throw new ArgumentNullException(nameof(uiThreadInvoke));
-    private readonly Func<CancellationToken> _parentToken =
-        parentToken ?? throw new ArgumentNullException(nameof(parentToken));
-    private readonly Action _refreshStatusBarHints =
-        refreshStatusBarHints ?? throw new ArgumentNullException(nameof(refreshStatusBarHints));
-    private readonly Action<string> _showError =
-        showError ?? throw new ArgumentNullException(nameof(showError));
-    private readonly View _overlayHost =
-        overlayHost ?? throw new ArgumentNullException(nameof(overlayHost));
-    private readonly Func<View?> _getCurrentView =
-        getCurrentView ?? throw new ArgumentNullException(nameof(getCurrentView));
+    private readonly IFilterScanRunner _filterScanRunner;
+    private readonly Action<Action> _uiThreadInvoke;
+    private readonly Func<CancellationToken> _parentToken;
+    private readonly Action _refreshStatusBarHints;
+    private readonly Action<string> _showError;
+    private readonly View _overlayHost;
+    private readonly Func<View?> _getCurrentView;
     private readonly FilterScanProgressOverlay _overlay = new();
     private ActiveScan? _activeScan;
     private bool _disposed;
 
     private sealed record ActiveScan(IFilterRowIndexer Indexer, MorphTableView ScanView, Action<int, int> ProgressHandler);
+
+    internal LazyFilterScanTracker(
+        IFilterScanRunner filterScanRunner,
+        Action<Action> uiThreadInvoke,
+        Func<CancellationToken> parentToken,
+        Action refreshStatusBarHints,
+        Action<string> showError,
+        View overlayHost,
+        Func<View?> getCurrentView)
+    {
+        ArgumentNullException.ThrowIfNull(filterScanRunner);
+        ArgumentNullException.ThrowIfNull(uiThreadInvoke);
+        ArgumentNullException.ThrowIfNull(parentToken);
+        ArgumentNullException.ThrowIfNull(refreshStatusBarHints);
+        ArgumentNullException.ThrowIfNull(showError);
+        ArgumentNullException.ThrowIfNull(overlayHost);
+        ArgumentNullException.ThrowIfNull(getCurrentView);
+
+        _filterScanRunner = filterScanRunner;
+        _uiThreadInvoke = uiThreadInvoke;
+        _parentToken = parentToken;
+        _refreshStatusBarHints = refreshStatusBarHints;
+        _showError = showError;
+        _overlayHost = overlayHost;
+        _getCurrentView = getCurrentView;
+    }
 
     /// <summary>
     /// Gets a value indicating whether the current content view has a running lazy scan,

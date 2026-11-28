@@ -4,15 +4,23 @@ namespace Refedle.Engine.IO.Csv;
 /// Manages a sliding window LRU cache of CSV data rows for efficient virtual scrolling.
 /// Uses ReadOnlyMemory for memory-efficient column storage.
 /// </summary>
-public sealed class DataRowCache(
-    IRowIndexer indexer,
-    int columnCount,
-    int capacity = 200,
-    int prefetchWindow = 20)
-    : SlidingWindowLruCache<CsvDataRow>(indexer, capacity, prefetchWindow), IDisposable
+public sealed class DataRowCache : SlidingWindowLruCache<CsvDataRow>, IDisposable
 {
-    private readonly DataRowReader _reader = new(indexer.FilePath, columnCount);
+    private readonly DataRowReader _reader;
     private bool _disposed;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DataRowCache"/> class.
+    /// </summary>
+    public DataRowCache(
+        IRowIndexer indexer,
+        int columnCount,
+        int capacity = 200,
+        int prefetchWindow = 20)
+        : base(indexer, capacity, prefetchWindow)
+    {
+        _reader = new(indexer.FilePath, columnCount);
+    }
 
     /// <inheritdoc/>
     protected override CsvDataRow EmptyValue => [];

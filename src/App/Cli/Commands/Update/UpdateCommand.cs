@@ -8,26 +8,45 @@ namespace Refedle.App.Cli.Commands.Update;
 /// The <c>refedle update</c> command: checks the latest GitHub release and replaces the
 /// running binary when a newer version is available.
 /// </summary>
-/// <param name="currentVersion">The version of the running binary, e.g. <see cref="BuildInfo.Version"/>.</param>
-/// <param name="releaseClient">The client used to resolve the latest release and download assets.</param>
-/// <param name="binaryReplacer">The component that replaces the running binary with the archive content.</param>
-/// <param name="ridResolver">Resolves the release runtime identifier for the running process.</param>
-/// <param name="logger">The logger used for progress and error output.</param>
-/// <param name="statusReporter">Shows the current phase while updating; the indicator shown while downloading and installing.</param>
-internal sealed class UpdateCommand(
-    string currentVersion,
-    IReleaseClient releaseClient,
-    IBinaryReplacer binaryReplacer,
-    IRuntimeIdentifierResolver ridResolver,
-    IAppLogger logger,
-    IStatusReporter statusReporter)
+internal sealed class UpdateCommand
 {
-    private readonly IStatusReporter _statusReporter =
-        statusReporter ?? throw new ArgumentNullException(nameof(statusReporter));
-
     private const string DevVersion = "0.0.0-dev";
     private const string ChecksumsFileName = "checksums.txt";
     private const int StreamBufferSize = 8192;
+
+    private readonly string _currentVersion;
+    private readonly IReleaseClient _releaseClient;
+    private readonly IBinaryReplacer _binaryReplacer;
+    private readonly IRuntimeIdentifierResolver _ridResolver;
+    private readonly IAppLogger _logger;
+    private readonly IStatusReporter _statusReporter;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UpdateCommand"/> class.
+    /// </summary>
+    /// <param name="currentVersion">The version of the running binary, e.g. <see cref="BuildInfo.Version"/>.</param>
+    /// <param name="releaseClient">The client used to resolve the latest release and download assets.</param>
+    /// <param name="binaryReplacer">The component that replaces the running binary with the archive content.</param>
+    /// <param name="ridResolver">Resolves the release runtime identifier for the running process.</param>
+    /// <param name="logger">The logger used for progress and error output.</param>
+    /// <param name="statusReporter">Shows the current phase while updating; the indicator shown while downloading and installing.</param>
+    public UpdateCommand(
+        string currentVersion,
+        IReleaseClient releaseClient,
+        IBinaryReplacer binaryReplacer,
+        IRuntimeIdentifierResolver ridResolver,
+        IAppLogger logger,
+        IStatusReporter statusReporter)
+    {
+        ArgumentNullException.ThrowIfNull(statusReporter);
+
+        _currentVersion = currentVersion;
+        _releaseClient = releaseClient;
+        _binaryReplacer = binaryReplacer;
+        _ridResolver = ridResolver;
+        _logger = logger;
+        _statusReporter = statusReporter;
+    }
 
     /// <summary>
     /// Runs the self-update flow.
@@ -36,9 +55,9 @@ internal sealed class UpdateCommand(
     /// <returns>The exit code for the process.</returns>
     public async Task<ExitCode> RunAsync(CancellationToken cancellationToken)
     {
-        if (currentVersion == DevVersion)
+        if (_currentVersion == DevVersion)
         {
-            await logger.WriteInfoAsync(
+            await _logger.WriteInfoAsync(
                 "This is a development build; 'refedle update' is disabled. Use install.sh to install a released version.")
                 .ConfigureAwait(false);
             return ExitCode.Success;
@@ -82,12 +101,12 @@ internal sealed class UpdateCommand(
 
     private async Task<ExitCode> RunUpdateFlowAsync(CancellationToken cancellationToken)
     {
-        if (!ReleaseVersion.TryParse(currentVersion, out ReleaseVersion current))
+        if (!ReleaseVersion.TryParse(_currentVersion, out ReleaseVersion current))
         {
-            return await FailAsync($"Invalid current version: '{currentVersion}'.").ConfigureAwait(false);
+            return await FailAsync($"Invalid current version: '{_currentVersion}'.").ConfigureAwait(false);
         }
 
-        Result<string> tagResult = await releaseClient.GetLatestTagAsync(cancellationToken).ConfigureAwait(false);
+        Result<string> tagResult = await _releaseClient.GetLatestTagAsync(cancellationToken).ConfigureAwait(false);
         if (tagResult.IsFailure)
         {
             return await FailAsync(tagResult.Error).ConfigureAwait(false);
@@ -98,24 +117,24 @@ internal sealed class UpdateCommand(
             return await FailAsync($"Could not parse the latest release tag: '{tagResult.Value}'.").ConfigureAwait(false);
         }
 
-        await logger.WriteInfoAsync($"Current version: {current}").ConfigureAwait(false);
-        await logger.WriteInfoAsync($"Latest version:  {latest}").ConfigureAwait(false);
-        await logger.WriteInfoAsync(string.Empty).ConfigureAwait(false);
+        await _logger.WriteInfoAsync($"Current version: {current}").ConfigureAwait(false);
+        await _logger.WriteInfoAsync($"Latest version:  {latest}").ConfigureAwait(false);
+        await _logger.WriteInfoAsync(string.Empty).ConfigureAwait(false);
 
         if (current >= latest)
         {
-            await logger.WriteInfoAsync("Already up to date.").ConfigureAwait(false);
+            await _logger.WriteInfoAsync("Already up to date.").ConfigureAwait(false);
             return ExitCode.Success;
         }
 
-        Result<string> ridResult = ridResolver.Resolve();
+        Result<string> ridResult = _ridResolver.Resolve();
         if (ridResult.IsFailure)
         {
             return await FailAsync(ridResult.Error).ConfigureAwait(false);
         }
 
         string archiveName = $"refedle-{tagResult.Value}-{ridResult.Value}.tar.gz";
-        await logger.WriteInfoAsync($"Downloading refedle {latest}...").ConfigureAwait(false);
+        await _logger.WriteInfoAsync($"Downloading refedle {latest}...").ConfigureAwait(false);
 
         DirectoryInfo tempDirectory = Directory.CreateTempSubdirectory("refedle-update-");
         try
@@ -129,7 +148,7 @@ internal sealed class UpdateCommand(
                 return await FailAsync(updateResult.Error).ConfigureAwait(false);
             }
 
-            await logger.WriteInfoAsync($"Updated successfully: {current} -> {latest}").ConfigureAwait(false);
+            await _logger.WriteInfoAsync($"Updated successfully: {current} -> {latest}").ConfigureAwait(false);
             return ExitCode.Success;
         }
         finally
@@ -142,7 +161,7 @@ internal sealed class UpdateCommand(
         string tag, string archiveName, string tempDirectoryPath, Action<string> setPhase, CancellationToken cancellationToken)
     {
         string checksumsPath = Path.Combine(tempDirectoryPath, ChecksumsFileName);
-        Result checksumsResult = await releaseClient.DownloadAssetAsync(
+        Result checksumsResult = await _releaseClient.DownloadAssetAsync(
             tag, ChecksumsFileName, checksumsPath, cancellationToken).ConfigureAwait(false);
         if (checksumsResult.IsFailure)
         {
@@ -150,7 +169,7 @@ internal sealed class UpdateCommand(
         }
 
         string archivePath = Path.Combine(tempDirectoryPath, archiveName);
-        Result archiveResult = await releaseClient.DownloadAssetAsync(
+        Result archiveResult = await _releaseClient.DownloadAssetAsync(
             tag, archiveName, archivePath, cancellationToken).ConfigureAwait(false);
         if (archiveResult.IsFailure)
         {
@@ -177,7 +196,7 @@ internal sealed class UpdateCommand(
         }
 
         setPhase("Replacing binary...");
-        Result replaceResult = await binaryReplacer.ReplaceAsync(archivePath, processPath, cancellationToken).ConfigureAwait(false);
+        Result replaceResult = await _binaryReplacer.ReplaceAsync(archivePath, processPath, cancellationToken).ConfigureAwait(false);
         return replaceResult;
     }
 
@@ -214,7 +233,7 @@ internal sealed class UpdateCommand(
 
     private async Task<ExitCode> FailAsync(string message)
     {
-        await logger.WriteErrorAsync(message).ConfigureAwait(false);
+        await _logger.WriteErrorAsync(message).ConfigureAwait(false);
         return ExitCode.Failure;
     }
 }

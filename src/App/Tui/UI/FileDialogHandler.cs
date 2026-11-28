@@ -13,24 +13,36 @@ namespace Refedle.App.Tui.UI;
 /// <summary>
 /// Handles file dialog operations for opening data files.
 /// </summary>
-internal sealed class FileDialogHandler(
-    IApplication app,
-    AppState state,
-    ViewManager viewManager,
-    Action<IRowIndexer> onIndexerStart,
-    Action stopIndexing,
-    Func<string, ISchemaScanner> scannerFactory,
-    Action<string> onFilePathChanged)
+internal sealed class FileDialogHandler
 {
-    private readonly IApplication _app = app;
-    private readonly AppState _state = state;
-    private readonly ViewManager _viewManager = viewManager;
-    private readonly Action<IRowIndexer> _onIndexerStart = onIndexerStart;
-    private readonly Action _stopIndexing = stopIndexing;
-    private readonly Func<string, ISchemaScanner> _scannerFactory =
-        scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
-    private readonly Action<string> _onFilePathChanged =
-        onFilePathChanged ?? throw new ArgumentNullException(nameof(onFilePathChanged));
+    private readonly IApplication _app;
+    private readonly AppState _state;
+    private readonly ViewManager _viewManager;
+    private readonly Action<IRowIndexer> _onIndexerStart;
+    private readonly Action _stopIndexing;
+    private readonly Func<string, ISchemaScanner> _scannerFactory;
+    private readonly Action<string> _onFilePathChanged;
+
+    internal FileDialogHandler(
+        IApplication app,
+        AppState state,
+        ViewManager viewManager,
+        Action<IRowIndexer> onIndexerStart,
+        Action stopIndexing,
+        Func<string, ISchemaScanner> scannerFactory,
+        Action<string> onFilePathChanged)
+    {
+        ArgumentNullException.ThrowIfNull(scannerFactory);
+        ArgumentNullException.ThrowIfNull(onFilePathChanged);
+
+        _app = app;
+        _state = state;
+        _viewManager = viewManager;
+        _onIndexerStart = onIndexerStart;
+        _stopIndexing = stopIndexing;
+        _scannerFactory = scannerFactory;
+        _onFilePathChanged = onFilePathChanged;
+    }
 
     internal async Task ShowAsync()
     {

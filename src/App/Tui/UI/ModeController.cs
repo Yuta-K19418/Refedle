@@ -11,16 +11,25 @@ namespace Refedle.App.Tui.UI;
 /// <summary>
 /// Orchestrates view mode transitions and associated lazy initialization logic.
 /// </summary>
-internal sealed class ModeController(
-    AppState state,
-    Action<Action> uiThreadInvoke,
-    Func<string, ISchemaScanner> scannerFactory)
+internal sealed class ModeController
 {
-    private readonly AppState _state = state ?? throw new ArgumentNullException(nameof(state));
-    private readonly Action<Action> _uiThreadInvoke =
-        uiThreadInvoke ?? throw new ArgumentNullException(nameof(uiThreadInvoke));
-    private readonly Func<string, ISchemaScanner> _scannerFactory =
-        scannerFactory ?? throw new ArgumentNullException(nameof(scannerFactory));
+    private readonly AppState _state;
+    private readonly Action<Action> _uiThreadInvoke;
+    private readonly Func<string, ISchemaScanner> _scannerFactory;
+
+    internal ModeController(
+        AppState state,
+        Action<Action> uiThreadInvoke,
+        Func<string, ISchemaScanner> scannerFactory)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(uiThreadInvoke);
+        ArgumentNullException.ThrowIfNull(scannerFactory);
+
+        _state = state;
+        _uiThreadInvoke = uiThreadInvoke;
+        _scannerFactory = scannerFactory;
+    }
 
     /// <summary>
     /// Toggles the JSON Lines display mode between Tree and Table.

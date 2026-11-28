@@ -12,16 +12,24 @@ namespace Refedle.App.Tui.UI;
 /// <summary>
 /// Handles recipe save and load operations.
 /// </summary>
-internal sealed class RecipeCommandHandler(
-    IApplication app,
-    AppState state,
-    ViewManager viewManager,
-    IRecipeManager? recipeManager = null)
+internal sealed class RecipeCommandHandler
 {
-    private readonly IApplication _app = app;
-    private readonly AppState _state = state;
-    private readonly ViewManager _viewManager = viewManager;
-    private readonly IRecipeManager _recipeManager = recipeManager ?? new RecipeManager();
+    private readonly IApplication _app;
+    private readonly AppState _state;
+    private readonly ViewManager _viewManager;
+    private readonly IRecipeManager _recipeManager;
+
+    internal RecipeCommandHandler(
+        IApplication app,
+        AppState state,
+        ViewManager viewManager,
+        IRecipeManager? recipeManager = null)
+    {
+        _app = app;
+        _state = state;
+        _viewManager = viewManager;
+        _recipeManager = recipeManager ?? new RecipeManager();
+    }
 
     /// <summary>
     /// Saves the current recipe. Threading: all AppState access is UI-thread-only, so the capture of

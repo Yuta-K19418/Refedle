@@ -5,24 +5,32 @@ namespace Refedle.App.Tui.UI;
 /// <summary>
 /// Owns the content container below the breadcrumb bar and the view currently shown in it.
 /// </summary>
-/// <param name="topAnchor">The view the content container is placed directly beneath.</param>
 /// <remarks>
 /// Threading contract: all state is UI-thread exclusive. <see cref="Replace"/>, <see cref="Dispose"/>
 /// and the members of <see cref="Container"/> must be called on the UI thread.
 /// </remarks>
-internal sealed class ContentViewHost(View topAnchor) : IDisposable
+internal sealed class ContentViewHost : IDisposable
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContentViewHost"/> class.
+    /// </summary>
+    /// <param name="topAnchor">The view the content container is placed directly beneath.</param>
+    internal ContentViewHost(View topAnchor)
+    {
+        Container = new()
+        {
+            X = 0,
+            Y = Pos.Bottom(topAnchor),
+            Width = Dim.Fill(),
+            Height = Dim.Fill() - 1, // Leave room for StatusBar at the bottom
+            CanFocus = true,
+        };
+    }
+
     /// <summary>
     /// Gets the container that hosts the current view.
     /// </summary>
-    internal View Container { get; } = new()
-    {
-        X = 0,
-        Y = Pos.Bottom(topAnchor),
-        Width = Dim.Fill(),
-        Height = Dim.Fill() - 1, // Leave room for StatusBar at the bottom
-        CanFocus = true,
-    };
+    internal View Container { get; }
 
     /// <summary>
     /// Gets the view currently shown in the container, or <c>null</c> before the first swap.

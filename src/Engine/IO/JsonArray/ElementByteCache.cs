@@ -4,14 +4,22 @@ namespace Refedle.Engine.IO.JsonArray;
 /// Sliding window LRU cache for JSON Array element bytes.
 /// Delegates byte loading to <see cref="ElementReader"/>.
 /// </summary>
-public sealed class ElementByteCache(
-    IRowIndexer indexer,
-    int capacity = 200,
-    int prefetchWindow = 20)
-    : SlidingWindowLruCache<JsonRawBytes>(indexer, capacity, prefetchWindow), IDisposable
+public sealed class ElementByteCache : SlidingWindowLruCache<JsonRawBytes>, IDisposable
 {
-    private readonly ElementReader _reader = new(indexer.FilePath);
+    private readonly ElementReader _reader;
     private bool _disposed;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ElementByteCache"/> class.
+    /// </summary>
+    public ElementByteCache(
+        IRowIndexer indexer,
+        int capacity = 200,
+        int prefetchWindow = 20)
+        : base(indexer, capacity, prefetchWindow)
+    {
+        _reader = new(indexer.FilePath);
+    }
 
     /// <inheritdoc/>
     public override JsonRawBytes GetRow(long index)
