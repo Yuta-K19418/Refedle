@@ -22,7 +22,6 @@
 ## 2. C# Coding Standards
 - **Modern Style (MANDATORY)**:
     - **Namespaces**: Use **File-scoped namespaces** (`namespace X;`).
-    - **Constructors**: Use **Primary Constructors** for classes/structs/records (unless explicit validation requires a body).
     - **Collections**: Use **Collection Expressions** `[]` (e.g., `int[] x = [1, 2];`).
     - **Pattern Matching**: Use `switch` expressions and `is` patterns (e.g., `is not null`) instead of legacy `switch` statements or `==` checks.
     - **Strings**: Use Interpolated Strings (`$"{var}"`) instead of `String.Format`.
