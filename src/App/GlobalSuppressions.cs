@@ -201,6 +201,24 @@ using System.Diagnostics.CodeAnalysis;
     Scope = "member",
     Target = "~M:Refedle.App.Tui.UI.AppKeyHandler.HandleFullAggregationDrillDown(Terminal.Gui.Views.ITreeNode,Refedle.Engine.Types.DataFormat)",
     Justification = "The dialog is managed by Terminal.Gui's IApplication.Run() and will be disposed automatically.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.AppKeyHandler._app",
+    Justification = "The application is injected and not owned by the handler, which only unsubscribes from its keyboard event on dispose.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.AppKeyHandler._state",
+    Justification = "The state is injected and not owned by the handler; MainWindow disposes it.")]
+[assembly: SuppressMessage(
+    "Reliability",
+    "CA2213:Disposable fields should be disposed",
+    Scope = "member",
+    Target = "~F:Refedle.App.Tui.UI.AppKeyHandler._viewManager",
+    Justification = "The view manager is injected and not owned by the handler; MainWindow creates and disposes it.")]
 
 // RecipeCommandHandler
 [assembly: SuppressMessage(

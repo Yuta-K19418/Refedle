@@ -8,14 +8,25 @@ namespace Refedle.App.Tui.Workers.Schema;
 /// - Background scan: refines the schema with the remaining data in a single pass
 /// - Thread-safe schema updates via Copy-on-Write pattern
 /// </summary>
-internal closed class IncrementalSchemaScannerBase(string filePath) : ISchemaScanner
+internal closed class IncrementalSchemaScannerBase : ISchemaScanner
 {
     protected const int InitialScanCount = 200;
 
     /// <summary>
     /// Gets the path of the file being scanned.
     /// </summary>
-    protected string FilePath { get; } = filePath ?? throw new ArgumentNullException(nameof(filePath));
+    protected string FilePath { get; }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="IncrementalSchemaScannerBase"/> class.
+    /// </summary>
+    /// <param name="filePath">Path to the file to scan.</param>
+    protected IncrementalSchemaScannerBase(string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(filePath);
+
+        FilePath = filePath;
+    }
 
     /// <summary>
     /// Performs initial scan to provide the first schema for UI display.

@@ -9,23 +9,32 @@ namespace Refedle.App.Tui.UI.Views;
 /// Column 0 of the source is the <c>"#"</c> pseudo column, so a spec's
 /// <see cref="FilterSpec.SourceColumnIndex"/> maps to source column <c>SourceColumnIndex + 1</c>.
 /// </summary>
-internal sealed class FocusedTableFilterRowIndexer(
-    IExtendedTableSource source,
-    IReadOnlyList<FilterSpec> filterSpecs,
-    int revealThreshold) : IFilterRowIndexer
+internal sealed class FocusedTableFilterRowIndexer : IFilterRowIndexer
 {
     private const int BatchSize = 1000;
 
-    private readonly IExtendedTableSource _source = source ?? throw new ArgumentNullException(nameof(source));
-    private readonly IReadOnlyList<FilterSpec> _filterSpecs =
-        filterSpecs ?? throw new ArgumentNullException(nameof(filterSpecs));
-    private readonly int _revealThreshold =
-        revealThreshold > 0 ? revealThreshold : throw new ArgumentOutOfRangeException(nameof(revealThreshold));
+    private readonly IExtendedTableSource _source;
+    private readonly IReadOnlyList<FilterSpec> _filterSpecs;
+    private readonly int _revealThreshold;
     private readonly TaskCompletionSource _thresholdReached =
         new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Lock _lock = new();
     private readonly List<int> _matchedRows = [];
     private readonly ScanProgressThrottle _progressThrottle = new();
+
+    internal FocusedTableFilterRowIndexer(
+        IExtendedTableSource source,
+        IReadOnlyList<FilterSpec> filterSpecs,
+        int revealThreshold)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ArgumentNullException.ThrowIfNull(filterSpecs);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(revealThreshold);
+
+        _source = source;
+        _filterSpecs = filterSpecs;
+        _revealThreshold = revealThreshold;
+    }
 
     /// <summary>
     /// Raised on the scanning task with the scan position as <c>(scannedRows, totalRows)</c>.

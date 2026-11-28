@@ -16,13 +16,18 @@ namespace Refedle.App.Tui.UI;
 /// <summary>
 /// Handles global keyboard shortcuts for Refedle application.
 /// </summary>
-internal sealed class AppKeyHandler : IDisposable
+internal sealed class AppKeyHandler(
+    IApplication app,
+    AppState state,
+    ViewManager viewManager,
+    FileDialogHandler fileDialogHandler,
+    RecipeCommandHandler recipeCommandHandler) : IDisposable
 {
-    private readonly IApplication _app;
-    private readonly AppState _state;
-    private readonly ViewManager _viewManager;
-    private readonly FileDialogHandler _fileDialogHandler;
-    private readonly RecipeCommandHandler _recipeCommandHandler;
+    private readonly IApplication _app = app;
+    private readonly AppState _state = state;
+    private readonly ViewManager _viewManager = viewManager;
+    private readonly FileDialogHandler _fileDialogHandler = fileDialogHandler;
+    private readonly RecipeCommandHandler _recipeCommandHandler = recipeCommandHandler;
 
     private bool _disposed;
 
@@ -35,21 +40,6 @@ internal sealed class AppKeyHandler : IDisposable
     {
         KeyCode baseKey = keyCode & ~(KeyCode.ShiftMask | KeyCode.CtrlMask | KeyCode.AltMask);
         return baseKey is KeyCode.O or KeyCode.S or KeyCode.Q or KeyCode.T or KeyCode.X or KeyCode.C or KeyCode.Backspace or (KeyCode)'?';
-    }
-
-    internal AppKeyHandler(
-        IApplication app,
-        AppState state,
-        ViewManager viewManager,
-        FileDialogHandler fileDialogHandler,
-        RecipeCommandHandler recipeCommandHandler
-    )
-    {
-        _app = app;
-        _state = state;
-        _viewManager = viewManager;
-        _fileDialogHandler = fileDialogHandler;
-        _recipeCommandHandler = recipeCommandHandler;
     }
 
     internal void Subscribe()
