@@ -15,7 +15,7 @@ namespace Refedle.App.Tui.UI.Views;
 /// (an <see cref="IFilterRowIndexer"/> for streaming sources, synchronous resolution for
 /// fully materialized ones).
 /// </summary>
-internal abstract class LazyTransformerBase(
+internal closed class LazyTransformerBase(
     IExtendedTableSource source,
     string[] columnNames,
     string[] rawColumnNames,

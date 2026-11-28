@@ -43,7 +43,7 @@ namespace Refedle.Engine.IO;
 ///   <item>Simplicity and zero-allocation preferred</item>
 /// </list>
 /// </remarks>
-public abstract class RowIndexerBase : IRowIndexer
+public closed class RowIndexerBase : IRowIndexer
 {
     private const long NotificationStepDivisor = 100;
 

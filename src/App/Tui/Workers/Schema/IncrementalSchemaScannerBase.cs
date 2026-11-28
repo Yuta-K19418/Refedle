@@ -8,7 +8,7 @@ namespace Refedle.App.Tui.Workers.Schema;
 /// - Background scan: refines the schema with the remaining data in a single pass
 /// - Thread-safe schema updates via Copy-on-Write pattern
 /// </summary>
-internal abstract class IncrementalSchemaScannerBase(string filePath) : ISchemaScanner
+internal closed class IncrementalSchemaScannerBase(string filePath) : ISchemaScanner
 {
     protected const int InitialScanCount = 200;
 

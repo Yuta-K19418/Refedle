@@ -1,5 +1,4 @@
 using System.Collections.Frozen;
-using System.Diagnostics;
 using Refedle.App.Cli.Parsing;
 using Refedle.Engine;
 using Refedle.Engine.Filtering;
@@ -117,7 +116,6 @@ internal static class DryRunner
             null => string.Empty,
             FillSpec fill => $"  [fill: {fill.Value}]",
             TimestampFormatSpec format => $"  [timestamp format: {format.TargetFormat}]",
-            _ => throw new UnreachableException($"Unhandled transform type: {transform.GetType().Name}"),
         };
 
     // Symbols follow the FilterOperator XML docs; the text-match operators have no symbol form.
